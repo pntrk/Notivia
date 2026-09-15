@@ -1,0 +1,54 @@
+{
+  "entities": {
+    "Note": {
+      "title": "Note",
+      "description": "A cognitive note created by the user with title, time/schedule, icon, color, and creation timestamp.",
+      "type": "object",
+      "properties": {
+        "baslik": {
+          "type": "string",
+          "description": "Short action title for the note card",
+          "maxLength": 300
+        },
+        "zaman": {
+          "type": "string",
+          "description": "Human-readable time or reminder schedule expression"
+        },
+        "tarih_iso": {
+          "type": "string",
+          "description": "ISO-8601 formatted datetime string or null"
+        },
+        "ikon": {
+          "type": "string",
+          "description": "Emoji icon representing the category or type of note",
+          "maxLength": 10
+        },
+        "renk": {
+          "type": "string",
+          "description": "Pastel hex color string for the card background",
+          "maxLength": 16
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp"
+        },
+        "calendar_event_id": {
+          "type": "string",
+          "description": "Google Calendar event ID if synced with Google Calendar"
+        },
+        "calendarEventId": {
+          "type": "string",
+          "description": "Google Calendar event ID (camelCase)"
+        }
+      },
+      "required": ["baslik", "ikon", "renk"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/notes/{noteId}": {
+      "schema": "Note",
+      "description": "User notes and reminder cards"
+    }
+  }
+}

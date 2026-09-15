@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  initFirebase,
-  getSavedFirebaseConfig,
-  saveFirebaseConfig,
+  auth,
+  db,
+  googleProvider,
   GoogleAuthProvider,
   signInWithPopup,
   signOut,
   onAuthStateChanged,
+  setGoogleAccessToken,
+  createCalendarEvent,
+  deleteCalendarEvent,
   collection,
   addDoc,
   deleteDoc,
@@ -15,17 +18,30 @@ import {
   query,
   orderBy,
   serverTimestamp,
+  handleFirestoreError,
+  OperationType,
   type User,
-  type FirebaseConfig,
 } from './firebase.ts';
 import { extractSimpleNoteFromText } from './utils/simpleNote.ts';
+import {
+  saveLocalMedia,
+  getLocalMedia,
+  deleteLocalMedia,
+  compressImage,
+} from './utils/mediaStorage.ts';
 
 interface SimpleCardItem {
   id: string;
   baslik: string;
   zaman?: string | null;
+  tarih_iso?: string | null;
+  hazirlik_zamani?: string | null;
+  hazirlik_iso?: string | null;
+  calendar_event_id?: string | null;
+  calendarEventId?: string | null;
   ikon?: string;
   renk?: string;
+  mediaId?: string | null;
   createdAt?: any;
   isRemoving?: boolean;
 }
@@ -33,21 +49,51 @@ interface SimpleCardItem {
 const LOCAL_STORAGE_KEY = 'notivia_local_notes';
 const SIMULATED_USER_KEY = 'notivia_simulated_user';
 
+function CardMediaThumbnail({ mediaId, onClick }: { mediaId: string; onClick: () => void }) {
+  const [mediaData, setMediaData] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    getLocalMedia(mediaId).then((data) => {
+      if (isMounted && data) {
+        setMediaData(data);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [mediaId]);
+
+  if (!mediaData) {
+    return (
+      <span className="w-11 h-11 rounded-xl bg-stone-200/50 animate-pulse shrink-0 flex items-center justify-center text-xs text-stone-400">
+        📷
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={mediaData}
+      alt="Not görseli"
+      onClick={onClick}
+      className="w-11 h-11 rounded-xl object-cover border border-white/80 shadow-xs cursor-pointer active:scale-95 shrink-0"
+    />
+  );
+}
+
 export default function App() {
   const [cards, setCards] = useState<SimpleCardItem[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [simulatedUser, setSimulatedUser] = useState<any>(null);
-  const [statusText, setStatusText] = useState<string>('Bas ve söyle');
+  const [statusText, setStatusText] = useState<string>('Söyle ya da fotoğrafını çek');
   const [isListening, setIsListening] = useState<boolean>(false);
-  const [showConfigModal, setShowConfigModal] = useState<boolean>(false);
   const [showTextInput, setShowTextInput] = useState<boolean>(false);
   const [textInput, setTextInput] = useState<string>('');
-
-  // Firebase Config Form State
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [projectIdInput, setProjectIdInput] = useState('');
+  const [modalImgSrc, setModalImgSrc] = useState<string | null>(null);
 
   const recognitionRef = useRef<any>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const firestoreUnsubRef = useRef<(() => void) | null>(null);
 
   // Load initial notes (local mode)
@@ -68,14 +114,16 @@ export default function App() {
       {
         id: 'local_1',
         baslik: 'Ahmet Abiyle Çay',
-        zaman: 'Salı 19:00 · Matkabı unutma',
+        zaman: 'Salı 19:00',
+        tarih_iso: '2026-09-15T19:00:00',
         ikon: '☕',
         renk: '#FEF3C7',
       },
       {
         id: 'local_2',
         baslik: 'Su Arıtma Filtresi',
-        zaman: '6 ay sonra hatırlatılacak',
+        zaman: '6 ay sonra',
+        tarih_iso: '2027-03-15T10:00:00',
         ikon: '💧',
         renk: '#E0F2FE',
       },
@@ -90,74 +138,80 @@ export default function App() {
     }
   };
 
-  // Firebase Auth & Firestore initialization
+  // Firebase Auth & Firestore synchronization
   useEffect(() => {
-    const existingConfig = getSavedFirebaseConfig();
-    if (existingConfig) {
-      setApiKeyInput(existingConfig.apiKey);
-      setProjectIdInput(existingConfig.projectId);
-    }
-
-    const { auth, db } = initFirebase(existingConfig);
-
-    // Check simulated user if any
-    const savedSimulated = localStorage.getItem(SIMULATED_USER_KEY);
-    if (savedSimulated) {
-      try {
-        setSimulatedUser(JSON.parse(savedSimulated));
-      } catch {
-        // ignore
+    try {
+      const storedSim = localStorage.getItem(SIMULATED_USER_KEY);
+      if (storedSim) {
+        const parsed = JSON.parse(storedSim);
+        setSimulatedUser(parsed);
       }
+    } catch {
+      // ignore
     }
 
-    if (auth && db) {
-      const unsub = onAuthStateChanged(auth, async (user) => {
+    let isMounted = true;
+
+    try {
+      const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+        if (!isMounted) return;
         setCurrentUser(user);
 
-        if (user) {
-          // Migrate local notes to Firestore
+        if (user && db) {
+          if (firestoreUnsubRef.current) {
+            firestoreUnsubRef.current();
+            firestoreUnsubRef.current = null;
+          }
+
+          // Migrate local notes to Firestore if any
           const local = getLocalNotes();
           if (local.length > 0) {
             for (const note of local) {
               try {
                 await addDoc(collection(db, 'users', user.uid, 'notes'), {
-                  baslik: note.baslik,
-                  zaman: note.zaman || null,
-                  ikon: note.ikon || '📌',
-                  renk: note.renk || '#FEF3C7',
+                  ...note,
                   createdAt: serverTimestamp(),
                 });
               } catch {
                 // ignore
               }
             }
-            localStorage.removeItem(LOCAL_STORAGE_KEY);
+            try {
+              localStorage.removeItem(LOCAL_STORAGE_KEY);
+            } catch {
+              // ignore
+            }
           }
 
-          // Real-time Firestore listener
-          const q = query(collection(db, 'users', user.uid, 'notes'), orderBy('createdAt', 'desc'));
-          const firestoreUnsub = onSnapshot(
+          // Listen live to Firestore notes collection
+          const notesRef = collection(db, 'users', user.uid, 'notes');
+          const q = query(notesRef, orderBy('createdAt', 'desc'));
+
+          firestoreUnsubRef.current = onSnapshot(
             q,
             (snapshot) => {
               const cloudNotes: SimpleCardItem[] = [];
               snapshot.forEach((docSnap) => {
-                const data = docSnap.data();
+                const d = docSnap.data();
                 cloudNotes.push({
                   id: docSnap.id,
-                  baslik: data.baslik,
-                  zaman: data.zaman,
-                  ikon: data.ikon,
-                  renk: data.renk,
-                  createdAt: data.createdAt,
+                  baslik: d.baslik || 'Not',
+                  zaman: d.zaman || null,
+                  tarih_iso: d.tarih_iso || null,
+                  calendarEventId: d.calendarEventId || d.calendar_event_id || null,
+                  calendar_event_id: d.calendarEventId || d.calendar_event_id || null,
+                  ikon: d.ikon || '📌',
+                  renk: d.renk || '#FEF3C7',
+                  mediaId: d.mediaId || null,
+                  createdAt: d.createdAt,
                 });
               });
               setCards(cloudNotes);
             },
-            (err) => {
-              console.warn('[Firestore] Snapshot notice:', err);
+            (error) => {
+              handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/notes`);
             }
           );
-          firestoreUnsubRef.current = firestoreUnsub;
         } else {
           if (firestoreUnsubRef.current) {
             firestoreUnsubRef.current();
@@ -167,115 +221,177 @@ export default function App() {
         }
       });
 
-      return () => unsub();
-    } else {
-      // Local Guest Mode by default
+      return () => {
+        isMounted = false;
+        unsubscribeAuth();
+        if (firestoreUnsubRef.current) {
+          firestoreUnsubRef.current();
+        }
+      };
+    } catch {
       setCards(getLocalNotes());
     }
   }, []);
 
-  // Web Speech API initialization
+  // Web Speech API Voice Recognition setup
   useEffect(() => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'tr-TR';
-      recognition.continuous = false;
-      recognition.interimResults = false;
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'tr-TR';
+        recognition.continuous = false;
+        recognition.interimResults = false;
 
-      recognition.onstart = () => {
-        setIsListening(true);
-        setStatusText('Dinliyorum...');
-      };
+        recognition.onstart = () => {
+          setIsListening(true);
+          setStatusText('Dinliyorum...');
+        };
 
-      recognition.onresult = async (event: any) => {
-        const spokenText = event.results[0][0].transcript;
-        setStatusText('Kaydediliyor...');
-        resetMicUI();
-        await parseAndSave(spokenText);
-      };
+        recognition.onresult = async (event: any) => {
+          const spoken = event.results?.[0]?.[0]?.transcript;
+          if (spoken) {
+            setStatusText('Anlıyorum...');
+            resetMicUI();
+            await processWithAI(spoken, null);
+          } else {
+            resetMicUI();
+          }
+        };
 
-      recognition.onerror = () => {
-        resetMicUI();
-        setStatusText('Ses algılanamadı, tekrar dene');
-        setTimeout(() => setStatusText('Bas ve söyle'), 2500);
-      };
+        recognition.onerror = (e: any) => {
+          console.warn('SpeechRecognition bildirimi:', e?.error || e);
+          resetMicUI();
+        };
 
-      recognition.onend = () => {
-        resetMicUI();
-      };
+        recognition.onend = () => {
+          setIsListening(false);
+          resetMicUI();
+        };
 
-      recognitionRef.current = recognition;
+        recognitionRef.current = recognition;
+      } catch (err) {
+        console.warn('Konuşma tanıma başlatılamadı:', err);
+      }
     }
-  }, [currentUser, simulatedUser]);
+  }, []);
 
   const resetMicUI = () => {
     setIsListening(false);
-    setStatusText('Bas ve söyle');
+    setStatusText('Söyle ya da fotoğrafını çek');
   };
 
   const handleMicClick = () => {
-    if (!recognitionRef.current) {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition || !recognitionRef.current) {
       setShowTextInput(true);
+      setStatusText('Klavye moduna geçildi');
       return;
     }
 
     if (isListening) {
-      recognitionRef.current.stop();
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // ignore
+      }
       resetMicUI();
     } else {
       try {
         recognitionRef.current.start();
-      } catch {
-        resetMicUI();
+      } catch (e: any) {
+        try {
+          recognitionRef.current.stop();
+          setTimeout(() => recognitionRef.current?.start(), 150);
+        } catch {
+          setShowTextInput(true);
+          setStatusText('Klavye moduna geçildi');
+        }
       }
     }
   };
 
-  // Add Note (Unified Router: Cloud or Local)
+  // Add Note Handler
   const addNote = async (noteData: {
     baslik: string;
     zaman?: string | null;
+    tarih_iso?: string | null;
+    hazirlik_zamani?: string | null;
+    hazirlik_iso?: string | null;
     ikon?: string;
     renk?: string;
+    mediaId?: string | null;
   }) => {
-    const { auth, db } = initFirebase();
+    let calendarEventId: string | null = null;
+    if (noteData.tarih_iso) {
+      try {
+        calendarEventId = await createCalendarEvent(noteData);
+      } catch (err) {
+        console.warn('Takvim senkronizasyon hatası:', err);
+      }
+    }
+
+    const payload = {
+      ...noteData,
+      calendarEventId: calendarEventId || null,
+      calendar_event_id: calendarEventId || null,
+    };
 
     if (currentUser && db) {
-      // Write to Firestore
-      await addDoc(collection(db, 'users', currentUser.uid, 'notes'), {
-        ...noteData,
-        createdAt: serverTimestamp(),
-      });
+      const pathForWrite = `users/${currentUser.uid}/notes`;
+      try {
+        await addDoc(collection(db, 'users', currentUser.uid, 'notes'), {
+          ...payload,
+          createdAt: serverTimestamp(),
+        });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.CREATE, pathForWrite);
+      }
     } else {
-      // Write to LocalStorage / Local State
-      const currentList = getLocalNotes();
+      const local = getLocalNotes();
       const newCard: SimpleCardItem = {
         id: 'local_' + Date.now(),
-        ...noteData,
+        ...payload,
       };
-      const updated = [newCard, ...currentList];
+      const updated = [newCard, ...local];
       saveLocalNotes(updated);
       setCards(updated);
     }
   };
 
-  // Delete Note (Unified Router: Cloud or Local)
-  const deleteNote = async (id: string) => {
+  // Delete Note Handler
+  const deleteNote = async (
+    id: string,
+    calendarEventId?: string | null,
+    mediaId?: string | null
+  ) => {
+    if (calendarEventId) {
+      deleteCalendarEvent(calendarEventId).catch((err) =>
+        console.warn('Takvim silme hatası:', err)
+      );
+    }
+    if (mediaId) {
+      deleteLocalMedia(mediaId).catch((err) =>
+        console.warn('Medya silme hatası:', err)
+      );
+    }
+
     // Animate removal first
     setCards((prev) =>
       prev.map((c) => (c.id === id ? { ...c, isRemoving: true } : c))
     );
 
     setTimeout(async () => {
-      const { db } = initFirebase();
       if (currentUser && db && !id.startsWith('local_')) {
+        const pathForDelete = `users/${currentUser.uid}/notes/${id}`;
         try {
           await deleteDoc(doc(db, 'users', currentUser.uid, 'notes', id));
-        } catch {
-          // ignore
+        } catch (error) {
+          handleFirestoreError(error, OperationType.DELETE, pathForDelete);
         }
       } else {
         const local = getLocalNotes().filter((n) => n.id !== id);
@@ -285,150 +401,128 @@ export default function App() {
     }, 200);
   };
 
-  // AI Parser: Generates clean 4-field card object
-  const parseAndSave = async (text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) {
-      resetMicUI();
-      return;
+  // View full image in modal
+  const viewFullImage = async (mediaId: string) => {
+    const base64 = await getLocalMedia(mediaId);
+    if (base64) {
+      setModalImgSrc(base64);
+    }
+  };
+
+  // Global window bindings
+  useEffect(() => {
+    (window as any).deleteNote = deleteNote;
+    (window as any).viewFullImage = viewFullImage;
+    return () => {
+      delete (window as any).deleteNote;
+      delete (window as any).viewFullImage;
+    };
+  }, [currentUser]);
+
+  // Multimodal AI Processing (Text + Image)
+  const processWithAI = async (text: string = '', base64Image: string | null = null) => {
+    let mediaId: string | null = null;
+    if (base64Image) {
+      mediaId = 'media_' + Date.now();
+      await saveLocalMedia(mediaId, base64Image);
     }
 
-    // Direct JSON support if user passes JSON
-    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-      try {
-        const json = JSON.parse(trimmed);
-        if (json.baslik) {
-          await addNote({
-            baslik: json.baslik,
-            zaman: json.zaman || 'Kaydedildi',
-            ikon: json.ikon || '📌',
-            renk: json.renk || '#FEF3C7',
-          });
-          resetMicUI();
-          return;
-        }
-      } catch {
-        // continue
-      }
-    }
+    const now = new Date().toISOString();
 
     try {
-      const res = await fetch('/api/parse', {
+      const res = await fetch('/api/parse-simple', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          input: trimmed,
-          current_datetime: new Date().toISOString(),
+          input: text || '',
+          base64Image: base64Image || null,
+          current_datetime: now,
         }),
       });
 
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.data) {
-          const parsed = data.data;
-          let calculatedZaman = parsed.calendar_event?.start_datetime
-            ? new Date(parsed.calendar_event.start_datetime).toLocaleDateString('tr-TR', {
-                weekday: 'short',
-                hour: '2-digit',
-                minute: '2-digit',
-              })
-            : null;
-
-          if (parsed.periodic_log?.is_periodic && parsed.periodic_log?.interval_days) {
-            calculatedZaman = `${parsed.periodic_log.interval_days} gün sonra`;
-          }
-
+          const item = data.data;
           await addNote({
-            baslik: parsed.summary || trimmed.slice(0, 24),
-            zaman: calculatedZaman || parsed.detailed_note?.slice(0, 35) || 'Kaydedildi',
-            ikon: parsed.ui_meta?.icon?.split(' ')[0] || '📌',
-            renk: parsed.ui_meta?.color_hex || '#FEF3C7',
+            baslik: item.baslik || (text ? text.slice(0, 24) : 'Görsel Kaydı'),
+            zaman: item.zaman || null,
+            tarih_iso: item.tarih_iso || null,
+            ikon: item.ikon || (base64Image ? '📷' : '📌'),
+            renk: item.renk || '#FEF3C7',
+            mediaId,
           });
           resetMicUI();
           return;
         }
       }
+    } catch (err) {
+      console.warn('AI analizi sunucuda başarısız oldu, yerel ayrıştırmaya geçiliyor:', err);
+    }
 
-      // Cognitive local fallback
-      const local = extractSimpleNoteFromText(trimmed);
-      await addNote({
-        baslik: local.baslik,
-        zaman: local.zaman || 'Hatırlatıcı yok',
-        ikon: local.ikon || '📌',
-        renk: local.renk || '#FEF3C7',
-      });
-    } catch {
-      await addNote({
-        baslik: trimmed.slice(0, 24),
-        zaman: null,
-        ikon: '📝',
-        renk: '#F5F5F4',
-      });
+    // Cognitive Local Fallback
+    const local = extractSimpleNoteFromText(
+      text || (base64Image ? 'Fotoğraflı kayıt' : 'Not'),
+      now
+    );
+    await addNote({
+      baslik: text ? local.baslik : 'Fotoğraflı Not',
+      zaman: local.zaman || (base64Image ? 'Az önce eklendi' : null),
+      tarih_iso: local.tarih_iso || null,
+      ikon: base64Image ? '📷' : local.ikon,
+      renk: local.renk || '#FEF3C7',
+      mediaId,
+    });
+    resetMicUI();
+  };
+
+  // Camera / Gallery Image Upload Handler
+  const handleCameraChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setStatusText('Görsel inceleniyor...');
+    try {
+      const compressed = await compressImage(file);
+      await processWithAI('', compressed);
+    } catch (err) {
+      console.error('Fotoğraf işleme hatası:', err);
+      setStatusText('Görsel işlenemedi');
+      setTimeout(() => setStatusText('Söyle ya da fotoğrafını çek'), 2000);
     } finally {
+      if (cameraInputRef.current) {
+        cameraInputRef.current.value = '';
+      }
       resetMicUI();
     }
   };
 
   // Google Sign-In Handler
   const handleLogin = async () => {
-    const { auth } = initFirebase();
-    if (!auth) {
-      // Show config / login options modal
-      setShowConfigModal(true);
-      return;
-    }
-
     try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, googleProvider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const token = credential?.accessToken || null;
+      if (token) {
+        setGoogleAccessToken(token);
+      }
     } catch (err: any) {
-      console.warn('Giriş uyarısı:', err?.message || err);
-      // Fallback: offer configuration dialog
-      setShowConfigModal(true);
+      console.warn('Google giriş uyarısı:', err?.message || err);
+      setStatusText('Giriş penceresi açılamadı');
+      setTimeout(() => setStatusText('Söyle ya da fotoğrafını çek'), 2500);
     }
   };
 
   // Sign out
   const handleSignOut = async () => {
     if (confirm('Hesaptan çıkış yapılsın mı?')) {
-      const { auth } = initFirebase();
-      if (auth) {
-        await signOut(auth);
-      }
+      await signOut(auth);
+      setGoogleAccessToken(null);
       setCurrentUser(null);
       setSimulatedUser(null);
       localStorage.removeItem(SIMULATED_USER_KEY);
       setCards(getLocalNotes());
     }
-  };
-
-  // Save custom Firebase config
-  const handleSaveConfig = () => {
-    if (apiKeyInput.trim() && projectIdInput.trim()) {
-      const newConfig: FirebaseConfig = {
-        apiKey: apiKeyInput.trim(),
-        authDomain: `${projectIdInput.trim()}.firebaseapp.com`,
-        projectId: projectIdInput.trim(),
-        storageBucket: `${projectIdInput.trim()}.appspot.com`,
-      };
-      saveFirebaseConfig(newConfig);
-      initFirebase(newConfig);
-      setShowConfigModal(false);
-      handleLogin();
-    }
-  };
-
-  // Quick Simulated Google Account for instant testing
-  const handleSimulatedSignIn = () => {
-    const mockUser = {
-      uid: 'user_google_' + Math.random().toString(36).substring(2, 8),
-      displayName: 'Bahadır Kumcu',
-      email: 'bahadirkumcu@gmail.com',
-      photoURL: 'https://api.dicebear.com/7.x/identicon/svg?seed=bahadirkumcu',
-    };
-    setSimulatedUser(mockUser);
-    localStorage.setItem(SIMULATED_USER_KEY, JSON.stringify(mockUser));
-    setShowConfigModal(false);
   };
 
   const activeUser = currentUser || simulatedUser;
@@ -439,7 +533,7 @@ export default function App() {
       {/* Masaüstünde telefon gibi ortalanan, mobilde tam ekran olan kapsayıcı */}
       <main className="w-full max-w-md h-[100dvh] flex flex-col justify-between bg-white relative shadow-sm overflow-hidden sm:border sm:border-stone-200">
         
-        {/* Başlık ve Profil / Giriş Alanı */}
+        {/* Üst Bar: Başlık & Senkronizasyon & Profil */}
         <header className="px-6 pt-6 pb-2 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-stone-900">Notivia</h1>
@@ -453,15 +547,17 @@ export default function App() {
             </span>
           </div>
 
-          {/* Sağ Üst: Giriş / Profil Butonu */}
           <div id="auth-container" className="flex items-center gap-2">
+            {/* Hızlı Metin Girişi Toggle */}
             <button
               type="button"
-              onClick={() => setShowTextInput(!showTextInput)}
-              title="Klavye ile yaz"
-              className="text-xs text-stone-400 hover:text-stone-700 transition-colors cursor-pointer px-1 py-0.5"
+              onClick={() => setShowTextInput((prev) => !prev)}
+              title="Metin ile yaz"
+              className="p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
             >
-              {showTextInput ? 'Kapat' : 'Yaz'}
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
             </button>
 
             {!activeUser ? (
@@ -496,7 +592,7 @@ export default function App() {
                 id="user-avatar-btn"
                 type="button"
                 onClick={handleSignOut}
-                title={`${activeUser.displayName || 'Hesap'} (Çıkış Yap)`}
+                title={`${activeUser.displayName || 'Kullanıcı'} - Çıkış yapmak için tıkla`}
                 className="w-8 h-8 rounded-full overflow-hidden border border-stone-200 active:scale-95 transition-transform cursor-pointer"
               >
                 <img
@@ -524,7 +620,7 @@ export default function App() {
                   const val = textInput;
                   setTextInput('');
                   setShowTextInput(false);
-                  await parseAndSave(val);
+                  await processWithAI(val, null);
                 }
               }}
               className="flex gap-2"
@@ -548,20 +644,20 @@ export default function App() {
           </div>
         )}
 
-        {/* Kart Listesi */}
+        {/* Kart Listesi Alanı */}
         <section
           id="cards-container"
           className="flex-1 overflow-y-auto px-5 py-3 space-y-3 pb-32"
         >
           {cards.length === 0 ? (
             <div className="text-center text-xs text-stone-400 mt-10">
-              Henüz bir not yok. Konuşmak için butona bas.
+              Henüz not yok. Konuş veya fotoğraf çek.
             </div>
           ) : (
             cards.map((item) => (
               <div
                 key={item.id}
-                className={`card p-4 rounded-2xl flex items-center justify-between transition-all duration-200 ${
+                className={`card p-3.5 rounded-2xl flex items-center justify-between transition-all duration-200 ${
                   item.isRemoving ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
                 }`}
                 style={{
@@ -570,21 +666,49 @@ export default function App() {
                   borderWidth: '1px',
                 }}
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl select-none">{item.ikon || '📌'}</span>
-                  <div>
-                    <h2 className="font-semibold text-stone-900 text-base leading-tight">
+                <div className="flex items-center gap-3 overflow-hidden">
+                  {item.mediaId ? (
+                    <CardMediaThumbnail
+                      mediaId={item.mediaId}
+                      onClick={() => viewFullImage(item.mediaId!)}
+                    />
+                  ) : (
+                    <span className="text-2xl select-none shrink-0">{item.ikon || '📌'}</span>
+                  )}
+                  <div className="truncate">
+                    <h2 className="font-semibold text-stone-900 text-sm leading-tight truncate">
                       {item.baslik}
                     </h2>
-                    <p className="text-xs text-stone-600 mt-0.5">
-                      {item.zaman || 'Hatırlatıcı yok'}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                      <p className="text-[11px] text-stone-600 truncate">
+                        {item.zaman || 'Hatırlatıcı yok'}
+                      </p>
+                      {item.hazirlik_zamani && (
+                        <span
+                          className="text-[9px] bg-white/80 text-amber-900 border border-amber-300/40 px-1.5 py-0.5 rounded font-medium shrink-0 flex items-center gap-0.5 shadow-2xs"
+                          title={`Ön Hazırlık: ${item.hazirlik_zamani}`}
+                        >
+                          ⏳ {item.hazirlik_zamani}
+                        </span>
+                      )}
+                      {(item.calendarEventId || item.calendar_event_id) && (
+                        <span className="text-[9px] bg-white/70 text-stone-700 px-1 rounded shadow-2xs font-medium shrink-0">
+                          📅 Takvimde
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => deleteNote(item.id)}
-                  className="w-8 h-8 rounded-full border border-stone-300/70 flex items-center justify-center text-stone-400 active:bg-white/80 transition-colors cursor-pointer shrink-0"
+                  onClick={() =>
+                    deleteNote(
+                      item.id,
+                      item.calendarEventId || item.calendar_event_id,
+                      item.mediaId
+                    )
+                  }
+                  className="w-8 h-8 rounded-full border border-stone-300/70 flex items-center justify-center text-stone-400 active:bg-white/80 transition-colors shrink-0 ml-2 cursor-pointer"
                 >
                   ✓
                 </button>
@@ -593,111 +717,101 @@ export default function App() {
           )}
         </section>
 
-        {/* Alt Kısım: Mikrofon */}
+        {/* Alt Kontrol Barı (Kamera + Mikrofon) */}
         <footer className="absolute bottom-0 inset-x-0 p-6 flex flex-col items-center bg-gradient-to-t from-white via-white/95 to-transparent pointer-events-auto">
           <p
             id="status-text"
             className={`text-xs mb-3 font-medium transition-colors ${
-              isListening ? 'text-red-500 font-semibold' : 'text-stone-400'
+              isListening
+                ? 'text-red-500 font-semibold'
+                : statusText.includes('Görsel') || statusText.includes('inceleniyor')
+                ? 'text-amber-600 font-semibold'
+                : 'text-stone-400'
             }`}
           >
             {statusText}
           </p>
 
-          <button
-            id="mic-btn"
-            type="button"
-            onClick={handleMicClick}
-            className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all duration-200 cursor-pointer ${
-              isListening
-                ? 'bg-red-500 scale-105 animate-pulse text-white'
-                : 'bg-stone-900 text-white'
-            }`}
-          >
-            <svg
-              id="mic-icon"
-              className="w-7 h-7"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div className="flex items-center gap-5">
+            {/* Kamera / Galeri Butonu */}
+            <label
+              htmlFor="camera-input"
+              className="w-12 h-12 bg-stone-100 border border-stone-200 text-stone-700 rounded-full flex items-center justify-center shadow-xs active:scale-90 transition-all cursor-pointer"
+              title="Fotoğraf Çek / Görsel Yükle"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 02-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-              />
-            </svg>
-          </button>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                />
+              </svg>
+            </label>
+            <input
+              id="camera-input"
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              onChange={handleCameraChange}
+            />
+
+            {/* Ana Mikrofon Butonu */}
+            <button
+              id="mic-btn"
+              type="button"
+              onClick={handleMicClick}
+              className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all duration-200 cursor-pointer ${
+                isListening
+                  ? 'bg-red-500 scale-105 animate-pulse text-white'
+                  : 'bg-stone-900 text-white'
+              }`}
+            >
+              <svg
+                id="mic-icon"
+                className="w-7 h-7"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 02-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+                />
+              </svg>
+            </button>
+          </div>
         </footer>
 
-        {/* Firebase Config / Giriş Seçenekleri Modalı */}
-        {showConfigModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/30 backdrop-blur-2xs p-4">
-            <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-xl space-y-4 animate-in zoom-in-95 duration-150">
-              <div className="flex items-center justify-between pb-2 border-b border-stone-100">
-                <h3 className="text-sm font-bold text-stone-900">Bulut Senkronizasyonu</h3>
-                <button
-                  type="button"
-                  onClick={() => setShowConfigModal(false)}
-                  className="text-stone-400 hover:text-stone-600 text-xs px-2 py-1 rounded"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <p className="text-xs text-stone-600 leading-relaxed">
-                Notlarınızı cihazlar arasında otomatik senkronize etmek için Firebase bilgilerinizi girebilir veya hızlı test oturumu açabilirsiniz.
-              </p>
-
-              <div className="space-y-2">
-                <div>
-                  <label className="text-[11px] font-semibold text-stone-500 block mb-1">
-                    Firebase API Key
-                  </label>
-                  <input
-                    type="text"
-                    value={apiKeyInput}
-                    onChange={(e) => setApiKeyInput(e.target.value)}
-                    placeholder="AIzaSy..."
-                    className="w-full text-xs px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-stone-400"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] font-semibold text-stone-500 block mb-1">
-                    Project ID
-                  </label>
-                  <input
-                    type="text"
-                    value={projectIdInput}
-                    onChange={(e) => setProjectIdInput(e.target.value)}
-                    placeholder="notivia-app-123"
-                    className="w-full text-xs px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-stone-400"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2 flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={handleSaveConfig}
-                  className="w-full py-2 bg-stone-900 text-white rounded-xl text-xs font-semibold hover:bg-stone-800 transition-colors"
-                >
-                  Firebase Bilgilerini Kaydet & Giriş Yap
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSimulatedSignIn}
-                  className="w-full py-2 bg-stone-100 text-stone-700 rounded-xl text-xs font-semibold hover:bg-stone-200 transition-colors"
-                >
-                  Hızlı Test Hesabı ile Giriş Yap
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
       </main>
+
+      {/* Görsel Büyütme Modalı */}
+      <div
+        id="image-modal"
+        className={`fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 cursor-pointer transition-opacity duration-200 ${
+          modalImgSrc ? 'opacity-100' : 'hidden opacity-0 pointer-events-none'
+        }`}
+        onClick={() => setModalImgSrc(null)}
+      >
+        {modalImgSrc && (
+          <img
+            id="modal-img"
+            src={modalImgSrc}
+            alt="Büyütülmüş Görsel"
+            className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl object-contain"
+          />
+        )}
+      </div>
     </div>
   );
 }

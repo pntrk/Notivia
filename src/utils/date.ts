@@ -60,3 +60,65 @@ export function getCurrentIsoLocal(): string {
 
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${offsetSign}${offsetHours}:${offsetMinutes}`;
 }
+
+export function extractDateTimeFromTurkish(
+  text: string,
+  baseDate: Date | string = new Date()
+): { zaman: string | null; tarih_iso: string | null } {
+  const lower = text.toLowerCase();
+  const days: Record<string, number> = {
+    pazar: 0,
+    pazartesi: 1,
+    salı: 2,
+    çarşamba: 3,
+    perşembe: 4,
+    cuma: 5,
+    cumartesi: 6,
+  };
+
+  let targetDate = new Date(baseDate);
+  let hasDate = false;
+
+  // 1. Gün Tespiti
+  for (const [dayName, dayIndex] of Object.entries(days)) {
+    if (lower.includes(dayName)) {
+      const currentDay = targetDate.getDay();
+      let diff = dayIndex - currentDay;
+      if (diff <= 0) diff += 7; // Önümüzdeki ilk ilgili gün
+      targetDate.setDate(targetDate.getDate() + diff);
+      hasDate = true;
+      break;
+    }
+  }
+
+  if (lower.includes("yarın")) {
+    targetDate.setDate(targetDate.getDate() + 1);
+    hasDate = true;
+  }
+
+  // 2. Saat / Vakit Tespiti
+  let hour = 9,
+    minute = 0;
+  if (lower.includes("öğlen") || lower.includes("öğle")) hour = 13;
+  else if (lower.includes("akşam")) hour = 19;
+  else if (lower.includes("gece")) hour = 21;
+  else if (lower.includes("sabah")) hour = 9;
+
+  targetDate.setHours(hour, minute, 0, 0);
+
+  // ISO Formatı (YYYY-MM-DDTHH:mm:ss)
+  const pad = (n: number | string) => String(n).padStart(2, '0');
+  const iso = `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-${pad(targetDate.getDate())}T${pad(hour)}:${pad(minute)}:00`;
+
+  return hasDate
+    ? {
+        zaman: `${lower.includes("cuma") ? "Cuma" : "Tarihli"} ${pad(hour)}:${pad(minute)}`,
+        tarih_iso: iso,
+      }
+    : { zaman: null, tarih_iso: null };
+}
+
+// Global window binding
+if (typeof window !== 'undefined') {
+  (window as any).extractDateTimeFromTurkish = extractDateTimeFromTurkish;
+}

@@ -2,7 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { parseWithGemini } from './src/server/geminiParser.ts';
+import { parseWithGemini, parseSimpleWithGemini, parseWithAIAndImage } from './src/server/geminiParser.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = 3000;
 
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '15mb' }));
 
 // Health endpoint
 app.get('/api/health', (_req, res) => {
@@ -19,6 +19,35 @@ app.get('/api/health', (_req, res) => {
     engine: 'Notivia Cognitive Parser',
     has_api_key: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY'),
   });
+});
+
+// Simple 5-field parsing endpoint matching exact user prompt (with image support)
+app.post('/api/parse-simple', async (req, res) => {
+  try {
+    const { input, text, current_datetime, base64Image, image } = req.body;
+    const cleanInput = String(input || text || '').trim();
+    const now = String(current_datetime || new Date().toISOString());
+    const media = base64Image || image || null;
+
+    if (!cleanInput && !media) {
+      return res.status(400).json({
+        success: false,
+        error: 'Kullanıcı girdisi veya görsel boş olamaz.',
+      });
+    }
+
+    const simple = await parseWithAIAndImage(cleanInput, media, now);
+    return res.json({
+      success: true,
+      data: simple,
+    });
+  } catch (error: any) {
+    console.error('[Notivia Simple Parse Error]:', error);
+    return res.status(500).json({
+      success: false,
+      error: error?.message || 'Ayrıştırma hatası.',
+    });
+  }
 });
 
 // Cognitive Parsing Endpoint
@@ -36,19 +65,32 @@ app.post('/api/parse', async (req, res) => {
       });
     }
 
+    const simple = await parseSimpleWithGemini(cleanInput, currentDt);
     const { data, source } = await parseWithGemini(cleanInput, currentDt);
     const processingTime = Date.now() - startTime;
 
     return res.json({
       success: true,
+      simple,
       data: {
         id: `notivia-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         created_at: new Date().toISOString(),
         raw_input: cleanInput,
         reference_datetime: currentDt,
         ...data,
+        summary: simple.baslik || data.summary,
+        detailed_note: simple.zaman || data.detailed_note,
+        calendar_event: {
+          ...data.calendar_event,
+          start_datetime: simple.tarih_iso || data.calendar_event.start_datetime,
+        },
+        ui_meta: {
+          ...data.ui_meta,
+          icon: simple.ikon || data.ui_meta.icon,
+          color_hex: simple.renk || data.ui_meta.color_hex,
+        },
         engine_meta: {
-          model: source === 'gemini-3.8-flash' ? 'gemini-3.8-flash' : 'Cognitive Inference Engine',
+          model: source.startsWith('gemini') ? source : 'Cognitive Inference Engine',
           processing_time_ms: processingTime,
           source,
         },

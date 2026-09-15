@@ -44,6 +44,9 @@ export interface PeriodicLog {
 export interface NotiviaSimpleNote {
   baslik: string;
   zaman: string | null;
+  tarih_iso?: string | null;
+  hazirlik_zamani?: string | null;
+  hazirlik_iso?: string | null;
   ikon: string;
   renk: string;
 }

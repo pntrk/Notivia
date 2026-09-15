@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import type { NotiviaParsedNote, NotiviaCategory, NotiviaPriority } from '../types/notivia.js';
+import type { NotiviaParsedNote, NotiviaCategory, NotiviaPriority, NotiviaSimpleNote } from '../types/notivia.js';
+import { extractSimpleNoteFromText } from '../utils/simpleNote.js';
 
 const SYSTEM_INSTRUCTION = `Sen "Notivia" adlı bilişsel yaşam asistanının çekirdek niyet çözümleme ve veri ayrıştırma (parser) motorusun.
 Görevin: Kullanıcının ayaküstü, devrik, dağınık, imalı veya sesle kaydedilmiş girdilerini analiz etmek; söylenmeyen gereksinimleri ("leb demeden leblebiyi anlayarak") alt görevlere dönüştürmek ve arayüzde görselleştirilmeye hazır katı bir JSON nesnesi üretmektir.
@@ -31,12 +32,16 @@ TEMEL YÖNERGELER:
 export async function parseWithGemini(
   userInput: string,
   currentDatetime: string
-): Promise<{ data: Omit<NotiviaParsedNote, 'id' | 'created_at' | 'raw_input' | 'reference_datetime'>; source: 'gemini-3.8-flash' | 'cognitive-fallback' }> {
+): Promise<{ data: Omit<NotiviaParsedNote, 'id' | 'created_at' | 'raw_input' | 'reference_datetime'>; source: string }> {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '') {
     // Try Gemini models with graceful failover
-    const candidateModels = ['gemini-3.8-flash', 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
+    const candidateModels = [
+      'gemini-2.5-flash',
+      'gemini-2.5-pro',
+      'gemini-flash-latest'
+    ];
     for (const modelName of candidateModels) {
       try {
         const ai = new GoogleGenAI({
@@ -147,7 +152,7 @@ export async function parseWithGemini(
           const parsed = JSON.parse(text);
           return {
             data: sanitizeParsedOutput(parsed),
-            source: 'gemini-3.8-flash',
+            source: modelName,
           };
         }
       } catch {
@@ -560,3 +565,209 @@ export function runCognitiveFallback(
     },
   };
 }
+
+/**
+ * Parses user input using the exact prompt and 5-field schema specified by the user:
+ * {
+ *   "baslik": "Kısa eylem başlığı (max 4 kelime)",
+ *   "zaman": "Arayüzde görünecek sade ifade (örn: Salı 19:00, 6 ay sonra)",
+ *   "tarih_iso": "Belirli bir gün/saat varsa ISO-8601 (YYYY-MM-DDTHH:mm:ss) formatı, yoksa null",
+ *   "ikon": "tek emoji",
+ *   "renk": "pastel hex (örn: #FEF3C7, #E0F2FE, #DCFCE7)"
+ * }
+ */
+export async function parseSimpleWithGemini(
+  text: string,
+  now: string
+): Promise<NotiviaSimpleNote> {
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '') {
+    const candidateModels = [
+      'gemini-2.5-flash',
+      'gemini-2.5-pro',
+      'gemini-flash-latest'
+    ];
+    for (const modelName of candidateModels) {
+      try {
+        const ai = new GoogleGenAI({
+          apiKey,
+          httpOptions: {
+            headers: {
+              'User-Agent': 'aistudio-build',
+            },
+          },
+        });
+
+        const prompt = `Sen "Notivia" uygulamasının bilişsel zeka motorusun. Sadece söylenen kelimeleri değil, söylenmeyen hazırlık ihtiyaçlarını ve tersine zamanlamayı ("leb demeden leblebiyi") çözümlersin.
+
+TEMEL GÖREVLER VE AKIL YÜRÜTME:
+1. Niyet ve Özne Analizi:
+   - 3. şahıs bildirimleri ("bakan gelecek", "okul tatil", "elektrik kesilecek") kullanıcı için doğrudan takip ve hazırlık görevidir.
+   - Pasif haberleri kullanıcının etkileneceği aksiyona dönüştür.
+
+2. Tersine Zamanlama (Inverted Scheduling):
+   - Her randevu, resmi ziyaret, sınav, seyahat veya kontrol öncesinde bir "ön hazırlık" gerekir.
+   - Etkinlik Cuma sabahı ise hazırlık hatırlatıcısını Perşembe 16:00'ya; sabah erken uçuş varsa hazırlık uyarısını önceki akşam 20:00'ye kur.
+
+3. Referans Zaman (CURRENT_DATETIME):
+   - Sağlanan referans zamana göre gün ve saatleri kesin ISO-8601 biçiminde hesapla: ${now}.
+
+Kullanıcı girdisi: "${text}".
+
+ÇIKTI ŞEMASI (Katı JSON):
+{
+  "baslik": "Kısa eylem başlığı (max 4 kelime)",
+  "zaman": "Kullanıcıya görünecek sade zaman (örn: Cuma 09:00)",
+  "tarih_iso": "Etkinliğin kesin tarihi (ISO-8601)",
+  "hazirlik_zamani": "Ön hazırlık zamanı (örn: Perşembe 16:00 hazırlık uyarısı)",
+  "hazirlik_iso": "Takvim/bildirim için hazırlık tarihi (ISO-8601)",
+  "ikon": "Temsili tek emoji",
+  "renk": "Pastel HEX kodu"
+}`;
+
+        const response = await ai.models.generateContent({
+          model: modelName,
+          contents: prompt,
+          config: {
+            responseMimeType: 'application/json',
+            temperature: 0.1,
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                baslik: { type: Type.STRING, description: 'Kısa eylem başlığı (max 4 kelime)' },
+                zaman: { type: Type.STRING, description: 'Kullanıcıya görünecek sade zaman' },
+                tarih_iso: { type: Type.STRING, description: 'Etkinliğin kesin tarihi (ISO-8601)' },
+                hazirlik_zamani: { type: Type.STRING, description: 'Ön hazırlık zamanı' },
+                hazirlik_iso: { type: Type.STRING, description: 'Takvim/bildirim için hazırlık tarihi (ISO-8601)' },
+                ikon: { type: Type.STRING, description: 'Temsili tek emoji' },
+                renk: { type: Type.STRING, description: 'Pastel HEX kodu' },
+              },
+              required: ['baslik', 'ikon', 'renk'],
+            },
+          },
+        });
+
+        const raw = response.text;
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return {
+            baslik: String(parsed.baslik || text.slice(0, 25)),
+            zaman: parsed.zaman ? String(parsed.zaman) : null,
+            tarih_iso: parsed.tarih_iso ? String(parsed.tarih_iso) : null,
+            hazirlik_zamani: parsed.hazirlik_zamani ? String(parsed.hazirlik_zamani) : null,
+            hazirlik_iso: parsed.hazirlik_iso ? String(parsed.hazirlik_iso) : null,
+            ikon: String(parsed.ikon || '📌'),
+            renk: String(parsed.renk || '#FEF3C7'),
+          };
+        }
+      } catch {
+        // Continue to fallback or next model
+        continue;
+      }
+    }
+  }
+
+  // Local fallback with reference datetime
+  return extractSimpleNoteFromText(text, now);
+}
+
+export async function parseWithAIAndImage(
+  text?: string,
+  base64Image: string | null = null,
+  referenceNow?: string
+): Promise<NotiviaSimpleNote> {
+  const now = referenceNow || new Date().toISOString();
+  const promptText = `Sen "Notivia" uygulamasının bilişsel zeka motorusun. Sadece söylenen kelimeleri değil, söylenmeyen hazırlık ihtiyaçlarını ve tersine zamanlamayı ("leb demeden leblebiyi") çözümlersin.
+
+TEMEL GÖREVLER VE AKIL YÜRÜTME:
+1. Niyet ve Özne Analizi:
+   - 3. şahıs bildirimleri ("bakan gelecek", "okul tatil", "elektrik kesilecek") kullanıcı için doğrudan takip ve hazırlık görevidir.
+   - Pasif haberleri veya görsel duyuruları kullanıcının etkileneceği aksiyona dönüştür.
+
+2. Tersine Zamanlama (Inverted Scheduling):
+   - Her randevu, resmi ziyaret, sınav, seyahat veya kontrol öncesinde bir "ön hazırlık" gerekir.
+   - Etkinlik Cuma sabahı ise hazırlık hatırlatıcısını Perşembe 16:00'ya; sabah erken uçuş varsa hazırlık uyarısını önceki akşam 20:00'ye kur.
+
+3. Referans Zaman (CURRENT_DATETIME):
+   - Sağlanan referans zamana göre gün ve saatleri kesin ISO-8601 biçiminde hesapla: ${now}.
+
+Kullanıcı girdisi / Görsel: "${text || 'Görseldeki durumu veya duyuruyu analiz et ve yapılması gereken takip/etkinlik ve ön hazırlık işini çıkar.'}".
+
+ÇIKTI ŞEMASI (Katı JSON):
+{
+  "baslik": "Kısa eylem başlığı (max 4 kelime)",
+  "zaman": "Kullanıcıya görünecek sade zaman (örn: Cuma 09:00)",
+  "tarih_iso": "Etkinliğin kesin tarihi (ISO-8601)",
+  "hazirlik_zamani": "Ön hazırlık zamanı (örn: Perşembe 16:00 hazırlık uyarısı)",
+  "hazirlik_iso": "Takvim/bildirim için hazırlık tarihi (ISO-8601)",
+  "ikon": "Temsili tek emoji",
+  "renk": "Pastel HEX kodu"
+}`;
+
+  const parts: any[] = [{ text: promptText }];
+
+  if (base64Image) {
+    const cleanBase64 = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
+    parts.push({
+      inlineData: {
+        mimeType: 'image/jpeg',
+        data: cleanBase64,
+      },
+    });
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '') {
+    const candidateModels = [
+      'gemini-2.5-flash',
+      'gemini-2.5-pro',
+      'gemini-flash-latest',
+    ];
+
+    for (const modelName of candidateModels) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts }],
+              generationConfig: { responseMimeType: 'application/json' },
+            }),
+          }
+        );
+
+        if (response.ok) {
+          const resJson = await response.json();
+          const raw = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            return {
+              baslik: String(parsed.baslik || (text || 'Görsel Notu').slice(0, 25)),
+              zaman: parsed.zaman ? String(parsed.zaman) : null,
+              tarih_iso: parsed.tarih_iso ? String(parsed.tarih_iso) : null,
+              hazirlik_zamani: parsed.hazirlik_zamani ? String(parsed.hazirlik_zamani) : null,
+              hazirlik_iso: parsed.hazirlik_iso ? String(parsed.hazirlik_iso) : null,
+              ikon: String(parsed.ikon || '📷'),
+              renk: String(parsed.renk || '#FEF3C7'),
+            };
+          }
+        }
+      } catch (err) {
+        console.warn(`parseWithAIAndImage model error (${modelName}):`, err);
+        continue;
+      }
+    }
+  }
+
+  const fallback = extractSimpleNoteFromText(text || 'Görsel analizi', now);
+  if (base64Image && !text) {
+    fallback.baslik = 'Görsel Notu';
+    fallback.ikon = '📷';
+  }
+  return fallback;
+}
+
