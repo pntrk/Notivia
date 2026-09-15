@@ -10,10 +10,12 @@ import {
   setGoogleAccessToken,
   createCalendarEvent,
   deleteCalendarEvent,
+  updateCalendarEventTitle,
   checkCalendarConflicts,
   collection,
   addDoc,
   deleteDoc,
+  updateDoc,
   doc,
   onSnapshot,
   query,
@@ -24,6 +26,14 @@ import {
   type User,
 } from './firebase.ts';
 import { extractSimpleNoteFromText } from './utils/simpleNote.ts';
+import type { ActionItem } from './types/notivia.ts';
+import {
+  exportToDeviceCalendar,
+  getGoogleCalendarWebUrl,
+  scheduleLocalDeviceReminder,
+  requestDeviceNotificationPermission,
+  playNotificationChime,
+} from './utils/deviceCalendar.ts';
 import {
   saveLocalMedia,
   getLocalMedia,
@@ -36,10 +46,17 @@ interface SimpleCardItem {
   baslik: string;
   zaman?: string | null;
   tarih_iso?: string | null;
+  tetikleyici?: {
+    tip: string | null;
+    sart: string;
+    etiket: string;
+  } | null;
   hazirlik_zamani?: string | null;
   hazirlik_iso?: string | null;
   anomali_notu?: string | null;
   teshis_notu?: string | null;
+  baglantili_hatirlatma?: string | null;
+  action_items?: ActionItem[] | null;
   calendar_event_id?: string | null;
   calendarEventId?: string | null;
   conflictWarning?: string | null;
@@ -53,6 +70,91 @@ interface SimpleCardItem {
 
 const LOCAL_STORAGE_KEY = 'notivia_local_notes';
 const SIMULATED_USER_KEY = 'notivia_simulated_user';
+
+// 1. Türkçe Doğal Sesli Fısıltı (TTS)
+function speakFeedback(phrase: string) {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+
+  // Önceki ses kuyruğunu anında kes
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(phrase);
+  utterance.lang = 'tr-TR';
+  utterance.rate = 1.05; // Seri ve modern konuşma hızı
+  utterance.pitch = 1.0;
+
+  // Varsa Türkçe ses profilini seç
+  const voices = window.speechSynthesis.getVoices();
+  const trVoice = voices.find((v) => v.lang.startsWith('tr'));
+  if (trVoice) {
+    utterance.voice = trVoice;
+  }
+
+  window.speechSynthesis.speak(utterance);
+}
+
+// 2. Nota Göre 3-4 Kelimelik Kısa Doğrulama Metni Üretici
+function generateWhisperText(note: {
+  baslik: string;
+  zaman?: string | null;
+  calendarEventId?: string | null;
+  tetikleyici?: { etiket: string } | null;
+}): string {
+  if (note.calendarEventId && note.zaman) {
+    return `${note.baslik}, ${note.zaman} için takvime işlendi.`;
+  }
+  if (note.tetikleyici?.etiket) {
+    return `${note.baslik}, ${note.tetikleyici.etiket} koşuluyla kaydedildi.`;
+  }
+  return `${note.baslik} kaydedildi.`;
+}
+
+function formatCreatedTime(rawTime: any): string {
+  if (!rawTime) return "";
+  
+  // Firestore Timestamp veya standart Date ayrıştırma
+  const date = rawTime.toDate ? rawTime.toDate() : new Date(rawTime);
+  if (isNaN(date.getTime())) return "";
+
+  return date.toLocaleDateString("tr-TR", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function sortNotiviaCards(cards: SimpleCardItem[]): SimpleCardItem[] {
+  const now = Date.now();
+
+  return [...cards].sort((a, b) => {
+    const timeA = a.tarih_iso ? new Date(a.tarih_iso).getTime() : null;
+    const timeB = b.tarih_iso ? new Date(b.tarih_iso).getTime() : null;
+
+    const isExpiredA = timeA !== null && timeA < now;
+    const isExpiredB = timeB !== null && timeB < now;
+
+    // 1. Öncelik: Süresi geçmiş olanlar her zaman listenin en dibine
+    if (isExpiredA && !isExpiredB) return 1;
+    if (!isExpiredA && isExpiredB) return -1;
+
+    // 2. Öncelik: Yaklaşan aktif randevular (önümüzdeki 48 saat) en üste
+    const isUpcomingA = timeA && timeA >= now && (timeA - now) < 48 * 3600 * 1000;
+    const isUpcomingB = timeB && timeB >= now && (timeB - now) < 48 * 3600 * 1000;
+
+    if (isUpcomingA && !isUpcomingB) return -1;
+    if (!isUpcomingA && isUpcomingB) return 1;
+
+    // 3. Öncelik: Kendi içlerinde en yeni oluşturulan en üstte
+    const getCreatedMs = (val: any) => {
+      if (!val) return 0;
+      if (val.toDate) return val.toDate().getTime();
+      return new Date(val).getTime();
+    };
+
+    return getCreatedMs(b.createdAt) - getCreatedMs(a.createdAt);
+  });
+}
 
 function CardMediaThumbnail({ mediaId, onClick }: { mediaId: string; onClick: () => void }) {
   const [mediaData, setMediaData] = useState<string | null>(null);
@@ -95,7 +197,15 @@ export default function App() {
   const [isListening, setIsListening] = useState<boolean>(false);
   const [showTextInput, setShowTextInput] = useState<boolean>(false);
   const [textInput, setTextInput] = useState<string>('');
+  const [showSearch, setShowSearch] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [modalImgSrc, setModalImgSrc] = useState<string | null>(null);
+
+  // Geri alma state'i
+  const [undoToast, setUndoToast] = useState<{
+    item: SimpleCardItem;
+    timerId: any;
+  } | null>(null);
 
   // Manuel Ekleme Çekmecesi State'leri
   const [showManualModal, setShowManualModal] = useState<boolean>(false);
@@ -109,57 +219,22 @@ export default function App() {
   const firestoreUnsubRef = useRef<(() => void) | null>(null);
   const pendingCapturedImageRef = useRef<string | null>(null);
   const onSpeechCompletedRef = useRef<((spoken: string) => Promise<void>) | null>(null);
-  const processWithAIRef = useRef<((text?: string, base64Image?: string | null) => Promise<void>) | null>(null);
+  const processWithAIRef = useRef<((text?: string, base64Image?: string | null, isSpoken?: boolean) => Promise<void>) | null>(null);
 
   // Load initial notes (local mode)
   const getLocalNotes = (): SimpleCardItem[] => {
-    const initialCards: SimpleCardItem[] = [
-      {
-        id: 'local_0',
-        baslik: 'Bakan Ziyareti (Kırklareli)',
-        zaman: 'Cuma 09:00',
-        tarih_iso: '2026-09-18T09:00:00+03:00',
-        hazirlik_zamani: 'Perşembe 16:00 Hazırlık Planı',
-        hazirlik_iso: '2026-09-17T16:00:00+03:00',
-        ikon: '🏛️',
-        renk: '#E0F2FE',
-      },
-      {
-        id: 'local_1',
-        baslik: 'Ahmet Abiyle Çay',
-        zaman: 'Salı 19:00',
-        tarih_iso: '2026-09-15T19:00:00',
-        ikon: '☕',
-        renk: '#FEF3C7',
-      },
-      {
-        id: 'local_2',
-        baslik: 'Su Arıtma Filtresi',
-        zaman: '6 ay sonra',
-        tarih_iso: '2027-03-15T10:00:00',
-        ikon: '💧',
-        renk: '#E0F2FE',
-      },
-    ];
-
     try {
       const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Ensure showcase item is present if not already added
-          const hasBakan = parsed.some((c: any) => c.baslik && c.baslik.includes('Bakan'));
-          if (!hasBakan) {
-            return [initialCards[0], ...parsed];
-          }
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       }
     } catch {
       // ignore
     }
-
-    return initialCards;
+    return []; // Mock 'Ahmet Abi' ve 'Su Filtresi' kayıtları tamamen temizlendi
   };
 
   const saveLocalNotes = (notes: SimpleCardItem[]) => {
@@ -238,6 +313,7 @@ export default function App() {
                   calendar_event_id: d.calendarEventId || d.calendar_event_id || null,
                   conflictWith: d.conflictWith || d.conflictWarning || null,
                   conflictWarning: d.conflictWith || d.conflictWarning || null,
+                  action_items: d.action_items || null,
                   ikon: d.ikon || '📌',
                   renk: d.renk || '#FEF3C7',
                   mediaId: d.mediaId || null,
@@ -354,7 +430,11 @@ export default function App() {
 
   // Butona basıldığında giriş alanını aç/kapa
   const handleToggleTextInput = () => {
-    openManualModal();
+    if (showManualModal) {
+      closeManualModal();
+    } else {
+      openManualModal();
+    }
   };
 
   const openManualModal = () => {
@@ -362,7 +442,7 @@ export default function App() {
     setTimeout(() => {
       const el = document.getElementById('manual-title');
       el?.focus();
-    }, 60);
+    }, 80);
   };
 
   const closeManualModal = () => {
@@ -394,28 +474,57 @@ export default function App() {
 
     if (rawDate) {
       const d = new Date(rawDate);
-      tarihIso = d.toISOString();
-      zamanStr = d.toLocaleDateString('tr-TR', {
-        weekday: 'short',
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      if (!isNaN(d.getTime())) {
+        tarihIso = d.toISOString();
+        zamanStr = d.toLocaleDateString('tr-TR', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      }
     }
+
+    // Determine smart icon & color based on keywords
+    let ikon = '📌';
+    let renk = '#FEF3C7';
+    const lower = baslik.toLowerCase();
+    if (lower.includes('kira') || lower.includes('fatura') || lower.includes('öde')) {
+      ikon = '💳';
+      renk = '#FEE2E2';
+    } else if (lower.includes('toplantı') || lower.includes('görüşme') || lower.includes('ziyaret')) {
+      ikon = '💼';
+      renk = '#E0F2FE';
+    } else if (lower.includes('çay') || lower.includes('kahve') || lower.includes('yemek')) {
+      ikon = '☕';
+      renk = '#FEF3C7';
+    } else if (lower.includes('doktor') || lower.includes('ilaç') || lower.includes('hastane')) {
+      ikon = '💊';
+      renk = '#DCFCE7';
+    } else if (lower.includes('su') || lower.includes('filtre') || lower.includes('tamir')) {
+      ikon = '💧';
+      renk = '#E0F2FE';
+    } else if (rawDate) {
+      ikon = '🗓️';
+      renk = '#F3E8FF';
+    }
+
+    closeManualModal();
+    setManualTitle('');
+    setManualDatetime('');
+    setStatusText('Not eklendi');
 
     // Doğrudan sisteme ekleme (AI atlanır)
     await addNote({
       baslik,
       zaman: zamanStr,
       tarih_iso: syncCal ? tarihIso : null,
-      ikon: '📌',
-      renk: '#FEF3C7',
+      ikon,
+      renk,
     });
 
-    closeManualModal();
-    setManualTitle('');
-    setManualDatetime('');
+    setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
   };
 
   // Metin girilip enter/ekle yapıldığında
@@ -427,13 +536,18 @@ export default function App() {
     // Giriş kutusunu sıfırla ve kapat
     setTextInput('');
     setShowTextInput(false);
+    setStatusText('Yapay zeka çözümlüyor...');
 
-    setStatusText('Kaydediliyor...');
-
-    // Mevcut bilişsel motora gönder
-    await processWithAI(text, null);
-
-    setStatusText('Söyle, çek ya da yaz');
+    try {
+      // Mevcut bilişsel motora gönder (yazılı girdi olduğu için sesli fısıltı kapalı)
+      await processWithAI(text, null, false);
+    } catch (error) {
+      console.error("Yazılı girdi işleme hatası:", error);
+      const parsed = extractSimpleNoteFromText(text);
+      await addNote(parsed);
+    } finally {
+      setStatusText('Söyle, çek ya da yaz');
+    }
   };
 
   const handleMicClick = () => {
@@ -468,11 +582,29 @@ export default function App() {
     }
   };
 
+  // Yeni bir girdi geldiğinde pasif koşullu kartları tarama
+  const checkReactiveTriggers = (newInputText: string, existingCards: SimpleCardItem[]) => {
+    const lowerInput = newInputText.toLowerCase();
+    
+    return existingCards.filter(card => {
+      if (!card.tetikleyici || !card.tetikleyici.sart) return false;
+      
+      // Tetikleyicinin anahtar kelimeleri yeni girdide geçiyor mu?
+      const conditionWords = card.tetikleyici.sart.toLowerCase().split(' ');
+      return conditionWords.some(word => word.length > 3 && lowerInput.includes(word));
+    });
+  };
+
   // Add Note Handler
   const addNote = async (noteData: {
     baslik: string;
     zaman?: string | null;
     tarih_iso?: string | null;
+    tetikleyici?: {
+      tip: string | null;
+      sart: string;
+      etiket: string;
+    } | null;
     hazirlik_zamani?: string | null;
     hazirlik_iso?: string | null;
     anomali_notu?: string | null;
@@ -482,12 +614,31 @@ export default function App() {
     ikon?: string;
     renk?: string;
     mediaId?: string | null;
+    baglantili_hatirlatma?: string | null;
   }) => {
+    // Check reactive triggers against existing cards
+    const triggeredCards = checkReactiveTriggers(noteData.baslik + ' ' + (noteData.zaman || ''), cards);
+    if (triggeredCards.length > 0) {
+      const relatedNames = triggeredCards.map((c) => c.baslik).join(', ');
+      noteData.baglantili_hatirlatma = `Hazır buradayken: ${relatedNames}`;
+    }
+
     // Takvime yaz ve çakışma bilgisini al
     const { eventId, conflictWith } = await createCalendarEvent(noteData);
 
+    const nowIso = new Date().toISOString();
+    const tempId = 'local_' + Date.now();
+
+    // Cihaz Takvimi / Yerel Hatırlatıcı Kur
+    if (noteData.tarih_iso) {
+      scheduleLocalDeviceReminder(tempId, noteData.baslik, noteData.tarih_iso, noteData.ikon);
+      requestDeviceNotificationPermission().catch(() => {});
+    }
+
     if (conflictWith) {
-      setStatusText(`Not eklendi (Takvim çakışması: ${conflictWith})`);
+      setStatusText(`Not eklendi (Çakışma: ${conflictWith})`);
+    } else if (noteData.tarih_iso) {
+      setStatusText('Cihaz hatırlatıcısı kuruldu ⏰');
     }
 
     const payload = {
@@ -496,67 +647,164 @@ export default function App() {
       calendar_event_id: eventId || null,
       conflictWith: conflictWith || null,
       conflictWarning: conflictWith || null,
+      tetikleyici: noteData.tetikleyici || null,
       anomali_notu: noteData.anomali_notu || null,
       teshis_notu: noteData.teshis_notu || null,
+      baglantili_hatirlatma: noteData.baglantili_hatirlatma || null,
+      action_items: (noteData as any).action_items || null,
+      createdAt: currentUser ? serverTimestamp() : nowIso // Lokal ve bulut uyumu
     };
+
+    const newCard: SimpleCardItem = {
+      id: tempId,
+      ...payload,
+    };
+
+    // Optimistic immediate update to local UI state & localStorage
+    setCards((prev) => [newCard, ...prev.filter((c) => c.id !== tempId)]);
+    const local = getLocalNotes().filter((c) => c.id !== tempId);
+    local.unshift(newCard);
+    saveLocalNotes(local);
 
     if (currentUser && db) {
       const pathForWrite = `users/${currentUser.uid}/notes`;
       try {
-        await addDoc(collection(db, 'users', currentUser.uid, 'notes'), {
-          ...payload,
-          createdAt: serverTimestamp(),
-        });
+        const docRef = await addDoc(collection(db, 'users', currentUser.uid, 'notes'), payload);
+        setCards((prev) =>
+          prev.map((c) => (c.id === tempId ? { ...c, id: docRef.id } : c))
+        );
       } catch (error) {
         handleFirestoreError(error, OperationType.CREATE, pathForWrite);
-        const local = getLocalNotes();
-        local.unshift({ id: 'local_' + Date.now(), ...payload });
-        saveLocalNotes(local);
-        setCards(local);
       }
-    } else {
-      const local = getLocalNotes();
-      local.unshift({ id: 'local_' + Date.now(), ...payload });
-      saveLocalNotes(local);
-      setCards(local);
     }
   };
 
-  // Delete Note Handler
-  const deleteNote = async (
+  // 1. Alt görev tamamlama / geri alma fonksiyonu
+  const toggleActionItem = async (cardId: string, taskIndex: number) => {
+    const targetCard = cards.find((c) => c.id === cardId);
+    if (!targetCard || !targetCard.action_items) return;
+
+    const updatedTasks = targetCard.action_items.map((item, idx) =>
+      idx === taskIndex ? { ...item, is_completed: !item.is_completed } : item
+    );
+
+    // Lokal State Güncelle
+    setCards((prev) =>
+      prev.map((c) => (c.id === cardId ? { ...c, action_items: updatedTasks } : c))
+    );
+
+    // Firestore & LocalStorage Güncelle
+    if (currentUser && db && !cardId.startsWith('local_')) {
+      const noteRef = doc(db, 'users', currentUser.uid, 'notes', cardId);
+      await updateDoc(noteRef, { action_items: updatedTasks });
+    } else {
+      const local = getLocalNotes();
+      const locItem = local.find((n) => n.id === cardId);
+      if (locItem) {
+        locItem.action_items = updatedTasks;
+        saveLocalNotes(local);
+      }
+    }
+  };
+
+  // Kalıcı silmeyi gerçekleştiren çekirdek fonksiyon
+  const commitPendingDeletion = async (card: SimpleCardItem) => {
+    const calId = card.calendarEventId || card.calendar_event_id;
+    if (calId) {
+      deleteCalendarEvent(calId).catch((err) =>
+        console.warn('Takvim silme hatası:', err)
+      );
+    }
+    if (card.mediaId) {
+      deleteLocalMedia(card.mediaId).catch((err) =>
+        console.warn('Medya silme hatası:', err)
+      );
+    }
+    if (currentUser && db && !card.id.startsWith('local_')) {
+      const pathForDelete = `users/${currentUser.uid}/notes/${card.id}`;
+      try {
+        await deleteDoc(doc(db, 'users', currentUser.uid, 'notes', card.id));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, pathForDelete);
+      }
+    }
+    const local = getLocalNotes().filter((n) => n.id !== card.id);
+    saveLocalNotes(local);
+  };
+
+  // Geri Alma Aksiyonu
+  const handleUndo = () => {
+    if (!undoToast) return;
+    clearTimeout(undoToast.timerId);
+    const restoredItem = undoToast.item;
+    
+    // Kartı listeye geri yükle
+    setCards((prev) => [restoredItem, ...prev]);
+    setUndoToast(null);
+    setStatusText('Not geri yüklendi');
+    setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2000);
+  };
+
+  const deleteNote = (
     id: string,
     calendarEventId?: string | null,
     mediaId?: string | null
   ) => {
+    // Eğer zaten bekleyen başka bir silme işlemi varsa onu hemen kalıcılaştır
+    if (undoToast) {
+      commitPendingDeletion(undoToast.item);
+      clearTimeout(undoToast.timerId);
+    }
+
+    const targetCard = cards.find((c) => c.id === id);
+    if (!targetCard) return;
+
+    // 1. Ekrandan anında kaldır (Hızlı UI tepkisi)
+    setCards((prev) => prev.filter((c) => c.id !== id));
+
+    // 2. 5 saniyelik zamanlayıcı başlat (Geri alınmazsa kalıcı silinecek)
+    const timerId = setTimeout(async () => {
+      await commitPendingDeletion(targetCard);
+      setUndoToast(null);
+    }, 5000);
+
+    setUndoToast({ item: targetCard, timerId });
+  };
+
+  // 2. Kartı Güncelleme (Lokal / Firestore)
+  const updateNoteTitle = async (
+    id: string,
+    newTitle: string,
+    calendarEventId?: string | null,
+    icon: string = '📌'
+  ) => {
+    const cleanTitle = newTitle.trim();
+    if (!cleanTitle) return;
+
+    // Takvimde karşılığı varsa başlığı orada da sessizce güncelle
     if (calendarEventId) {
-      deleteCalendarEvent(calendarEventId).catch((err) =>
-        console.warn('Takvim silme hatası:', err)
-      );
-    }
-    if (mediaId) {
-      deleteLocalMedia(mediaId).catch((err) =>
-        console.warn('Medya silme hatası:', err)
-      );
+      updateCalendarEventTitle(calendarEventId, cleanTitle, icon);
     }
 
-    // Animate removal first
-    setCards((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, isRemoving: true } : c))
-    );
-
-    setTimeout(async () => {
-      if (currentUser && db && !id.startsWith('local_')) {
-        const pathForDelete = `users/${currentUser.uid}/notes/${id}`;
-        try {
-          await deleteDoc(doc(db, 'users', currentUser.uid, 'notes', id));
-        } catch (error) {
-          handleFirestoreError(error, OperationType.DELETE, pathForDelete);
-        }
+    // Bulut veya yerel kayıt güncellemesi
+    if (currentUser && db && !id.startsWith('local_')) {
+      const noteRef = doc(db, 'users', currentUser.uid, 'notes', id);
+      try {
+        await updateDoc(noteRef, { baslik: cleanTitle });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.UPDATE, `users/${currentUser.uid}/notes/${id}`);
       }
-      const local = getLocalNotes().filter((n) => n.id !== id);
-      saveLocalNotes(local);
-      setCards((prev) => prev.filter((n) => n.id !== id));
-    }, 200);
+    } else {
+      const local = getLocalNotes();
+      const target = local.find((n) => n.id === id);
+      if (target) {
+        target.baslik = cleanTitle;
+        saveLocalNotes(local);
+      }
+      setCards((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, baslik: cleanTitle } : n))
+      );
+    }
   };
 
   // View full image in modal
@@ -571,109 +819,163 @@ export default function App() {
   useEffect(() => {
     (window as any).deleteNote = deleteNote;
     (window as any).viewFullImage = viewFullImage;
+    (window as any).updateNoteTitle = updateNoteTitle;
+    (window as any).updateCalendarEventTitle = updateCalendarEventTitle;
     return () => {
       delete (window as any).deleteNote;
       delete (window as any).viewFullImage;
+      delete (window as any).updateNoteTitle;
+      delete (window as any).updateCalendarEventTitle;
     };
   }, [currentUser]);
 
-  // Multimodal AI Processing (Text + Image)
-  const processWithAI = async (text: string = '', base64Image: string | null = null) => {
+  // Güvenli ve Konsolda Her Adımı Gösteren AI İşleme Fonksiyonu
+  async function processWithAI(
+    textInput: string = '',
+    base64Image: string | null = null,
+    isSpoken: boolean = false
+  ) {
+    const currentNow = new Date().toISOString();
+    console.log("1. Girdi gönderiliyor:", textInput, "Zaman:", currentNow);
+
     let mediaId: string | null = null;
     if (base64Image) {
       mediaId = 'media_' + Date.now();
       await saveLocalMedia(mediaId, base64Image);
     }
 
-    // Direct JSON handling (if user pastes/inputs exact JSON object)
-    if (text && text.trim().startsWith('{') && text.trim().endsWith('}')) {
+    // Doğrudan saf JSON girilmişse doğrudan ekle
+    if (textInput && textInput.trim().startsWith('{') && textInput.trim().endsWith('}')) {
       try {
-        const directJson = JSON.parse(text.trim());
+        const directJson = JSON.parse(textInput.trim());
         if (directJson.baslik) {
-          await addNote({
-            baslik: directJson.baslik,
-            zaman: directJson.zaman || null,
-            tarih_iso: directJson.tarih_iso || null,
-            hazirlik_zamani: directJson.hazirlik_zamani || null,
-            hazirlik_iso: directJson.hazirlik_iso || null,
-            ikon: directJson.ikon || '🏛️',
-            renk: directJson.renk || '#E0F2FE',
-            mediaId,
-          });
+          console.log("3. Ayrıştırılmış Veri (Doğrudan JSON):", directJson);
+          const createdNote = { ...directJson, mediaId };
+          await addNote(createdNote);
+          if (isSpoken) {
+            const whisper = generateWhisperText(createdNote);
+            speakFeedback(whisper);
+          }
           resetMicUI();
           return;
         }
       } catch {
-        // continue normal parsing flow
+        // JSON değilse normal akışa devam et
       }
     }
 
-    const now = new Date().toISOString();
-    const pastNotesPayload = cards.slice(0, 30).map((c) => ({
-      baslik: c.baslik,
-      zaman: c.zaman,
-      tarih_iso: c.tarih_iso,
-      createdAt: c.createdAt,
-    }));
+    const promptContent = `CURRENT_DATETIME: ${currentNow}
+Kullanıcı Girdisi: "${textInput}"
 
+GÖREV:
+1. Kullanıcı "yarın", "cuma" gibi bir gün söyleyip saat vermediyse varsayılan saat olarak "09:00:00" ata.
+2. "tarih_iso" alanını KESİNLİKLE hesapla (Format: YYYY-MM-DDTHH:mm:ss). Asla null bırakma.
+
+BİLİŞSEL ALT GÖREVLER (Action Items):
+- Kullanıcının belirttiği ana işin (muayene, seyahat, resmi başvuru, bakım, randevu) gerektirdiği 2-3 somut alt adımı belirle.
+- "action_items": [ { "task": "Kısa alt görev metni", "is_completed": false } ] formatında dizi olarak döndür.
+- Alt görev gerektirmeyen basit durumlarda boş dizi [] dön.
+
+3. Sadece saf JSON üret:
+{
+  "baslik": "Kısa eylem başlığı",
+  "zaman": "Arayüz zaman metni (örn: Yarın 09:00)",
+  "tarih_iso": "2026-09-16T09:00:00",
+  "action_items": [
+    { "task": "Kısa alt görev metni", "is_completed": false }
+  ],
+  "ikon": "📌",
+  "renk": "#FEF3C7"
+}`;
+
+    const GEMINI_API_KEY = (window as any).GEMINI_API_KEY || '';
+
+    // İstemcide özel bir anahtar tanımlıysa doğrudan dene
+    if (GEMINI_API_KEY && GEMINI_API_KEY !== 'MY_GEMINI_API_KEY') {
+      try {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: promptContent },
+                ...(base64Image ? [{ inlineData: { mimeType: "image/jpeg", data: base64Image.split(",")[1] } }] : [])
+              ]
+            }]
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const rawResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (rawResult) {
+            console.log("2. AI Ham Çıktı (İstemci):", rawResult);
+            const cleanResult = rawResult.replace(/```json/gi, "").replace(/```/g, "").trim();
+            const parsedData = JSON.parse(cleanResult);
+            console.log("3. Ayrıştırılmış Veri:", parsedData);
+            const createdNote = { ...parsedData, mediaId };
+            await addNote(createdNote);
+            if (isSpoken) {
+              const whisper = generateWhisperText(createdNote);
+              speakFeedback(whisper);
+            }
+            resetMicUI();
+            return;
+          }
+        }
+      } catch (clientErr) {
+        console.warn("İstemci Gemini denemesi başarısız, sunucuya geçiliyor:", clientErr);
+      }
+    }
+
+    // Sunucu tarafı proxy'yi çağır (GEMINI_API_KEY sunucuda güvenle saklanır)
+    let parsedByServer = false;
     try {
-      const res = await fetch('/api/parse-simple', {
+      const sRes = await fetch('/api/parse-simple', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          input: text || '',
-          base64Image: base64Image || null,
-          current_datetime: now,
-          past_notes: pastNotesPayload,
+          input: textInput,
+          base64Image,
+          current_datetime: currentNow,
         }),
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.data) {
-          const item = data.data;
-          await addNote({
-            baslik: item.baslik || (text ? text.slice(0, 24) : 'Görsel Kaydı'),
-            zaman: item.zaman || null,
-            tarih_iso: item.tarih_iso || null,
-            hazirlik_zamani: item.hazirlik_zamani || null,
-            hazirlik_iso: item.hazirlik_iso || null,
-            teshis_notu: item.teshis_notu || null,
-            anomali_notu: item.anomali_notu || null,
-            ikon: item.ikon || (base64Image ? '📷' : '📌'),
-            renk: item.renk || '#FEF3C7',
-            mediaId,
-          });
-          resetMicUI();
-          return;
+      if (sRes.ok) {
+        const sJson = await sRes.json();
+        if (sJson.success && sJson.data) {
+          console.log("2. AI Sunucu Çıktısı:", JSON.stringify(sJson.data));
+          console.log("3. Ayrıştırılmış Veri:", sJson.data);
+          const createdNote = { ...sJson.data, mediaId };
+          await addNote(createdNote);
+          if (isSpoken) {
+            const whisper = generateWhisperText(createdNote);
+            speakFeedback(whisper);
+          }
+          parsedByServer = true;
         }
       }
-    } catch (err) {
-      console.warn('AI analizi sunucuda başarısız oldu, yerel ayrıştırmaya geçiliyor:', err);
+    } catch {
+      // Sunucuya erişilemezse yerel kural motoruna geç
     }
 
-    // Cognitive Local Fallback
-    const local = extractSimpleNoteFromText(
-      text || (base64Image ? 'Fotoğraflı kayıt' : 'Not'),
-      now,
-      cards
-    );
-    await addNote({
-      baslik: text ? local.baslik : (local.teshis_notu ? local.baslik : 'Fotoğraflı Not'),
-      zaman: local.zaman || (base64Image ? 'Az önce eklendi' : null),
-      tarih_iso: local.tarih_iso || null,
-      hazirlik_zamani: local.hazirlik_zamani || null,
-      hazirlik_iso: local.hazirlik_iso || null,
-      teshis_notu: local.teshis_notu || null,
-      anomali_notu: local.anomali_notu || null,
-      ikon: base64Image ? '📷' : local.ikon,
-      renk: local.renk || '#FEF3C7',
-      mediaId,
-    });
+    if (!parsedByServer) {
+      // Çevrimdışı / Hızlı Kural Motoru (Türkçe Doğal Dil Ayrıştırıcı)
+      const fallback = extractSimpleNoteFromText(textInput, currentNow);
+      console.log("2. Bilişsel Kural Motoru Devrede:", fallback);
+      console.log("3. Ayrıştırılmış Veri:", fallback);
+      const createdNote = { ...fallback, mediaId };
+      await addNote(createdNote);
+      if (isSpoken) {
+        const whisper = generateWhisperText(createdNote);
+        speakFeedback(whisper);
+      }
+    }
     resetMicUI();
-  };
+  }
 
   processWithAIRef.current = processWithAI;
+  (window as any).processWithAI = processWithAI;
 
   // Ses bittiğinde hem ses metnini hem bekleyen görseli gönder
   const onSpeechCompleted = async (spokenText: string) => {
@@ -685,7 +987,7 @@ export default function App() {
     } else {
       setStatusText('Anlıyorum...');
     }
-    await processWithAI(spokenText, imageToSend);
+    await processWithAI(spokenText, imageToSend, true);
   };
 
   onSpeechCompletedRef.current = onSpeechCompleted;
@@ -710,14 +1012,14 @@ export default function App() {
           const imageToSend = pendingCapturedImageRef.current;
           pendingCapturedImageRef.current = null;
           setStatusText('Görsel teşhis ediliyor...');
-          await processWithAI('', imageToSend);
+          await processWithAI('', imageToSend, true);
         }
       } else {
         // Ses desteği yoksa sadece görseli doğrudan analiz et
         const imageToSend = pendingCapturedImageRef.current;
         pendingCapturedImageRef.current = null;
         setStatusText('Görsel teşhis ediliyor...');
-        await processWithAI('', imageToSend);
+        await processWithAI('', imageToSend, true);
       }
     } catch (err) {
       console.error('Fotoğraf işleme hatası:', err);
@@ -733,17 +1035,31 @@ export default function App() {
 
   // Google Sign-In Handler
   const handleLogin = async () => {
+    setStatusText('Google hesabı bağlanıyor...');
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const token = credential?.accessToken || null;
       if (token) {
         setGoogleAccessToken(token);
+        console.log("Mevcut Google Token başarıyla alındı:", token);
+        setStatusText('Google hesabı bağlandı ✓');
+      } else {
+        setStatusText('Giriş yapıldı ✓');
       }
+      setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
     } catch (err: any) {
-      console.warn('Google giriş uyarısı:', err?.message || err);
-      setStatusText('Giriş penceresi açılamadı');
-      setTimeout(() => setStatusText('Söyle ya da fotoğrafını çek'), 2500);
+      console.warn('Google giriş uyarısı / hatası:', err?.code, err?.message || err);
+      if (err?.code === 'auth/popup-blocked') {
+        setStatusText('Tarayıcı açılır pencereyi engelledi. Lütfen izin verin.');
+      } else if (err?.code === 'auth/unauthorized-domain') {
+        setStatusText('Önizleme yetkisi bekleniyor (Lokal mod aktif)');
+      } else if (err?.code === 'auth/cancelled-popup-request' || err?.code === 'auth/popup-closed-by-user') {
+        setStatusText('Giriş penceresi kapatıldı');
+      } else {
+        setStatusText('Giriş yapılamadı (Lokal mod devrede)');
+      }
+      setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 3500);
     }
   };
 
@@ -761,6 +1077,19 @@ export default function App() {
 
   const activeUser = currentUser || simulatedUser;
   const isCloudSync = !!activeUser;
+
+  const filteredCards = cards.filter((item) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      item.baslik.toLowerCase().includes(q) ||
+      (item.zaman && item.zaman.toLowerCase().includes(q)) ||
+      (item.teshis_notu && item.teshis_notu.toLowerCase().includes(q)) ||
+      (item.anomali_notu && item.anomali_notu.toLowerCase().includes(q)) ||
+      (item.baglantili_hatirlatma && item.baglantili_hatirlatma.toLowerCase().includes(q)) ||
+      (item.ikon && item.ikon.toLowerCase().includes(q))
+    );
+  });
 
   return (
     <div className="bg-stone-100 text-stone-800 antialiased select-none min-h-screen flex items-center justify-center">
@@ -782,6 +1111,23 @@ export default function App() {
           </div>
 
           <div id="auth-container" className="flex items-center gap-2">
+            {/* Arama Toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                setShowSearch((prev) => !prev);
+                if (showSearch) setSearchQuery('');
+              }}
+              title="Notlarda ara"
+              className={`p-1.5 rounded-full transition-colors ${
+                showSearch ? 'text-stone-900 bg-stone-200' : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+
             {/* Hızlı Metin Girişi Toggle */}
             <button
               type="button"
@@ -847,19 +1193,12 @@ export default function App() {
         {showTextInput && (
           <div className="px-6 py-2 border-b border-stone-100 animate-in fade-in duration-150">
             <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (textInput.trim()) {
-                  setStatusText('Kaydediliyor...');
-                  const val = textInput;
-                  setTextInput('');
-                  setShowTextInput(false);
-                  await processWithAI(val, null);
-                }
-              }}
+              id="text-input-form"
+              onSubmit={handleManualTextSubmit}
               className="flex gap-2"
             >
               <input
+                id="manual-text-input"
                 type="text"
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
@@ -883,98 +1222,251 @@ export default function App() {
           id="cards-container"
           className="flex-1 overflow-y-auto px-5 py-3 space-y-3 pb-32"
         >
-          {cards.length === 0 ? (
+          {/* Gizlenebilir Arama Alanı */}
+          <div
+            id="search-bar-container"
+            className={`transition-all duration-200 overflow-hidden mb-2 ${
+              showSearch ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'
+            }`}
+          >
+            <input
+              id="search-input"
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Notlarda ara (isim, borç, araba, tarih)..."
+              className="w-full text-xs px-3.5 py-2 bg-stone-100/80 border border-stone-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-stone-400 text-stone-800"
+            />
+          </div>
+
+          {filteredCards.length === 0 ? (
             <div className="text-center text-xs text-stone-400 mt-10">
-              Henüz not yok. Konuş veya fotoğraf çek.
+              {searchQuery ? 'Aramanızla eşleşen not bulunamadı.' : 'Henüz not yok. Konuş veya fotoğraf çek.'}
             </div>
           ) : (
-            cards.map((item) => (
-              <div
-                key={item.id}
-                className={`card p-3.5 rounded-2xl flex items-center justify-between transition-all duration-200 ${
-                  item.isRemoving ? 'scale-95 opacity-0' : 'scale-100 opacity-100'
-                }`}
-                style={{
-                  backgroundColor: item.renk || '#FEF3C7',
-                  borderColor: 'rgba(0,0,0,0.05)',
-                  borderWidth: '1px',
-                }}
-              >
-                <div className="flex items-center gap-3 overflow-hidden">
-                  {item.mediaId ? (
-                    <CardMediaThumbnail
-                      mediaId={item.mediaId}
-                      onClick={() => viewFullImage(item.mediaId!)}
-                    />
-                  ) : (
-                    <span className="text-2xl select-none shrink-0">{item.ikon || '📌'}</span>
-                  )}
-                  <div className="truncate">
-                    <h2 className="font-semibold text-stone-900 text-sm leading-tight truncate">
-                      {item.baslik}
-                    </h2>
-                    <div className="flex flex-col gap-0.5 mt-0.5">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <p className="text-[11px] text-stone-600 truncate">
-                          {item.zaman || 'Hatırlatıcı yok'}
-                        </p>
-                        {item.hazirlik_zamani && (
-                          <span
-                            className="text-[9px] bg-white/80 text-amber-900 border border-amber-300/40 px-1.5 py-0.5 rounded font-medium shrink-0 flex items-center gap-0.5 shadow-2xs"
-                            title={`Ön Hazırlık: ${item.hazirlik_zamani}`}
-                          >
-                            ⏳ {item.hazirlik_zamani}
-                          </span>
+            sortNotiviaCards(filteredCards).map((item) => {
+              // Kartın süresinin dolup dolmadığını kontrol et
+              const isExpired = item.tarih_iso ? new Date(item.tarih_iso).getTime() < Date.now() : false;
+
+              return (
+                <div
+                  key={item.id}
+                  className={`card p-3.5 rounded-2xl flex items-center justify-between transition-all duration-300 ${
+                    item.isRemoving ? 'scale-95 opacity-0' : 'scale-100'
+                  } ${
+                    isExpired 
+                      ? 'opacity-65 saturate-60 border-dashed border-stone-300' 
+                      : 'opacity-100 border-solid border-black/5'
+                  }`}
+                  style={{
+                    backgroundColor: item.renk || '#FEF3C7',
+                    borderWidth: '1px',
+                  }}
+                >
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    {item.mediaId ? (
+                      <CardMediaThumbnail
+                        mediaId={item.mediaId}
+                        onClick={() => viewFullImage(item.mediaId!)}
+                      />
+                    ) : (
+                      <span className={`text-2xl select-none shrink-0 ${isExpired ? 'grayscale-40' : ''}`}>
+                        {item.ikon || '📌'}
+                      </span>
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                      <h2
+                        contentEditable={!isExpired}
+                        suppressContentEditableWarning={true}
+                        spellCheck={false}
+                        className={`font-semibold text-sm leading-tight outline-hidden ${
+                          isExpired ? 'text-stone-500 line-through decoration-stone-400/60' : 'text-stone-900 cursor-text'
+                        }`}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            (e.currentTarget as HTMLElement).blur();
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const newTitle = e.currentTarget.innerText?.trim();
+                          if (newTitle && newTitle !== item.baslik) {
+                            updateNoteTitle(
+                              item.id,
+                              newTitle,
+                              item.calendarEventId || item.calendar_event_id,
+                              item.ikon || '📌'
+                            );
+                          } else if (!newTitle) {
+                            e.currentTarget.innerText = item.baslik;
+                          }
+                        }}
+                      >
+                        {item.baslik}
+                      </h2>
+
+                      <div className="flex flex-col gap-0.5 mt-0.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {isExpired ? (
+                            <span className="text-[9px] bg-stone-900/10 text-stone-600 px-1.5 py-0.5 rounded font-mono font-medium shrink-0 flex items-center gap-0.5">
+                              ⌛ Vadesi Geçti · {item.zaman || 'Tamamlanmadı'}
+                            </span>
+                          ) : (
+                            <>
+                              {item.tetikleyici?.etiket ? (
+                                <span
+                                  className="text-[10px] bg-white/85 text-stone-800 font-semibold px-2 py-0.5 rounded-md shrink-0 flex items-center gap-1 shadow-2xs border border-stone-900/10"
+                                  title={item.tetikleyici.sart ? `Koşul: ${item.tetikleyici.sart}` : undefined}
+                                >
+                                  {item.tetikleyici.etiket}
+                                </span>
+                              ) : (
+                                <p className="text-[11px] text-stone-600 truncate">
+                                  {item.zaman || 'Hatırlatıcı yok'}
+                                </p>
+                              )}
+                              {item.hazirlik_zamani && (
+                                <span
+                                  className="text-[9px] bg-white/80 text-amber-900 border border-amber-300/40 px-1.5 py-0.5 rounded font-medium shrink-0 flex items-center gap-0.5 shadow-2xs"
+                                  title={`Ön Hazırlık: ${item.hazirlik_zamani}`}
+                                >
+                                  ⏳ {item.hazirlik_zamani}
+                                </span>
+                              )}
+                              {(item.calendarEventId || item.calendar_event_id) && (
+                                <span className="text-[9px] bg-white/70 text-stone-700 px-1 rounded shadow-2xs font-medium shrink-0">
+                                  📅 Takvimde
+                                </span>
+                              )}
+                              {item.tarih_iso && (
+                                <div className="flex items-center gap-1 shrink-0">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      exportToDeviceCalendar({
+                                        title: `${item.ikon || '📌'} ${item.baslik}`,
+                                        startDate: new Date(item.tarih_iso!),
+                                        description: `Notivia Hatırlatıcı: ${item.baslik}`
+                                      });
+                                      playNotificationChime();
+                                      setStatusText('Cihaz takvimine (.ics) aktarıldı');
+                                      setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
+                                    }}
+                                    className="text-[9px] bg-amber-100/90 hover:bg-amber-200 text-amber-900 border border-amber-300/80 px-1.5 py-0.5 rounded font-medium shrink-0 flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95 transition-all"
+                                    title="iPhone / Android Cihaz Takvimine (.ics) Ekle"
+                                  >
+                                    <span>📲</span>
+                                    <span>Cihaz Takvimine Ekle</span>
+                                  </button>
+                                </div>
+                              )}
+                            </>
+                          )}
+
+                          {/* Oluşturulma Zaman Damgası */}
+                          {item.createdAt && (
+                            <span className="text-[9px] text-stone-400 font-mono tracking-tight select-none ml-1">
+                              · {formatCreatedTime(item.createdAt)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Eğer çakışma varsa görünen hafif uyarı */}
+                        {(item.conflictWith || item.conflictWarning) && (
+                          <p className="text-[10px] text-amber-700 font-medium flex items-center gap-1 mt-0.5">
+                            <span>⚠️</span>
+                            <span className="truncate">'{item.conflictWith || item.conflictWarning}' ile çakışıyor</span>
+                          </p>
                         )}
-                        {(item.calendarEventId || item.calendar_event_id) && (
-                          <span className="text-[9px] bg-white/70 text-stone-700 px-1 rounded shadow-2xs font-medium shrink-0">
-                            📅 Takvimde
-                          </span>
+
+                        {/* Kart İçi Teşhis Rozeti */}
+                        {item.teshis_notu && (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center gap-1 text-[10px] bg-stone-900/5 text-stone-700 px-1.5 py-0.5 rounded border border-stone-300/60 font-mono">
+                              🔍 {item.teshis_notu}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Bağlantılı Hatırlatma (Fısıltı) */}
+                        {item.baglantili_hatirlatma && (
+                          <div className="mt-1.5 flex items-start gap-1.5 bg-blue-500/10 text-blue-900 border border-blue-500/20 px-2 py-1 rounded-lg">
+                            <span className="text-xs shrink-0">🔗</span>
+                            <p className="text-[11px] font-medium leading-tight">{item.baglantili_hatirlatma}</p>
+                          </div>
+                        )}
+
+                        {/* Anomali veya Rutin Zeka Tespiti */}
+                        {item.anomali_notu && (
+                          <div className="mt-1.5 flex items-start gap-1.5 bg-amber-500/10 text-amber-900 border border-amber-500/20 px-2 py-1 rounded-lg">
+                            <span className="text-xs shrink-0">💡</span>
+                            <p className="text-[11px] font-medium leading-tight">{item.anomali_notu}</p>
+                          </div>
+                        )}
+
+                        {/* Kart İçi Alt Görevler Alanı */}
+                        {item.action_items && item.action_items.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-black/5">
+                            <details className="group">
+                              <summary className="text-[10px] font-semibold text-stone-600 flex items-center justify-between cursor-pointer list-none select-none">
+                                <span className="flex items-center gap-1">
+                                  <span>📋</span>
+                                  <span>{item.action_items.filter(t => t.is_completed).length}/{item.action_items.length} Alt Görev</span>
+                                </span>
+                                <span className="text-[9px] text-stone-400 group-open:rotate-180 transition-transform">▼</span>
+                              </summary>
+                              
+                              <div className="mt-1.5 space-y-1 pl-1">
+                                {item.action_items.map((task, tIdx) => (
+                                  <div
+                                    key={tIdx}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      toggleActionItem(item.id, tIdx);
+                                    }}
+                                    className="flex items-center gap-2 cursor-pointer py-0.5"
+                                  >
+                                    <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center text-[9px] ${
+                                      task.is_completed 
+                                        ? 'bg-stone-800 border-stone-800 text-white' 
+                                        : 'border-stone-400 bg-white/60'
+                                    }`}>
+                                      {task.is_completed ? '✓' : ''}
+                                    </span>
+                                    <span className={`text-[11px] leading-tight ${
+                                      task.is_completed ? 'line-through text-stone-400' : 'text-stone-700'
+                                    }`}>
+                                      {task.task}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </details>
+                          </div>
                         )}
                       </div>
-
-                      {/* Eğer çakışma varsa görünen hafif uyarı */}
-                      {(item.conflictWith || item.conflictWarning) && (
-                        <p className="text-[10px] text-amber-700 font-medium flex items-center gap-1 mt-0.5">
-                          <span>⚠️</span>
-                          <span className="truncate">'{item.conflictWith || item.conflictWarning}' ile çakışıyor</span>
-                        </p>
-                      )}
-
-                      {/* Kart İçi Teşhis Rozeti */}
-                      {item.teshis_notu && (
-                        <div className="mt-1">
-                          <span className="inline-flex items-center gap-1 text-[10px] bg-stone-900/5 text-stone-700 px-1.5 py-0.5 rounded border border-stone-300/60 font-mono">
-                            🔍 {item.teshis_notu}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Anomali veya Rutin Zeka Tespiti */}
-                      {item.anomali_notu && (
-                        <div className="mt-1.5 flex items-start gap-1.5 bg-amber-500/10 text-amber-900 border border-amber-500/20 px-2 py-1 rounded-lg">
-                          <span className="text-xs shrink-0">💡</span>
-                          <p className="text-[11px] font-medium leading-tight">{item.anomali_notu}</p>
-                        </div>
-                      )}
                     </div>
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      deleteNote(
+                        item.id,
+                        item.calendarEventId || item.calendar_event_id,
+                        item.mediaId
+                      )
+                    }
+                    className="w-8 h-8 rounded-full border border-stone-300/70 flex items-center justify-center text-stone-400 active:bg-white/80 transition-colors shrink-0 ml-2 cursor-pointer"
+                    title={isExpired ? "Arşivle / Temizle" : "Tamamla"}
+                  >
+                    ✓
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() =>
-                    deleteNote(
-                      item.id,
-                      item.calendarEventId || item.calendar_event_id,
-                      item.mediaId
-                    )
-                  }
-                  className="w-8 h-8 rounded-full border border-stone-300/70 flex items-center justify-center text-stone-400 active:bg-white/80 transition-colors shrink-0 ml-2 cursor-pointer"
-                >
-                  ✓
-                </button>
-              </div>
-            ))
+              );
+            })
           )}
         </section>
 
@@ -1012,7 +1504,7 @@ export default function App() {
                 ? 'text-red-500 font-semibold'
                 : statusText.includes('Görsel') || statusText.includes('inceleniyor')
                 ? 'text-amber-600 font-semibold'
-                : statusText === 'Kaydediliyor...'
+                : statusText.includes('çözümlüyor') || statusText === 'Kaydediliyor...'
                 ? 'text-stone-700 font-semibold'
                 : 'text-stone-400'
             }`}
@@ -1102,6 +1594,23 @@ export default function App() {
             </button>
           </div>
         </footer>
+
+        {/* Geri Alma (Undo Toast) Bildirimi */}
+        {undoToast && (
+          <div className="absolute bottom-28 inset-x-6 z-30 flex items-center justify-between bg-stone-900 text-white text-xs px-4 py-2.5 rounded-2xl shadow-xl border border-stone-800 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="flex items-center gap-2 truncate pr-2">
+              <span className="text-emerald-400 font-bold">✓</span>
+              <span className="truncate">"{undoToast.item.baslik}" tamamlandı</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleUndo}
+              className="text-amber-300 hover:text-amber-200 font-bold shrink-0 ml-3 underline decoration-amber-400/50 hover:decoration-amber-300 transition-colors cursor-pointer"
+            >
+              Geri Al
+            </button>
+          </div>
+        )}
 
       </main>
 

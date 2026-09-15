@@ -13,6 +13,7 @@ import {
   collection,
   addDoc,
   deleteDoc,
+  updateDoc,
   doc,
   onSnapshot,
   query,
@@ -59,24 +60,34 @@ if (getApps().length === 0) {
 export const auth: Auth = getAuth(app);
 export const db: Firestore = getFirestore(app, (firebaseConfig as any).firestoreDatabaseId);
 
-// Google Auth Provider with Google Calendar Events scope
+// Google Auth Provider (Standard authentication without external Calendar scopes)
 export const googleProvider = new GoogleAuthProvider();
-googleProvider.addScope('https://www.googleapis.com/auth/calendar.events');
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 // Token management (in-memory + sessionStorage as requested)
 const TOKEN_KEY = 'notivia_g_token';
 let cachedAccessToken: string | null = null;
+export let googleAccessToken: string | null = null;
 try {
   cachedAccessToken = sessionStorage.getItem(TOKEN_KEY) || null;
+  googleAccessToken = cachedAccessToken;
+  if (typeof window !== 'undefined') {
+    (window as any).googleAccessToken = googleAccessToken;
+  }
 } catch {
   // ignore
 }
 
 export function setGoogleAccessToken(token: string | null) {
   cachedAccessToken = token;
+  googleAccessToken = token;
+  if (typeof window !== 'undefined') {
+    (window as any).googleAccessToken = token;
+  }
   try {
     if (token) {
       sessionStorage.setItem(TOKEN_KEY, token);
+      console.log("Mevcut Google Token:", token);
     } else {
       sessionStorage.removeItem(TOKEN_KEY);
     }
@@ -86,9 +97,15 @@ export function setGoogleAccessToken(token: string | null) {
 }
 
 export function getGoogleAccessToken(): string | null {
+  if (googleAccessToken) return googleAccessToken;
   if (cachedAccessToken) return cachedAccessToken;
   try {
-    return sessionStorage.getItem(TOKEN_KEY) || null;
+    const stored = sessionStorage.getItem(TOKEN_KEY) || null;
+    if (stored) {
+      googleAccessToken = stored;
+      cachedAccessToken = stored;
+    }
+    return stored;
   } catch {
     return null;
   }
@@ -156,71 +173,52 @@ export async function createCalendarEvent(item: {
   hazirlik_zamani?: string | null;
   hazirlik_iso?: string | null;
   ikon?: string;
+  [key: string]: any;
 }): Promise<{ eventId: string | null; conflictWith: string | null }> {
-  let token = getGoogleAccessToken();
-  if (!token || !item.tarih_iso) return { eventId: null, conflictWith: null };
+  const token = googleAccessToken || getGoogleAccessToken();
+  if (!token) {
+    console.warn("Takvim Hatası: Google Access Token bulunamadı! Giriş yapılmamış.");
+    return { eventId: null, conflictWith: null };
+  }
+  if (!item.tarih_iso) {
+    console.warn("Takvim Hatası: tarih_iso alanı boş geldiği için takvim atlandı.");
+    return { eventId: null, conflictWith: null };
+  }
+
+  const startTime = new Date(item.tarih_iso);
+  const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
 
   try {
-    const startTime = new Date(item.tarih_iso);
-    if (isNaN(startTime.getTime())) return { eventId: null, conflictWith: null };
-
-    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
-
-    // 1. Önce takvimde çakışma var mı bak
-    const conflictWith = await checkCalendarConflict(startTime.toISOString(), endTime.toISOString());
-
-    // 2. Etkinliği oluştur (Ön hazırlık uyarısı ile birlikte)
-    const eventPayload: any = {
-      summary: `${item.ikon || '📌'} ${item.baslik}`,
-      description: conflictWith
-        ? `Notivia: Dikkat! Bu saatte '${conflictWith}' ile çakışma tespit edildi.`
-        : (item.hazirlik_zamani
-            ? `Notivia tarafından otomatik oluşturuldu.\n⏳ Tersine Ön Hazırlık: ${item.hazirlik_zamani}`
-            : 'Notivia tarafından otomatik oluşturuldu.'),
-      start: { dateTime: startTime.toISOString() },
-      end: { dateTime: endTime.toISOString() },
-      reminders: {
-        useDefault: false,
-        overrides: [
-          { method: 'popup', minutes: 60 },   // 1 saat önce
-          { method: 'popup', minutes: 1020 }  // 17 saat önce (Önceki gün ikindi)
-        ]
-      }
-    };
-
-    let response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-      method: 'POST',
+    const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+      method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json"
       },
-      body: JSON.stringify(eventPayload)
+      body: JSON.stringify({
+        summary: `${item.ikon || "📌"} ${item.baslik}`,
+        start: { dateTime: startTime.toISOString() },
+        end: { dateTime: endTime.toISOString() }
+      })
     });
 
-    // 401 Expired Token yakalandığında token'ı sıfırla ve 1 kez tazeleyip tekrar dene
-    if (response.status === 401) {
-      setGoogleAccessToken(null);
-      const refreshedToken = await refreshGoogleAccessToken();
-      if (refreshedToken) {
-        response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${refreshedToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(eventPayload),
-        });
-      }
+    if (!res.ok) {
+      const errorBody = await res.json().catch(() => ({}));
+      console.error("Google Takvim API Red Hatası:", errorBody);
+      return { eventId: null, conflictWith: null };
     }
 
-    if (response.ok) {
-      const data = await response.json();
-      return { eventId: data.id, conflictWith };
-    }
-  } catch (error) {
-    console.error('Takvim kayıt hatası:', error);
+    const calData = await res.json();
+    console.log("Takvim Başarıyla Eklendi. Event ID:", calData.id);
+    return { eventId: calData.id, conflictWith: null };
+  } catch (err) {
+    console.error("Google Takvim API Red Hatası:", err);
+    return { eventId: null, conflictWith: null };
   }
-  return { eventId: null, conflictWith: null };
+}
+
+if (typeof window !== 'undefined') {
+  (window as any).createCalendarEvent = createCalendarEvent;
 }
 
 // Delete Calendar Event from Google Calendar
@@ -237,6 +235,32 @@ export async function deleteCalendarEvent(eventId: string): Promise<void> {
     console.error('Takvim silme hatası:', error);
   }
 }
+
+// 1. Google Takvim Başlığını Güncelleme
+export async function updateCalendarEventTitle(
+  eventId: string,
+  newTitle: string,
+  icon: string = '📌'
+): Promise<void> {
+  const token = getGoogleAccessToken();
+  if (!token || !eventId) return;
+  try {
+    await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        summary: `${icon} ${newTitle}`,
+      }),
+    });
+  } catch (err) {
+    console.warn('Takvim güncelleme hatası:', err);
+  }
+}
+
+export { updateDoc };
 
 if (typeof window !== 'undefined') {
   (window as any).checkCalendarConflict = checkCalendarConflict;

@@ -41,6 +41,12 @@ export interface PeriodicLog {
   next_due_date: string | null;
 }
 
+export interface NotiviaTriggerInfo {
+  tip: 'finansal' | 'mekan' | 'kisi' | 'durum' | 'zincirleme' | null;
+  sart: string;
+  etiket: string;
+}
+
 export interface NotiviaSimpleNote {
   baslik: string;
   zaman: string | null;
@@ -49,6 +55,9 @@ export interface NotiviaSimpleNote {
   hazirlik_iso?: string | null;
   anomali_notu?: string | null;
   teshis_notu?: string | null;
+  baglantili_hatirlatma?: string | null;
+  tetikleyici?: NotiviaTriggerInfo | null;
+  action_items?: ActionItem[] | null;
   ikon: string;
   renk: string;
 }

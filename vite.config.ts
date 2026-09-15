@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig, type Plugin } from 'vite';
 import dotenv from 'dotenv';
-import { parseWithGemini } from './src/server/geminiParser.ts';
+import { parseWithGemini, parseWithAIAndImage } from './src/server/geminiParser.ts';
 
 dotenv.config();
 
@@ -21,6 +21,44 @@ function notiviaApiPlugin(): Plugin {
               has_api_key: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY'),
             })
           );
+          return;
+        }
+
+        if (req.url === '/api/parse-simple' && req.method === 'POST') {
+          let bodyStr = '';
+          req.on('data', (chunk) => {
+            bodyStr += chunk;
+          });
+          req.on('end', async () => {
+            try {
+              const body = JSON.parse(bodyStr || '{}');
+              const input = String(body.input || body.text || '').trim();
+              const currentDatetime = String(body.current_datetime || new Date().toISOString());
+              const base64Image = body.base64Image || body.image || null;
+              const pastNotes = body.past_notes || body.gecmis_notlar || body.history || [];
+
+              if (!input && !base64Image) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: false, error: 'Kullanıcı girdisi veya görsel boş olamaz.' }));
+                return;
+              }
+
+              const simple = await parseWithAIAndImage(input, base64Image, currentDatetime, pastNotes);
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: true, data: simple }));
+            } catch (err: any) {
+              console.error('[Vite Plugin API /api/parse-simple error]:', err);
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(
+                JSON.stringify({
+                  success: false,
+                  error: err?.message || 'Ayrıştırma hatası.',
+                })
+              );
+            }
+          });
           return;
         }
 

@@ -36,6 +36,11 @@
           "description": "Anomaly detection warning or pattern note",
           "maxLength": 300
         },
+        "baglantili_hatirlatma": {
+          "type": "string",
+          "description": "Contextual cross-reference reminder based on triggers",
+          "maxLength": 300
+        },
         "mediaId": {
           "type": "string",
           "description": "Attached image media reference ID"
@@ -54,6 +59,25 @@
           "type": "string",
           "format": "date-time",
           "description": "Creation timestamp"
+        },
+        "conflictWith": {
+          "type": "string",
+          "description": "Conflict warning title with other events",
+          "maxLength": 300
+        },
+        "conflictWarning": {
+          "type": "string",
+          "description": "Conflict warning title (alias)",
+          "maxLength": 300
+        },
+        "tetikleyici": {
+          "type": "object",
+          "description": "Conditional trigger metadata (tip, sart, etiket)",
+          "properties": {
+            "tip": { "type": "string" },
+            "sart": { "type": "string" },
+            "etiket": { "type": "string" }
+          }
         },
         "calendar_event_id": {
           "type": "string",

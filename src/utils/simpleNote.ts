@@ -50,243 +50,280 @@ export function toSimpleNote(note: NotiviaParsedNote): NotiviaSimpleNote {
     zaman: zamanStr,
     tarih_iso: tarihIso,
     anomali_notu: note.anomali_notu || null,
+    tetikleyici: (note as any).tetikleyici || null,
     ikon: singleEmoji,
     renk: note.ui_meta.color_hex || '#FEF3C7',
   };
 }
 
+// 1. Türkçe Zaman ve Göreceli Periyot Ayrıştırıcı
+function parseTurkishTemporal(text: string, baseDate: Date): { zaman: string | null; tarih_iso: string | null } {
+  const lower = text.toLowerCase();
+  const target = new Date(baseDate.getTime());
+  let hasDate = false;
+
+  const days: Record<string, number> = { pazar: 0, pazartesi: 1, salı: 2, çarşamba: 3, perşembe: 4, cuma: 5, cumartesi: 6 };
+  for (const [day, idx] of Object.entries(days)) {
+    if (lower.includes(day)) {
+      const current = target.getDay();
+      let diff = idx - current;
+      if (diff <= 0) diff += 7;
+      target.setDate(target.getDate() + diff);
+      hasDate = true;
+      break;
+    }
+  }
+
+  if (lower.includes('yarın')) {
+    target.setDate(target.getDate() + 1);
+    hasDate = true;
+  } else if (lower.includes('öbür gün')) {
+    target.setDate(target.getDate() + 2);
+    hasDate = true;
+  }
+
+  const gunMatch = lower.match(/(\d+)\s*gün\s*sonra/);
+  const ayMatch = lower.match(/(\d+)\s*ay\s*sonra/);
+  if (gunMatch) {
+    target.setDate(target.getDate() + parseInt(gunMatch[1], 10));
+    hasDate = true;
+  } else if (ayMatch) {
+    target.setMonth(target.getMonth() + parseInt(ayMatch[1], 10));
+    hasDate = true;
+  }
+
+  let hour = 9, minute = 0;
+  const timeRegex = /(?:saat\s*)?(\d{1,2})[:.](\d{2})|saat\s*(\d{1,2})/;
+  const timeMatch = lower.match(timeRegex);
+
+  if (timeMatch) {
+    hour = parseInt(timeMatch[1] || timeMatch[3], 10);
+    minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+    hasDate = true;
+  } else if (lower.includes('öğle') || lower.includes('öğlen')) {
+    hour = 13;
+  } else if (lower.includes('akşam')) {
+    hour = 19;
+  } else if (lower.includes('gece')) {
+    hour = 21;
+    minute = 30;
+  }
+
+  target.setHours(hour, minute, 0, 0);
+
+  if (!hasDate) return { zaman: null, tarih_iso: null };
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const iso = `${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}T${pad(hour)}:${pad(minute)}:00`;
+  const gunIsimleri = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+  
+  return { zaman: `${gunIsimleri[target.getDay()]} ${pad(hour)}:${pad(minute)}`, tarih_iso: iso };
+}
+
+// 2. Sözdizimsel Anlam ve Rol Çözümleyici (Özne - Nesne - Yüklem)
 export function extractSimpleNoteFromText(
   input: string,
   refDatetime?: string,
   pastNotes?: any[]
 ): NotiviaSimpleNote {
-  const lower = input.toLowerCase();
+  const cleanInput = input.trim();
+  const lower = cleanInput.toLowerCase();
   const baseDate = refDatetime ? new Date(refDatetime) : new Date();
 
-  // Color selection
-  let renk = '#FEF3C7'; // Default yellow
-  let ikon = '📝';
+  const { zaman, tarih_iso } = parseTurkishTemporal(cleanInput, baseDate);
 
-  if (lower.includes('bakan') || lower.includes('ziyaret') || lower.includes('valilik') || lower.includes('belediye')) {
-    renk = '#E0F2FE'; // Pastel mavi
-    ikon = '🏛️';
-  } else if (lower.includes('su') || lower.includes('sular') || lower.includes('arıtma') || lower.includes('filtre') || lower.includes('temizle')) {
-    renk = '#E0F2FE'; // Pastel mavi
-    ikon = '💧';
-  } else if (lower.includes('para') || lower.includes('maaş') || lower.includes('kart') || lower.includes('fatura') || lower.includes('kira')) {
-    renk = '#DCFCE7'; // Pastel yeşil
-    ikon = '💳';
-  } else if (lower.includes('maç') || lower.includes('halı saha') || lower.includes('kahve') || lower.includes('ahmet') || lower.includes('arkadaş') || lower.includes('buluş')) {
-    renk = '#DCFCE7'; // Pastel yeşil
-    ikon = '☕';
-  } else if (lower.includes('acil') || lower.includes('elektrik') || lower.includes('kesinti') || lower.includes('hemen') || lower.includes('bugün saat') || lower.includes('unutma')) {
-    renk = '#FEE2E2'; // Pastel kırmızı
-    ikon = '⚡';
-  } else if (lower.includes('doktor') || lower.includes('diş') || lower.includes('hastane') || lower.includes('ilaç') || lower.includes('aşı') || lower.includes('kedi') || lower.includes('köpek')) {
-    renk = '#F3E8FF'; // Pastel mor
-    ikon = lower.includes('kedi') ? '🐱' : lower.includes('diş') ? '🦷' : '🩺';
-  } else if (lower.includes('araba') || lower.includes('muayene') || lower.includes('kombi') || lower.includes('tamir')) {
-    renk = '#FEF3C7'; // Pastel sarı
-    ikon = lower.includes('araba') ? '🚗' : '🔧';
+  // A. KOŞUL VE TETİKLEYİCİ TESPİTİ (Zaman içermeyen şartlar)
+  let tetikleyici: { tip: 'finansal' | 'mekan' | 'kisi' | 'durum' | 'zincirleme' | null; sart: string; etiket: string } | null = null;
+  if (lower.includes('maaş yatınca')) {
+    tetikleyici = { tip: 'finansal', sart: 'Maaş yatması', etiket: '⚡ Maaş Gününde' };
+  } else if (lower.includes('sanayiye yolum') || lower.includes('sanayiye gidince') || lower.includes('sanayide')) {
+    tetikleyici = { tip: 'mekan', sart: 'Sanayi ziyareti', etiket: '📍 Sanayi Uğraması' };
+  } else if (lower.includes('veli toplantıs') || lower.includes('toplantıda')) {
+    tetikleyici = { tip: 'mekan', sart: 'Toplantı', etiket: '📍 Toplantıda' };
   }
 
-  // Zaman & tarih_iso extraction
-  let zaman: string | null = null;
-  let tarih_iso: string | null = null;
+  // B. FİNANSAL İŞLEMLER (-e / -den Ek Analizi ve Meblağ Tespiti)
+  const amountMatch = cleanInput.match(/(\d+(?:[.,]\d+)?)\s*(?:bin)?\s*(?:tl|lira|euro|dolar)?/i);
+  const amountStr = amountMatch ? amountMatch[0] : null;
 
-  const targetDate = new Date(baseDate);
+  // İsmin halleri ve muhatap yakalama (Örn: "Ali hocaya", "Ahmet abiden", "Mehmet'e")
+  const recipientMatch = cleanInput.match(/([A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?:\s+[a-zçğıöşü]+)?)(?:'?[yea])\b/i); // -e/-a (Yönelme -> Ödeme)
+  const sourceMatch = cleanInput.match(/([A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?:\s+[a-zçğıöşü]+)?)(?:'?[dten]an|'?[dten]en)\b/i); // -den/-dan (Ayrılma -> Alacak)
 
-  // Time slot detection
-  // Kurallar: "sabah" -> 09:00, "öğlen" -> 13:00, "akşam" -> 19:00, "gece" -> 21:30. Saat verilmediyse 09:00 ata.
-  let slotHours = 9;
-  let slotMinutes = 0;
-  let hasSlot = false;
+  const isFinancialVerb = lower.includes('alacak') || lower.includes('alacağım') || 
+                           lower.includes('borç') || lower.includes('borcum') || 
+                           lower.includes('öde') || lower.includes('at') || 
+                           lower.includes('gönder') || lower.includes('yatır');
 
-  if (lower.includes('gece')) {
-    slotHours = 21;
-    slotMinutes = 30;
-    hasSlot = true;
-  } else if (lower.includes('akşam')) {
-    slotHours = 19;
-    slotMinutes = 0;
-    hasSlot = true;
-  } else if (lower.includes('öğlen') || lower.includes('öğle')) {
-    slotHours = 13;
-    slotMinutes = 0;
-    hasSlot = true;
-  } else if (lower.includes('sabah')) {
-    slotHours = 9;
-    slotMinutes = 0;
-    hasSlot = true;
-  }
+  if (amountStr && (isFinancialVerb || recipientMatch || sourceMatch)) {
+    let title = 'Finansal İşlem';
+    let isPayable = lower.includes('borcum') || lower.includes('öde') || lower.includes('at') || lower.includes('gönder') || !!recipientMatch;
 
-  // Check explicit HH:mm
-  const timeRegex = /(\b[0-2]?[0-9]):([0-5][0-9])\b/;
-  const timeMatch = input.match(timeRegex);
-  if (timeMatch) {
-    slotHours = parseInt(timeMatch[1], 10);
-    slotMinutes = parseInt(timeMatch[2], 10);
-    hasSlot = true;
-  }
-
-  // Days mapping
-  const daysMap: Record<string, { dayIndex: number; name: string }> = {
-    'pazartesi': { dayIndex: 1, name: 'Pazartesi' },
-    'salı': { dayIndex: 2, name: 'Salı' },
-    'çarşamba': { dayIndex: 3, name: 'Çarşamba' },
-    'perşembe': { dayIndex: 4, name: 'Perşembe' },
-    'cuma': { dayIndex: 5, name: 'Cuma' },
-    'cumartesi': { dayIndex: 6, name: 'Cumartesi' },
-    'pazar': { dayIndex: 0, name: 'Pazar' },
-  };
-
-  let matchedDayKey: string | null = null;
-  for (const dayKey of Object.keys(daysMap)) {
-    if (lower.includes(dayKey)) {
-      matchedDayKey = dayKey;
-      break;
+    if (recipientMatch) {
+      title = `${recipientMatch[1]}: ${amountStr} Ödeme`;
+      isPayable = true;
+    } else if (sourceMatch) {
+      title = `${sourceMatch[1]}: ${amountStr} Alacak`;
+      isPayable = false;
+    } else if (lower.includes('alacak') || lower.includes('alacağım')) {
+      title = `${amountStr} Alacak Takibi`;
+      isPayable = false;
+    } else {
+      title = `${amountStr} Ödeme Takibi`;
+      isPayable = true;
     }
+
+    return {
+      baslik: title.slice(0, 32),
+      zaman: tetikleyici ? tetikleyici.etiket : (zaman || 'Vade Belirtilmedi'),
+      tarih_iso: tetikleyici ? null : tarih_iso,
+      ikon: isPayable ? '💳' : '💰',
+      renk: isPayable ? '#FEE2E2' : '#DCFCE7',
+      tetikleyici
+    };
   }
 
-  if (lower.includes('6 ay')) {
-    zaman = '6 ay sonra';
-    targetDate.setMonth(targetDate.getMonth() + 6);
-    targetDate.setHours(10, 0, 0, 0);
-    tarih_iso = targetDate.toISOString().slice(0, 19);
-  } else if (lower.includes('3 ay')) {
-    zaman = '3 ay sonra';
-    targetDate.setMonth(targetDate.getMonth() + 3);
-    targetDate.setHours(10, 0, 0, 0);
-    tarih_iso = targetDate.toISOString().slice(0, 19);
-  } else if (lower.includes('yarın')) {
-    targetDate.setDate(targetDate.getDate() + 1);
-    targetDate.setHours(slotHours, slotMinutes, 0, 0);
-    const timeStr = `${slotHours.toString().padStart(2, '0')}:${slotMinutes.toString().padStart(2, '0')}`;
-    zaman = `Yarın ${timeStr}`;
-    tarih_iso = targetDate.toISOString().slice(0, 19);
-  } else if (matchedDayKey) {
-    const { dayIndex, name } = daysMap[matchedDayKey];
-    const currentDay = targetDate.getDay();
-    const diff = (dayIndex - currentDay + 7) % 7 || 7;
-    targetDate.setDate(targetDate.getDate() + diff);
-    targetDate.setHours(slotHours, slotMinutes, 0, 0);
+  // C. KURUMSAL / BÜROKRASİ / 3. ŞAHIS DENETİM & RESMİ GÖREVLER
+  if (
+    lower.includes('müfettiş') || lower.includes('bakan') || lower.includes('denetim') ||
+    lower.includes('nöbet') || lower.includes('müdür') || lower.includes('evrak') ||
+    lower.includes('protokol') || lower.includes('ziyaret')
+  ) {
+    let baslik = 'Kurumsal Takip';
+    let ikon = '📄';
 
-    const timeStr = `${slotHours.toString().padStart(2, '0')}:${slotMinutes.toString().padStart(2, '0')}`;
-    zaman = `${name} ${timeStr}`;
-    tarih_iso = targetDate.toISOString().slice(0, 19);
-  }
-
-  // Baslik extraction (en fazla 4 kelime net ve eylem/takip odaklı)
-  let baslik = 'Yeni Hatırlatıcı';
-  if (lower.includes('bakan')) {
-    baslik = 'Bakan Ziyareti Takibi';
-  } else if (lower.includes('sular') || lower.includes('su kesil')) {
-    baslik = 'Su Kesintisi';
-  } else if (lower.includes('elektrik')) {
-    baslik = 'Elektrik Kesintisi';
-  } else if (lower.includes('ahmet')) {
-    baslik = 'Ahmet Ziyareti';
-  } else if (lower.includes('su arıtma') || lower.includes('filtre')) {
-    baslik = 'Su Arıtma Filtresi Değişimi';
-  } else if (lower.includes('araba') && lower.includes('muayene')) {
-    baslik = 'Araç Muayenesi';
-  } else if (lower.includes('kedi') && lower.includes('parazit')) {
-    baslik = 'Kedi Parazit Damlası';
-  } else if (lower.includes('halı saha')) {
-    baslik = 'Halı Saha Maçı';
-  } else if (lower.includes('diş')) {
-    baslik = 'Diş Hekimi Randevusu';
-  } else if (lower.includes('pasaport')) {
-    baslik = 'Pasaport Yenileme';
-  } else if (lower.includes('kombi')) {
-    baslik = 'Kombi Bakımı';
-  } else if (lower.includes('kredi kartı')) {
-    baslik = 'Kredi Kartı Borcu Ödemesi';
-  } else {
-    // Generate clean concise title from input
-    const cleanWords = input
-      .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '')
-      .split(/\s+/)
-      .filter((w) => !['bir', 've', 'için', 'ile', 'bana', 'yeni', 'kafam', 'rahat', 'ama', 'günü', 'geçmesin', 'yine'].includes(w.toLowerCase()))
-      .slice(0, 4);
-    if (cleanWords.length > 0) {
-      baslik = cleanWords.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    if (lower.includes('müfettiş') || lower.includes('denetim')) {
+      baslik = 'Müfettiş Evrak Denetimi';
+      ikon = '📁';
+    } else if (lower.includes('nöbet')) {
+      baslik = 'Nöbetçi Görevi';
+      ikon = '📋';
+    } else if (lower.includes('bakan')) {
+      baslik = 'Bakan Ziyareti';
+      ikon = '🏛️';
+    } else if (lower.includes('rapor') || lower.includes('evrak')) {
+      baslik = 'Evrak / Rapor Teslimi';
+      ikon = '📑';
     }
+
+    return {
+      baslik,
+      zaman: tetikleyici ? tetikleyici.etiket : (zaman || 'Resmi Takip'),
+      tarih_iso: tetikleyici ? null : tarih_iso,
+      ikon,
+      renk: '#E0F2FE',
+      tetikleyici
+    };
   }
 
-  // Tersine Zamanlama (Inverted Scheduling):
-  // - Etkinlik Cuma sabahı ise hazırlık hatırlatıcısını Perşembe 16:00'ya; sabah erken uçuş varsa hazırlık uyarısını önceki akşam 20:00'ye kur.
-  let hazirlik_zamani: string | null = null;
-  let hazirlik_iso: string | null = null;
+  // D. TEKNİK BAKIM / MUAYENE & RESMİ İŞLEMLER
+  if (
+    lower.includes('muayene') || lower.includes('pasaport') ||
+    lower.includes('balata') || lower.includes('kombi') || lower.includes('lastik') ||
+    lower.includes('basınç') || lower.includes('filtre') || lower.includes('tamir') ||
+    lower.includes('servis') || lower.includes('araba') || lower.includes('bakım')
+  ) {
+    let baslik = 'Teknik Bakım';
+    let ikon = '🔧';
 
-  if (tarih_iso) {
-    const eventDate = new Date(tarih_iso);
-    if (!isNaN(eventDate.getTime())) {
-      const prepDate = new Date(eventDate);
-      const isMorning = eventDate.getHours() < 12;
+    if (lower.includes('muayene')) { baslik = 'Araç Muayenesi'; ikon = '🚗'; }
+    else if (lower.includes('pasaport')) { baslik = 'Pasaport Randevusu'; ikon = '🛂'; }
+    else if (lower.includes('balata')) baslik = 'Fren Balata Değişimi';
+    else if (lower.includes('lastik')) { baslik = 'Kışlık Lastik Değişimi'; ikon = '🛞'; }
+    else if (lower.includes('kombi')) baslik = 'Kombi Basınç Kontrolü';
 
-      if (isMorning) {
-        prepDate.setDate(prepDate.getDate() - 1);
-        if (lower.includes('uçak') || lower.includes('uçuş')) {
-          prepDate.setHours(20, 0, 0, 0);
-        } else {
-          prepDate.setHours(16, 0, 0, 0);
-        }
-      } else if (eventDate.getHours() >= 18) {
-        prepDate.setHours(13, 0, 0, 0);
+    let action_items: { task: string; is_completed: boolean }[] = [];
+    if (lower.includes('muayene')) {
+      action_items = [
+        { task: 'Ruhsat ve trafik sigortasını kontrol et', is_completed: false },
+        { task: 'İlk yardım çantası ve yangın tüpünü teyit et', is_completed: false },
+        { task: 'MTV ve trafik cezası borcu sorgula', is_completed: false }
+      ];
+    } else if (lower.includes('pasaport')) {
+      action_items = [
+        { task: 'Harç ve defter bedeli dekontunu al', is_completed: false },
+        { task: '2 adet biyometrik fotoğraf hazırla', is_completed: false },
+        { task: 'Eski pasaport ve kimlik asıllarını çantaya koy', is_completed: false }
+      ];
+    }
+
+    return {
+      baslik,
+      zaman: tetikleyici ? tetikleyici.etiket : (zaman || 'Servis Takibi'),
+      tarih_iso: tetikleyici ? null : tarih_iso,
+      ikon,
+      renk: '#FEF3C7',
+      tetikleyici,
+      action_items // <- Dönen objeye iliştirildi
+    };
+  }
+
+  // E. SAĞLIK & REÇETE TAKİBİ
+  if (lower.includes('doktor') || lower.includes('tok karnına') || lower.includes('ilaç') || lower.includes('reçete') || lower.includes('diş')) {
+    const frequencyMatch = cleanInput.match(/günde\s*(\d+)\s*kez/i);
+    const doseStr = frequencyMatch ? `(${frequencyMatch[1]}x1 Tok)` : '';
+    
+    return {
+      baslik: lower.includes('diş') ? 'Diş Randevusu' : (lower.includes('doktor') ? 'Doktor Randevusu' : `İlaç Takibi ${doseStr}`.trim()),
+      zaman: zaman || 'Günlük Doz',
+      tarih_iso,
+      ikon: lower.includes('diş') ? '🦷' : (lower.includes('doktor') ? '🩺' : '💊'),
+      renk: '#F3E8FF'
+    };
+  }
+
+  // E2. RANDEVU, TOPLANTI VE TAKVİM HATIRLATICILARI
+  if (
+    lower.includes('randevu') || lower.includes('toplantı') || lower.includes('görüşme') ||
+    lower.includes('buluşma') || lower.includes('seans') || lower.includes('muayene') ||
+    lower.includes('mülakat') || lower.includes('hatırlat')
+  ) {
+    let baslik = 'Randevu';
+    let ikon = '🗓️';
+    if (lower.includes('veli toplantı')) baslik = 'Veli Toplantısı';
+    else if (lower.includes('iş görüşme') || lower.includes('mülakat')) baslik = 'İş Mülakatı';
+    else if (lower.includes('kuaför') || lower.includes('berber')) { baslik = 'Kuaför Randevusu'; ikon = '✂️'; }
+    else if (lower.includes('muayene') || lower.includes('hastane')) { baslik = 'Hastane Muayenesi'; ikon = '🏥'; }
+    else {
+      // Kelime temizleme: "randevu yarın" -> "Randevu"
+      const cleanWords = cleanInput
+        .replace(/\b(yarın|bugün|öbür gün|saat|pazartesi|salı|çarşamba|perşembe|cuma|cumartesi|pazar)\b/gi, '')
+        .replace(/\b(\d{1,2}[:.]\d{2}|\d{1,2})\b/g, '')
+        .trim();
+      if (cleanWords.length > 2) {
+        baslik = cleanWords.charAt(0).toUpperCase() + cleanWords.slice(1);
       } else {
-        prepDate.setDate(prepDate.getDate() - 1);
-        prepDate.setHours(16, 0, 0, 0);
-      }
-
-      const daysOfWeek = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
-      const prepDayName = daysOfWeek[prepDate.getDay()];
-      const pad = (n: number) => n.toString().padStart(2, '0');
-      hazirlik_zamani = `${prepDayName} ${pad(prepDate.getHours())}:${pad(prepDate.getMinutes())} hazırlık uyarısı`;
-      hazirlik_iso = `${prepDate.getFullYear()}-${pad(prepDate.getMonth() + 1)}-${pad(prepDate.getDate())}T${pad(prepDate.getHours())}:${pad(prepDate.getMinutes())}:00`;
-    }
-  }
-
-  // Örüntü ve Anomali Tespiti:
-  // 1. Anomali: Normalde uzun aralıklarla yapılması gereken bakım/işlem son 30 günde tekrarlanmışsa
-  // 2. Rutin: Düzenli tekrarlanan alışkanlık
-  let anomali_notu: string | null = null;
-  if (pastNotes && Array.isArray(pastNotes) && pastNotes.length > 0) {
-    const maintenanceKeywords = ['su bas', 'kombi', 'akü', 'tamir', 'lastik', 'filtre', 'arıza', 'servis', 'tesisat', 'şarj'];
-    const hasMaintenance = maintenanceKeywords.some((k) => lower.includes(k));
-
-    if (hasMaintenance) {
-      const matchWord = maintenanceKeywords.find((k) => lower.includes(k)) || 'bakım';
-      const similarPast = pastNotes.filter((p) => {
-        const pText = (p.baslik + ' ' + (p.zaman || '')).toLowerCase();
-        return pText.includes(matchWord) || maintenanceKeywords.some((k) => pText.includes(k));
-      });
-
-      if (similarPast.length >= 1) {
-        anomali_notu = `Son dönemde ${similarPast.length + 1}. kez benzer işlem/bakım yapıldı, teknik bir sorun veya arıza olabilir.`;
+        baslik = 'Randevu';
       }
     }
+
+    return {
+      baslik: baslik.slice(0, 30),
+      zaman: zaman || 'Planlanan Zaman',
+      tarih_iso,
+      ikon,
+      renk: '#FEF3C7',
+      tetikleyici
+    };
   }
 
-  // Görsel Teşhis (Heuristic Fallback)
-  let teshis_notu: string | null = null;
-  if (lower.includes('ses yapıyor') || lower.includes('ses geliyor')) {
-    teshis_notu = 'Mekanik sürtünme veya aşınma tespit edildi';
-  } else if (lower.includes('bitti bu') || lower.includes('bitmiş')) {
-    teshis_notu = 'Tükenme / ömür sonu tespiti';
-  } else if (lower.includes('bar') || lower.includes('basınç')) {
-    teshis_notu = 'Kritik basınç seviyesi uyarısı';
+  // F. EMANET / İADE İŞLEMLERİ
+  if (lower.includes('emanet') || lower.includes('geri ver') || lower.includes('iade') || lower.includes('aldım')) {
+    return {
+      baslik: (cleanInput.slice(0, 24) + ' (İade)').slice(0, 30),
+      zaman: zaman || 'Takip',
+      tarih_iso,
+      ikon: '🪜',
+      renk: '#F5F5F4'
+    };
   }
 
+  // G. GENEL DÜŞÜŞ (Fallback)
   return {
-    baslik,
-    zaman,
+    baslik: cleanInput.slice(0, 28) || 'Not',
+    zaman: zaman || 'Not',
     tarih_iso,
-    hazirlik_zamani,
-    hazirlik_iso,
-    anomali_notu,
-    teshis_notu,
-    ikon,
-    renk,
+    ikon: '📌',
+    renk: '#F5F5F4'
   };
 }

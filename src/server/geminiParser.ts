@@ -7,6 +7,13 @@ Görevin: Kullanıcının ayaküstü, devrik, dağınık, imalı veya sesle kayd
 
 GÖREV: Kullanıcının yeni girdisini ve varsa verilen 'GEÇMİŞ NOTLAR' listesini karşılaştır.
 
+GÖREV VE ANLAM AYRIŞTIRMA KURALLARI:
+1. Kişi İsimleri ve Eylem Ayrımı:
+   - Girdide bir kişi adı geçmesi (Ahmet, Mehmet vb.) o kişinin ziyaret edileceği anlamına GELMEZ.
+   - "Ahmet'ten alacağım var", "Mehmet'e borç verdim" gibi ifadeler KESİNLİKLE 'Finans' kategorisidir. Başlığı "Buluşma" veya "Ziyaret" yapma; doğrudan "Alacak Takibi" veya "Borç Takibi" yap.
+   - İkon: Alacak/borç için '💰' veya '💳' kullan.
+   - Zaman: Kesin bir tarih veya vade söylenmediyse zamanı null bırak; takvime rastgele çay randevusu yazma.
+
 ÖRÜNTÜ VE ANOMALİ KURALLARI:
 1. Anomali Tespiti: Normalde uzun aralıklarla yapılması gereken bir bakım/işlem (örn: kombiye su basma, akü şarjı, arıza tamiri) son 30 gün içinde birden fazla tekrarlanmışsa teknik bir sorun olduğunu sez ve "anomali_notu" üret.
 2. Rutin Keşfi: Düzenli tekrarlanan bir sosyal veya kişisel alışkanlık sezersen ortalama döngüyü çıkar.
@@ -164,7 +171,8 @@ export async function parseWithGemini(
 
         const text = response.text;
         if (text) {
-          const parsed = JSON.parse(text);
+          const cleanJson = text.replace(/```json/gi, "").replace(/```/g, "").trim();
+          const parsed = JSON.parse(cleanJson);
           return {
             data: sanitizeParsedOutput(parsed),
             source: modelName,
@@ -619,39 +627,55 @@ export async function parseSimpleWithGemini(
           ? `\nGEÇMİŞ NOTLAR:\n${JSON.stringify(pastNotes.slice(0, 20).map((n) => ({ baslik: n.baslik, zaman: n.zaman, tarih_iso: n.tarih_iso, createdAt: n.createdAt })), null, 2)}`
           : '';
 
-        const prompt = `Sen "Notivia" uygulamasının bilişsel zeka motorusun. Sadece söylenen kelimeleri değil, söylenmeyen hazırlık ihtiyaçlarını ve tersine zamanlamayı ("leb demeden leblebiyi") çözümlersin.
+        const prompt = `Sen Notivia'nın Türkçe Dilbilgisi ve Semantik Niyet Çözümleme Motorusun.
+Görevin: Kullanıcının doğal Türkçe ifadelerini "Özne - Nesne/Meblağ - Yüklem/Eylem" çözümlemesine tabi tutarak katı JSON üretmek.
 
-GÖREV: Kullanıcının yeni girdisini ve varsa verilen 'GEÇMİŞ NOTLAR' listesini karşılaştır.
+TEMEL SÖZDİZİMİ VE ANLAM KURALLARI:
 
-ÖRÜNTÜ VE ANOMALİ KURALLARI:
-1. Anomali Tespiti: Normalde uzun aralıklarla yapılması gereken bir bakım/işlem (örn: kombiye su basma, akü şarjı, arıza tamiri) son 30 gün içinde birden fazla tekrarlanmışsa teknik bir sorun olduğunu sez ve "anomali_notu" üret.
-2. Rutin Keşfi: Düzenli tekrarlanan bir sosyal veya kişisel alışkanlık sezersen ortalama döngüyü çıkar.
-3. Çıktı: Sorun veya rutin yoksa null dön; varsa tek cümlelik zeki bir gözlem yaz.
+1. İsmin Halleri ve Finansal Rol Dağılımı:
+   - İsmin Yönelme Hali (-e, -a): Hedef muhataptır, giden bir değeri ifade eder ("Ali hocaya 750 at" -> Ödeme Takibi, Renk: #FEE2E2, İkon: 💳).
+   - İsmin Ayrılma Hali (-den, -dan): Kaynak muhataptır, gelen bir değeri ifade eder ("Ahmet abiden 5000 alacağım var" -> Alacak Takibi, Renk: #DCFCE7, İkon: 💰).
+   - Vade belirtilmemişse "tarih_iso": null dön; rastgele takvim randevusu oluşturma.
 
-TEMEL GÖREVLER VE AKIL YÜRÜTME:
-1. Niyet ve Özne Analizi:
-   - 3. şahıs bildirimleri ("bakan gelecek", "okul tatil", "elektrik kesilecek") kullanıcı için doğrudan takip ve hazırlık görevidir.
-   - Pasif haberleri kullanıcının etkileneceği aksiyona dönüştür.
+2. Kurumsal ve Üçüncü Şahıs Bildirimleri (Tersine Zamanlama):
+   - Cümlenin öznesi resmi bir makam veya olay ise ("Müfettişler denetleyecek", "Bakan gelecek", "Sular kesilecek"), kullanıcı pasif etkilenendir.
+   - Bu girdileri kullanıcının yapması gereken hazırlık olarak yapılandır ("📁 Müfettiş Evrak Denetimi").
+   - Etkinlik gününden bir önceki ikindi vaktine (16:00) "hazirlik_zamani" ve "hazirlik_iso" üret.
 
-2. Tersine Zamanlama (Inverted Scheduling):
-   - Her randevu, resmi ziyaret, sınav, seyahat veya kontrol öncesinde bir "ön hazırlık" gerekir.
-   - Etkinlik Cuma sabahı ise hazırlık hatırlatıcısını Perşembe 16:00'ya; sabah erken uçuş varsa hazırlık uyarısını önceki akşam 20:00'ye kur.
+3. Koşul ve Tetikleyiciler (Triggers):
+   - "Maaş yatınca", "Sanayiye yolum düşünce", "Toplantıda", "Havalar soğuyunca" gibi şart bildiren yapılarda "tarih_iso": null bırak.
+   - Bu şartı "tetikleyici" alanına yaz:
+     { "tip": "finansal"|"mekan"|"kisi"|"durum", "sart": "Olay adı", "etiket": "⚡ Maaş Gününde" }
 
-3. Referans Zaman (CURRENT_DATETIME):
-   - Sağlanan referans zamana göre gün ve saatleri kesin ISO-8601 biçiminde hesapla: ${now}.${historyContext}
+4. Sağlık ve Reçete Eylemleri:
+   - "Günde X kez tok karnına", "Doktor iç dedi" ifadelerinde eylem medikal takiptir ("💊 İlaç Takibi (3x1 Tok)").
+
+5. Zaman ve Hatırlatıcı Çözümleme Kuralları:
+   - Göreceli Gün Çözümlemesi: "CURRENT_DATETIME" değerini referans alarak "yarın", "pazartesi", "haftaya cuma" gibi ifadeleri kesin YYYY-MM-DD formatına dönüştür.
+   - Saat Belirtilmemişse Varsayılan Ekle: Kullanıcı "yarın randevu", "cuma veli toplantısı" gibi bir gün belirtip SAAT BELİRTMEDİYSE: "tarih_iso" alanını kesinlikle boş (null) bırakma. Standart iş/eylem saati olarak 09:00:00 ata. "zaman" etiketine "Yarın 09:00" yaz.
+   - Randevu ve Hatırlatıcı İfadeleri: Cümlede "randevu", "toplantı", "görüşme", "teslim", "kontrol" gibi kelimeler geçiyorsa bu doğrudan bir takvim eylemidir.
+
+Referans Zaman (CURRENT_DATETIME): ${now}.${historyContext}
 
 Kullanıcı girdisi: "${text}".
 
-ÇIKTI ŞEMASI (Katı JSON):
+ÇIKTI ŞEMASI (Katı JSON üret, markdown veya açıklama ekleme):
 {
-  "baslik": "Kısa eylem başlığı (max 4 kelime)",
-  "zaman": "Kullanıcıya görünecek sade zaman (örn: Cuma 09:00)",
-  "tarih_iso": "Etkinliğin kesin tarihi (ISO-8601)",
-  "hazirlik_zamani": "Ön hazırlık zamanı (örn: Perşembe 16:00 hazırlık uyarısı)",
-  "hazirlik_iso": "Takvim/bildirim için hazırlık tarihi (ISO-8601)",
-  "anomali_notu": "Kısa zeka tespiti veya null (Örn: 'Son 20 günde 3. kez su basıldı, tesisatta kaçak olabilir.')",
-  "ikon": "Temsili tek emoji",
-  "renk": "Pastel HEX kodu"
+  "ozne": "Cümlenin öznesi veya muhatap",
+  "nesne": "İşleme konu olan meblağ, eşya veya evrak",
+  "eylem": "Gerçekleşecek temel aksiyon",
+  "baslik": "Kısa eylem başlığı (maks 4 kelime)",
+  "zaman": "Arayüzde görünecek sade ifade",
+  "tarih_iso": "Kesin ISO-8601 tarihi veya null",
+  "hazirlik_zamani": "Varsa ön hazırlık uyarısı metni veya null",
+  "hazirlik_iso": "Varsa ön hazırlık tarihi (ISO-8601) veya null",
+  "tetikleyici": {
+    "tip": "finansal | mekan | kisi | durum",
+    "sart": "Beklenen olay",
+    "etiket": "Arayüz hap etiketi (örn: ⚡ Maaş Gününde)"
+  },
+  "ikon": "İçeriğe tam uyan tek emoji",
+  "renk": "Pastel HEX kodu (#DCFCE7, #FEE2E2, #E0F2FE, #FEF3C7, #F3E8FF)"
 }`;
 
         const response = await ai.models.generateContent({
@@ -663,14 +687,22 @@ Kullanıcı girdisi: "${text}".
             responseSchema: {
               type: Type.OBJECT,
               properties: {
-                baslik: { type: Type.STRING, description: 'Kısa eylem başlığı (max 4 kelime)' },
-                zaman: { type: Type.STRING, description: 'Kullanıcıya görünecek sade zaman' },
-                tarih_iso: { type: Type.STRING, description: 'Etkinliğin kesin tarihi (ISO-8601)' },
+                baslik: { type: Type.STRING, description: 'Kısa eylem (max 4 kelime)' },
+                zaman: { type: Type.STRING, description: 'Arayüzde görünecek sade metin' },
+                tarih_iso: { type: Type.STRING, description: 'Yalnızca kesin randevularda ISO-8601, koşulluysa null' },
+                tetikleyici: {
+                  type: Type.OBJECT,
+                  properties: {
+                    tip: { type: Type.STRING, description: 'finansal | mekan | kisi | durum | zincirleme' },
+                    sart: { type: Type.STRING, description: 'Gerçekleşmesi beklenen şart' },
+                    etiket: { type: Type.STRING, description: 'Arayüzde görünecek 2-3 kelimelik koşul rozeti (örn: ⚡ Maaş Gününde)' },
+                  },
+                },
                 hazirlik_zamani: { type: Type.STRING, description: 'Ön hazırlık zamanı' },
                 hazirlik_iso: { type: Type.STRING, description: 'Takvim/bildirim için hazırlık tarihi (ISO-8601)' },
                 anomali_notu: { type: Type.STRING, description: 'Kısa zeka tespiti veya null' },
-                ikon: { type: Type.STRING, description: 'Temsili tek emoji' },
-                renk: { type: Type.STRING, description: 'Pastel HEX kodu' },
+                ikon: { type: Type.STRING, description: 'tek emoji' },
+                renk: { type: Type.STRING, description: 'pastel hex' },
               },
               required: ['baslik', 'ikon', 'renk'],
             },
@@ -679,11 +711,17 @@ Kullanıcı girdisi: "${text}".
 
         const raw = response.text;
         if (raw) {
-          const parsed = JSON.parse(raw);
+          const cleanJson = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+          const parsed = JSON.parse(cleanJson);
           return {
             baslik: String(parsed.baslik || text.slice(0, 25)),
             zaman: parsed.zaman ? String(parsed.zaman) : null,
             tarih_iso: parsed.tarih_iso ? String(parsed.tarih_iso) : null,
+            tetikleyici: parsed.tetikleyici && parsed.tetikleyici.etiket ? {
+              tip: parsed.tetikleyici.tip || null,
+              sart: String(parsed.tetikleyici.sart || ''),
+              etiket: String(parsed.tetikleyici.etiket || ''),
+            } : null,
             hazirlik_zamani: parsed.hazirlik_zamani ? String(parsed.hazirlik_zamani) : null,
             hazirlik_iso: parsed.hazirlik_iso ? String(parsed.hazirlik_iso) : null,
             anomali_notu: parsed.anomali_notu ? String(parsed.anomali_notu) : null,
@@ -744,7 +782,8 @@ export async function sendMultimodalRequest(text?: string, base64Image?: string 
   const resJson = await response.json();
   const textOut = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!textOut) throw new Error('No candidate content');
-  return JSON.parse(textOut);
+  const cleanJson = textOut.replace(/```json/gi, "").replace(/```/g, "").trim();
+  return JSON.parse(cleanJson);
 }
 
 export async function parseWithAIAndImage(
@@ -758,11 +797,23 @@ export async function parseWithAIAndImage(
     ? `\nGEÇMİŞ NOTLAR:\n${JSON.stringify(pastNotes.slice(0, 20).map((n) => ({ baslik: n.baslik, zaman: n.zaman, tarih_iso: n.tarih_iso, createdAt: n.createdAt })), null, 2)}`
     : '';
 
-  const promptText = `Sen "Notivia" uygulamasının bilişsel zeka ve Görsel Teşhis motorusun.
+  const promptText = `Sen Notivia'nın Türkçe Dilbilgisi ve Semantik Niyet Çözümleme Motorusun.
+Girdiyi "Özne - Nesne/Meblağ - Yüklem/Eylem" ayrımına tabi tutarak katı JSON üretirsin.
 
-GÖREV: Kullanıcının kısa ses girdisini ve gönderilen görseli birlikte analiz ederek 'Görsel Teşhis' gerçekleştir.
+SÖZDİZİMİ AYRIŞTIRMA KURALLARI:
+1. Kişi İsimleri Önyargısını Kır:
+   - Cümlede kişi ismi geçmesi (Ahmet, Mehmet vb.) o kişiyle buluşulacağı/çay içileceği anlamına KESİNLİKLE GELMEZ.
+   - Yükleme bak: "Alacağım var", "Borç verdim", "Evrak teslim ettim" deniyorsa bu bir FİNANSAL veya RESMİ işlemdir; asla 'Sosyal' kategorisine atama.
 
-FÜZYON VE TEŞHİS KURALLARI:
+2. Finansal Rol Dağılımı:
+   - "X kişisinden Y TL alacağım var" -> Başlık: "X: Y TL Alacak", İkon: "💰", Renk: "#DCFCE7" (Pastel Yeşil).
+   - "X kişisine Y TL borcum var" -> Başlık: "X: Y TL Borç", İkon: "💳", Renk: "#FEE2E2" (Pastel Kırmızı).
+   - Tarih/vade verilmediyse "tarih_iso": null dön; rastgele takvim randevusu oluşturma.
+
+3. Üçüncü Şahıs ve Kurumsal Bildirimler:
+   - "Cuma günü bakan gelecek", "Elektrik kesilecek" gibi ifadelerde kullanıcı pasif dinleyicidir; bunu kullanıcının hazırlık yapması gereken kurumsal/takip görevi olarak yapılandır ("🏛️ Bakan Ziyareti").
+
+FÜZYON VE TEŞHİS KURALLARI (Görsel Varsa):
 1. Görsel Okuma (OCR & Durum):
    - Görseldeki model numarası, marka, son kullanma tarihi, bar/basınç saati veya parça aşınmasını doğrudan tespit et.
 2. Bağlam Birleştirme:
@@ -773,6 +824,11 @@ FÜZYON VE TEŞHİS KURALLARI:
 ÖRÜNTÜ VE ANOMALİ KURALLARI:
 - Normalde uzun aralıklarla yapılması gereken bir bakım son 30 günde tekrarlanmışsa veya rutin varsa anomali_notu oluştur.
 
+BİLİŞSEL ALT GÖREVLER (Action Items):
+- Kullanıcının belirttiği ana işin (muayene, seyahat, resmi başvuru, bakım, randevu) gerektirdiği 2-3 somut alt adımı belirle.
+- "action_items": [ { "task": "Kısa alt görev metni", "is_completed": false } ] formatında dizi olarak döndür.
+- Alt görev gerektirmeyen basit durumlarda boş dizi [] dön.
+
 4. Referans Zaman (CURRENT_DATETIME):
    - Sağlanan referans zamana göre gün ve saatleri kesin ISO-8601 biçiminde hesapla: ${now}.${historyContext}
 
@@ -780,15 +836,18 @@ Kullanıcı Girdisi / Ses Notu: "${text || 'Görseldeki durumu teşhis et ve yap
 
 JSON ÇIKTI ALANLARI (Katı JSON):
 {
-  "baslik": "Net eylem başlığı (örn: Ön Fren Balatası Değişimi)",
-  "zaman": "Arayüz zamanı veya eylem vadesi",
-  "tarih_iso": "ISO-8601 tarihi veya null",
+  "baslik": "Net özne + nesne + eylem özeti (max 4 kelime)",
+  "zaman": "Arayüzde görünecek sade zaman ifadesi",
+  "tarih_iso": "Kesin gün/saat varsa ISO-8601, yoksa null",
   "hazirlik_zamani": "Ön hazırlık zamanı (varsa)",
   "hazirlik_iso": "Takvim/bildirim için hazırlık tarihi (ISO-8601)",
   "teshis_notu": "Görselden okunan kritik teşhis (max 6 kelime, örn: Balata aşınma sınırında)",
   "anomali_notu": "Kısa zeka tespiti veya null",
+  "action_items": [
+    { "task": "Yapılacak alt adım / kontrol maddesi", "is_completed": false }
+  ],
   "ikon": "İçeriğe tam uyan tek emoji",
-  "renk": "Pastel HEX (örn: #FEF3C7, #E0F2FE, #DCFCE7, #FEE2E2)"
+  "renk": "Pastel HEX"
 }`;
 
   const parts: any[] = [{ text: promptText }];
@@ -830,10 +889,30 @@ JSON ÇIKTI ALANLARI (Katı JSON):
                     baslik: { type: 'STRING' },
                     zaman: { type: 'STRING' },
                     tarih_iso: { type: 'STRING' },
+                    tetikleyici: {
+                      type: 'OBJECT',
+                      properties: {
+                        tip: { type: 'STRING' },
+                        sart: { type: 'STRING' },
+                        etiket: { type: 'STRING' },
+                      },
+                    },
                     hazirlik_zamani: { type: 'STRING' },
                     hazirlik_iso: { type: 'STRING' },
                     teshis_notu: { type: 'STRING' },
                     anomali_notu: { type: 'STRING' },
+                    action_items: {
+                      type: Type.ARRAY,
+                      description: 'Gizli gereksinimlerden türetilen somut kontrol adımları',
+                      items: {
+                        type: Type.OBJECT,
+                        properties: {
+                          task: { type: Type.STRING },
+                          is_completed: { type: Type.BOOLEAN },
+                        },
+                        required: ['task', 'is_completed'],
+                      },
+                    },
                     ikon: { type: 'STRING' },
                     renk: { type: 'STRING' },
                   },
@@ -848,15 +927,25 @@ JSON ÇIKTI ALANLARI (Katı JSON):
           const resJson = await response.json();
           const raw = resJson?.candidates?.[0]?.content?.parts?.[0]?.text;
           if (raw) {
-            const parsed = JSON.parse(raw);
+            const cleanJson = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+            const parsed = JSON.parse(cleanJson);
             return {
               baslik: String(parsed.baslik || (text || 'Görsel Notu').slice(0, 25)),
               zaman: parsed.zaman ? String(parsed.zaman) : null,
               tarih_iso: parsed.tarih_iso ? String(parsed.tarih_iso) : null,
+              tetikleyici: parsed.tetikleyici && parsed.tetikleyici.etiket ? {
+                tip: parsed.tetikleyici.tip || null,
+                sart: String(parsed.tetikleyici.sart || ''),
+                etiket: String(parsed.tetikleyici.etiket || ''),
+              } : null,
               hazirlik_zamani: parsed.hazirlik_zamani ? String(parsed.hazirlik_zamani) : null,
               hazirlik_iso: parsed.hazirlik_iso ? String(parsed.hazirlik_iso) : null,
               teshis_notu: parsed.teshis_notu ? String(parsed.teshis_notu) : null,
               anomali_notu: parsed.anomali_notu ? String(parsed.anomali_notu) : null,
+              action_items: Array.isArray(parsed.action_items) ? parsed.action_items.map((ai: any) => ({
+                task: String(ai.task || ''),
+                is_completed: Boolean(ai.is_completed),
+              })) : null,
               ikon: String(parsed.ikon || '📷'),
               renk: String(parsed.renk || '#FEF3C7'),
             };
