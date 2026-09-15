@@ -2,7 +2,7 @@
   "entities": {
     "Note": {
       "title": "Note",
-      "description": "A cognitive note created by the user with title, time/schedule, icon, color, and creation timestamp.",
+      "description": "A cognitive note created by the user with title, time/schedule, preparation time, visual diagnosis, anomaly note, mediaId, icon, color, and creation timestamp.",
       "type": "object",
       "properties": {
         "baslik": {
@@ -18,20 +18,42 @@
           "type": "string",
           "description": "ISO-8601 formatted datetime string or null"
         },
+        "hazirlik_zamani": {
+          "type": "string",
+          "description": "Human-readable preparation time"
+        },
+        "hazirlik_iso": {
+          "type": "string",
+          "description": "ISO-8601 formatted preparation datetime string or null"
+        },
+        "teshis_notu": {
+          "type": "string",
+          "description": "Visual diagnosis note or OCR excerpt",
+          "maxLength": 300
+        },
+        "anomali_notu": {
+          "type": "string",
+          "description": "Anomaly detection warning or pattern note",
+          "maxLength": 300
+        },
+        "mediaId": {
+          "type": "string",
+          "description": "Attached image media reference ID"
+        },
         "ikon": {
           "type": "string",
           "description": "Emoji icon representing the category or type of note",
-          "maxLength": 10
+          "maxLength": 20
         },
         "renk": {
           "type": "string",
           "description": "Pastel hex color string for the card background",
-          "maxLength": 16
+          "maxLength": 20
         },
         "createdAt": {
           "type": "string",
           "format": "date-time",
-          "description": "Server creation timestamp"
+          "description": "Creation timestamp"
         },
         "calendar_event_id": {
           "type": "string",

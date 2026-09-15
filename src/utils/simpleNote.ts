@@ -49,12 +49,17 @@ export function toSimpleNote(note: NotiviaParsedNote): NotiviaSimpleNote {
     baslik: note.summary,
     zaman: zamanStr,
     tarih_iso: tarihIso,
+    anomali_notu: note.anomali_notu || null,
     ikon: singleEmoji,
     renk: note.ui_meta.color_hex || '#FEF3C7',
   };
 }
 
-export function extractSimpleNoteFromText(input: string, refDatetime?: string): NotiviaSimpleNote {
+export function extractSimpleNoteFromText(
+  input: string,
+  refDatetime?: string,
+  pastNotes?: any[]
+): NotiviaSimpleNote {
   const lower = input.toLowerCase();
   const baseDate = refDatetime ? new Date(refDatetime) : new Date();
 
@@ -242,12 +247,45 @@ export function extractSimpleNoteFromText(input: string, refDatetime?: string): 
     }
   }
 
+  // Örüntü ve Anomali Tespiti:
+  // 1. Anomali: Normalde uzun aralıklarla yapılması gereken bakım/işlem son 30 günde tekrarlanmışsa
+  // 2. Rutin: Düzenli tekrarlanan alışkanlık
+  let anomali_notu: string | null = null;
+  if (pastNotes && Array.isArray(pastNotes) && pastNotes.length > 0) {
+    const maintenanceKeywords = ['su bas', 'kombi', 'akü', 'tamir', 'lastik', 'filtre', 'arıza', 'servis', 'tesisat', 'şarj'];
+    const hasMaintenance = maintenanceKeywords.some((k) => lower.includes(k));
+
+    if (hasMaintenance) {
+      const matchWord = maintenanceKeywords.find((k) => lower.includes(k)) || 'bakım';
+      const similarPast = pastNotes.filter((p) => {
+        const pText = (p.baslik + ' ' + (p.zaman || '')).toLowerCase();
+        return pText.includes(matchWord) || maintenanceKeywords.some((k) => pText.includes(k));
+      });
+
+      if (similarPast.length >= 1) {
+        anomali_notu = `Son dönemde ${similarPast.length + 1}. kez benzer işlem/bakım yapıldı, teknik bir sorun veya arıza olabilir.`;
+      }
+    }
+  }
+
+  // Görsel Teşhis (Heuristic Fallback)
+  let teshis_notu: string | null = null;
+  if (lower.includes('ses yapıyor') || lower.includes('ses geliyor')) {
+    teshis_notu = 'Mekanik sürtünme veya aşınma tespit edildi';
+  } else if (lower.includes('bitti bu') || lower.includes('bitmiş')) {
+    teshis_notu = 'Tükenme / ömür sonu tespiti';
+  } else if (lower.includes('bar') || lower.includes('basınç')) {
+    teshis_notu = 'Kritik basınç seviyesi uyarısı';
+  }
+
   return {
     baslik,
     zaman,
     tarih_iso,
     hazirlik_zamani,
     hazirlik_iso,
+    anomali_notu,
+    teshis_notu,
     ikon,
     renk,
   };

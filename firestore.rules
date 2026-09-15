@@ -27,6 +27,12 @@ service cloud.firestore {
       return data.baslik is string && data.baslik.size() > 0 && data.baslik.size() <= 300 &&
         (!('zaman' in data) || data.zaman == null || (data.zaman is string && data.zaman.size() <= 200)) &&
         (!('tarih_iso' in data) || data.tarih_iso == null || (data.tarih_iso is string && data.tarih_iso.size() <= 100)) &&
+        (!('hazirlik_zamani' in data) || data.hazirlik_zamani == null || (data.hazirlik_zamani is string && data.hazirlik_zamani.size() <= 200)) &&
+        (!('hazirlik_iso' in data) || data.hazirlik_iso == null || (data.hazirlik_iso is string && data.hazirlik_iso.size() <= 100)) &&
+        (!('teshis_notu' in data) || data.teshis_notu == null || (data.teshis_notu is string && data.teshis_notu.size() <= 300)) &&
+        (!('anomali_notu' in data) || data.anomali_notu == null || (data.anomali_notu is string && data.anomali_notu.size() <= 300)) &&
+        (!('mediaId' in data) || data.mediaId == null || (data.mediaId is string && data.mediaId.size() <= 128)) &&
+        (!('createdAt' in data) || data.createdAt == null || (data.createdAt is string && data.createdAt.size() <= 100)) &&
         (!('calendar_event_id' in data) || data.calendar_event_id == null || (data.calendar_event_id is string && data.calendar_event_id.size() <= 256)) &&
         (!('calendarEventId' in data) || data.calendarEventId == null || (data.calendarEventId is string && data.calendarEventId.size() <= 256)) &&
         data.ikon is string && data.ikon.size() <= 20 &&

@@ -5,6 +5,13 @@ import { extractSimpleNoteFromText } from '../utils/simpleNote.js';
 const SYSTEM_INSTRUCTION = `Sen "Notivia" adlı bilişsel yaşam asistanının çekirdek niyet çözümleme ve veri ayrıştırma (parser) motorusun.
 Görevin: Kullanıcının ayaküstü, devrik, dağınık, imalı veya sesle kaydedilmiş girdilerini analiz etmek; söylenmeyen gereksinimleri ("leb demeden leblebiyi anlayarak") alt görevlere dönüştürmek ve arayüzde görselleştirilmeye hazır katı bir JSON nesnesi üretmektir.
 
+GÖREV: Kullanıcının yeni girdisini ve varsa verilen 'GEÇMİŞ NOTLAR' listesini karşılaştır.
+
+ÖRÜNTÜ VE ANOMALİ KURALLARI:
+1. Anomali Tespiti: Normalde uzun aralıklarla yapılması gereken bir bakım/işlem (örn: kombiye su basma, akü şarjı, arıza tamiri) son 30 gün içinde birden fazla tekrarlanmışsa teknik bir sorun olduğunu sez ve "anomali_notu" üret.
+2. Rutin Keşfi: Düzenli tekrarlanan bir sosyal veya kişisel alışkanlık sezersen ortalama döngüyü çıkar.
+3. Çıktı: Sorun veya rutin yoksa null dön; varsa tek cümlelik zeki bir gözlem yaz.
+
 TEMEL YÖNERGELER:
 
 1. Referans Zaman ve Hesaplama (CURRENT_DATETIME):
@@ -31,12 +38,12 @@ TEMEL YÖNERGELER:
 
 export async function parseWithGemini(
   userInput: string,
-  currentDatetime: string
+  currentDatetime: string,
+  pastNotes?: any[]
 ): Promise<{ data: Omit<NotiviaParsedNote, 'id' | 'created_at' | 'raw_input' | 'reference_datetime'>; source: string }> {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '') {
-    // Try Gemini models with graceful failover
     const candidateModels = [
       'gemini-2.5-flash',
       'gemini-2.5-pro',
@@ -53,7 +60,11 @@ export async function parseWithGemini(
           },
         });
 
-        const promptText = `CURRENT_DATETIME: ${currentDatetime}\nKULLANICI GİRDİSİ: ${userInput}`;
+        const historyContext = pastNotes && pastNotes.length > 0
+          ? `\nGEÇMİŞ NOTLAR:\n${JSON.stringify(pastNotes.slice(0, 20).map((n) => ({ baslik: n.baslik, zaman: n.zaman, tarih_iso: n.tarih_iso, createdAt: n.createdAt })), null, 2)}`
+          : '';
+
+        const promptText = `CURRENT_DATETIME: ${currentDatetime}${historyContext}\nKULLANICI GİRDİSİ: ${userInput}`;
 
         const response = await ai.models.generateContent({
           model: modelName,
@@ -80,6 +91,10 @@ export async function parseWithGemini(
                 priority: {
                   type: Type.STRING,
                   description: 'dusuk | normal | yuksek | kritik',
+                },
+                anomali_notu: {
+                  type: Type.STRING,
+                  description: 'Kısa zeka tespiti veya null (Örn: Son 20 günde 3. kez su basıldı, tesisatta kaçak olabilir.)',
                 },
                 ui_meta: {
                   type: Type.OBJECT,
@@ -156,15 +171,13 @@ export async function parseWithGemini(
           };
         }
       } catch {
-        // Model busy or temporary spike (503/429); continue to next model or cognitive fallback
         continue;
       }
     }
   }
 
-  // Gracefully fall back to local Cognitive Inference Engine
   return {
-    data: runCognitiveFallback(userInput, currentDatetime),
+    data: runCognitiveFallback(userInput, currentDatetime, pastNotes),
     source: 'cognitive-fallback',
   };
 }
@@ -189,6 +202,7 @@ function sanitizeParsedOutput(raw: any): Omit<NotiviaParsedNote, 'id' | 'created
     detailed_note: String(raw.detailed_note || ''),
     category,
     priority,
+    anomali_notu: raw.anomali_notu ? String(raw.anomali_notu) : null,
     ui_meta: {
       icon: String(raw.ui_meta?.icon || '📝'),
       color_hex: String(raw.ui_meta?.color_hex || '#E0F2FE'),
@@ -228,7 +242,8 @@ function sanitizeParsedOutput(raw: any): Omit<NotiviaParsedNote, 'id' | 'created
  */
 export function runCognitiveFallback(
   input: string,
-  currentDatetime: string
+  currentDatetime: string,
+  pastNotes?: any[]
 ): Omit<NotiviaParsedNote, 'id' | 'created_at' | 'raw_input' | 'reference_datetime'> {
   const refDate = new Date(currentDatetime);
   const lower = input.toLowerCase();
@@ -578,7 +593,8 @@ export function runCognitiveFallback(
  */
 export async function parseSimpleWithGemini(
   text: string,
-  now: string
+  now: string,
+  pastNotes?: any[]
 ): Promise<NotiviaSimpleNote> {
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -599,7 +615,18 @@ export async function parseSimpleWithGemini(
           },
         });
 
+        const historyContext = pastNotes && pastNotes.length > 0
+          ? `\nGEÇMİŞ NOTLAR:\n${JSON.stringify(pastNotes.slice(0, 20).map((n) => ({ baslik: n.baslik, zaman: n.zaman, tarih_iso: n.tarih_iso, createdAt: n.createdAt })), null, 2)}`
+          : '';
+
         const prompt = `Sen "Notivia" uygulamasının bilişsel zeka motorusun. Sadece söylenen kelimeleri değil, söylenmeyen hazırlık ihtiyaçlarını ve tersine zamanlamayı ("leb demeden leblebiyi") çözümlersin.
+
+GÖREV: Kullanıcının yeni girdisini ve varsa verilen 'GEÇMİŞ NOTLAR' listesini karşılaştır.
+
+ÖRÜNTÜ VE ANOMALİ KURALLARI:
+1. Anomali Tespiti: Normalde uzun aralıklarla yapılması gereken bir bakım/işlem (örn: kombiye su basma, akü şarjı, arıza tamiri) son 30 gün içinde birden fazla tekrarlanmışsa teknik bir sorun olduğunu sez ve "anomali_notu" üret.
+2. Rutin Keşfi: Düzenli tekrarlanan bir sosyal veya kişisel alışkanlık sezersen ortalama döngüyü çıkar.
+3. Çıktı: Sorun veya rutin yoksa null dön; varsa tek cümlelik zeki bir gözlem yaz.
 
 TEMEL GÖREVLER VE AKIL YÜRÜTME:
 1. Niyet ve Özne Analizi:
@@ -611,7 +638,7 @@ TEMEL GÖREVLER VE AKIL YÜRÜTME:
    - Etkinlik Cuma sabahı ise hazırlık hatırlatıcısını Perşembe 16:00'ya; sabah erken uçuş varsa hazırlık uyarısını önceki akşam 20:00'ye kur.
 
 3. Referans Zaman (CURRENT_DATETIME):
-   - Sağlanan referans zamana göre gün ve saatleri kesin ISO-8601 biçiminde hesapla: ${now}.
+   - Sağlanan referans zamana göre gün ve saatleri kesin ISO-8601 biçiminde hesapla: ${now}.${historyContext}
 
 Kullanıcı girdisi: "${text}".
 
@@ -622,6 +649,7 @@ Kullanıcı girdisi: "${text}".
   "tarih_iso": "Etkinliğin kesin tarihi (ISO-8601)",
   "hazirlik_zamani": "Ön hazırlık zamanı (örn: Perşembe 16:00 hazırlık uyarısı)",
   "hazirlik_iso": "Takvim/bildirim için hazırlık tarihi (ISO-8601)",
+  "anomali_notu": "Kısa zeka tespiti veya null (Örn: 'Son 20 günde 3. kez su basıldı, tesisatta kaçak olabilir.')",
   "ikon": "Temsili tek emoji",
   "renk": "Pastel HEX kodu"
 }`;
@@ -640,6 +668,7 @@ Kullanıcı girdisi: "${text}".
                 tarih_iso: { type: Type.STRING, description: 'Etkinliğin kesin tarihi (ISO-8601)' },
                 hazirlik_zamani: { type: Type.STRING, description: 'Ön hazırlık zamanı' },
                 hazirlik_iso: { type: Type.STRING, description: 'Takvim/bildirim için hazırlık tarihi (ISO-8601)' },
+                anomali_notu: { type: Type.STRING, description: 'Kısa zeka tespiti veya null' },
                 ikon: { type: Type.STRING, description: 'Temsili tek emoji' },
                 renk: { type: Type.STRING, description: 'Pastel HEX kodu' },
               },
@@ -657,52 +686,109 @@ Kullanıcı girdisi: "${text}".
             tarih_iso: parsed.tarih_iso ? String(parsed.tarih_iso) : null,
             hazirlik_zamani: parsed.hazirlik_zamani ? String(parsed.hazirlik_zamani) : null,
             hazirlik_iso: parsed.hazirlik_iso ? String(parsed.hazirlik_iso) : null,
+            anomali_notu: parsed.anomali_notu ? String(parsed.anomali_notu) : null,
             ikon: String(parsed.ikon || '📌'),
             renk: String(parsed.renk || '#FEF3C7'),
           };
         }
       } catch {
-        // Continue to fallback or next model
         continue;
       }
     }
   }
 
-  // Local fallback with reference datetime
-  return extractSimpleNoteFromText(text, now);
+  // Local fallback with reference datetime and past notes
+  return extractSimpleNoteFromText(text, now, pastNotes);
+}
+
+export async function sendMultimodalRequest(text?: string, base64Image?: string | null): Promise<any> {
+  const now = new Date().toISOString();
+  const parts: any[] = [];
+
+  // 1. Metin ve Referans Bilgisi
+  parts.push({
+    text: `CURRENT_DATETIME: ${now}\nKullanıcı Sesi: "${text || 'Görseldeki durumu teşhis et ve yapılması gereken işlemi belirle.'}"`
+  });
+
+  // 2. Görsel Parçası (Varsa)
+  if (base64Image) {
+    parts.push({
+      inlineData: {
+        mimeType: 'image/jpeg',
+        data: base64Image.includes(',') ? base64Image.split(',')[1] : base64Image
+      }
+    });
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY' || apiKey.trim() === '') {
+    throw new Error('GEMINI_API_KEY missing');
+  }
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts }],
+      generationConfig: { 
+        responseMimeType: 'application/json',
+        temperature: 0.1 
+      }
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Gemini API error ${response.status}`);
+  }
+
+  const resJson = await response.json();
+  const textOut = resJson.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!textOut) throw new Error('No candidate content');
+  return JSON.parse(textOut);
 }
 
 export async function parseWithAIAndImage(
   text?: string,
   base64Image: string | null = null,
-  referenceNow?: string
+  referenceNow?: string,
+  pastNotes?: any[]
 ): Promise<NotiviaSimpleNote> {
   const now = referenceNow || new Date().toISOString();
-  const promptText = `Sen "Notivia" uygulamasının bilişsel zeka motorusun. Sadece söylenen kelimeleri değil, söylenmeyen hazırlık ihtiyaçlarını ve tersine zamanlamayı ("leb demeden leblebiyi") çözümlersin.
+  const historyContext = pastNotes && pastNotes.length > 0
+    ? `\nGEÇMİŞ NOTLAR:\n${JSON.stringify(pastNotes.slice(0, 20).map((n) => ({ baslik: n.baslik, zaman: n.zaman, tarih_iso: n.tarih_iso, createdAt: n.createdAt })), null, 2)}`
+    : '';
 
-TEMEL GÖREVLER VE AKIL YÜRÜTME:
-1. Niyet ve Özne Analizi:
-   - 3. şahıs bildirimleri ("bakan gelecek", "okul tatil", "elektrik kesilecek") kullanıcı için doğrudan takip ve hazırlık görevidir.
-   - Pasif haberleri veya görsel duyuruları kullanıcının etkileneceği aksiyona dönüştür.
+  const promptText = `Sen "Notivia" uygulamasının bilişsel zeka ve Görsel Teşhis motorusun.
 
-2. Tersine Zamanlama (Inverted Scheduling):
-   - Her randevu, resmi ziyaret, sınav, seyahat veya kontrol öncesinde bir "ön hazırlık" gerekir.
-   - Etkinlik Cuma sabahı ise hazırlık hatırlatıcısını Perşembe 16:00'ya; sabah erken uçuş varsa hazırlık uyarısını önceki akşam 20:00'ye kur.
+GÖREV: Kullanıcının kısa ses girdisini ve gönderilen görseli birlikte analiz ederek 'Görsel Teşhis' gerçekleştir.
 
-3. Referans Zaman (CURRENT_DATETIME):
-   - Sağlanan referans zamana göre gün ve saatleri kesin ISO-8601 biçiminde hesapla: ${now}.
+FÜZYON VE TEŞHİS KURALLARI:
+1. Görsel Okuma (OCR & Durum):
+   - Görseldeki model numarası, marka, son kullanma tarihi, bar/basınç saati veya parça aşınmasını doğrudan tespit et.
+2. Bağlam Birleştirme:
+   - Kullanıcı belirsiz konuştuğunda ("Ses yapıyor", "Bunu al", "Bitti bu") görseldeki nesneyi özne yap (örn: Görselde bisiklet/araç fren diski varsa -> "Ön Fren Balatası Değişimi").
+3. Eyleme Dökme:
+   - Sadece durumu tespit etmekle kalma; gerekli aksiyonu ve zamanlamayı çıkar (örn: "Basınç 0.7 Bar - Kombiye Su Basılacak").
 
-Kullanıcı girdisi / Görsel: "${text || 'Görseldeki durumu veya duyuruyu analiz et ve yapılması gereken takip/etkinlik ve ön hazırlık işini çıkar.'}".
+ÖRÜNTÜ VE ANOMALİ KURALLARI:
+- Normalde uzun aralıklarla yapılması gereken bir bakım son 30 günde tekrarlanmışsa veya rutin varsa anomali_notu oluştur.
 
-ÇIKTI ŞEMASI (Katı JSON):
+4. Referans Zaman (CURRENT_DATETIME):
+   - Sağlanan referans zamana göre gün ve saatleri kesin ISO-8601 biçiminde hesapla: ${now}.${historyContext}
+
+Kullanıcı Girdisi / Ses Notu: "${text || 'Görseldeki durumu teşhis et ve yapılması gereken işlemi belirle.'}".
+
+JSON ÇIKTI ALANLARI (Katı JSON):
 {
-  "baslik": "Kısa eylem başlığı (max 4 kelime)",
-  "zaman": "Kullanıcıya görünecek sade zaman (örn: Cuma 09:00)",
-  "tarih_iso": "Etkinliğin kesin tarihi (ISO-8601)",
-  "hazirlik_zamani": "Ön hazırlık zamanı (örn: Perşembe 16:00 hazırlık uyarısı)",
+  "baslik": "Net eylem başlığı (örn: Ön Fren Balatası Değişimi)",
+  "zaman": "Arayüz zamanı veya eylem vadesi",
+  "tarih_iso": "ISO-8601 tarihi veya null",
+  "hazirlik_zamani": "Ön hazırlık zamanı (varsa)",
   "hazirlik_iso": "Takvim/bildirim için hazırlık tarihi (ISO-8601)",
-  "ikon": "Temsili tek emoji",
-  "renk": "Pastel HEX kodu"
+  "teshis_notu": "Görselden okunan kritik teşhis (max 6 kelime, örn: Balata aşınma sınırında)",
+  "anomali_notu": "Kısa zeka tespiti veya null",
+  "ikon": "İçeriğe tam uyan tek emoji",
+  "renk": "Pastel HEX (örn: #FEF3C7, #E0F2FE, #DCFCE7, #FEE2E2)"
 }`;
 
   const parts: any[] = [{ text: promptText }];
@@ -735,7 +821,25 @@ Kullanıcı girdisi / Görsel: "${text || 'Görseldeki durumu veya duyuruyu anal
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               contents: [{ parts }],
-              generationConfig: { responseMimeType: 'application/json' },
+              generationConfig: {
+                responseMimeType: 'application/json',
+                temperature: 0.1,
+                responseSchema: {
+                  type: 'OBJECT',
+                  properties: {
+                    baslik: { type: 'STRING' },
+                    zaman: { type: 'STRING' },
+                    tarih_iso: { type: 'STRING' },
+                    hazirlik_zamani: { type: 'STRING' },
+                    hazirlik_iso: { type: 'STRING' },
+                    teshis_notu: { type: 'STRING' },
+                    anomali_notu: { type: 'STRING' },
+                    ikon: { type: 'STRING' },
+                    renk: { type: 'STRING' },
+                  },
+                  required: ['baslik', 'ikon', 'renk'],
+                },
+              },
             }),
           }
         );
@@ -751,6 +855,8 @@ Kullanıcı girdisi / Görsel: "${text || 'Görseldeki durumu veya duyuruyu anal
               tarih_iso: parsed.tarih_iso ? String(parsed.tarih_iso) : null,
               hazirlik_zamani: parsed.hazirlik_zamani ? String(parsed.hazirlik_zamani) : null,
               hazirlik_iso: parsed.hazirlik_iso ? String(parsed.hazirlik_iso) : null,
+              teshis_notu: parsed.teshis_notu ? String(parsed.teshis_notu) : null,
+              anomali_notu: parsed.anomali_notu ? String(parsed.anomali_notu) : null,
               ikon: String(parsed.ikon || '📷'),
               renk: String(parsed.renk || '#FEF3C7'),
             };
@@ -763,9 +869,9 @@ Kullanıcı girdisi / Görsel: "${text || 'Görseldeki durumu veya duyuruyu anal
     }
   }
 
-  const fallback = extractSimpleNoteFromText(text || 'Görsel analizi', now);
+  const fallback = extractSimpleNoteFromText(text || 'Görsel analizi', now, pastNotes);
   if (base64Image && !text) {
-    fallback.baslik = 'Görsel Notu';
+    fallback.baslik = 'Görsel Teşhisi';
     fallback.ikon = '📷';
   }
   return fallback;

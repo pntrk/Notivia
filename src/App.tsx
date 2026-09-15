@@ -10,6 +10,7 @@ import {
   setGoogleAccessToken,
   createCalendarEvent,
   deleteCalendarEvent,
+  checkCalendarConflicts,
   collection,
   addDoc,
   deleteDoc,
@@ -37,8 +38,12 @@ interface SimpleCardItem {
   tarih_iso?: string | null;
   hazirlik_zamani?: string | null;
   hazirlik_iso?: string | null;
+  anomali_notu?: string | null;
+  teshis_notu?: string | null;
   calendar_event_id?: string | null;
   calendarEventId?: string | null;
+  conflictWarning?: string | null;
+  conflictWith?: string | null;
   ikon?: string;
   renk?: string;
   mediaId?: string | null;
@@ -86,31 +91,39 @@ export default function App() {
   const [cards, setCards] = useState<SimpleCardItem[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [simulatedUser, setSimulatedUser] = useState<any>(null);
-  const [statusText, setStatusText] = useState<string>('Söyle ya da fotoğrafını çek');
+  const [statusText, setStatusText] = useState<string>('Söyle, çek ya da yaz');
   const [isListening, setIsListening] = useState<boolean>(false);
   const [showTextInput, setShowTextInput] = useState<boolean>(false);
   const [textInput, setTextInput] = useState<string>('');
   const [modalImgSrc, setModalImgSrc] = useState<string | null>(null);
 
+  // Manuel Ekleme Çekmecesi State'leri
+  const [showManualModal, setShowManualModal] = useState<boolean>(false);
+  const [manualTitle, setManualTitle] = useState<string>('');
+  const [manualDatetime, setManualDatetime] = useState<string>('');
+  const [manualSyncCal, setManualSyncCal] = useState<boolean>(true);
+
   const recognitionRef = useRef<any>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const manualTextInputRef = useRef<HTMLInputElement | null>(null);
   const firestoreUnsubRef = useRef<(() => void) | null>(null);
+  const pendingCapturedImageRef = useRef<string | null>(null);
+  const onSpeechCompletedRef = useRef<((spoken: string) => Promise<void>) | null>(null);
+  const processWithAIRef = useRef<((text?: string, base64Image?: string | null) => Promise<void>) | null>(null);
 
   // Load initial notes (local mode)
   const getLocalNotes = (): SimpleCardItem[] => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-    } catch {
-      // ignore
-    }
-
-    return [
+    const initialCards: SimpleCardItem[] = [
+      {
+        id: 'local_0',
+        baslik: 'Bakan Ziyareti (Kırklareli)',
+        zaman: 'Cuma 09:00',
+        tarih_iso: '2026-09-18T09:00:00+03:00',
+        hazirlik_zamani: 'Perşembe 16:00 Hazırlık Planı',
+        hazirlik_iso: '2026-09-17T16:00:00+03:00',
+        ikon: '🏛️',
+        renk: '#E0F2FE',
+      },
       {
         id: 'local_1',
         baslik: 'Ahmet Abiyle Çay',
@@ -128,6 +141,25 @@ export default function App() {
         renk: '#E0F2FE',
       },
     ];
+
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Ensure showcase item is present if not already added
+          const hasBakan = parsed.some((c: any) => c.baslik && c.baslik.includes('Bakan'));
+          if (!hasBakan) {
+            return [initialCards[0], ...parsed];
+          }
+          return parsed;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    return initialCards;
   };
 
   const saveLocalNotes = (notes: SimpleCardItem[]) => {
@@ -198,8 +230,14 @@ export default function App() {
                   baslik: d.baslik || 'Not',
                   zaman: d.zaman || null,
                   tarih_iso: d.tarih_iso || null,
+                  hazirlik_zamani: d.hazirlik_zamani || null,
+                  hazirlik_iso: d.hazirlik_iso || null,
+                  anomali_notu: d.anomali_notu || null,
+                  teshis_notu: d.teshis_notu || null,
                   calendarEventId: d.calendarEventId || d.calendar_event_id || null,
                   calendar_event_id: d.calendarEventId || d.calendar_event_id || null,
+                  conflictWith: d.conflictWith || d.conflictWarning || null,
+                  conflictWarning: d.conflictWith || d.conflictWarning || null,
                   ikon: d.ikon || '📌',
                   renk: d.renk || '#FEF3C7',
                   mediaId: d.mediaId || null,
@@ -210,6 +248,7 @@ export default function App() {
             },
             (error) => {
               handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/notes`);
+              setCards(getLocalNotes());
             }
           );
         } else {
@@ -247,28 +286,58 @@ export default function App() {
 
         recognition.onstart = () => {
           setIsListening(true);
-          setStatusText('Dinliyorum...');
+          if (pendingCapturedImageRef.current) {
+            setStatusText('Görsel hazır. Bir şey söyleyecek misin?');
+          } else {
+            setStatusText('Dinliyorum...');
+          }
         };
 
         recognition.onresult = async (event: any) => {
           const spoken = event.results?.[0]?.[0]?.transcript;
-          if (spoken) {
-            setStatusText('Anlıyorum...');
+          if (spoken && onSpeechCompletedRef.current) {
+            await onSpeechCompletedRef.current(spoken);
+          } else if (pendingCapturedImageRef.current) {
+            const imageToSend = pendingCapturedImageRef.current;
+            pendingCapturedImageRef.current = null;
+            setStatusText('Görsel teşhis ediliyor...');
             resetMicUI();
-            await processWithAI(spoken, null);
+            if (processWithAIRef.current) {
+              await processWithAIRef.current('', imageToSend);
+            }
           } else {
             resetMicUI();
           }
         };
 
-        recognition.onerror = (e: any) => {
+        recognition.onerror = async (e: any) => {
           console.warn('SpeechRecognition bildirimi:', e?.error || e);
-          resetMicUI();
+          const imageToSend = pendingCapturedImageRef.current;
+          if (imageToSend) {
+            pendingCapturedImageRef.current = null;
+            setStatusText('Görsel teşhis ediliyor...');
+            resetMicUI();
+            if (processWithAIRef.current) {
+              await processWithAIRef.current('', imageToSend);
+            }
+          } else {
+            resetMicUI();
+          }
         };
 
-        recognition.onend = () => {
+        recognition.onend = async () => {
           setIsListening(false);
-          resetMicUI();
+          const imageToSend = pendingCapturedImageRef.current;
+          if (imageToSend) {
+            pendingCapturedImageRef.current = null;
+            setStatusText('Görsel teşhis ediliyor...');
+            resetMicUI();
+            if (processWithAIRef.current) {
+              await processWithAIRef.current('', imageToSend);
+            }
+          } else {
+            resetMicUI();
+          }
         };
 
         recognitionRef.current = recognition;
@@ -280,7 +349,91 @@ export default function App() {
 
   const resetMicUI = () => {
     setIsListening(false);
-    setStatusText('Söyle ya da fotoğrafını çek');
+    setStatusText('Söyle, çek ya da yaz');
+  };
+
+  // Butona basıldığında giriş alanını aç/kapa
+  const handleToggleTextInput = () => {
+    openManualModal();
+  };
+
+  const openManualModal = () => {
+    setShowManualModal(true);
+    setTimeout(() => {
+      const el = document.getElementById('manual-title');
+      el?.focus();
+    }, 60);
+  };
+
+  const closeManualModal = () => {
+    setShowManualModal(false);
+  };
+
+  // Expose to window for direct event invocation
+  useEffect(() => {
+    (window as any).closeManualModal = closeManualModal;
+    (window as any).openManualModal = openManualModal;
+    return () => {
+      delete (window as any).closeManualModal;
+      delete (window as any).openManualModal;
+    };
+  }, []);
+
+  // Manuel Not Form Gönderimi (#manual-create-form)
+  const handleManualCreateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const baslik = manualTitle.trim();
+    const rawDate = manualDatetime;
+    const syncCal = manualSyncCal;
+
+    if (!baslik) return;
+
+    let zamanStr: string | null = null;
+    let tarihIso: string | null = null;
+
+    if (rawDate) {
+      const d = new Date(rawDate);
+      tarihIso = d.toISOString();
+      zamanStr = d.toLocaleDateString('tr-TR', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+
+    // Doğrudan sisteme ekleme (AI atlanır)
+    await addNote({
+      baslik,
+      zaman: zamanStr,
+      tarih_iso: syncCal ? tarihIso : null,
+      ikon: '📌',
+      renk: '#FEF3C7',
+    });
+
+    closeManualModal();
+    setManualTitle('');
+    setManualDatetime('');
+  };
+
+  // Metin girilip enter/ekle yapıldığında
+  const handleManualTextSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const text = textInput.trim();
+    if (!text) return;
+
+    // Giriş kutusunu sıfırla ve kapat
+    setTextInput('');
+    setShowTextInput(false);
+
+    setStatusText('Kaydediliyor...');
+
+    // Mevcut bilişsel motora gönder
+    await processWithAI(text, null);
+
+    setStatusText('Söyle, çek ya da yaz');
   };
 
   const handleMicClick = () => {
@@ -322,23 +475,29 @@ export default function App() {
     tarih_iso?: string | null;
     hazirlik_zamani?: string | null;
     hazirlik_iso?: string | null;
+    anomali_notu?: string | null;
+    teshis_notu?: string | null;
+    conflictWith?: string | null;
+    conflictWarning?: string | null;
     ikon?: string;
     renk?: string;
     mediaId?: string | null;
   }) => {
-    let calendarEventId: string | null = null;
-    if (noteData.tarih_iso) {
-      try {
-        calendarEventId = await createCalendarEvent(noteData);
-      } catch (err) {
-        console.warn('Takvim senkronizasyon hatası:', err);
-      }
+    // Takvime yaz ve çakışma bilgisini al
+    const { eventId, conflictWith } = await createCalendarEvent(noteData);
+
+    if (conflictWith) {
+      setStatusText(`Not eklendi (Takvim çakışması: ${conflictWith})`);
     }
 
     const payload = {
       ...noteData,
-      calendarEventId: calendarEventId || null,
-      calendar_event_id: calendarEventId || null,
+      calendarEventId: eventId || null,
+      calendar_event_id: eventId || null,
+      conflictWith: conflictWith || null,
+      conflictWarning: conflictWith || null,
+      anomali_notu: noteData.anomali_notu || null,
+      teshis_notu: noteData.teshis_notu || null,
     };
 
     if (currentUser && db) {
@@ -350,16 +509,16 @@ export default function App() {
         });
       } catch (error) {
         handleFirestoreError(error, OperationType.CREATE, pathForWrite);
+        const local = getLocalNotes();
+        local.unshift({ id: 'local_' + Date.now(), ...payload });
+        saveLocalNotes(local);
+        setCards(local);
       }
     } else {
       const local = getLocalNotes();
-      const newCard: SimpleCardItem = {
-        id: 'local_' + Date.now(),
-        ...payload,
-      };
-      const updated = [newCard, ...local];
-      saveLocalNotes(updated);
-      setCards(updated);
+      local.unshift({ id: 'local_' + Date.now(), ...payload });
+      saveLocalNotes(local);
+      setCards(local);
     }
   };
 
@@ -393,11 +552,10 @@ export default function App() {
         } catch (error) {
           handleFirestoreError(error, OperationType.DELETE, pathForDelete);
         }
-      } else {
-        const local = getLocalNotes().filter((n) => n.id !== id);
-        saveLocalNotes(local);
-        setCards(local);
       }
+      const local = getLocalNotes().filter((n) => n.id !== id);
+      saveLocalNotes(local);
+      setCards((prev) => prev.filter((n) => n.id !== id));
     }, 200);
   };
 
@@ -427,7 +585,36 @@ export default function App() {
       await saveLocalMedia(mediaId, base64Image);
     }
 
+    // Direct JSON handling (if user pastes/inputs exact JSON object)
+    if (text && text.trim().startsWith('{') && text.trim().endsWith('}')) {
+      try {
+        const directJson = JSON.parse(text.trim());
+        if (directJson.baslik) {
+          await addNote({
+            baslik: directJson.baslik,
+            zaman: directJson.zaman || null,
+            tarih_iso: directJson.tarih_iso || null,
+            hazirlik_zamani: directJson.hazirlik_zamani || null,
+            hazirlik_iso: directJson.hazirlik_iso || null,
+            ikon: directJson.ikon || '🏛️',
+            renk: directJson.renk || '#E0F2FE',
+            mediaId,
+          });
+          resetMicUI();
+          return;
+        }
+      } catch {
+        // continue normal parsing flow
+      }
+    }
+
     const now = new Date().toISOString();
+    const pastNotesPayload = cards.slice(0, 30).map((c) => ({
+      baslik: c.baslik,
+      zaman: c.zaman,
+      tarih_iso: c.tarih_iso,
+      createdAt: c.createdAt,
+    }));
 
     try {
       const res = await fetch('/api/parse-simple', {
@@ -437,6 +624,7 @@ export default function App() {
           input: text || '',
           base64Image: base64Image || null,
           current_datetime: now,
+          past_notes: pastNotesPayload,
         }),
       });
 
@@ -448,6 +636,10 @@ export default function App() {
             baslik: item.baslik || (text ? text.slice(0, 24) : 'Görsel Kaydı'),
             zaman: item.zaman || null,
             tarih_iso: item.tarih_iso || null,
+            hazirlik_zamani: item.hazirlik_zamani || null,
+            hazirlik_iso: item.hazirlik_iso || null,
+            teshis_notu: item.teshis_notu || null,
+            anomali_notu: item.anomali_notu || null,
             ikon: item.ikon || (base64Image ? '📷' : '📌'),
             renk: item.renk || '#FEF3C7',
             mediaId,
@@ -463,12 +655,17 @@ export default function App() {
     // Cognitive Local Fallback
     const local = extractSimpleNoteFromText(
       text || (base64Image ? 'Fotoğraflı kayıt' : 'Not'),
-      now
+      now,
+      cards
     );
     await addNote({
-      baslik: text ? local.baslik : 'Fotoğraflı Not',
+      baslik: text ? local.baslik : (local.teshis_notu ? local.baslik : 'Fotoğraflı Not'),
       zaman: local.zaman || (base64Image ? 'Az önce eklendi' : null),
       tarih_iso: local.tarih_iso || null,
+      hazirlik_zamani: local.hazirlik_zamani || null,
+      hazirlik_iso: local.hazirlik_iso || null,
+      teshis_notu: local.teshis_notu || null,
+      anomali_notu: local.anomali_notu || null,
       ikon: base64Image ? '📷' : local.ikon,
       renk: local.renk || '#FEF3C7',
       mediaId,
@@ -476,24 +673,61 @@ export default function App() {
     resetMicUI();
   };
 
+  processWithAIRef.current = processWithAI;
+
+  // Ses bittiğinde hem ses metnini hem bekleyen görseli gönder
+  const onSpeechCompleted = async (spokenText: string) => {
+    const imageToSend = pendingCapturedImageRef.current;
+    pendingCapturedImageRef.current = null; // Sıfırla
+
+    if (imageToSend) {
+      setStatusText('Görsel ve ses teşhis ediliyor...');
+    } else {
+      setStatusText('Anlıyorum...');
+    }
+    await processWithAI(spokenText, imageToSend);
+  };
+
+  onSpeechCompletedRef.current = onSpeechCompleted;
+
   // Camera / Gallery Image Upload Handler
   const handleCameraChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setStatusText('Görsel inceleniyor...');
+    setStatusText('Görsel hazır. Bir şey söyleyecek misin?');
+
     try {
       const compressed = await compressImage(file);
-      await processWithAI('', compressed);
+      pendingCapturedImageRef.current = compressed;
+
+      // Otomatik ses dinlemeyi başlat (İsteğe bağlı konuşma)
+      if (recognitionRef.current && !isListening) {
+        try {
+          recognitionRef.current.start();
+        } catch {
+          // Ses desteği yoksa veya başlatılamazsa doğrudan analiz et
+          const imageToSend = pendingCapturedImageRef.current;
+          pendingCapturedImageRef.current = null;
+          setStatusText('Görsel teşhis ediliyor...');
+          await processWithAI('', imageToSend);
+        }
+      } else {
+        // Ses desteği yoksa sadece görseli doğrudan analiz et
+        const imageToSend = pendingCapturedImageRef.current;
+        pendingCapturedImageRef.current = null;
+        setStatusText('Görsel teşhis ediliyor...');
+        await processWithAI('', imageToSend);
+      }
     } catch (err) {
       console.error('Fotoğraf işleme hatası:', err);
+      pendingCapturedImageRef.current = null;
       setStatusText('Görsel işlenemedi');
       setTimeout(() => setStatusText('Söyle ya da fotoğrafını çek'), 2000);
     } finally {
       if (cameraInputRef.current) {
         cameraInputRef.current.value = '';
       }
-      resetMicUI();
     }
   };
 
@@ -551,7 +785,7 @@ export default function App() {
             {/* Hızlı Metin Girişi Toggle */}
             <button
               type="button"
-              onClick={() => setShowTextInput((prev) => !prev)}
+              onClick={handleToggleTextInput}
               title="Metin ile yaz"
               className="p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
             >
@@ -679,22 +913,49 @@ export default function App() {
                     <h2 className="font-semibold text-stone-900 text-sm leading-tight truncate">
                       {item.baslik}
                     </h2>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                      <p className="text-[11px] text-stone-600 truncate">
-                        {item.zaman || 'Hatırlatıcı yok'}
-                      </p>
-                      {item.hazirlik_zamani && (
-                        <span
-                          className="text-[9px] bg-white/80 text-amber-900 border border-amber-300/40 px-1.5 py-0.5 rounded font-medium shrink-0 flex items-center gap-0.5 shadow-2xs"
-                          title={`Ön Hazırlık: ${item.hazirlik_zamani}`}
-                        >
-                          ⏳ {item.hazirlik_zamani}
-                        </span>
+                    <div className="flex flex-col gap-0.5 mt-0.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="text-[11px] text-stone-600 truncate">
+                          {item.zaman || 'Hatırlatıcı yok'}
+                        </p>
+                        {item.hazirlik_zamani && (
+                          <span
+                            className="text-[9px] bg-white/80 text-amber-900 border border-amber-300/40 px-1.5 py-0.5 rounded font-medium shrink-0 flex items-center gap-0.5 shadow-2xs"
+                            title={`Ön Hazırlık: ${item.hazirlik_zamani}`}
+                          >
+                            ⏳ {item.hazirlik_zamani}
+                          </span>
+                        )}
+                        {(item.calendarEventId || item.calendar_event_id) && (
+                          <span className="text-[9px] bg-white/70 text-stone-700 px-1 rounded shadow-2xs font-medium shrink-0">
+                            📅 Takvimde
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Eğer çakışma varsa görünen hafif uyarı */}
+                      {(item.conflictWith || item.conflictWarning) && (
+                        <p className="text-[10px] text-amber-700 font-medium flex items-center gap-1 mt-0.5">
+                          <span>⚠️</span>
+                          <span className="truncate">'{item.conflictWith || item.conflictWarning}' ile çakışıyor</span>
+                        </p>
                       )}
-                      {(item.calendarEventId || item.calendar_event_id) && (
-                        <span className="text-[9px] bg-white/70 text-stone-700 px-1 rounded shadow-2xs font-medium shrink-0">
-                          📅 Takvimde
-                        </span>
+
+                      {/* Kart İçi Teşhis Rozeti */}
+                      {item.teshis_notu && (
+                        <div className="mt-1">
+                          <span className="inline-flex items-center gap-1 text-[10px] bg-stone-900/5 text-stone-700 px-1.5 py-0.5 rounded border border-stone-300/60 font-mono">
+                            🔍 {item.teshis_notu}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Anomali veya Rutin Zeka Tespiti */}
+                      {item.anomali_notu && (
+                        <div className="mt-1.5 flex items-start gap-1.5 bg-amber-500/10 text-amber-900 border border-amber-500/20 px-2 py-1 rounded-lg">
+                          <span className="text-xs shrink-0">💡</span>
+                          <p className="text-[11px] font-medium leading-tight">{item.anomali_notu}</p>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -717,8 +978,33 @@ export default function App() {
           )}
         </section>
 
-        {/* Alt Kontrol Barı (Kamera + Mikrofon) */}
+        {/* Alt Kontrol Barı (Kamera + Mikrofon + Klavye) */}
         <footer className="absolute bottom-0 inset-x-0 p-6 flex flex-col items-center bg-gradient-to-t from-white via-white/95 to-transparent pointer-events-auto">
+          {/* Metin Giriş Formu (Açılır/Kapanır) */}
+          <form
+            id="text-input-form"
+            onSubmit={handleManualTextSubmit}
+            className={`w-full mb-3 flex items-center gap-2 bg-stone-50 p-1.5 pl-3 rounded-2xl border border-stone-200 shadow-sm transition-all duration-200 ${
+              showTextInput ? 'opacity-100 scale-100' : 'hidden opacity-0 scale-95 pointer-events-none'
+            }`}
+          >
+            <input
+              id="manual-text-input"
+              ref={manualTextInputRef}
+              type="text"
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              placeholder="Bir not yazın..."
+              className="flex-1 bg-transparent text-sm text-stone-800 placeholder-stone-400 outline-hidden py-1"
+            />
+            <button
+              type="submit"
+              className="px-3 py-1.5 bg-stone-900 text-white text-xs font-semibold rounded-xl active:scale-95 transition-all shrink-0 cursor-pointer"
+            >
+              Ekle
+            </button>
+          </form>
+
           <p
             id="status-text"
             className={`text-xs mb-3 font-medium transition-colors ${
@@ -726,13 +1012,15 @@ export default function App() {
                 ? 'text-red-500 font-semibold'
                 : statusText.includes('Görsel') || statusText.includes('inceleniyor')
                 ? 'text-amber-600 font-semibold'
+                : statusText === 'Kaydediliyor...'
+                ? 'text-stone-700 font-semibold'
                 : 'text-stone-400'
             }`}
           >
             {statusText}
           </p>
 
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-4">
             {/* Kamera / Galeri Butonu */}
             <label
               htmlFor="camera-input"
@@ -790,10 +1078,97 @@ export default function App() {
                 />
               </svg>
             </button>
+
+            {/* Klavye / Metin Girişi Toggle Butonu */}
+            <button
+              id="keyboard-toggle-btn"
+              type="button"
+              onClick={handleToggleTextInput}
+              title="Metin ile Yaz"
+              className={`w-12 h-12 rounded-full flex items-center justify-center border shadow-xs active:scale-90 transition-all cursor-pointer ${
+                showTextInput
+                  ? 'bg-stone-800 text-white border-stone-800'
+                  : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200/70'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
+              </svg>
+            </button>
           </div>
         </footer>
 
       </main>
+
+      {/* Gizlenebilir Manuel Ekleme Çekmecesi */}
+      {showManualModal && (
+        <div
+          className="fixed inset-0 bg-stone-900/40 z-40 backdrop-blur-2xs transition-opacity"
+          onClick={closeManualModal}
+        />
+      )}
+      <div
+        id="manual-modal"
+        className={`fixed inset-x-0 bottom-0 max-w-md mx-auto bg-white rounded-t-3xl p-6 shadow-2xl border-t border-stone-200 z-50 transition-transform duration-300 ${
+          showManualModal ? 'translate-y-0' : 'translate-y-full hidden'
+        }`}
+      >
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-sm font-bold text-stone-900">Manuel Not Oluştur</h3>
+          <button
+            type="button"
+            onClick={closeManualModal}
+            className="text-stone-400 hover:text-stone-700 text-sm p-1 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+
+        <form id="manual-create-form" onSubmit={handleManualCreateSubmit} className="space-y-3">
+          <input
+            id="manual-title"
+            type="text"
+            value={manualTitle}
+            onChange={(e) => setManualTitle(e.target.value)}
+            placeholder="Not başlığı (örn: Kira Ödemesi)"
+            required
+            className="w-full text-xs px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-stone-400 text-stone-800"
+          />
+
+          <input
+            id="manual-datetime"
+            type="datetime-local"
+            value={manualDatetime}
+            onChange={(e) => setManualDatetime(e.target.value)}
+            className="w-full text-xs px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:outline-hidden text-stone-700"
+          />
+
+          <div className="flex items-center justify-between px-1 py-1">
+            <label className="text-xs text-stone-600 flex items-center gap-2 cursor-pointer">
+              <input
+                id="manual-sync-cal"
+                type="checkbox"
+                checked={manualSyncCal}
+                onChange={(e) => setManualSyncCal(e.target.checked)}
+                className="rounded text-stone-900"
+              />
+              Google Takvim'e işle
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full py-2.5 bg-stone-900 text-white rounded-xl text-xs font-semibold active:scale-95 transition-transform cursor-pointer"
+          >
+            Kaydet
+          </button>
+        </form>
+      </div>
 
       {/* Görsel Büyütme Modalı */}
       <div

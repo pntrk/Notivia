@@ -47,6 +47,8 @@ export interface NotiviaSimpleNote {
   tarih_iso?: string | null;
   hazirlik_zamani?: string | null;
   hazirlik_iso?: string | null;
+  anomali_notu?: string | null;
+  teshis_notu?: string | null;
   ikon: string;
   renk: string;
 }
@@ -60,6 +62,8 @@ export interface NotiviaParsedNote {
   detailed_note: string;
   category: NotiviaCategory;
   priority: NotiviaPriority;
+  anomali_notu?: string | null;
+  teshis_notu?: string | null;
   ui_meta: UiMeta;
   calendar_event: CalendarEvent;
   action_items: ActionItem[];

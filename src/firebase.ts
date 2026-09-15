@@ -118,41 +118,83 @@ export async function refreshGoogleAccessToken(): Promise<string | null> {
   }
 }
 
-// createCalendarEvent fonksiyonunu 401 yakalayıp 1 kez tazeleyecek şekilde güncelleyin
+// Çakışan etkinlikleri sessizce sorgulama
+export async function checkCalendarConflict(startIso: string, endIso: string): Promise<string | null> {
+  const token = getGoogleAccessToken();
+  if (!token) return null;
+
+  try {
+    const url = new URL('https://www.googleapis.com/calendar/v3/calendars/primary/events');
+    url.searchParams.append('timeMin', new Date(startIso).toISOString());
+    url.searchParams.append('timeMax', new Date(endIso).toISOString());
+    url.searchParams.append('singleEvents', 'true');
+    url.searchParams.append('orderBy', 'startTime');
+
+    const res = await fetch(url.toString(), {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      // Varsa çakışan ilk etkinliğin özetini döndür
+      if (data.items && data.items.length > 0) {
+        return data.items[0].summary || 'Mevcut Etkinlik';
+      }
+    }
+  } catch (err) {
+    console.warn('Çakışma sorgusu yapılamadı:', err);
+  }
+  return null;
+}
+
+export const checkCalendarConflicts = checkCalendarConflict;
+
+// createCalendarEvent fonksiyonu artık hem ID hem çakışma bilgisi döndürür
 export async function createCalendarEvent(item: {
   baslik: string;
   tarih_iso?: string | null;
   hazirlik_zamani?: string | null;
   hazirlik_iso?: string | null;
   ikon?: string;
-}): Promise<string | null> {
+}): Promise<{ eventId: string | null; conflictWith: string | null }> {
   let token = getGoogleAccessToken();
-  if (!token || !item.tarih_iso) return null;
+  if (!token || !item.tarih_iso) return { eventId: null, conflictWith: null };
 
   try {
     const startTime = new Date(item.tarih_iso);
-    if (isNaN(startTime.getTime())) return null;
+    if (isNaN(startTime.getTime())) return { eventId: null, conflictWith: null };
 
     const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
 
-    const description = item.hazirlik_zamani
-      ? `Notivia tarafından otomatik oluşturuldu.\n⏳ Tersine Ön Hazırlık: ${item.hazirlik_zamani}`
-      : 'Notivia tarafından otomatik oluşturuldu.';
+    // 1. Önce takvimde çakışma var mı bak
+    const conflictWith = await checkCalendarConflict(startTime.toISOString(), endTime.toISOString());
 
-    const eventPayload = {
+    // 2. Etkinliği oluştur (Ön hazırlık uyarısı ile birlikte)
+    const eventPayload: any = {
       summary: `${item.ikon || '📌'} ${item.baslik}`,
-      description,
+      description: conflictWith
+        ? `Notivia: Dikkat! Bu saatte '${conflictWith}' ile çakışma tespit edildi.`
+        : (item.hazirlik_zamani
+            ? `Notivia tarafından otomatik oluşturuldu.\n⏳ Tersine Ön Hazırlık: ${item.hazirlik_zamani}`
+            : 'Notivia tarafından otomatik oluşturuldu.'),
       start: { dateTime: startTime.toISOString() },
       end: { dateTime: endTime.toISOString() },
+      reminders: {
+        useDefault: false,
+        overrides: [
+          { method: 'popup', minutes: 60 },   // 1 saat önce
+          { method: 'popup', minutes: 1020 }  // 17 saat önce (Önceki gün ikindi)
+        ]
+      }
     };
 
     let response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(eventPayload),
+      body: JSON.stringify(eventPayload)
     });
 
     // 401 Expired Token yakalandığında token'ı sıfırla ve 1 kez tazeleyip tekrar dene
@@ -173,12 +215,12 @@ export async function createCalendarEvent(item: {
 
     if (response.ok) {
       const data = await response.json();
-      return data.id;
+      return { eventId: data.id, conflictWith };
     }
   } catch (error) {
-    console.error('Takvim senkronizasyon hatası:', error);
+    console.error('Takvim kayıt hatası:', error);
   }
-  return null;
+  return { eventId: null, conflictWith: null };
 }
 
 // Delete Calendar Event from Google Calendar
@@ -194,6 +236,11 @@ export async function deleteCalendarEvent(eventId: string): Promise<void> {
   } catch (error) {
     console.error('Takvim silme hatası:', error);
   }
+}
+
+if (typeof window !== 'undefined') {
+  (window as any).checkCalendarConflict = checkCalendarConflict;
+  (window as any).checkCalendarConflicts = checkCalendarConflict;
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
@@ -213,18 +260,18 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path,
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  console.warn('Firestore Operation Info: ', JSON.stringify(errInfo));
+  return errInfo;
 }
 
 // Initial connection test
 export async function testConnection() {
   try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firebase client is offline or configuration needs verification.');
+    if (db) {
+      await getDocFromServer(doc(db, 'test', 'connection'));
     }
+  } catch (error) {
+    // Database may not be provisioned yet; fallback storage handles notes safely
   }
 }
 

@@ -24,10 +24,11 @@ app.get('/api/health', (_req, res) => {
 // Simple 5-field parsing endpoint matching exact user prompt (with image support)
 app.post('/api/parse-simple', async (req, res) => {
   try {
-    const { input, text, current_datetime, base64Image, image } = req.body;
+    const { input, text, current_datetime, base64Image, image, past_notes, gecmis_notlar, history } = req.body;
     const cleanInput = String(input || text || '').trim();
     const now = String(current_datetime || new Date().toISOString());
     const media = base64Image || image || null;
+    const past = Array.isArray(past_notes) ? past_notes : Array.isArray(gecmis_notlar) ? gecmis_notlar : Array.isArray(history) ? history : [];
 
     if (!cleanInput && !media) {
       return res.status(400).json({
@@ -36,7 +37,7 @@ app.post('/api/parse-simple', async (req, res) => {
       });
     }
 
-    const simple = await parseWithAIAndImage(cleanInput, media, now);
+    const simple = await parseWithAIAndImage(cleanInput, media, now, past);
     return res.json({
       success: true,
       data: simple,
@@ -54,9 +55,10 @@ app.post('/api/parse-simple', async (req, res) => {
 app.post('/api/parse', async (req, res) => {
   const startTime = Date.now();
   try {
-    const { input, current_datetime } = req.body;
+    const { input, current_datetime, past_notes, gecmis_notlar, history } = req.body;
     const cleanInput = String(input || '').trim();
     const currentDt = String(current_datetime || new Date().toISOString());
+    const past = Array.isArray(past_notes) ? past_notes : Array.isArray(gecmis_notlar) ? gecmis_notlar : Array.isArray(history) ? history : [];
 
     if (!cleanInput) {
       return res.status(400).json({
@@ -65,8 +67,8 @@ app.post('/api/parse', async (req, res) => {
       });
     }
 
-    const simple = await parseSimpleWithGemini(cleanInput, currentDt);
-    const { data, source } = await parseWithGemini(cleanInput, currentDt);
+    const simple = await parseSimpleWithGemini(cleanInput, currentDt, past);
+    const { data, source } = await parseWithGemini(cleanInput, currentDt, past);
     const processingTime = Date.now() - startTime;
 
     return res.json({
@@ -80,6 +82,8 @@ app.post('/api/parse', async (req, res) => {
         ...data,
         summary: simple.baslik || data.summary,
         detailed_note: simple.zaman || data.detailed_note,
+        teshis_notu: simple.teshis_notu || data.teshis_notu || null,
+        anomali_notu: simple.anomali_notu || data.anomali_notu || null,
         calendar_event: {
           ...data.calendar_event,
           start_datetime: simple.tarih_iso || data.calendar_event.start_datetime,
