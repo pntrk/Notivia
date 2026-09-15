@@ -5,6 +5,8 @@ import {
   googleProvider,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut,
   onAuthStateChanged,
   setGoogleAccessToken,
@@ -258,6 +260,22 @@ export default function App() {
     }
 
     let isMounted = true;
+
+    // Mobil cihazlardan redirect ile dönüldüyse sonucu yakala
+    getRedirectResult(auth).then((result) => {
+      if (result) {
+        const credential = GoogleAuthProvider.credentialFromResult(result);
+        const token = credential?.accessToken || null;
+        if (token) {
+          setGoogleAccessToken(token);
+          console.log("Mevcut Google Token başarıyla alındı (Redirect):", token);
+          setStatusText('Google hesabı bağlandı ✓');
+          setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
+        }
+      }
+    }).catch((err) => {
+      console.warn("Google Redirect Login Error:", err);
+    });
 
     try {
       const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
@@ -1036,7 +1054,17 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
   // Google Sign-In Handler
   const handleLogin = async () => {
     setStatusText('Google hesabı bağlanıyor...');
+    
+    // Mobil Cihaz Tespiti
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
     try {
+      if (isMobile) {
+        // Mobilde doğrudan redirect ile giriş yapmayı dene
+        await signInWithRedirect(auth, googleProvider);
+        return; // Yönlendirme yapılacağı için aşağı devam etmez
+      }
+      
       const result = await signInWithPopup(auth, googleProvider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const token = credential?.accessToken || null;
@@ -1051,15 +1079,22 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
     } catch (err: any) {
       console.warn('Google giriş uyarısı / hatası:', err?.code, err?.message || err);
       if (err?.code === 'auth/popup-blocked') {
-        setStatusText('Tarayıcı açılır pencereyi engelledi. Lütfen izin verin.');
+        setStatusText('Popup engellendi, yönlendiriliyor...');
+        // Popup engellenirse otomatik olarak redirect metoduna düş
+        await signInWithRedirect(auth, googleProvider).catch(() => {
+          setStatusText('Yönlendirme de başarısız oldu.');
+          setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 3500);
+        });
       } else if (err?.code === 'auth/unauthorized-domain') {
         setStatusText('Önizleme yetkisi bekleniyor (Lokal mod aktif)');
+        setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 3500);
       } else if (err?.code === 'auth/cancelled-popup-request' || err?.code === 'auth/popup-closed-by-user') {
         setStatusText('Giriş penceresi kapatıldı');
+        setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 3500);
       } else {
         setStatusText('Giriş yapılamadı (Lokal mod devrede)');
+        setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 3500);
       }
-      setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 3500);
     }
   };
 
