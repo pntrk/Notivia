@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1c1917" />
+      <stop offset="100%" stop-color="#0c0a09" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Outer Rounded Container -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+  
+  <!-- Subtle border highlight -->
+  <rect x="8" y="8" width="496" height="496" rx="104" fill="none" stroke="#44403c" stroke-width="4" opacity="0.4" />
+  
+  <!-- Core Symbol: Dynamic Stylized 'N' & Spark / Node -->
+  <g transform="translate(106, 106)">
+    <!-- Path 1: Left Vertical Stem with gradient -->
+    <path d="M40 240 L40 60 C40 45 55 35 68 42 L80 49 C90 55 96 66 96 78 L96 220 C96 235 80 246 66 239 Z" fill="#fafaf9" />
+    
+    <!-- Path 2: Diagonal Energy Bridge -->
+    <path d="M80 65 L220 225 C232 238 252 232 256 215 L256 75 C256 60 242 50 228 56 L216 62 C206 67 200 78 200 90 L200 170 L96 52 C88 43 75 42 66 48 Z" fill="url(#glowGrad)" />
+    
+    <!-- Path 3: Right Vertical Pillar -->
+    <path d="M204 220 L204 80 C204 65 220 54 234 61 L246 67 C255 72 260 82 260 92 L260 222 C260 238 245 248 232 241 Z" fill="#fafaf9" />
+    
+    <!-- Accent Cognitive Spark / Star -->
+    <g transform="translate(230, 20)">
+      <circle cx="20" cy="20" r="14" fill="#fbbf24" />
+      <circle cx="20" cy="20" r="24" fill="#fbbf24" opacity="0.25" />
+    </g>
+  </g>
+</svg>

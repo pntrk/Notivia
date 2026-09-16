@@ -42,6 +42,8 @@ import {
   deleteLocalMedia,
   compressImage,
 } from './utils/mediaStorage.ts';
+import { PWAInstallButton } from './components/PWAInstallButton.tsx';
+import { OfflineIndicator } from './components/OfflineIndicator.tsx';
 
 interface SimpleCardItem {
   id: string;
@@ -1144,6 +1146,9 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
           </div>
 
           <div id="auth-container" className="flex items-center gap-2">
+            {/* PWA Uygulama Olarak Yükle Butonu */}
+            <PWAInstallButton />
+
             {/* Arama Toggle */}
             <button
               type="button"
@@ -1729,6 +1734,9 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
           />
         )}
       </div>
+
+      {/* PWA Çevrimdışı Durum Göstergesi */}
+      <OfflineIndicator />
     </div>
   );
 }
