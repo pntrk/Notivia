@@ -142,19 +142,73 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
   {
     id: 'tapu_devir',
     category: 'resmi',
-    keywords: ['tapu', 'harç', 'webtapu', 'gayrimenkul devir', 'noter vekalet'],
-    baslik: 'Tapu Devir & Noter İşlemi',
+    keywords: ['tapu', 'tapu harç', 'webtapu', 'gayrimenkul devir', 'tapu devri', 'tapu randevu'],
+    baslik: 'Tapu Devir & Harç İşlemi',
     ikon: '🏛️',
     renk: '#E0F2FE',
     varsayilanZaman: 'Randevu Saati',
     hazirlikZamani: 'Randevu Günü Sabah',
     hazirlikSaatOncesi: 3,
-    akilliFisilti: '🏛️ DASK poliçesi ve belediye rayiç bedel yazısı olmadan işlem yapılamaz.',
+    akilliFisilti: '🏛️ Tapu harcını alıcı ve satıcı eşit öder; güncel DASK poliçesi ve belediye rayiç bedel yazısı olmadan işlem yapılamaz.',
     oncedenYapilacaklar: [
-      'Belediyeden rayiç bedel belgesi (borçsuzluk) al',
+      'Belediyeden rayiç bedel belgesi (emlak borçsuzluk yazısı) al',
       'Güncel DASK (Deprem Sigortası) poliçesini kontrol et',
-      'Tapu harcı SMS bildirimini ve döner sermaye ödemesini yap',
-      'Alıcı ve satıcı T.C. kimlik asıllarını hazırla'
+      'GİB üzerinden tapu harcı SMS bildirimini ve döner sermaye ödemesini yap',
+      'Alıcı ve satıcı fotoğraflı T.C. kimlik asıllarını hazırla'
+    ]
+  },
+  {
+    id: 'ehliyet_yenileme',
+    category: 'resmi',
+    keywords: ['ehliyet', 'sürücü belgesi', 'ehliyet yenile', 'ehliyet randevu', 'yeni tip ehliyet'],
+    baslik: 'Ehliyet Yenileme Başvurusu',
+    ikon: '🪪',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Randevu Günü 10:00',
+    hazirlikZamani: '1 Gün Önce 16:00',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '🪪 Sağlık raporu (Sürücü olur) ve harç/vakıf payı dekontu olmadan randevuda işlem yapılmaz.',
+    oncedenYapilacaklar: [
+      'Aile hekiminden e-Rapor formatında "Sürücü Olur" sağlık raporu al',
+      'Vergi dairesi harç ve Polis Teşkilatı Vakıf payını banka/GİB üzerinden ödeyip dekont al',
+      'Son 6 ayda çekilmiş 1 adet biyometrik fotoğraf hazırla',
+      'Mevcut eski ehliyet ve T.C. Kimlik kartının aslını çantaya koy'
+    ]
+  },
+  {
+    id: 'noter_islem',
+    category: 'resmi',
+    keywords: ['noter', 'vekalet', 'vekaletname', 'araç satış noter', 'noter randevu', 'noterde'],
+    baslik: 'Noter İşlemi & Vekaletname',
+    ikon: '🏛️',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Hafta İçi 11:00',
+    hazirlikZamani: '1 Saat Önce',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '🏛️ Araç satışında alıcı ve satıcı T.C. kimlik aslı ve tescil belgesi (ruhsat) olmadan işlem yapılamaz.',
+    oncedenYapilacaklar: [
+      'Vekalet verilecek kişinin T.C. Kimlik no ve doğru unvan/ad-soyad bilgilerini teyit et',
+      'Fotoğraflı T.C. Kimlik kartı asıllarını hazırla',
+      'Araç satışı ise ruhsat ve plaka borçsuzluk durumunu kontrol et',
+      'Noter masrafları ve harç ödemesi için nakit veya banka kartı hazır bulundur'
+    ]
+  },
+  {
+    id: 'nobet_gorevi',
+    category: 'resmi',
+    keywords: ['nöbet', 'okul nöbeti', 'hastane nöbeti', 'öğretmen nöbet', 'nöbetçi öğretmen', 'nöbetçiyim', 'kat nöbeti'],
+    baslik: 'Nöbet Görevi & Çizelge',
+    ikon: '📋',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Nöbet Günü 08:00',
+    hazirlikZamani: 'Önceki Akşam 20:00',
+    hazirlikSaatOncesi: 12,
+    akilliFisilti: '📋 Nöbet başlangıcında nöbet defterinin imzalanması ve acil durum anahtarlarının teslim alınması şarttır.',
+    oncedenYapilacaklar: [
+      'Nöbet defterini idareden alıp gün başı imzasını at',
+      'Kat/blok ve bahçe giriş-çıkış güvenlik kontrollerini sağla',
+      'İlk yardım dolabı ve acil durum çıkış kapılarının açık olduğunu teyit et',
+      'Nöbet bitiminde vukuat ve teslim tutanağını doldurup imzala'
     ]
   },
 
@@ -405,6 +459,262 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
       'Hediye siparişini teslimat süresini gözeterek erkenden ver',
       'Tebrik kartı veya hediye paketi hazırla',
       'Pasta veya restoran rezervasyonunu teyit et'
+    ]
+  },
+  {
+    id: 'ev_tasinma',
+    category: 'ev_teknik',
+    keywords: ['taşınma', 'ev taşıma', 'nakliye', 'nakliyat', 'yeni eve taşın', 'koli yap', 'kiralık eve çık'],
+    baslik: 'Ev Taşıma & Nakliyat Planı',
+    ikon: '📦',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Taşınma Günü 08:30',
+    hazirlikZamani: '3 Gün Önce 10:00',
+    hazirlikSaatOncesi: 72,
+    akilliFisilti: '📦 Yeni adrese geçtikten sonra 20 iş günü içinde e-Devletten adres beyanı yapılması kanuni zorunluluktur.',
+    oncedenYapilacaklar: [
+      'Kırılacak cam ve porselenleri havalı naylonla sarıp kolileri etiketle',
+      'Eski evin elektrik, su ve doğalgaz aboneliklerini son endeksle kapattırıp depozito iadesi talep et',
+      'İnternet ve TV servis sağlayıcısına yeni adres nakil randevusu oluştur',
+      'Taşınmadan sonra 20 iş günü içinde Nüfus/e-Devlet üzerinden adres değişikliği bildirimi yap'
+    ]
+  },
+  {
+    id: 'kira_sozlesmesi',
+    category: 'finans',
+    keywords: ['kira kontratı', 'kira sözleşmesi', 'depozito', 'tüfe kira artış', 'ev kiralama'],
+    baslik: 'Kira Sözleşmesi & Depozito',
+    ikon: '🏠',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Sözleşme Günü',
+    hazirlikZamani: '1 Gün Önce',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '🏠 Yasa gereği kira ödemelerinin banka kanalıyla ve açıklama belirtilerek yapılması zorunludur.',
+    oncedenYapilacaklar: [
+      'TÜFE 12 aylık ortalamayı kontrol ederek yasal tavan kira artış oranını hesapla',
+      'Evdeki mevcut hasar, kombi ve demirbaşların fotoğraflı teslim tutanağını hazırla',
+      'Depozito tutarını ve iade koşullarını sözleşmeye madde olarak ekle',
+      'Kira ödemelerini bankadan açıklama kısmına ay belirterek transfer et'
+    ]
+  },
+  {
+    id: 'schengen_vize',
+    category: 'resmi',
+    keywords: ['vize', 'schengen', 'vize randevu', 'vfs', 'idata', 'konsolosluk', 'pasaport vize'],
+    baslik: 'Vize Başvuru & Dosya Hazırlığı',
+    ikon: '🇪🇺',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Randevu Saati',
+    hazirlikZamani: '3 Gün Önce 14:00',
+    hazirlikSaatOncesi: 72,
+    akilliFisilti: '🇪🇺 Banka hesap dökümünün randevu tarihinden en fazla 7-10 gün önce ıslak imza/kaşeyle alınması gerekir.',
+    oncedenYapilacaklar: [
+      'Son 3 aylık kaşeli ve ıslak imzalı banka hesap dökümü ile imza sirkülerini al',
+      'Uçak ve otel rezervasyonlarının barkodlu dökümlerini dosyaya ekle',
+      'En az 30.000 € teminatlı Seyahat Sağlık Sigortası poliçesini hazırla',
+      'e-Devletten barkodlu SGK hizmet dökümü ve iş yeri izin yazısını al'
+    ]
+  },
+  {
+    id: 'arac_kasko_sigorta',
+    category: 'arac_ulasim',
+    keywords: ['kasko', 'trafik sigortası', 'sigorta yenile', 'hasarsızlık indirim', 'poliçe yenile'],
+    baslik: 'Kasko & Trafik Sigortası Yenileme',
+    ikon: '🛡️',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Poliçe Bitiş Günü 11:00',
+    hazirlikZamani: '3 Gün Önce',
+    hazirlikSaatOncesi: 72,
+    akilliFisilti: '🛡️ Zorunlu trafik sigortası gecikmelerinde her ay için %5 gecikme zammı uygulanır.',
+    oncedenYapilacaklar: [
+      'Hasarsızlık indirim kademesini (1-8. basamak) teyit et ve çoklu teklif al',
+      'Kasko poliçesinde ikame araç sınıfını ve orijinal cam muafiyetini kontrol et',
+      'Eski poliçenin bittiği gün saat 12:00 olmadan yeni poliçeyi onaylat',
+      'Poliçe PDF kopyasını torpido ve telefona kaydet'
+    ]
+  },
+  {
+    id: 'arac_kis_antifriz',
+    category: 'arac_ulasim',
+    keywords: ['antifriz', 'kış hazırlığı araba', 'silecek suyu', 'cam suyu', 'kışlık bakım'],
+    baslik: 'Kışlık Araç & Antifriz Hazırlığı',
+    ikon: '❄️',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Hafta Sonu 11:00',
+    hazirlikZamani: 'Öncesinde',
+    akilliFisilti: '❄️ Saf su eklemek antifriz derecesini düşürür; motor bloğu çatlamasını önlemek için dereceyi en az -25°C tutun.',
+    oncedenYapilacaklar: [
+      'Bomometre ile radyatör antifriz koruma derecesini ölçtür (en az -25°C)',
+      'Silecek haznesine donmayan -20°C kışlık cam suyu doldur',
+      'Silecek lastiklerinin cama yapışıp yırtılmadığını kontrol et',
+      'Bagaja çekme halatı, buz kazıyıcı ve takoz koy'
+    ]
+  },
+  {
+    id: 'bebek_cocuk_asi',
+    category: 'saglik',
+    keywords: ['bebek aşı', 'çocuk aşı', 'aile hekimi aşı', 'rotavirüs', 'menenjit', 'bebek aşı takvimi'],
+    baslik: 'Bebek / Çocuk Aşı Takibi',
+    ikon: '👶',
+    renk: '#F3E8FF',
+    varsayilanZaman: 'Aşı Günü 09:30',
+    hazirlikZamani: '1 Gün Önce',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '👶 Özel aşılar (rotavirüs/menenjit) soğuk zincirle taşınmalı; aşı kartı mutlaka yanınızda olmalıdır.',
+    oncedenYapilacaklar: [
+      'Sağlık ocağı / hastane aşı kartını çantaya koy',
+      'Özel aşı ise eczaneden soğuk zincir buz aküsüyle teslim al',
+      'Aşı sonrası olası ateş için doktor önerili parasetamol şurubu hazır bulundur',
+      'Aşı yapılan kola/bacağa o gün su değdirmemeye özen göster'
+    ]
+  },
+  {
+    id: 'osym_sinav_hazirlik',
+    category: 'resmi',
+    keywords: ['yks', 'kpss', 'ales', 'ehliyet sınavı', 'ösym sınavı', 'sınav giriş belgesi', 'msü'],
+    baslik: 'ÖSYM / Resmi Sınav Hazırlığı',
+    ikon: '📝',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Sınav Günü 08:45',
+    hazirlikZamani: '1 Gün Önce 18:00',
+    hazirlikSaatOncesi: 15,
+    akilliFisilti: '📝 Sınav binalarına girişler 10:00 itibarıyla kapatılır; fotoğraflı T.C. kimlik kartı aslı zorunludur.',
+    oncedenYapilacaklar: [
+      'ÖSYM / MEB Sınav Giriş Belgesini barkodlu ve fotoğraflı olarak yazdır',
+      'Fotoğraflı T.C. Kimlik Kartının aslını hazırla (Sürücü belgesi geçerli değildir)',
+      'Metal toka, takı, saat veya elektronik eşyaları evde bırak',
+      'En geç 09:30’da sınav binasında olacak şekilde ulaşım planı yap'
+    ]
+  },
+  {
+    id: 'goz_muayenesi',
+    category: 'saglik',
+    keywords: ['göz randevu', 'göz muayenesi', 'gözlük', 'kontakt lens', 'göz doktoru'],
+    baslik: 'Göz Muayenesi & Reçete',
+    ikon: '👓',
+    renk: '#F3E8FF',
+    varsayilanZaman: 'Randevu Saati',
+    hazirlikZamani: '24 Saat Önce',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '👓 Damlalı göz dibi taraması sonrası 4-6 saat bulanık görme ve ışık hassasiyeti oluşacağından araçla gitmeyiniz.',
+    oncedenYapilacaklar: [
+      'Kontakt lens kullanıyorsan kornea şeklinin dinlenmesi için 24 saat önceden çıkarıp gözlük tak',
+      'Güneş gözlüğünü yanına al (Damlalı muayene sonrası ışık hassasiyeti için)',
+      'Mevcut kullandığın gözlük ve eski reçeteni hekime göstermek üzere al',
+      'Muayene sonrası araç kullanmamak üzere toplu taşıma veya refakatçi planla'
+    ]
+  },
+  {
+    id: 'mtv_vergi_odeme',
+    category: 'finans',
+    keywords: ['mtv öde', 'vergi öde', 'motorlu taşıtlar vergisi', 'gelir vergisi', 'yapılandırma taksit'],
+    baslik: 'MTV / Vergi Taksiti Ödemesi',
+    ikon: '💳',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Son Gün 14:00',
+    hazirlikZamani: '2 Gün Önce',
+    hazirlikSaatOncesi: 48,
+    akilliFisilti: '💳 Vergi ödemelerinde son gün sistem tıkanıklığı yaşamamak adına işlemi erkenden tamamlayın.',
+    oncedenYapilacaklar: [
+      'GİB İnteraktif Vergi Dairesi üzerinden güncel tahakkuk tutarını sorgula',
+      'Bankaların kredi kartı ücretsiz taksit kampanyalarını kontrol et',
+      'Ödeme sonrası sistemden barkodlu tahsilat makbuzunu PDF olarak indir',
+      'Araç satış veya muayene öncesi borçsuzluk durumunu teyit et'
+    ]
+  },
+  {
+    id: 'ev_ilaclama_temizlik',
+    category: 'ev_teknik',
+    keywords: ['böcek ilaçlama', 'haşere', 'ilaçlama', 'derin temizlik', 'koltuk yıkama'],
+    baslik: 'Ev İlaçlama & Derin Temizlik',
+    ikon: '🧹',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Uygulama Günü 10:00',
+    hazirlikZamani: '1 Saat Önce',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '⚠️ İlaçlama esnasında açıkta hiçbir gıda veya evcil hayvan maması bırakılmamalı; ev en az 2 saat terk edilmelidir.',
+    oncedenYapilacaklar: [
+      'Mutfaktaki açık gıdaları, tabakları ve evcil hayvan mama kaplarını dolaplara kapat',
+      'Uygulama bittikten sonra evi en az 2 saat boş bırak ve evcil hayvanları uzak tut',
+      'Dönüşte tüm pencereleri açarak en az 1 saat cereyanlı havalandırma yap',
+      'Mutfak tezgahı ve yemek masası yüzeylerini sabunlu bezle sil'
+    ]
+  },
+
+  // 7. BOTANİK & BİTKİ BAKIMI (Şiveye Duyarlı ve Botanik Zekalı)
+  {
+    id: 'cicek_sulama_genel',
+    category: 'ev_teknik',
+    keywords: [
+      'suvar', 'suvarıver', 'suvarıve', 'verive gari', 'sulayuver', 'sulayıver', 'sulayıve',
+      'çiçee su', 'çiçeğe su', 'çiçek sula', 'çiçekleri sula', 'boynunu bükmüş',
+      'çiçekler susamış', 'saksının dibi', 'saksı sula', 'su sal', 'çiçek sulama'
+    ],
+    baslik: 'Akşam Çiçek Sulama',
+    ikon: '🪴',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Bugün 19:30',
+    hazirlikZamani: 'Öğle Güneşi Sonrası',
+    hazirlikSaatOncesi: 0,
+    akilliFisilti: '🪴 Güneş yaprakları yakmasın diye sulama akşam 19:30 serinliğine kuruldu.',
+    oncedenYapilacaklar: [
+      'Doğrudan saksı toprağına dök, yapraklara ve çiçeklere su değdirme',
+      'Kök çürümesini önlemek için saksı altlığında biriken suyu 15 dk sonra dök',
+      'Oda sıcaklığında dinlenmiş kireçsiz su kullan',
+      'Toprağın üst yüzeyi hafif kurudukça sulama döngüsünü tekrarla'
+    ]
+  },
+  {
+    id: 'orkide_bakim',
+    category: 'ev_teknik',
+    keywords: ['orkide', 'orkide sula', 'orkide bakımı', 'orkide sulama'],
+    baslik: 'Sabah Orkide Sulama',
+    ikon: '🌸',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Yarın 09:30',
+    hazirlikZamani: 'Sabah 09:00',
+    hazirlikSaatOncesi: 0,
+    akilliFisilti: '🌸 Orkide gece kök mantarı yapar; sulamayı asla akşama bırakmayın, sabah 09:30 en idealidir.',
+    oncedenYapilacaklar: [
+      'Şeffaf saksıyı 10-15 dk dinlenmiş oda sıcaklığındaki ılık suda beklet (daldırma yöntemi)',
+      'Saksıdaki fazla suyu tamamen süzdürerek altlığa yerleştir',
+      'Doğrudan yakıcı güneş almayan aydınlık bir pencere önüne koy',
+      'Kökler yeşilden gümüşi griye döndüğünde yeniden sula'
+    ]
+  },
+  {
+    id: 'sardunya_petunya_bakim',
+    category: 'ev_teknik',
+    keywords: ['sardunya', 'petunya', 'balkon çiçeği', 'balkon çiçekleri'],
+    baslik: 'Akşam Sardunya Bakımı',
+    ikon: '🌺',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Bugün 19:30',
+    hazirlikZamani: 'Akşam Serinliği',
+    hazirlikSaatOncesi: 0,
+    akilliFisilti: '🌺 Sardunyalar öğle güneşinde sulanırsa haşlanır; akşam 19:30 serinliği idealdir.',
+    oncedenYapilacaklar: [
+      'Güneş tamamen çekildikten sonra kök boğazına su ver',
+      'Kurumuş çiçek başlarını ve sararmış yaprakları kopar',
+      'Saksı tabağındaki fazla suyu dök'
+    ]
+  },
+  {
+    id: 'kaktus_sukulent_bakim',
+    category: 'ev_teknik',
+    keywords: ['kaktüs', 'kaktus', 'sukulent', 'paşa kılıcı', 'pasa kilici', 'barış çiçeği', 'baris cicegi'],
+    baslik: 'Kaktüs & Sukulent Bakımı',
+    ikon: '🌵',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Sabah 10:00',
+    hazirlikZamani: 'Sabah',
+    hazirlikSaatOncesi: 0,
+    akilliFisilti: '🌵 Kaktüs ve sukulentler 2-3 haftada bir ve mutlaka sabah saatinde sulanmalıdır.',
+    oncedenYapilacaklar: [
+      'Toprağın tamamen kuruduğundan emin olmadan su verme',
+      'Oda sıcaklığında bekletilmiş kireçsiz su kullan',
+      'Gövdeye su değdirmeden yalnızca toprağı nemlendir',
+      'Saksı altlığında su bekletme'
     ]
   }
 ];

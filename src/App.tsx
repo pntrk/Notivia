@@ -123,7 +123,12 @@ function generateWhisperText(note: {
   zaman?: string | null;
   calendarEventId?: string | null;
   tetikleyici?: { etiket: string } | null;
+  teshis_notu?: string | null;
+  anomali_notu?: string | null;
 }): string {
+  if (note.teshis_notu) {
+    return `${note.teshis_notu}. ${note.baslik} planlandı.`;
+  }
   if (note.calendarEventId && note.zaman) {
     return `${note.baslik}, ${note.zaman} için takvime işlendi.`;
   }
@@ -231,6 +236,7 @@ export default function App() {
   const [showSearch, setShowSearch] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [modalImgSrc, setModalImgSrc] = useState<string | null>(null);
+  const [pendingImage, setPendingImage] = useState<string | null>(null);
 
   // Çoklu seçim ve toplu silme modu
   const [isSelectMode, setIsSelectMode] = useState<boolean>(false);
@@ -638,14 +644,9 @@ export default function App() {
 
         recognition.onerror = async (e: any) => {
           console.warn('SpeechRecognition bildirimi:', e?.error || e);
-          const imageToSend = pendingCapturedImageRef.current;
-          if (imageToSend) {
-            pendingCapturedImageRef.current = null;
-            setStatusText('Görsel teşhis ediliyor...');
-            resetMicUI();
-            if (processWithAIRef.current) {
-              await processWithAIRef.current('', imageToSend);
-            }
+          setIsListening(false);
+          if (pendingCapturedImageRef.current) {
+            setStatusText('Görsel hazır. "Teşhis Et"e dokunabilir veya konuşabilirsin.');
           } else {
             resetMicUI();
           }
@@ -653,14 +654,8 @@ export default function App() {
 
         recognition.onend = async () => {
           setIsListening(false);
-          const imageToSend = pendingCapturedImageRef.current;
-          if (imageToSend) {
-            pendingCapturedImageRef.current = null;
-            setStatusText('Görsel teşhis ediliyor...');
-            resetMicUI();
-            if (processWithAIRef.current) {
-              await processWithAIRef.current('', imageToSend);
-            }
+          if (pendingCapturedImageRef.current) {
+            setStatusText('Görsel hazır. İster sesle anlat, ister doğrudan tıkla.');
           } else {
             resetMicUI();
           }
@@ -678,13 +673,15 @@ export default function App() {
     setStatusText('Söyle, çek ya da yaz');
   };
 
-  // Butona basıldığında giriş alanını aç/kapa
+  // Butona basıldığında hızlı yapay zeka metin giriş alanını aç/kapa
   const handleToggleTextInput = () => {
-    if (showManualModal) {
-      closeManualModal();
-    } else {
-      openManualModal();
-    }
+    setShowTextInput((prev) => {
+      const next = !prev;
+      if (next) {
+        setTimeout(() => manualTextInputRef.current?.focus(), 80);
+      }
+      return next;
+    });
   };
 
   const openManualModal = () => {
@@ -781,19 +778,22 @@ export default function App() {
   const handleManualTextSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const text = textInput.trim();
-    if (!text) return;
+    const imageToAttach = pendingImage || pendingCapturedImageRef.current;
+    if (!text && !imageToAttach) return;
 
     // Giriş kutusunu sıfırla ve kapat
     setTextInput('');
     setShowTextInput(false);
+    setPendingImage(null);
+    pendingCapturedImageRef.current = null;
     setStatusText('Yapay zeka çözümlüyor...');
 
     try {
-      // Mevcut bilişsel motora gönder (yazılı girdi olduğu için sesli fısıltı kapalı)
-      await processWithAI(text, null, false);
+      // Bilişsel motora gönder (yazılı girdi + varsa görsel)
+      await processWithAI(text, imageToAttach, false);
     } catch (error) {
       console.error("Yazılı girdi işleme hatası:", error);
-      const parsed = extractSimpleNoteFromText(text);
+      const parsed = extractSimpleNoteFromText(text || 'Görsel eylemi');
       await addNote(parsed);
     } finally {
       setStatusText('Söyle, çek ya da yaz');
@@ -1251,71 +1251,6 @@ export default function App() {
       }
     }
 
-    const promptContent = `CURRENT_DATETIME: ${currentNow}
-Kullanıcı Girdisi: "${textInput}"
-
-GÖREV:
-1. Kullanıcı "yarın", "cuma" gibi bir gün söyleyip saat vermediyse varsayılan saat olarak "09:00:00" ata.
-2. "tarih_iso" alanını KESİNLİKLE hesapla (Format: YYYY-MM-DDTHH:mm:ss). Asla null bırakma.
-
-BİLİŞSEL ALT GÖREVLER (Action Items):
-- Kullanıcının belirttiği ana işin (muayene, seyahat, resmi başvuru, bakım, randevu) gerektirdiği 2-3 somut alt adımı belirle.
-- "action_items": [ { "task": "Kısa alt görev metni", "is_completed": false } ] formatında dizi olarak döndür.
-- Alt görev gerektirmeyen basit durumlarda boş dizi [] dön.
-
-3. Sadece saf JSON üret:
-{
-  "baslik": "Kısa eylem başlığı",
-  "zaman": "Arayüz zaman metni (örn: Yarın 09:00)",
-  "tarih_iso": "2026-09-16T09:00:00",
-  "action_items": [
-    { "task": "Kısa alt görev metni", "is_completed": false }
-  ],
-  "ikon": "📌",
-  "renk": "#FEF3C7"
-}`;
-
-    const GEMINI_API_KEY = (window as any).GEMINI_API_KEY || '';
-
-    // İstemcide özel bir anahtar tanımlıysa doğrudan dene
-    if (GEMINI_API_KEY && GEMINI_API_KEY !== 'MY_GEMINI_API_KEY') {
-      try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                { text: promptContent },
-                ...(base64Image ? [{ inlineData: { mimeType: "image/jpeg", data: base64Image.split(",")[1] } }] : [])
-              ]
-            }]
-          })
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          const rawResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (rawResult) {
-            console.log("2. AI Ham Çıktı (İstemci):", rawResult);
-            const cleanResult = rawResult.replace(/```json/gi, "").replace(/```/g, "").trim();
-            const parsedData = JSON.parse(cleanResult);
-            console.log("3. Ayrıştırılmış Veri:", parsedData);
-            const createdNote = { ...parsedData, mediaId };
-            await addNote(createdNote);
-            if (isSpoken) {
-              const whisper = generateWhisperText(createdNote);
-              speakFeedback(whisper);
-            }
-            resetMicUI();
-            return;
-          }
-        }
-      } catch (clientErr) {
-        console.warn("İstemci Gemini denemesi başarısız, sunucuya geçiliyor:", clientErr);
-      }
-    }
-
     // Sunucu tarafı Otonom Ajan Yönlendiricisini (Autonomous Dispatcher) çağır
     if (textInput && !base64Image) {
       try {
@@ -1433,6 +1368,11 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
           input: textInput,
           base64Image,
           current_datetime: currentNow,
+          past_notes: cards.slice(0, 15).map((c) => ({
+            baslik: c.baslik,
+            zaman: c.zaman,
+            tarih_iso: c.tarih_iso,
+          })),
         }),
       });
       if (sRes.ok) {
@@ -1474,8 +1414,9 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
   // Ses bittiğinde hem ses metnini hem bekleyen görseli gönder
   const onSpeechCompleted = async (spokenText: string) => {
     playMicDoneChime();
-    const imageToSend = pendingCapturedImageRef.current;
+    const imageToSend = pendingImage || pendingCapturedImageRef.current;
     pendingCapturedImageRef.current = null; // Sıfırla
+    setPendingImage(null);
 
     if (imageToSend) {
       setStatusText('Görsel ve ses teşhis ediliyor...');
@@ -1492,33 +1433,27 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setStatusText('Görsel hazır. Bir şey söyleyecek misin?');
+    setStatusText('Görsel işleniyor...');
 
     try {
       const compressed = await compressImage(file);
       pendingCapturedImageRef.current = compressed;
+      setPendingImage(compressed);
+      setStatusText('Görsel hazır. İster sesle anlat, ister doğrudan tıkla.');
+      playMicListeningChime();
 
-      // Otomatik ses dinlemeyi başlat (İsteğe bağlı konuşma)
+      // İsteğe bağlı olarak mikrofonu da dinlemeye al (kullanıcı konuşursa birlikte çözümlenir)
       if (recognitionRef.current && !isListening) {
         try {
           recognitionRef.current.start();
         } catch {
-          // Ses desteği yoksa veya başlatılamazsa doğrudan analiz et
-          const imageToSend = pendingCapturedImageRef.current;
-          pendingCapturedImageRef.current = null;
-          setStatusText('Görsel teşhis ediliyor...');
-          await processWithAI('', imageToSend, true);
+          // mikrofon açılamazsa görsel hazır kalır, kullanıcı tıklayabilir
         }
-      } else {
-        // Ses desteği yoksa sadece görseli doğrudan analiz et
-        const imageToSend = pendingCapturedImageRef.current;
-        pendingCapturedImageRef.current = null;
-        setStatusText('Görsel teşhis ediliyor...');
-        await processWithAI('', imageToSend, true);
       }
     } catch (err) {
       console.error('Fotoğraf işleme hatası:', err);
       pendingCapturedImageRef.current = null;
+      setPendingImage(null);
       setStatusText('Görsel işlenemedi');
       setTimeout(() => setStatusText('Söyle ya da fotoğrafını çek'), 2000);
     } finally {
@@ -2145,6 +2080,61 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
             ? 'from-stone-900 via-stone-900/95 to-transparent'
             : 'from-white via-white/95 to-transparent'
         }`}>
+          {/* Bekleyen Görsel Önizleme Kartı */}
+          {pendingImage && (
+            <div
+              id="pending-image-card"
+              className="w-full mb-3 p-2.5 bg-amber-50 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-800/80 rounded-2xl flex items-center justify-between gap-3 shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-200"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <img
+                  src={pendingImage}
+                  alt="Önizleme"
+                  onClick={() => setModalImgSrc(pendingImage)}
+                  className="w-12 h-12 rounded-xl object-cover border border-amber-300 dark:border-amber-700 shrink-0 cursor-pointer shadow-xs active:scale-95"
+                  title="Büyütmek için tıkla"
+                />
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-amber-950 dark:text-amber-100 truncate flex items-center gap-1">
+                    <span>📷</span> <span>Görsel Yüklendi</span>
+                  </p>
+                  <p className="text-[11px] text-amber-800 dark:text-amber-300 truncate">
+                    İster sesle anlat, ister hemen teşhis et
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  id="diagnose-pending-image-btn"
+                  onClick={async () => {
+                    const img = pendingImage;
+                    setPendingImage(null);
+                    pendingCapturedImageRef.current = null;
+                    setStatusText('Görsel teşhis ediliyor...');
+                    await processWithAI(textInput.trim(), img, true);
+                    setTextInput('');
+                  }}
+                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer flex items-center gap-1"
+                >
+                  <span>✨ Teşhis Et</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPendingImage(null);
+                    pendingCapturedImageRef.current = null;
+                    setStatusText('Söyle, çek ya da yaz');
+                  }}
+                  className="w-7 h-7 flex items-center justify-center text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded-lg cursor-pointer text-sm"
+                  title="Görseli İptal Et"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Metin Giriş Formu (Açılır/Kapanır) */}
           <form
             id="text-input-form"

@@ -685,6 +685,17 @@ function enrichWithPredictiveGraph(note: NotiviaSimpleNote, input: string): Noti
 
   const result = { ...note };
 
+  // 0. Botanik / özel başlık ve zamanlama geçişi (eğer genel/varsayılansa)
+  if (predictive.baslik && (!result.baslik || result.baslik === 'Yeni Eylem' || result.baslik === 'Yeni Hatırlatıcı')) {
+    result.baslik = predictive.baslik;
+  }
+  if (predictive.zaman && (!result.zaman || result.zaman === 'Bugün')) {
+    result.zaman = predictive.zaman;
+  }
+  if (predictive.tarih_iso && !result.tarih_iso) {
+    result.tarih_iso = predictive.tarih_iso;
+  }
+
   // 1. Ön hazırlık fısıltısı ve anomali / rehberlik notu
   if (!result.anomali_notu && predictive.akilliFisilti) {
     result.anomali_notu = predictive.akilliFisilti;
@@ -712,6 +723,21 @@ function enrichWithPredictiveGraph(note: NotiviaSimpleNote, input: string): Noti
       task,
       is_completed: false,
     }));
+  }
+
+  // 4. Kulaktan verilecek kısa sesli doğrulama fısıltısı
+  if (predictive.sesliFisilti && (!result.sesli_fisilti || result.sesli_fisilti.includes('oluşturuldu'))) {
+    result.sesli_fisilti = predictive.sesliFisilti;
+  } else if (!result.sesli_fisilti) {
+    result.sesli_fisilti = `${result.baslik} planlandı, hazırlık adımları hazırlandı.`;
+  }
+
+  // 5. İkon ve Renk Tema Uyarlaması
+  if (predictive.ikon && (!result.ikon || result.ikon === '📌')) {
+    result.ikon = predictive.ikon;
+  }
+  if (predictive.renk && (!result.renk || result.renk === '#FEF3C7' || result.renk.startsWith('#F5'))) {
+    result.renk = predictive.renk;
   }
 
   return result;

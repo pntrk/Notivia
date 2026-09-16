@@ -1,15 +1,18 @@
 // Not kartları için şık, yüksek kontrastlı ve göz yormayan pastel/soft renk paleti
+export const SEMANTIC_PALETTE = {
+  resmi_burokrasi: '#E0F2FE', // Resmi / Kurumsal / Bürokrasi (🏛️/🛂/🪪/📋)
+  sosyal_iletisim: '#DCFCE7', // Sosyal / İletişim / Tören (🤝/💍/💐)
+  teknik_bakim: '#FEF3C7',    // Teknik / Bakım / Muayene (🔧/🚗/⚙️)
+  finansal_borc: '#FEE2E2',   // Acil / Finansal Ödeme / Borç (💳/💸/🚨)
+  saglik_alacak: '#F3E8FF',   // Sağlık / Kişisel Yaşam / Alacak (💊/🩺/💰)
+};
+
 export const NOTE_COLOR_PALETTE = [
-  '#FEF3C7', // Amber / Sıcak Sarı
-  '#E0F2FE', // Açık Gökyüzü Mavisi
-  '#DCFCE7', // Taze Nane Yeşili
-  '#FCE7F3', // Gül / Pembe
-  '#F3E8FF', // Lavanta Moru
-  '#FFEDD5', // Şeftali / Turuncu
-  '#CCFBF1', // Turkuaz / Camgöbeği
-  '#F1F5F9', // Buzul Grisi
-  '#EDE9FE', // Eflatun
-  '#FEF9C3', // Limon Sarısı
+  '#E0F2FE', // Resmi / Bürokrasi
+  '#DCFCE7', // Sosyal / İletişim
+  '#FEF3C7', // Teknik / Bakım
+  '#FEE2E2', // Finansal / Ödeme
+  '#F3E8FF', // Sağlık / Yaşam
 ];
 
 /**

@@ -135,9 +135,15 @@ KULLANILABİLİR ARAÇLAR:
 1. get_calendar_events: Kullanıcının mevcut Google Takvimindeki randevularını, toplantılarını ve ajandasını sorgular.
    Parametreler: period_label (bugun | yarin | bu_hafta | ozel), start_iso, end_iso, sesli_fisilti.
 2. create_note_or_event: Notivia içine bilişsel alt görevleri (action_items), zamanı ve görsel özellikleri olan yeni bir eylem kartı ekler.
-   - "Leb Demeden Leblebiyi Anlama": Gizli ön hazırlıkları 'action_items' listesine ekle.
-   - Tersine Zamanlama: Etkinlikten önceki hazırlık vadesini ('hazirlik_iso') hesapla.
-   - Finansal Yön: "-den/-dan" ayrılma ise alacak (ikon: 🟢), "-e/-a" yönelme ise borç/ödeme (ikon: 🔴).
+   - Zero-Shot Inverted Planning: Eksik girdileri dev bir eylem planına dönüştür; 3-4 maddelik somut kontrol adımı üret (harç, evrak, borç kontrolü, açlık/tokluk, vb.).
+   - Inverted Scheduling: Etkinlikten önceki hazırlık vadesini ('hazirlik_iso') hesapla (randevudan 1 gün önce 16:00, uçuştan 24 saat önce, vb.).
+   - Anomali Notu: Hayati hatadan kurtaracak rehber fısıltı ('anomali_notu').
+   - Renk ve İkon Mimarisi:
+     * Resmi / Kurumsal / Bürokrasi: #E0F2FE (🏛️/🛂/🪪/📋)
+     * Sosyal / İletişim / Tören: #DCFCE7 (🤝/💍/💐)
+     * Teknik / Bakım / Muayene: #FEF3C7 (🔧/🚗/⚙️)
+     * Acil / Finansal Ödeme / Borç: #FEE2E2 (💳/💸/🚨)
+     * Sağlık / Kişisel Yaşam / Alacak: #F3E8FF (💊/🩺/💰)
    - baslik maksimum 4 kelime olmalıdır.
 3. draft_message: Toplantı, randevu erteleme, bilgilendirme veya ödeme takibi için hazır mesaj/e-posta taslağı üretir.
    Parametreler: recipient, channel (whatsapp | email | sms), subject, message_body, sesli_fisilti.
@@ -347,29 +353,45 @@ export async function dispatchWithGemini(input: string, currentDatetime: string)
 
     const userPrompt = `Kullanıcı Girdisi: "${input}"\nCURRENT_DATETIME: ${currentDatetime}`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: userPrompt,
-      config: {
-        systemInstruction: DISPATCHER_SYSTEM_PROMPT,
-        tools: [
-          {
-            functionDeclarations: [
-              getCalendarEventsDeclaration,
-              createNoteOrEventDeclaration,
-              draftMessageDeclaration,
-            ],
-          },
-        ],
-        toolConfig: {
-          functionCallingConfig: {
-            mode: 'ANY' as any,
-          },
-        },
-      },
-    });
+    let functionCalls: any[] | undefined;
+    let usedModel = 'gemini-3.8-flash';
 
-    const functionCalls = response.functionCalls;
+    const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest'];
+    for (const modelName of candidateModels) {
+      try {
+        const response = await ai.models.generateContent({
+          model: modelName,
+          contents: userPrompt,
+          config: {
+            systemInstruction: DISPATCHER_SYSTEM_PROMPT,
+            tools: [
+              {
+                functionDeclarations: [
+                  getCalendarEventsDeclaration,
+                  createNoteOrEventDeclaration,
+                  draftMessageDeclaration,
+                ],
+              },
+            ],
+            toolConfig: {
+              functionCallingConfig: {
+                mode: 'ANY' as any,
+              },
+            },
+          },
+        });
+
+        if (response.functionCalls && response.functionCalls.length > 0) {
+          functionCalls = response.functionCalls;
+          usedModel = modelName;
+          break;
+        }
+      } catch (callErr) {
+        console.warn(`[Dispatcher Tool Call Error on ${modelName}]:`, callErr);
+        continue;
+      }
+    }
+
     if (functionCalls && functionCalls.length > 0) {
       const call = functionCalls[0];
       const toolName = call.name as 'get_calendar_events' | 'create_note_or_event' | 'draft_message';
@@ -390,7 +412,7 @@ export async function dispatchWithGemini(input: string, currentDatetime: string)
         tool: toolName,
         arguments: args,
         sesli_fisilti: fisilti,
-        source: 'gemini-2.5-flash-tools',
+        source: `${usedModel}-tools`,
       };
     }
 

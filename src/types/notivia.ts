@@ -65,6 +65,7 @@ export interface NotiviaSimpleNote {
   action_items?: ActionItem[] | null;
   ikon: string;
   renk: string;
+  sesli_fisilti?: string | null;
 }
 
 export interface NotiviaParsedNote {
