@@ -1,3 +1,6 @@
+import type { ProfessionDomain, DomainThemeConfig, ActionButtonConfig } from './domainThemes.ts';
+export * from './domainThemes.ts';
+
 export type NotiviaCategory =
   | 'Sosyal'
   | 'İş'

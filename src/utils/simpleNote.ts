@@ -84,24 +84,141 @@ export function parseMultiMedicationNote(input: string, baseDate: Date): Notivia
 export function parseLegalNote(input: string, baseDate: Date): NotiviaSimpleNote | null {
   const lower = input.toLowerCase();
 
-  const isLegal = 
-    lower.includes('duruşma') || lower.includes('durusma') ||
-    lower.includes('mahkeme') || lower.includes('sulh hukuk') ||
-    lower.includes('asliye hukuk') || lower.includes('asliye ceza') ||
-    lower.includes('ağır ceza') || lower.includes('agir ceza') ||
-    lower.includes('icra') || lower.includes('haciz') ||
-    lower.includes('tebligat') || lower.includes('tebliğ') || lower.includes('teblig') ||
-    lower.includes('ödeme emri') || lower.includes('odeme emri') ||
-    lower.includes('icra emri') || lower.includes('istinaf') ||
-    lower.includes('temyiz') || lower.includes('itiraz süresi') ||
-    lower.includes('cevap süresi') || lower.includes('vekalet') ||
-    lower.includes('uyap') || lower.includes('esas no') || lower.includes('esas');
+  const isLegalOrFinancial = 
+    lower.includes('avukat') || lower.includes('hakim') || lower.includes('hâkim') || lower.includes('smmm') || lower.includes('mali müşavir') || lower.includes('mali musavir') || lower.includes('noter') ||
+    lower.includes('duruşma') || lower.includes('durusma') || lower.includes('mahkeme') || lower.includes('sulh') || lower.includes('asliye') || lower.includes('ağır ceza') || lower.includes('agir ceza') ||
+    lower.includes('icra') || lower.includes('haciz') || lower.includes('tebligat') || lower.includes('tebliğ') || lower.includes('teblig') ||
+    lower.includes('ödeme emri') || lower.includes('odeme emri') || lower.includes('istinaf') || lower.includes('temyiz') || lower.includes('gerekçeli karar') || lower.includes('gerekceli karar') ||
+    lower.includes('hüküm') || lower.includes('hukum') || lower.includes('müzekkere') || lower.includes('muzekkere') || lower.includes('bilirkişi') || lower.includes('bilirkisi') ||
+    lower.includes('kdv') || lower.includes('muhsgk') || lower.includes('beyanname') || lower.includes('e-defter') || lower.includes('edefter') || lower.includes('berat') || lower.includes('sgk prim') || lower.includes('mükellef') || lower.includes('mukellef') ||
+    lower.includes('ihtarname') || lower.includes('defter tasdik') || lower.includes('yevmiye') || lower.includes('uyap');
 
-  if (!isLegal) return null;
+  if (!isLegalOrFinancial) return null;
 
-  // 1. Duruşma Tespiti
+  // 1. NOTER (NOTARY): İhtarname PTT Tebliği, Yevmiye Kapanış & Defter Tasdik
+  if (lower.includes('noter') || lower.includes('ihtarname') || lower.includes('defter tasdik') || lower.includes('yevmiye')) {
+    if (lower.includes('ihtarname')) {
+      const pttDate = new Date(baseDate);
+      pttDate.setDate(pttDate.getDate() + 7);
+      return {
+        baslik: 'Noter İhtarname & PTT Takibi',
+        zaman: '7 Gün Sonra (Tebliğ Şerhi)',
+        tarih_iso: pttDate.toISOString(),
+        action_items: [
+          { task: 'İhtarname metnini hazırla ve noter yevmiye kaydını al', is_completed: false },
+          { task: 'PTT barkod takip numarası ile tebliğ akıbetini sorgula', is_completed: false },
+          { task: 'Tebliğ şerhli ihtarname nüshasını dosyalayıp müvekkile/arşive ilet', is_completed: false }
+        ],
+        ikon: '📜',
+        renk: '#F1F5F9',
+        anomali_notu: 'İhtarnamelerde muhataba tebliğ tarihi hukuki temerrüt başlangıcı açısından esastır.',
+        sesli_fisilti: 'Noter ihtarnamesi ve PTT tebliğ şerhi takip adımları oluşturuldu.'
+      };
+    }
+
+    return {
+      baslik: 'Noter Defter Tasdiki & Yevmiye',
+      zaman: 'Yasal Tasdik / Gün Sonu',
+      tarih_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'Gün sonu noter yevmiye defteri dökümü ve kasa mutabakatı', is_completed: false },
+        { task: 'Ticari defter açılış (Aralık) veya yevmiye kapanış (Haziran) tasdik kontrolü', is_completed: false },
+        { task: 'Mühür ve imza sirküleri arşiv kaydını doğrula', is_completed: false }
+      ],
+      ikon: '📜',
+      renk: '#F1F5F9',
+      anomali_notu: 'TTK uyarınca yevmiye defteri kapanış tasdiki izleyen faaliyet döneminin altıncı ayının sonuna kadar yapılmalıdır.',
+      sesli_fisilti: 'Noter defter tasdiki ve yevmiye kapama adımları planlandı.'
+    };
+  }
+
+  // 2. MALİ MÜŞAVİR / SMMM: KDV/MUHSGK Beyanname (Ayın 26'sı), SGK & e-Defter Beratı
+  if (lower.includes('smmm') || lower.includes('mali müşavir') || lower.includes('mali musavir') || lower.includes('beyanname') || lower.includes('kdv') || lower.includes('muhsgk') || lower.includes('e-defter') || lower.includes('edefter') || lower.includes('berat') || lower.includes('mükellef') || lower.includes('mukellef')) {
+    const isTaxDue = lower.includes('kdv') || lower.includes('muhsgk') || lower.includes('beyanname') || lower.includes('26');
+    
+    if (isTaxDue) {
+      const taxDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), 26, 23, 59, 0);
+      if (baseDate.getDate() > 26) {
+        taxDate.setMonth(taxDate.getMonth() + 1);
+      }
+
+      return {
+        baslik: 'KDV & MUHSGK Beyanname Onayı',
+        zaman: 'Ayın 26\'sı (Son Onay)',
+        tarih_iso: taxDate.toISOString(),
+        action_items: [
+          { task: 'Mükellef KDV ve MUHSGK beyannamelerini GİB sistemine yükle', is_completed: false },
+          { task: 'Tahakkuk fişlerini ve tahakkuk eden vergi tutarlarını mükelleflere ilet', is_completed: false },
+          { task: 'Ay sonu SGK prim bildirgeleri ve e-Defter berat onayını kontrol et', is_completed: false }
+        ],
+        ikon: '📊',
+        renk: '#DCFCE7',
+        anomali_notu: 'KDV ve Muhtasar Prim Hizmet Beyannameleri her ayın 26. günü saat 23:59\'a kadar onaylanmalıdır.',
+        sesli_fisilti: 'KDV ve MUHSGK beyanname onay alarmı ayın 26\'sına kuruldu.'
+      };
+    }
+
+    return {
+      baslik: 'Mükellef Evrak & Defter Beratı',
+      zaman: 'Ay İçi Muhasebe Rutini',
+      tarih_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'Mükelleflerden alış/satış faturaları ve banka ekstrelerini topla', is_completed: false },
+        { task: 'Muhasebe fiş kayıtlarını ve BA/BS mutabakatlarını tamamla', is_completed: false },
+        { task: 'e-Defter beratlarını GİB e-Defter portalına yükle ve imzala', is_completed: false }
+      ],
+      ikon: '📊',
+      renk: '#DCFCE7',
+      anomali_notu: 'Mükellef fatura ve banka dökümleri ayın ilk 15 gününde tamamlanıp kayıtlara işlenmelidir.',
+      sesli_fisilti: 'Mükellef evrak toplama ve e-Defter berat adımları listelendi.'
+    };
+  }
+
+  // 3. HAKİM (JUDGE): Hüküm / Gerekçeli Karar (30 Gün) & Müzekkere/Bilirkişi Tekidi
+  if (lower.includes('hakim') || lower.includes('hâkim') || lower.includes('gerekçeli karar') || lower.includes('gerekceli karar') || lower.includes('hüküm') || lower.includes('hukum') || lower.includes('müzekkere') || lower.includes('bilirkişi')) {
+    const judgeDate = new Date(baseDate);
+    judgeDate.setDate(judgeDate.getDate() + 30);
+
+    return {
+      baslik: 'Gerekçeli Karar & Müzekkere Takibi',
+      zaman: '30 Gün İçinde (HMK 294)',
+      tarih_iso: judgeDate.toISOString(),
+      action_items: [
+        { task: 'HMK 294 uyarınca 30 gün içinde gerekçeli kararı UYAP üzerinden yaz ve imzala', is_completed: false },
+        { task: 'Cevap gelmeyen kurumlara müzekkere tekidi (hatırlatma) yazısı çıkar', is_completed: false },
+        { task: 'Bilirkişi ek rapor veya dosya teslim süresini denetle', is_completed: false }
+      ],
+      ikon: '🏛️',
+      renk: '#FEF3C7',
+      anomali_notu: 'HMK gereğince hükmün tefhiminden itibaren 30 gün içinde gerekçeli kararın yazılması yasal zorunluluktur.',
+      sesli_fisilti: 'Gerekçeli karar yazımı için 30 günlük yasal süre sayacı başlatıldı.'
+    };
+  }
+
+  // 4. AVUKAT (LAWYER): UYAP Elektronik Tebligat (5 Gün + Yasal Süre) & Duruşma
+  if (lower.includes('uyap') && (lower.includes('tebligat') || lower.includes('tebliğ') || lower.includes('teblig'))) {
+    // Tebligat Kanunu 7/a: 5. günün sonunda tebliğ sayılır + 14 gün yasal süre = 19 gün
+    const tebligDate = new Date(baseDate);
+    tebligDate.setDate(tebligDate.getDate() + 19);
+
+    return {
+      baslik: 'UYAP E-Tebligat & İtiraz Süresi',
+      zaman: '5 Gün + 14 Gün Yasal Süre',
+      tarih_iso: tebligDate.toISOString(),
+      action_items: [
+        { task: 'Tebligat Kanunu 7/a gereği 5. günün sonundaki kesin tebliğ tarihini not et', is_completed: false },
+        { task: 'Dava/Cevap/İstinaf dilekçesi ve delil listesini UYAP Avukat Portalından hazırla', is_completed: false },
+        { task: 'e-İmza ile son gün mesai bitimine kadar dilekçeyi mahkemesine sun', is_completed: false }
+      ],
+      ikon: '⚖️',
+      renk: '#E0E7FF',
+      anomali_notu: 'Elektronik tebligatlarda tebligat, muhatabın elektronik adresine ulaştığı tarihi izleyen 5. günün sonunda yapılmış sayılır.',
+      sesli_fisilti: 'UYAP 7/a 5 günlük tebliğ kuralı ve yasal itiraz süresi takvimlendi.'
+    };
+  }
+
+  // Duruşma Tespiti
   if (lower.includes('duruşma') || lower.includes('durusma') || lower.includes('mahkeme')) {
-    // Mahkeme ve Esas No ayıklama
     const courtMatch = input.match(/([a-zA-ZÇĞİÖŞÜçğıöşü0-9\.\s]+(?:Sulh|Asliye|Ağır Ceza|İş|Aile|Ticaret|İcra|Tüketici|Fikri|İdare|Vergi)\s*(?:Hukuk|Ceza|Mahkemesi|Mahkeme)?)/i);
     const esasMatch = input.match(/(\d{4}\s*\/\s*\d+)\s*(?:E\.?|esas)?/i);
 
@@ -117,7 +234,6 @@ export function parseLegalNote(input: string, baseDate: Date): NotiviaSimpleNote
       baslik = shortClean ? `${shortClean.slice(0, 20)} Duruşması` : 'Mahkeme Duruşması';
     }
 
-    // Kelime sayısı sınırlaması (en fazla 4-5 kelime)
     const words = baslik.split(/\s+/);
     if (words.length > 5) {
       baslik = words.slice(0, 5).join(' ');
@@ -125,20 +241,21 @@ export function parseLegalNote(input: string, baseDate: Date): NotiviaSimpleNote
 
     return {
       baslik,
-      zaman: 'Duruşma Günü',
+      zaman: 'Duruşma Günü (30 Dk Önce Alarm)',
       tarih_iso: baseDate.toISOString(),
       action_items: [
-        { task: 'Duruşmadan 1 gün önce: UYAP dosya incelemesi ve mazeret/beyan kontrolü', is_completed: false },
-        { task: 'Duruşma günü: Cübbe, vekaletname/yetki belgesi ve duruşma pulu kontrolü', is_completed: false }
+        { task: 'Duruşmadan 30 dk önce adliyede hazır bulun ve cübbe/dosya kontrolü yap', is_completed: false },
+        { task: 'Çakışan duruşma riski varsa UYAP üzerinden mazeret dilekçesi sun', is_completed: false },
+        { task: 'Yetki belgesi, vekaletname harcı ve duruşma tutanağı tanzimi', is_completed: false }
       ],
       ikon: '⚖️',
-      renk: '#FEF3C7',
-      anomali_notu: 'Duruşma saatinden en az 15 dakika önce salon önünde hazır bulununuz.',
-      sesli_fisilti: 'Duruşma ve UYAP hazırlık adımları ajandaya işlendi.'
+      renk: '#E0E7FF',
+      anomali_notu: 'Duruşma saatinden en az 30 dakika önce salon önünde hazır bulunulmalı, çakışmalarda mazeret bildirilmelidir.',
+      sesli_fisilti: 'Duruşma öncesi 30 dakikalık adliye alarmı ve mazeret kontrolü kuruldu.'
     };
   }
 
-  // 2. İcra / Ödeme Emri (7 Günlük İtiraz Süresi)
+  // İcra / Ödeme Emri (7 Günlük İtiraz Süresi)
   if (lower.includes('icra emri') || lower.includes('ödeme emri') || lower.includes('odeme emri') || (lower.includes('icra') && (lower.includes('itiraz') || lower.includes('süre') || lower.includes('geldi')))) {
     const due = new Date(baseDate);
     due.setDate(due.getDate() + 7);
@@ -153,13 +270,13 @@ export function parseLegalNote(input: string, baseDate: Date): NotiviaSimpleNote
         { task: 'İcra müdürlüğüne UYAP üzerinden itiraz gönderimi', is_completed: false }
       ],
       ikon: '⚖️',
-      renk: '#FEF3C7',
+      renk: '#E0E7FF',
       anomali_notu: 'İİK gereği ödeme emrine itiraz süresi tebliğden itibaren 7 gündür. Hak düşürücü süredir.',
       sesli_fisilti: '7 günlük icra itiraz süresi alarmı kuruldu.'
     };
   }
 
-  // 3. İstinaf / Temyiz (2 Hafta / 14 Gün Kesin Süre)
+  // İstinaf / Temyiz (2 Hafta / 14 Gün Kesin Süre)
   if (lower.includes('istinaf') || lower.includes('temyiz')) {
     const due = new Date(baseDate);
     due.setDate(due.getDate() + 14);
@@ -174,13 +291,13 @@ export function parseLegalNote(input: string, baseDate: Date): NotiviaSimpleNote
         { task: 'İstinaf harç ve gider avansı yatırma kontrolü', is_completed: false }
       ],
       ikon: '⚖️',
-      renk: '#FEF3C7',
+      renk: '#E0E7FF',
       anomali_notu: 'HMK/CMK gereği istinaf ve temyiz süresi tebliğden itibaren 2 haftadır (14 gün).',
       sesli_fisilti: '2 haftalık yasal istinaf/temyiz süresi planlandı.'
     };
   }
 
-  // 4. Tebligat / Tebliğ (14 Günlük Genel Yasal Cevap/İtiraz Süresi)
+  // Genel Tebligat (14 Günlük Yasal Süre)
   if (lower.includes('tebligat') || lower.includes('tebliğ') || lower.includes('teblig')) {
     const due = new Date(baseDate);
     due.setDate(due.getDate() + 14);
@@ -195,7 +312,7 @@ export function parseLegalNote(input: string, baseDate: Date): NotiviaSimpleNote
         { task: 'UYAP üzerinden cevap dilekçesi sunumu', is_completed: false }
       ],
       ikon: '⚖️',
-      renk: '#FEF3C7',
+      renk: '#E0E7FF',
       anomali_notu: 'HMK genel hükümlerine göre dava dilekçesine cevap süresi tebliğden itibaren 2 haftadır.',
       sesli_fisilti: '14 günlük yasal cevap ve itiraz süresi takvime işlendi.'
     };
@@ -421,93 +538,151 @@ export function parseEduManagerNote(input: string, baseDate: Date): NotiviaSimpl
   return null;
 }
 
-export function parsePoliceLawEnforcementNote(input: string, baseDate: Date): NotiviaSimpleNote | null {
+export function parseOperationSafetyEmergencyNote(input: string, baseDate: Date): NotiviaSimpleNote | null {
   const lower = input.toLowerCase();
 
-  const isPolice = 
-    lower.includes('gözaltı') || lower.includes('gozalti') ||
+  const isOperationSafety = 
+    lower.includes('polis') || lower.includes('emniyet') || lower.includes('gözaltı') || lower.includes('gozalti') ||
     lower.includes('nezaret') || lower.includes('yakaladık') || lower.includes('yakaladik') || lower.includes('yakalama') ||
-    lower.includes('şüpheli') || lower.includes('supheli') || lower.includes('adli muayene') ||
-    lower.includes('çevik kuvvet') || lower.includes('cevik kuvvet') || lower.includes('ek görev') || lower.includes('ek gorev') ||
-    lower.includes('maç görevi') || lower.includes('mac gorevi') || lower.includes('miting') ||
-    lower.includes('asayiş uygulama') || lower.includes('asayis uygulama') || lower.includes('trafik uygulama') ||
-    lower.includes('alkolmetre') || lower.includes('kaza tespit') || lower.includes('elkoyma') ||
-    lower.includes('teslim tesellüm') || lower.includes('zabıt mümzisi') || lower.includes('fezleke');
+    lower.includes('şüpheli') || lower.includes('supheli') || lower.includes('adli muayene') || lower.includes('fezleke') ||
+    lower.includes('adli emanet') || lower.includes('itfaiye') || lower.includes('itfaiyeci') || lower.includes('yangın') || lower.includes('yangin') ||
+    lower.includes('scba') || lower.includes('solunum tüp') || lower.includes('arazöz') || lower.includes('arazoz') ||
+    lower.includes('hidrolik kesici') || lower.includes('baca denetim') || lower.includes('yangın uygunluk') || lower.includes('yangin uygunluk') ||
+    lower.includes('aşçı') || lower.includes('asci') || lower.includes('şef') || lower.includes('mutfak') || lower.includes('mise en place') ||
+    lower.includes('haccp') || lower.includes('fifo') || lower.includes('tadım brifing') || lower.includes('tadim') ||
+    lower.includes('pilot') || lower.includes('uçuş') || lower.includes('ucus') || lower.includes('kokpit') || lower.includes('dispatch') ||
+    lower.includes('ofp') || lower.includes('metar') || lower.includes('taf') || lower.includes('walkaround') ||
+    lower.includes('fdp') || lower.includes('dinlenme süresi') || lower.includes('class 1') || lower.includes('simülatör') || lower.includes('lpc');
 
-  if (!isPolice) return null;
+  if (!isOperationSafety) return null;
 
-  // 1. Gözaltı ve Adli Muayene Protokolü (CMK 91 - 24 Saat)
-  if (lower.includes('gözaltı') || lower.includes('gozalti') || lower.includes('nezaret') || lower.includes('yakaladık') || lower.includes('yakaladik') || lower.includes('yakalama')) {
+  // 1. POLİS (LAW ENFORCEMENT)
+  if (lower.includes('polis') || lower.includes('gözaltı') || lower.includes('gozalti') || lower.includes('nezaret') || lower.includes('yakalama') || lower.includes('yakaladık') || lower.includes('yakaladik') || lower.includes('şüpheli') || lower.includes('fezleke') || lower.includes('adli emanet')) {
+    const isGroup = lower.includes('toplu') || lower.includes('örgüt') || lower.includes('orgut');
+    const hours = isGroup ? 48 : 24;
     const due = new Date(baseDate);
-    due.setHours(due.getHours() + 24);
+    due.setHours(due.getHours() + hours);
 
     return {
-      baslik: 'Gözaltı & Adli Sevk (CMK 91)',
-      zaman: 'Yasal Süre: 24 Saat',
+      baslik: isGroup ? 'Toplu Suç Gözaltı (48s)' : 'Gözaltı & Savcılık Sevk (24s)',
+      zaman: `Yasal Süre: ${hours} Saat`,
       tarih_iso: due.toISOString(),
       action_items: [
-        { task: 'Giriş adli muayene raporu alımı', is_completed: false },
-        { task: 'Şüpheli hakları tebellüğ belgesi imzalatılması', is_completed: false },
-        { task: 'Savcılık sevk öncesi çıkış doktor raporu alımı', is_completed: false },
-        { task: 'Tahkikat evrakı / Fezleke hazırlığı ve adliye sevki', is_completed: false }
+        { task: 'Giriş adli muayene raporunun alınması', is_completed: false },
+        { task: 'Şüpheli hakları formu imzalatılması ve adli emanet teslim tutanağı', is_completed: false },
+        { task: 'Süre bitimine 6 saat kala savcılık fezlekesinin tamamlanması', is_completed: false },
+        { task: 'Savcılık sevk öncesi çıkış doktor raporunun alınması', is_completed: false }
       ],
-      ikon: '🚔',
-      renk: '#DBEAFE',
-      anomali_notu: 'CMK 91 gereği bireysel suçlarda gözaltı süresi yakalama anından itibaren 24 saati geçemez (yol süresi hariç).',
-      sesli_fisilti: 'Yakalama anından itibaren 24 saatlik yasal gözaltı ve adli muayene takvimi başlatıldı.'
+      ikon: '👮',
+      renk: '#BFDBFE',
+      anomali_notu: 'CMK 91 gereği bireysel suçlarda gözaltı 24 saati geçemez. Süre bitimine en geç 6 saat kala fezleke savcılığa sunulmalıdır.',
+      sesli_fisilti: `${hours} saatlik yasal gözaltı süreci ve 6 saat kala savcılık fezleke alarmı kuruldu.`
     };
   }
 
-  // 2. Ek Görev & Uygulama (Maç, Miting, Çevik Kuvvet, Asayiş/Trafik Uygulaması)
-  if (lower.includes('ek görev') || lower.includes('ek gorev') || lower.includes('maç') || lower.includes('mac') || lower.includes('miting') || lower.includes('çevik') || lower.includes('cevik') || lower.includes('uygulama')) {
-    // 90 dakika öncesi içtima
+  // 2. İTFAİYECİ (FIRE & RESCUE)
+  if (lower.includes('itfaiye') || lower.includes('yangın') || lower.includes('yangin') || lower.includes('scba') || lower.includes('arazöz') || lower.includes('baca denetim')) {
+    if (lower.includes('denetim') || lower.includes('uygunluk') || lower.includes('ruhsat') || lower.includes('baca')) {
+      const inspectDate = new Date(baseDate);
+      inspectDate.setDate(inspectDate.getDate() + 3);
+
+      return {
+        baslik: 'Yangın Uygunluk & Baca Denetimi',
+        zaman: '3 Gün İçinde (Raporlama)',
+        tarih_iso: inspectDate.toISOString(),
+        action_items: [
+          { task: 'İşyeri yangın algılama, sprinkler ve acil çıkış yönlendirmelerini denetle', is_completed: false },
+          { task: 'Endüstriyel mutfak/baca yağ tutucu ve tahliye kanallarını kontrol et', is_completed: false },
+          { task: 'İtfaiye yangın güvenlik ve uygunluk raporunu tanzim edip sisteme yükle', is_completed: false }
+        ],
+        ikon: '🚒',
+        renk: '#FECACA',
+        anomali_notu: 'Binaların Yangından Korunması Hakkında Yönetmelik gereği eksiklikler tespit edilirse 15 günlük süre verilir.',
+        sesli_fisilti: 'Yangın uygunluk denetimi ve yasal raporlama adımları planlandı.'
+      };
+    }
+
+    return {
+      baslik: 'İtfaiye Nöbet & Ekipman Devri',
+      zaman: 'Nöbet Başlangıcı / Devir',
+      tarih_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'SCBA temiz hava solunum tüplerinin 300 Bar basınç ve maske sızdırmazlık kontrolü', is_completed: false },
+        { task: 'Arazöz su ve köpük tank seviyeleri ile pompa testlerinin yapılması', is_completed: false },
+        { task: 'Hidrolik ayırıcı/kesici batarya şarj ve hidrolik yağ basınç kontrolü', is_completed: false }
+      ],
+      ikon: '🚒',
+      renk: '#FECACA',
+      anomali_notu: 'Solunum tüplerinde 270 Bar altındaki tüpler derhal kompresör odasında doldurulmalıdır.',
+      sesli_fisilti: 'SCBA 300 Bar ve arazöz su-köpük kontrolleri 1. sıraya alınarak devir listesi oluşturuldu.'
+    };
+  }
+
+  // 3. AŞÇI (CULINARY & KITCHEN)
+  if (lower.includes('aşçı') || lower.includes('asci') || lower.includes('şef') || lower.includes('mutfak') || lower.includes('mise en place') || lower.includes('haccp') || lower.includes('fifo') || lower.includes('servis')) {
     const timeMatch = input.match(/(\d{1,2})[:.](\d{2})/);
-    let ictimaZaman = 'Görevden 90 Dk Önce (İçtima)';
-    let ictimaIso = baseDate.toISOString();
+    let prepZaman = 'Servisten 3 Saat Önce (Mise en place)';
+    let prepIso = baseDate.toISOString();
 
     if (timeMatch) {
       const h = parseInt(timeMatch[1], 10);
       const m = parseInt(timeMatch[2], 10);
-      const ictimaDate = new Date(baseDate);
-      ictimaDate.setHours(h, m - 90, 0, 0);
-      const ih = ictimaDate.getHours().toString().padStart(2, '0');
-      const im = ictimaDate.getMinutes().toString().padStart(2, '0');
-      ictimaZaman = `${ih}:${im} (90 Dk Önce İçtima)`;
-      ictimaIso = ictimaDate.toISOString();
+      const prepDate = new Date(baseDate);
+      prepDate.setHours(h - 3, m, 0, 0);
+      const ph = prepDate.getHours().toString().padStart(2, '0');
+      const pm = prepDate.getMinutes().toString().padStart(2, '0');
+      prepZaman = `${ph}:${pm} (Mise en Place Bitişi)`;
+      prepIso = prepDate.toISOString();
     }
 
     return {
-      baslik: 'Kolluk Ek Görevi & Uygulama',
-      zaman: ictimaZaman,
-      tarih_iso: ictimaIso,
+      baslik: 'Mutfak Hazırlık & Servis Brifingi',
+      zaman: prepZaman,
+      tarih_iso: prepIso,
       action_items: [
-        { task: 'Kask/kalkan/çelik yelek teçhizat kontrolü', is_completed: false },
-        { task: 'Telsiz kanalı ve batarya teyidi', is_completed: false },
-        { task: 'Görev yeri amirine tekmil/kayıt', is_completed: false }
+        { task: 'Servisten 3-4 saat önce tüm istasyonların Mise en place hazırlığını tamamla', is_completed: false },
+        { task: 'HACCP standartlarında soğuk oda (+4°C) ve derin dondurucu (-18°C) ısı çizelgesini kaydet', is_completed: false },
+        { task: 'FIFO rotasyonuna göre et, süt ve taze yeşillik skt/etiket kontrolü yap', is_completed: false },
+        { task: 'Servise 45 dakika kala servis tadım ve menü brifingini gerçekleştir', is_completed: false }
       ],
-      ikon: '👮‍♂️',
-      renk: '#DBEAFE',
-      anomali_notu: 'Toplumsal olay ve ek görevlerde tam teçhizatla görev saatinden 90 dakika önce içtima alanında bulunulmalıdır.',
-      sesli_fisilti: 'Ek görev için 90 dakika öncesine teçhizat ve içtima alarmı kuruldu.'
+      ikon: '👨‍🍳',
+      renk: '#FED7AA',
+      anomali_notu: 'Çapraz bulaşmayı önlemek için kırmızı et ve çiğ sebze doğrama tahtaları kesinlikle ayrılmalıdır.',
+      sesli_fisilti: 'Mise en place hazırlığı ve servise 45 dakika kala tadım brifingi takvimlendi.'
     };
   }
 
-  // 3. Trafik / Olay Yeri / Elkoyma
-  if (lower.includes('trafik') || lower.includes('kaza') || lower.includes('alkol') || lower.includes('elkoyma')) {
+  // 4. PİLOT (AVIATION)
+  if (lower.includes('pilot') || lower.includes('uçuş') || lower.includes('ucus') || lower.includes('kokpit') || lower.includes('dispatch') || lower.includes('ofp') || lower.includes('walkaround') || lower.includes('metar') || lower.includes('taf')) {
+    const timeMatch = input.match(/(\d{1,2})[:.](\d{2})/);
+    let dispatchZaman = 'Uçuştan 90 Dk Önce (Dispatch & OFP)';
+    let dispatchIso = baseDate.toISOString();
+
+    if (timeMatch) {
+      const h = parseInt(timeMatch[1], 10);
+      const m = parseInt(timeMatch[2], 10);
+      const dispDate = new Date(baseDate);
+      dispDate.setHours(h, m - 90, 0, 0);
+      const dh = dispDate.getHours().toString().padStart(2, '0');
+      const dm = dispDate.getMinutes().toString().padStart(2, '0');
+      dispatchZaman = `${dh}:${dm} (90 Dk Önce Dispatch)`;
+      dispatchIso = dispDate.toISOString();
+    }
+
     return {
-      baslik: 'Olay Yeri & Tutanak Güvenliği',
-      zaman: 'Olay Anı / İvedi',
-      tarih_iso: baseDate.toISOString(),
+      baslik: 'Uçuş Öncesi Dispatch & Kokpit',
+      zaman: dispatchZaman,
+      tarih_iso: dispatchIso,
       action_items: [
-        { task: 'Alkolmetre çıktısı fişinin tutanağa zımbalanması', is_completed: false },
-        { task: 'Kaza tespit tutanağı kroki kontrolü', is_completed: false },
-        { task: 'Elkoyma tutanağı ve 24 saatlik hakim onayı takibi', is_completed: false },
-        { task: 'En az 2 zabıt mümzisi imzası ve teslim-tesellüm kontrolü', is_completed: false }
+        { task: 'Uçuştan önceki 12 saatlik FDP dinlenme süresi ve Class 1 medikal geçerlilik teyidi', is_completed: false },
+        { task: 'Uçuşa 90 dk kala OFP (Operasyonel Uçuş Planı), NOTAM ve METAR/TAF analizi', is_completed: false },
+        { task: 'Uçuşa 45 dk kala uçak başı harici kontrol (walkaround) ve yakıt mutabakatı', is_completed: false },
+        { task: 'FMC/CDU rota veri girişi ve kalkış brifingi', is_completed: false }
       ],
-      ikon: '🚔',
-      renk: '#DBEAFE',
-      anomali_notu: 'Gecikmesinde sakınca bulunan hallerde yapılan elkoyma işlemleri 24 saat içinde hakim onayına sunulmalıdır.',
-      sesli_fisilti: 'Tutanak ve delil güvenliği kontrol adımları oluşturuldu.'
+      ikon: '✈️',
+      renk: '#E0E7FF',
+      anomali_notu: 'FDP dinlenme kuralı ihlal edilemez. NOTAM ve rüzgar güncellemeleri kalkış öncesi kontrol edilmelidir.',
+      sesli_fisilti: 'Uçuştan 90 dakika öncesine dispatch analizi ve 45 dakika öncesine walkaround alarmı kuruldu.'
     };
   }
 
@@ -838,7 +1013,11 @@ export function parseCivilServantPublicOfficeNote(input: string, baseDate: Date)
 export function parseTradesmanLocalShopNote(input: string, baseDate: Date): NotiviaSimpleNote | null {
   const lower = input.toLowerCase();
 
-  const isTradesman =
+  const isTradeAndRepair =
+    lower.includes('tamirci') || lower.includes('usta') || lower.includes('tamir') || lower.includes('balata') || lower.includes('yağ değişimi') || lower.includes('yag degisimi') ||
+    lower.includes('obd') || lower.includes('arıza kodu') || lower.includes('ariza kodu') || lower.includes('torklama') || lower.includes('parça değişimi') || lower.includes('parca degisimi') ||
+    lower.includes('satış danışmanı') || lower.includes('satis danismani') || lower.includes('müşteri teklifi') || lower.includes('musteri teklifi') || lower.includes('teklif verdik') || lower.includes('teklif gönderdik') || lower.includes('follow-up') || lower.includes('sıcak takip') || lower.includes('sicak takip') || lower.includes('çapraz satış') || lower.includes('capraz satis') || lower.includes('cross-sell') ||
+    lower.includes('kasiyer') || lower.includes('kasa avansı') || lower.includes('kasa avansi') || lower.includes('ara kasa tahliye') || lower.includes('yazar kasa') ||
     lower.includes('veresiye') || lower.includes('toptancı') || lower.includes('toptanci') ||
     lower.includes('tedarikçi') || lower.includes('tedarikci') || lower.includes('z raporu') ||
     lower.includes('pos gün sonu') || lower.includes('kasa sayımı') || lower.includes('kasa sayimi') ||
@@ -847,27 +1026,76 @@ export function parseTradesmanLocalShopNote(input: string, baseDate: Date): Noti
     lower.includes('veresiye defteri') || lower.includes('eksik listesi') ||
     ((lower.includes('azaldı') || lower.includes('bitti') || lower.includes('sipariş ver') || lower.includes('siparis ver')) && (lower.includes('koli') || lower.includes('toptan') || lower.includes('ürün') || lower.includes('mal')));
 
-  if (!isTradesman) return null;
+  if (!isTradeAndRepair) return null;
 
-  // 1. Akşam Kasa & Gün Sonu (Z Raporu, POS Gün Sonu, Kasa Sayımı)
-  if (lower.includes('z raporu') || lower.includes('pos gün sonu') || lower.includes('kasa sayım') || lower.includes('dükkan kapat') || lower.includes('kapanış')) {
+  // 1. TAMİRCİ / USTA (AUTO & DEVICE REPAIR): Müşteri Onayı, Parça Tedariği, Torklama, OBD & Yol Testi
+  if (lower.includes('tamirci') || lower.includes('usta') || lower.includes('tamir') || lower.includes('balata') || lower.includes('obd') || lower.includes('arıza') || lower.includes('ariza') || lower.includes('tork')) {
+    const testDate = new Date(baseDate);
+    testDate.setMinutes(testDate.getMinutes() - 45);
+
     return {
-      baslik: 'Akşam Kasa & Gün Sonu',
-      zaman: 'Dükkan Kapanışı (20:00)',
+      baslik: 'Araç / Cihaz Onarımı & Teslimat',
+      zaman: 'Teslimattan 45 Dk Önce (Test & OBD)',
       tarih_iso: baseDate.toISOString(),
+      hazirlik_zamani: 'Onarım Öncesi (Müşteri Onayı)',
+      hazirlik_iso: baseDate.toISOString(),
       action_items: [
-        { task: 'Yazar kasa Z raporu çıktısı', is_completed: false },
-        { task: 'Banka POS cihazları gün sonu işlemi', is_completed: false },
-        { task: 'Nakit kasa sayımı ve günlük ciro mutabakatı', is_completed: false }
+        { task: 'Müşteri onayı ve tahmini maliyet mutabakatı almadan parça değişimine başlama', is_completed: false },
+        { task: 'Gereken orijinal/muadil yedek parçanın tedarik durumunu teyit et', is_completed: false },
+        { task: 'Teslimattan 45 dk önce: Bijon/civata tork kontrolü ve OBD arıza hafızasını sıfırla', is_completed: false },
+        { task: 'Sıvı kaçağı denetimi ve 5 km kısa yol testi gerçekleştir', is_completed: false }
       ],
-      ikon: '🏪',
+      ikon: '🔧',
       renk: '#FEF3C7',
-      anomali_notu: 'POS gün sonu işlemleri ile Z raporundaki kredi kartı toplamlarının birebir tutması gerekir.',
-      sesli_fisilti: 'Z raporu, POS gün sonu ve nakit kasa sayım adımları hazırlandı.'
+      anomali_notu: 'Müşteri yazılı/sözlü onayı alınmayan ilave parça değişimleri hukuki uyuşmazlık yaratır; teslim öncesi tork ve OBD kontrolü zorunludur.',
+      sesli_fisilti: 'Onarım öncesi müşteri onayı ve teslimattan 45 dk öncesine tork/OBD kontrolü kuruldu.'
     };
   }
 
-  // 2. Veresiye & Borç-Alacak Dengesi
+  // 2. SATIŞ DANIŞMANI: Teklif Takibi (24-48 Saat), Rezervasyon & Çapraz Satış
+  if (lower.includes('satış') || lower.includes('satis') || lower.includes('teklif') || lower.includes('follow-up') || lower.includes('cross-sell') || lower.includes('danışman')) {
+    const followUpDate = new Date(baseDate);
+    followUpDate.setHours(followUpDate.getHours() + 24);
+
+    return {
+      baslik: 'Müşteri Teklifi & Sıcak Takip',
+      zaman: '24-48 Saat İçinde (Follow-Up)',
+      tarih_iso: followUpDate.toISOString(),
+      action_items: [
+        { task: 'Müşteriye gönderilen teklifin ulaştığını ve opsiyon/geçerlilik süresini teyit et', is_completed: false },
+        { task: 'Teklif edilen ürünler için depoda geçici stok rezervasyonu oluştur', is_completed: false },
+        { task: '24-48 saat içinde müşteriyle sıcak takip görüşmesi (follow-up) yap', is_completed: false },
+        { task: 'Teklife tamamlayıcı sarf/aksesuar çapraz satış (cross-sell) alternatiflerini sun', is_completed: false }
+      ],
+      ikon: '💼',
+      renk: '#E0E7FF',
+      anomali_notu: 'Tekliflerde fiyat opsiyon süresi açıkça belirtilmeli ve stok rezerve süreleri aşılmamalıdır.',
+      sesli_fisilti: 'Teklif için 24 saatlik sıcak takip ve stok rezervasyon görevi açıldı.'
+    };
+  }
+
+  // 3. KASİYER: Kasa Avansı, Rulo Kontrolü, Ara Tahliye & Z Raporu
+  if (lower.includes('kasiyer') || lower.includes('kasa avansı') || lower.includes('kasa avansi') || lower.includes('ara kasa') || lower.includes('z raporu') || lower.includes('pos gün sonu') || lower.includes('kasa sayım') || lower.includes('dükkan kapat') || lower.includes('kapanış')) {
+    return {
+      baslik: 'Kasa Yönetimi & Gün Sonu',
+      zaman: 'Kapanış (Z Raporu & POS)',
+      tarih_iso: baseDate.toISOString(),
+      hazirlik_zamani: 'Vardiya Başı (Avans & Rulo)',
+      hazirlik_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'Vardiya başında bozuk para avans sayımı ve pos/yazar kasa rulo kontrolü yap', is_completed: false },
+        { task: 'Çekmecede nakit biriktiğinde kasa güvenliği için ara tahliye gerçekleştir', is_completed: false },
+        { task: 'Kapanışta yazar kasa Z raporu çıktısı ve banka POS gün sonu işlemlerini al', is_completed: false },
+        { task: 'Fiziki nakit sayımı ile sistem raporu mutabakatını sağla', is_completed: false }
+      ],
+      ikon: '🧾',
+      renk: '#DCFCE7',
+      anomali_notu: 'Kasa açığı veya fazlası oluşmaması için Z raporu ve POS gün sonu slipleri nakit kasa ile tam eşleşmelidir.',
+      sesli_fisilti: 'Vardiya başı avans ve kapanış Z raporu/POS mutabakat adımları planlandı.'
+    };
+  }
+
+  // 4. Veresiye & Borç-Alacak Dengesi
   if (lower.includes('veresiye') || (lower.includes('alacak') && (lower.includes('müşteri') || lower.includes('yaz') || lower.includes('defter')))) {
     const due = new Date(baseDate);
     due.setDate(due.getDate() + 14); // Standart 14 gün vade kontrolü
@@ -888,7 +1116,7 @@ export function parseTradesmanLocalShopNote(input: string, baseDate: Date): Noti
     };
   }
 
-  // 3. Toptancı & Tedarikçi Ödemesi
+  // 5. Toptancı & Tedarikçi Ödemesi
   if (lower.includes('toptancı') || lower.includes('toptanci') || lower.includes('tedarikçi') || lower.includes('tedarikci')) {
     if (lower.includes('ödeme') || lower.includes('odeme') || lower.includes('çek') || lower.includes('cek') || lower.includes('senet') || lower.includes('borç') || lower.includes('borc')) {
       const due = new Date(baseDate);
@@ -927,7 +1155,7 @@ export function parseTradesmanLocalShopNote(input: string, baseDate: Date): Noti
     };
   }
 
-  // 4. Esnaf Mali Takvimi (Muhasebeci / Fatura / Bağ-Kur / Stopaj)
+  // 6. Esnaf Mali Takvimi (Muhasebeci / Fatura / Bağ-Kur / Stopaj)
   if (lower.includes('muhasebeci') || lower.includes('fatura teslim') || lower.includes('bağ-kur') || lower.includes('bagkur') || lower.includes('stopaj') || lower.includes('kira')) {
     return {
       baslik: 'Esnaf Mali Takvimi & Vergiler',
@@ -1161,6 +1389,119 @@ export function parseEngineeringSuiteNote(input: string, baseDate: Date): Notivi
     sesli_fisilti: isFriday
       ? 'Cuma deploy risk uyarısı eklendi; DB yedek ve rollback adımları oluşturuldu.'
       : 'Prod deploy kontrol listesi, DB yedeği ve rollback planı hazırlandı.'
+  };
+}
+
+export function parseProjectLogisticsFieldTechNote(input: string, baseDate: Date): NotiviaSimpleNote | null {
+  const lower = input.toLowerCase();
+
+  const isProjectLogisticsTech =
+    lower.includes('mimar') || lower.includes('ruhsat') || lower.includes('belediye revizyon') || lower.includes('clash') || lower.includes('çakışma') || lower.includes('cakisma') || lower.includes('mahal listesi') || lower.includes('metraj') || lower.includes('render') || lower.includes('görselleştirme') || lower.includes('gorsellestirme') ||
+    lower.includes('şoför') || lower.includes('sofor') || lower.includes('tır') || lower.includes('tir') || lower.includes('kamyon') || lower.includes('dorse') || lower.includes('king-pin') || lower.includes('kingpin') || lower.includes('takograf') || lower.includes('aetr') || lower.includes('kantar') || lower.includes('lojistik') || lower.includes('sevkiyat') || lower.includes('cmr') || lower.includes('pre-trip') ||
+    lower.includes('teknisyen') || lower.includes('saha servisi') || lower.includes('saha ekibi') || lower.includes('iş emri') || lower.includes('is emri') || lower.includes('sla') || lower.includes('dbm') || lower.includes('optik güç') || lower.includes('fiber ek') || lower.includes('gerilim sıfırlama');
+
+  if (!isProjectLogisticsTech) return null;
+
+  // 1. MİMAR (ARCHITECTURE & DESIGN): Ruhsat Revizyonu, Müellif Çakışması, Render & Metraj
+  if (lower.includes('mimar') || lower.includes('ruhsat') || lower.includes('clash') || lower.includes('çakışma') || lower.includes('cakisma') || lower.includes('render') || lower.includes('metraj') || lower.includes('mahal listesi')) {
+    const isRevision = lower.includes('ruhsat') || lower.includes('revizyon') || lower.includes('belediye');
+    const isPresentation = lower.includes('sunum') || lower.includes('render') || lower.includes('müşteri');
+
+    if (isPresentation) {
+      const renderLockDate = new Date(baseDate);
+      renderLockDate.setHours(renderLockDate.getHours() - 24);
+
+      return {
+        baslik: 'Mimari Sunum & Görselleştirme',
+        zaman: 'Sunumdan 24 Saat Önce (Render Kilidi)',
+        tarih_iso: baseDate.toISOString(),
+        hazirlik_zamani: '24 Saat Önce (Final Render)',
+        hazirlik_iso: renderLockDate.toISOString(),
+        action_items: [
+          { task: 'Sunumdan 24 saat önce tüm 3D render ve animasyon çıktılarını kilitle', is_completed: false },
+          { task: 'Pafta ve malzeme numune panosunu (moodboard) hazırla', is_completed: false },
+          { task: 'İmalat öncesi mahal listesi ve yaklaşık metraj maliyet tablosunu doğrula', is_completed: false }
+        ],
+        ikon: '📐',
+        renk: '#FEF08A',
+        anomali_notu: 'Müşteri sunumlarında revizyon karmaşasını önlemek için renderlar en az 24 saat önceden dondurulmalıdır.',
+        sesli_fisilti: 'Sunumdan 24 saat öncesine render kilidi ve malzeme lejantı kontrolü kuruldu.'
+      };
+    }
+
+    const revisionDue = new Date(baseDate);
+    revisionDue.setDate(revisionDue.getDate() + 30); // 30 günlük yasal süre
+
+    return {
+      baslik: 'Mimari Ruhsat Revizyonu & Koordinasyon',
+      zaman: isRevision ? 'Yasal Süre: 30 Gün' : 'Proje Koordinasyon Saati',
+      tarih_iso: revisionDue.toISOString(),
+      action_items: [
+        { task: 'Statik, mekanik ve elektrik müellif projeleriyle BIM/CAD çakışma (clash) testi yap', is_completed: false },
+        { task: 'İmar yönetmeliği ve yangın merdiveni/sığınak yönetmelik kontrollerini tamamla', is_completed: false },
+        { task: 'Belediye imar müdürlüğü eksik listesini 30 günlük yasal sürede tamamlayıp sisteme yükle', is_completed: false },
+        { task: 'İmalat öncesi mahal listesi ve malzeme şartnamesini onayla', is_completed: false }
+      ],
+      ikon: '📐',
+      renk: '#FEF08A',
+      anomali_notu: 'Belediye ruhsat eksiklerinde yasal tamamlama süresi 30 gündür; şantiye imalatı öncesi müellif çakışma testi zorunludur.',
+      sesli_fisilti: 'Ruhsat revizyonu için 30 günlük yasal süre ve müellif çakışma kontrolü başlatıldı.'
+    };
+  }
+
+  // 2. ŞOFÖR & LOJİSTİK (AETR, Takograf, Yük Teslim & Pre-Trip)
+  if (lower.includes('şoför') || lower.includes('sofor') || lower.includes('tır') || lower.includes('tir') || lower.includes('kamyon') || lower.includes('dorse') || lower.includes('takograf') || lower.includes('aetr') || lower.includes('kantar') || lower.includes('lojistik') || lower.includes('sevkiyat')) {
+    const timeMatch = input.match(/(\d{1,2})[:.](\d{2})/);
+    let tripZaman = 'Yük Slotuna Göre Planlandı';
+    let tripIso = baseDate.toISOString();
+
+    if (timeMatch) {
+      const h = parseInt(timeMatch[1], 10);
+      const m = parseInt(timeMatch[2], 10);
+      const departureDate = new Date(baseDate);
+      departureDate.setHours(h - 5, m, 0, 0); // 4.5 saat sürüş + 45 dk mola + kantar payı
+      const dh = departureDate.getHours().toString().padStart(2, '0');
+      const dm = departureDate.getMinutes().toString().padStart(2, '0');
+      tripZaman = `${dh}:${dm} (Tersine Kalkış & Pre-Trip)`;
+      tripIso = departureDate.toISOString();
+    }
+
+    return {
+      baslik: 'Lojistik Sevkiyat & Takograf Planı',
+      zaman: tripZaman,
+      tarih_iso: tripIso,
+      hazirlik_zamani: 'Kalkıştan 45 Dk Önce (Pre-Trip)',
+      hazirlik_iso: tripIso,
+      action_items: [
+        { task: 'Pre-trip: Lastik havaları, dorse king-pin kilidi, fren hortumları ve aydınlatma kontrolü', is_completed: false },
+        { task: 'Dijital takograf kartını tak; 4.5 saat sürüş / 45 dk mola ve günlük 9 saat limitini planla', is_completed: false },
+        { task: 'Kantar tartım fişi, sevk irsaliyesi ve CMR/taşıma evraklarını doğrula', is_completed: false },
+        { task: 'Varış rampa randevu saatine göre mola ve trafik süresini hesapla', is_completed: false }
+      ],
+      ikon: '🚛',
+      renk: '#FED7AA',
+      anomali_notu: 'AETR kuralları gereği 4.5 saatlik kesintisiz sürüşten sonra en az 45 dakika mola zorunludur; takograf ihlalleri ağır idari para cezasına tabidir.',
+      sesli_fisilti: 'AETR takograf sürüş/mola planı ve dorse pre-trip kontrolleri takvimlendi.'
+    };
+  }
+
+  // 3. TEKNİSYEN & SAHA TEKNOLOJİSİ (SLA, LOTO, Parametre Ölçümü & Teslim İmzası)
+  return {
+    baslik: 'Saha Arıza Müdahalesi & SLA',
+    zaman: 'SLA Müdahale Süresi İçinde',
+    tarih_iso: baseDate.toISOString(),
+    hazirlik_zamani: 'Müdahale Öncesi (LOTO & Emniyet)',
+    hazirlik_iso: baseDate.toISOString(),
+    action_items: [
+      { task: 'Müdahale öncesi LOTO (enerji kesme/etiketleme) ve artık gerilim/gaz sıfırlama güvenliği', is_completed: false },
+      { task: 'SLA süresi dolmadan müşteri lokasyonuna intikal et ve arıza kök nedenini belirle', is_completed: false },
+      { task: 'Onarım sonrası teknik parametreleri (dBm, PSI, Ohm, Bar) ölç ve tolerans dahilinde doğrula', is_completed: false },
+      { task: 'Saha iş emri tutanağını doldur ve müşteriden ıslak/dijital teslim imzasını al', is_completed: false }
+    ],
+    ikon: '🛠️',
+    renk: '#CFFAFE',
+    anomali_notu: 'Can güvenliği için LOTO uygulanmadan hatta girilmemeli; SLA süresi aşılmadan ölçüm değerleri iş emrine girilmelidir.',
+    sesli_fisilti: 'SLA geri sayımı, LOTO güvenlik adımı ve parametre ölçüm tutanağı oluşturuldu.'
   };
 }
 
@@ -1684,10 +2025,10 @@ export function extractSimpleNoteFromText(
     return enrichWithPredictiveGraph(legalResult, cleanInput);
   }
 
-  // 3. ÖNCELİK: EMNİYET VE KOLLUK KUVVETLERİ MOTORU (POLICE & LAW ENFORCEMENT ENGINE)
-  const policeResult = parsePoliceLawEnforcementNote(cleanInput, baseDate);
-  if (policeResult) {
-    return enrichWithPredictiveGraph(policeResult, cleanInput);
+  // 3. ÖNCELİK: OPERASYON, GÜVENLİK VE ACİL DURUM MOTORU (POLICE, FIREFIGHTER, CHEF, PILOT)
+  const operationSafetyResult = parseOperationSafetyEmergencyNote(cleanInput, baseDate);
+  if (operationSafetyResult) {
+    return enrichWithPredictiveGraph(operationSafetyResult, cleanInput);
   }
 
   // 4. ÖNCELİK: EĞİTİM VE OKUL YÖNETİM MOTORU (EDUMANAGER)
@@ -1714,19 +2055,25 @@ export function extractSimpleNoteFromText(
     return enrichWithPredictiveGraph(engineeringResult, cleanInput);
   }
 
-  // 8. ÖNCELİK: ESNAF VE KÜÇÜK İŞLETME MOTORU (TRADESMAN & LOCAL SHOP ENGINE)
+  // 8. ÖNCELİK: PROJE, LOJİSTİK VE SAHA TEKNOLOJİSİ (MİMAR, ŞOFÖR, TEKNİSYEN)
+  const projLogisticsResult = parseProjectLogisticsFieldTechNote(cleanInput, baseDate);
+  if (projLogisticsResult) {
+    return enrichWithPredictiveGraph(projLogisticsResult, cleanInput);
+  }
+
+  // 9. ÖNCELİK: ESNAF VE KÜÇÜK İŞLETME MOTORU (TRADESMAN & LOCAL SHOP ENGINE)
   const tradesmanResult = parseTradesmanLocalShopNote(cleanInput, baseDate);
   if (tradesmanResult) {
     return enrichWithPredictiveGraph(tradesmanResult, cleanInput);
   }
 
-  // 9. ÖNCELİK: SAĞLIK VE KLİNİK ÇALIŞANLARI MOTORU (HEALTHCARE & CLINICAL ENGINE)
+  // 10. ÖNCELİK: SAĞLIK VE KLİNİK ÇALIŞANLARI MOTORU (HEALTHCARE & CLINICAL ENGINE)
   const clinicalResult = parseHealthcareClinicalNote(cleanInput, baseDate);
   if (clinicalResult) {
     return enrichWithPredictiveGraph(clinicalResult, cleanInput);
   }
 
-  // 10. ÖNCELİK: SAĞLIK, ÇOKLU İLAÇ & MEDİKAL DOZ YÖNETİMİ
+  // 11. ÖNCELİK: SAĞLIK, ÇOKLU İLAÇ & MEDİKAL DOZ YÖNETİMİ
   const multiMedResult = parseMultiMedicationNote(cleanInput, baseDate);
   if (multiMedResult) {
     return enrichWithPredictiveGraph(multiMedResult, cleanInput);

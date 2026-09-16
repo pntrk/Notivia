@@ -60,6 +60,18 @@ export function getDomainTheme(domain: string): { ikon: string; renk: string } {
     else if (d.includes('ilac')) ikon = '💊';
     return { ikon, renk: '#F3E8FF' };
   }
+  if (d.includes('polis') || d.includes('emniyet') || d.includes('asayis') || d.includes('gozalti') || d.includes('gözaltı') || d.includes('nezaret') || d.includes('fezleke')) {
+    return { ikon: '👮', renk: '#BFDBFE' };
+  }
+  if (d.includes('itfaiye') || d.includes('yangin') || d.includes('yangın') || d.includes('scba') || d.includes('arazoz') || d.includes('arazöz') || d.includes('arama_kurtarma')) {
+    return { ikon: '🚒', renk: '#FECACA' };
+  }
+  if (d.includes('asci') || d.includes('aşçı') || d.includes('sef') || d.includes('şef') || d.includes('mutfak') || d.includes('mise_en_place') || d.includes('haccp') || d.includes('fifo') || d.includes('culinary')) {
+    return { ikon: '👨‍🍳', renk: '#FED7AA' };
+  }
+  if (d.includes('pilot') || d.includes('ucus') || d.includes('uçuş') || d.includes('kokpit') || d.includes('dispatch') || d.includes('ofp') || d.includes('fdp') || d.includes('havacilik') || d.includes('havacılık')) {
+    return { ikon: '✈️', renk: '#E0E7FF' };
+  }
   if (d.includes('asker') || d.includes('ictima') || d.includes('tekmil') || d.includes('tabur') || d.includes('boluk') || d.includes('silahlik') || d.includes('muhimmat') || d.includes('poligon') || d.includes('tatbikat') || d.includes('kademe')) {
     let ikon = '🪖';
     let renk = '#E2E8D5';
@@ -72,6 +84,21 @@ export function getDomainTheme(domain: string): { ikon: string; renk: string } {
     } else if (d.includes('kademe') || d.includes('arac') || d.includes('bakim')) {
       ikon = '🪖';
       renk = '#E2E8F0';
+    }
+    return { ikon, renk };
+  }
+  if (d.includes('avukat') || d.includes('hakim') || d.includes('hâkim') || d.includes('smmm') || d.includes('mali_musavir') || d.includes('noter') || d.includes('durusma') || d.includes('duruşma') || d.includes('istinaf') || d.includes('temyiz') || d.includes('icra') || d.includes('tebligat') || d.includes('ihtarname') || d.includes('defter_tasdik') || d.includes('beyanname')) {
+    let ikon = '⚖️';
+    let renk = '#E0E7FF'; // Avukat / Hukuk İndigosu
+    if (d.includes('hakim') || d.includes('hâkim') || d.includes('gerekceli_karar') || d.includes('hukum')) {
+      ikon = '🏛️';
+      renk = '#FEF3C7'; // Adalet Sarısı
+    } else if (d.includes('smmm') || d.includes('mali_musavir') || d.includes('beyanname') || d.includes('kdv') || d.includes('muhsgk') || d.includes('edefter') || d.includes('berat')) {
+      ikon = '📊';
+      renk = '#DCFCE7'; // Finans Yeşili
+    } else if (d.includes('noter') || d.includes('ihtarname') || d.includes('defter_tasdik') || d.includes('yevmiye')) {
+      ikon = '📜';
+      renk = '#F1F5F9'; // Mühür Grisi
     }
     return { ikon, renk };
   }
@@ -116,6 +143,24 @@ export function getDomainTheme(domain: string): { ikon: string; renk: string } {
   }
   if (d.includes('yazilim') || d.includes('deploy') || d.includes('migration') || d.includes('rollback') || d.includes('staging') || d.includes('semver')) {
     return { ikon: '💻', renk: '#E0F2FE' };
+  }
+  if (d.includes('mimar') || d.includes('mimarlik') || d.includes('ruhsat') || d.includes('clash') || d.includes('cakisma') || d.includes('çakışma') || d.includes('render') || d.includes('mahal_listesi') || d.includes('metraj')) {
+    return { ikon: '📐', renk: '#FEF08A' };
+  }
+  if (d.includes('sofor') || d.includes('şoför') || d.includes('tir') || d.includes('tır') || d.includes('dorse') || d.includes('takograf') || d.includes('aetr') || d.includes('kantar') || d.includes('lojistik') || d.includes('sevkiyat')) {
+    return { ikon: '🚛', renk: '#FED7AA' };
+  }
+  if (d.includes('teknisyen') || d.includes('saha_servisi') || d.includes('is_emri') || d.includes('iş_emri') || d.includes('sla') || d.includes('dbm') || d.includes('fiber_ek') || d.includes('gerilim_sifirlama')) {
+    return { ikon: '🛠️', renk: '#CFFAFE' };
+  }
+  if (d.includes('tamir') || d.includes('tamirci') || d.includes('usta') || d.includes('balata') || d.includes('obd') || d.includes('tork') || d.includes('oto_servis')) {
+    return { ikon: '🔧', renk: '#FEF3C7' };
+  }
+  if (d.includes('satis') || d.includes('satış') || d.includes('danisman') || d.includes('danışman') || d.includes('teklif') || d.includes('follow_up') || d.includes('cross_sell')) {
+    return { ikon: '💼', renk: '#E0E7FF' };
+  }
+  if (d.includes('kasiyer') || d.includes('kasa_avansi') || d.includes('kasa_avansı') || d.includes('ara_tahliye') || d.includes('kasa_sayimi') || d.includes('kasa_sayımı')) {
+    return { ikon: '🧾', renk: '#DCFCE7' };
   }
   if (d.includes('esnaf') || d.includes('dukkan') || d.includes('veresiye') || d.includes('toptanci') || d.includes('tedarik') || d.includes('z_raporu') || d.includes('pos_kapanis') || d.includes('bagkur')) {
     let ikon = '🏪';

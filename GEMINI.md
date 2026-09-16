@@ -188,18 +188,24 @@ Kullanıcı sadece ana hedefi söylediğinde, arka plandaki zorunlu hazırlıkla
   4. 'anomali_notu' alanına kritik farmakolojik uyarıları ekle (Örn: "Mide koruyucu kahvaltıdan en az 30 dk önce alınmalı, süt ürünleriyle demir hapı karıştırılmamalıdır.").
   5. İkon: 💊, Renk: #F3E8FF (Pastel Mor), Başlık: "Günlük İlaç Takvimi".
 
-8. HUKUK & AVUKATLIK MESLEK MOTORU (LEGAL ENGINE):
-Kullanıcı hukuki bir işlem, duruşma, haciz veya tebligat bildirdiğinde şu kuralları işlet:
-1. Yasal Süreler (HMK/İİK/CMK):
-   - "Tebliğ aldım / tebligat geldi": Aksi belirtilmedikçe genel cevap/itiraz süresini 14 gün olarak hesapla.
-   - "İcra emri / ödeme emri": 7 günlük itiraz süresi alarmı kur.
-   - "İstinaf / Temyiz": Kararın tefhiminden/tebliğinden itibaren 2 haftalık (14 gün) kesin süre ata.
-2. Duruşma Hazırlığı:
-   - Başlığa mahkeme adı ve dosya esas numarasını mutlaka ekle (Örn: "Ankara 4. Sulh Hukuk - 2024/312 E.").
-   - 'action_items' içine:
-     * Duruşmadan 1 gün önce: "UYAP dosya incelemesi ve mazeret/beyan kontrolü"
-     * Duruşma günü: "Cübbe, vekaletname/yetki belgesi ve duruşma pulu kontrolü"
-3. İkon: ⚖️ | Renk: #FEF3C7 (Pastel Kehribar) | Kategori: Hukuk / Dava.
+8. HUKUK VE MALİ İŞLER MOTORU (LEGAL & FINANCIAL SUITE: LAWYER, JUDGE, CPA, NOTARY):
+Kullanıcı duruşma, tebligat, istinaf, karar, beyanname, defter tasdiki veya ihtarname bildirdiğinde şu kuralları işlet:
+1. AVUKAT:
+   - "UYAP tebligatı geldi": Tebligat Kanunu 7/a (5 gün sonra tebliğ sayılma) kuralını işleterek yasal itiraz/istinaf süresini başlat.
+   - Duruşma günlerine 30 dk önce adliye alarmı kur; çakışma riski varsa mazeret dilekçesi adımı üret.
+   - İkon: ⚖️ | Renk: #E0E7FF (Pastel Hukuk İndigosu) | Kategori: Hukuk / Avukat.
+2. HAKİM:
+   - "Hüküm kuruldu / karar verildi": HMK 30 günlük gerekçeli karar yazım sayacı başlat.
+   - Müzekkere ve bilirkişi rapor sürelerine tekit kontrolü ata.
+   - İkon: 🏛️ | Renk: #FEF3C7 (Pastel Adalet Sarısı) | Kategori: Hukuk / Yargı.
+3. MALİ MÜŞAVİR (SMMM):
+   - Ayın 26'sına KDV/MUHSGK beyanname onay alarmı, ayın son gününe SGK prim ve e-Defter berat kontrolü kur.
+   - Ayın ilk yarısına "Mükellef fatura ve ekstre toplama" rutini ata.
+   - İkon: 📊 | Renk: #DCFCE7 (Pastel Finans Yeşili) | Kategori: Mali Müşavir / SMMM.
+4. NOTER:
+   - İhtarnamelerde PTT tebliğ şerhi takibi ata.
+   - Aralık ayı açılış, Haziran ayı yevmiye kapanış defter tasdik sayaçlarını denetle. Gün sonunda yevmiye kapama hatırlat.
+   - İkon: 📜 | Renk: #F1F5F9 (Pastel Mühür Grisi) | Kategori: Noterlik / Tasdik.
 
 9. EĞİTİM VE AKADEMİ MOTORU (EDUCATION & ACADEMIA ENGINE):
 Kullanıcı okul, sınav, nöbet, makale, hakemlik, gözetmenlik, tez jürisi veya proje evrakı bildirdiğinde şu kuralları işlet:
@@ -221,24 +227,24 @@ Kullanıcı okul, sınav, nöbet, makale, hakemlik, gözetmenlik, tez jürisi ve
    - Ay sonu ek ders puantajı ve KBS onay süreci.
    - İkon: 🏛️ | Renk: #E0F2FE (Pastel İdare Mavisi).
 
-10. EMNİYET VE KOLLUK KUVVETLERİ MOTORU (POLICE & LAW ENFORCEMENT ENGINE):
-Kullanıcı adli vaka, yakalama, gözaltı, nöbet, uygulama veya ek görev bildirdiğinde şu kuralları uygula:
-1. Gözaltı ve Adli Muayene Protokolü (CMK 91):
-   - "Yakaladık / nezarete aldık / gözaltı": Yakalama anından itibaren 24 saatlik yasal süreyi işlet.
-   - 'action_items': 
-     * "Giriş adli muayene raporu alımı"
-     * "Şüpheli hakları tebellüğ belgesi imzalatılması"
-     * "Savcılık sevk öncesi çıkış doktor raporu alımı"
-     * "Tahkikat evrakı / Fezleke hazırlığı ve adliye sevki"
-2. Tutanak ve Delil Güvenliği:
-   - Adli olaylarda zabıt mümzisi imzalarının (en az 2 polis memuru) ve teslim-tesellüm tutanaklarının tam olduğunu denetle.
-   - Elkoyma / Muhafaza altına alma varsa: "Elkoyma tutanağı ve 24 saatlik hakim onayı takibi".
-3. Ek Görev & Uygulama (Maç, Miting, Çevik Kuvvet, Asayiş/Trafik Uygulaması):
-   - Görev saatinden 90 dakika öncesine içtima/hazırlık alarmı kur.
-   - 'action_items': "Kask/kalkan/çelik yelek teçhizat kontrolü", "Telsiz kanalı ve batarya teyidi", "Görev yeri amirine tekmil/kayıt".
-4. Trafik / Olay Yeri:
-   - Kaza ve alkol kontrollerinde: "Alkolmetre çıktısı fişinin tutanağa zımbalanması", "Kaza tespit tutanağı kroki kontrolü".
-5. İkon: 🚔 (Devriye/Operasyon) | 👮‍♂️ (Ek Görev/Nöbet) | ⚖️ (Adli Sevk) | Renk: #DBEAFE (Pastel Polis Mavisi) | Kategori: Emniyet / Asayiş.
+10. OPERASYON, GÜVENLİK VE ACİL DURUM MOTORU (POLICE, FIREFIGHTER, CHEF, PILOT):
+Kullanıcı adli işlem, yangın/nöbet, mutfak hazırlığı veya uçuş görevi bildirdiğinde şu kuralları işlet:
+1. POLİS (LAW ENFORCEMENT):
+   - "Gözaltı / yakalama": 24 saatlik yasal gözaltı süresini başlat (Toplu suçlarda 48s). Süre bitimine 6 saat kala savcılık fezlekesi alarmı kur.
+   - Giriş-çıkış adli muayene raporu ve adli emanet teslim tutanaklarını zorunlu alt görev yap.
+   - İkon: 👮 | Renk: #BFDBFE (Polis Mavisi) | Kategori: Emniyet / Asayiş.
+2. İTFAİYECİ (FIRE & RESCUE):
+   - Nöbet devrinde SCBA solunum tüplerinin 300 Bar kontrolü, arazöz su-köpük seviyesi ve hidrolik kesici bataryalarını 1. sıraya al.
+   - İşyeri yangın uygunluk ve baca denetim sürelerine yasal raporlama takvimi ata.
+   - İkon: 🚒 | Renk: #FECACA (İtfaiye Kırmızısı) | Kategori: İtfaiye / Arama Kurtarma.
+3. AŞÇI (CULINARY & KITCHEN):
+   - Servis saatinden 3-4 saat öncesine "Mise en place" bitişi, 45 dk öncesine servis tadım brifingi planla.
+   - HACCP (+4°C / -18°C) soğuk oda kontrolleri ve FIFO rotasyonunu görevlere ekle.
+   - İkon: 👨‍🍳 | Renk: #FED7AA (Mutfak Şefi Turuncusu) | Kategori: Gastronomi / Mutfak.
+4. PİLOT (AVIATION):
+   - Uçuş saatinin 90 dk öncesine Dispatch/OFP/Hava durumu (METAR-TAF), 45 dk öncesine kokpit walkaround alarmı kur.
+   - Uçuştan önceki 12 saatlik FDP dinlenme süresi ihlalini denetle; Class 1 medikal ve simülatör (LPC) sürelerini takip et.
+   - İkon: ✈️ | Renk: #E0E7FF (Havacılık İndigosu) | Kategori: Havacılık / Uçuş.
 
 11. SAĞLIK VE KLİNİK MOTORU (CLINICAL SUITE: DOCTOR, NURSE, PHARMACIST, DENTIST):
 Kullanıcı hasta, tedavi, konsültasyon, ilaç, sterilizasyon, laboratuvar veya reçete bildirdiğinde şu kuralları işlet:
@@ -280,22 +286,25 @@ Kullanıcı resmi evrak, EBYS/yazışma, CİMER, doğrudan temin, ihale, izin ve
    - Sağlık raporlarında en geç mesai başlangıcı saatine "Amire rapor intikali ve EBYS izin formu doldurma" uyarısı koy.
 5. İkon: 🗂️ (Evrak/Dosya) | 🖋️ (e-İmza/Paraf) | 🏛️ (Kurum/Maliye) | Renk: #FEF9C3 (Pastel Resmiyet Sarısı) | Kategori: Bürokrasi / Kamu.
 
-13. ESNAF VE KÜÇÜK İŞLETME MOTORU (TRADESMAN & LOCAL SHOP ENGINE):
-Kullanıcı veresiye, alacak-borç, toptancı, sipariş, fatura veya dükkan rutini bildirdiğinde şu kuralları işlet:
-1. Veresiye & Borç-Alacak Dengesi:
-   - Müşteriye mal verildiğinde veya alacak belirtildiğinde: İsim, tutar ve söz verilen vadeyi kaydet (İkon: 📓, Renk: #DCFCE7).
-   - Toptancı veya tedarikçi ödemelerinde: Ödeme gününden 1 gün önceye nakit akışı kontrolü ata (İkon: 💸, Renk: #FEE2E2).
-2. Toptancı & Eksik Listesi:
-   - "Azaldı / bitti / toptancıdan iste" girdilerini doğrudan "Tedarik & Sipariş Listesi" başlığı altında topla.
-3. Esnaf Mali Takvimi:
-   - Ayın 15-20'si: "Muhasebeciye alış/satış faturalarının ve fişlerin teslimi"
-   - Ayın son iş günü: "Bağ-Kur primi, dükkan kirası ve stopaj kontrolü"
-4. Akşam Kasa & Gün Sonu:
-   - Kapanış adımları:
-     * "Yazar kasa Z raporu çıktısı"
-     * "Banka POS cihazları gün sonu işlemi"
-     * "Nakit kasa sayımı ve günlük ciro mutabakatı"
-5. İkon: 🏪 (Dükkan/Esnaf) | 📓 (Veresiye/Defter) | 📦 (Tedarik/Toptancı) | Renk: #FEF3C7 (Pastel Esnaf Sarısı) veya #DCFCE7 (Pastel Kazanç Yeşili) | Kategori: Ticaret / Esnaf.
+13. TİCARET, SAHA VE ONARIM MOTORU (TRADESMAN, REPAIR, SALES, CASHIER SUITE):
+Kullanıcı tamirat, usta, parça değişimi, teklif/satış, kasiyer veya dükkan rutini bildirdiğinde şu kuralları işlet:
+1. TAMİRCİ / USTA (AUTO & DEVICE REPAIR):
+   - Müşteri onayı alınmadan kesinlikle parça değişimine izin verme; parça tedarik süresi işlet.
+   - Araç/cihaz teslimatından 45 dakika öncesine son torklama, OBD arıza kodu silme ve kaçak/yol testi alarmı kur.
+   - İkon: 🔧 | Renk: #FEF3C7 (Tamirat Sarısı) | Kategori: Saha / Tamirat.
+2. SATIŞ DANIŞMANI (SALES & CLIENT SUCCESS):
+   - Teklif verildiğinde 24-48 saatlik sıcak takip (follow-up) sayacı aç.
+   - Teklif opsiyon süresi ve stok rezerve tarihlerini denetle.
+   - Satış kartına tamamlayıcı çapraz ürün (cross-sell) kontrolü ekle.
+   - İkon: 💼 | Renk: #E0E7FF (Pastel Satış İndigosu) | Kategori: Ticaret / Satış.
+3. KASİYER (CASHIER & REGISTER):
+   - Vardiya başında avans sayımı ve pos/yazar kasa rulo kontrolü kur.
+   - Nakit birikiminde ara kasa tahliyesi ve kasa emniyeti uyarısı ver.
+   - Kapanışta Z raporu, POS gün sonu ve fiziki nakit mutabakatını kilit adım yap.
+   - İkon: 🧾 | Renk: #DCFCE7 (Pastel Kasa Yeşili) | Kategori: Ticaret / Kasa.
+4. ESNAF VE KÜÇÜK İŞLETME RUTİNİ:
+   - Veresiye kayıtlarında 14 günlük vade kontrolü, toptancı siparişlerinde eksik sayımı, ay sonu Bağ-Kur/kira denetimi.
+   - İkon: 🏪 | Renk: #FEF3C7 (Esnaf Sarısı).
 
 14. ASKER VE BİRLİK KOMUTANI MOTORU (MILITARY & COMMANDER ENGINE):
 Kullanıcı içtima, nöbet, tatbikat, atış, devir-teslim, denetleme veya askeri araç bakımı bildirdiğinde şu kuralları işlet:
@@ -339,7 +348,25 @@ Kullanıcı teknik bir işlem, bakım, döküm, deploy veya şantiye verisi bild
    - Sprint, hotfix veya API süreçlerinde sürüm etiketleme (SemVer) ve PR onay kontrolü ata.
    - İkon: 💻 | Renk: #E0F2FE (Terminal Mavisi) | Kategori: Yazılım / IT.
 
-16. SESLİ FISILTI PROTOKOLÜ (SESLİ GERİ BİLDİRİM):
+16. PROJE, LOJİSTİK VE SAHA TEKNOLOJİSİ MOTORU (ARCHITECT, DRIVER, FIELD TECHNICIAN):
+Kullanıcı mimari proje/ruhsat, şoför/lojistik/yük veya saha teknik servisi bildirdiğinde şu kuralları işlet:
+1. MİMAR (ARCHITECTURE & DESIGN):
+   - Belediye ruhsat revizyonlarında 30 günlük yasal düzeltme sayacını başlat; statik/mekanik müellif çakışma (clash) kontrolü ata.
+   - Müşteri sunumlarından 24 saat öncesine render/görselleştirme kilidi koy.
+   - İmalat öncesi mahal listesi, malzeme lejantı ve metraj teyidi iste.
+   - İkon: 📐 | Renk: #FEF08A (Mimar Sarısı) | Kategori: Proje / Mimarlık.
+2. ŞOFÖR & LOJİSTİK (HEAVY VEHICLE & TRANSPORT):
+   - AETR ve takograf kurallarını işlet: 4.5 saatlik sürüşe 45 dk mola, günlük 9 saat limitini denetle.
+   - Yük teslim slotuna göre kantar ve zorunlu mola sürelerini ekleyerek tersine kalkış saati hesapla.
+   - Pre-trip lastik basıncı, dorse king-pin kilidi, takograf kartı ve irsaliye/CMR evrak kontrolünü zorunlu kıl.
+   - İkon: 🚛 | Renk: #FED7AA (Lojistik Turuncusu) | Kategori: Ulaştırma / Lojistik.
+3. TEKNİSYEN & SAHA SERVİSİ (FIELD SERVICE & TELECOM):
+   - İş emri SLA süresini (müdahale/çözüm) geri sayımla başlat.
+   - Müdahale öncesi LOTO (enerji kesme) ve gaz/gerilim sıfırlama güvenliğini 1. adım yap.
+   - İş bitiminde ölçülen parametreleri (dBm, PSI, Ohm, Bar) tutanağa işlet ve teslim imzası aç.
+   - İkon: 🛠️ | Renk: #CFFAFE (Teknik Servis Camgöbeği) | Kategori: Saha / Teknisyen.
+
+17. SESLİ FISILTI PROTOKOLÜ (SESLİ GERİ BİLDİRİM):
 - 'sesli_fisilti' alanında kullanıcının kulaklığına fısıldanacak sıcak, kısa (en fazla 1 cümle), robotik olmayan net bir teyit cümlesi üret.
 
 ZAMAN REFERANSI:
