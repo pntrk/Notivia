@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Mic } from 'lucide-react';
+import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
 import {
   auth,
   googleProvider,
@@ -21,6 +23,7 @@ import { extractSimpleNoteFromText } from './utils/simpleNote.ts';
 import { getCardColor } from './utils/cardColors.ts';
 import { checkEpisodicMemory } from './utils/episodicMemory.ts';
 import type { ActionItem } from './types/notivia.ts';
+import { scheduleMedicationAlarms } from './utils/medicationScheduler.ts';
 import {
   exportToDeviceCalendar,
   getGoogleCalendarWebUrl,
@@ -49,16 +52,21 @@ import { PWAInstallButton } from './components/PWAInstallButton.tsx';
 import { OfflineIndicator } from './components/OfflineIndicator.tsx';
 import { SettingsModal } from './components/SettingsModal.tsx';
 import { translations, type Language } from './utils/i18n.ts';
+import { checkLocalWeather, type WeatherCondition } from './utils/weather.ts';
 
 export interface SimpleCardItem {
   id: string;
   baslik: string;
   zaman?: string | null;
   tarih_iso?: string | null;
+  eksik_bilgi?: boolean;
+  netlestirme_sorusu?: string | null;
+  soru?: string | null;
   tetikleyici?: {
-    tip: string | null;
-    sart: string;
-    etiket: string;
+    tip?: string | null;
+    sart?: string;
+    aktif_mi?: boolean;
+    etiket?: string;
   } | null;
   hazirlik_zamani?: string | null;
   hazirlik_iso?: string | null;
@@ -95,26 +103,38 @@ export function isCompletedCard(card: SimpleCardItem): boolean {
 const LOCAL_STORAGE_KEY = 'notivia_local_notes';
 const SIMULATED_USER_KEY = 'notivia_simulated_user';
 
-// 1. Türkçe Doğal Sesli Fısıltı (TTS)
-function speakFeedback(phrase: string) {
-  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+// 1. Türkçe Doğal Sesli Fısıltı & Soru Sorma Motoru (TTS)
+export function speakQuestion(text: string, onFinished?: () => void) {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+    onFinished?.();
+    return;
+  }
 
-  // Önceki ses kuyruğunu anında kes
   window.speechSynthesis.cancel();
-
-  const utterance = new SpeechSynthesisUtterance(phrase);
+  const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = 'tr-TR';
-  utterance.rate = 1.05; // Seri ve modern konuşma hızı
+  utterance.rate = 1.0;
   utterance.pitch = 1.0;
 
-  // Varsa Türkçe ses profilini seç
   const voices = window.speechSynthesis.getVoices();
   const trVoice = voices.find((v) => v.lang.startsWith('tr'));
   if (trVoice) {
     utterance.voice = trVoice;
   }
 
+  utterance.onend = () => {
+    onFinished?.();
+  };
+
+  utterance.onerror = () => {
+    onFinished?.();
+  };
+
   window.speechSynthesis.speak(utterance);
+}
+
+function speakFeedback(phrase: string, onFinished?: () => void) {
+  speakQuestion(phrase, onFinished);
 }
 
 // 2. Nota Göre 3-4 Kelimelik Kısa Doğrulama Metni Üretici
@@ -122,10 +142,14 @@ function generateWhisperText(note: {
   baslik: string;
   zaman?: string | null;
   calendarEventId?: string | null;
-  tetikleyici?: { etiket: string } | null;
+  tetikleyici?: { tip?: string | null; sart?: string; aktif_mi?: boolean; etiket?: string } | null;
   teshis_notu?: string | null;
   anomali_notu?: string | null;
+  sesli_fisilti?: string | null;
 }): string {
+  if (note.sesli_fisilti) {
+    return note.sesli_fisilti;
+  }
   if (note.teshis_notu) {
     return `${note.teshis_notu}. ${note.baslik} planlandı.`;
   }
@@ -319,6 +343,35 @@ export default function App() {
     body: string;
     icon?: string;
   } | null>(null);
+
+  // Canlı Hava Durumu Takip State'i
+  const [weather, setWeather] = useState<WeatherCondition | null>(null);
+
+  useEffect(() => {
+    const updateWeather = async () => {
+      // Cihaz konumunu al, izin yoksa varsayılan koordinatla devam et
+      if (typeof navigator !== 'undefined' && 'geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            const w = await checkLocalWeather(pos.coords.latitude, pos.coords.longitude);
+            setWeather(w);
+          },
+          async () => {
+            const w = await checkLocalWeather();
+            setWeather(w);
+          },
+          { timeout: 6000 }
+        );
+      } else {
+        const w = await checkLocalWeather();
+        setWeather(w);
+      }
+    };
+
+    updateWeather();
+    const interval = setInterval(updateWeather, 20 * 60 * 1000); // 20 dakikada bir kontrol
+    return () => clearInterval(interval);
+  }, []);
 
   const t = translations[language];
 
@@ -855,6 +908,108 @@ export default function App() {
     }
   };
 
+  // Android Quick Settings Tile / Deep Link / PWA Shortcuts Yönlendiricisi (notivia://listen veya ?action=listen)
+  useEffect(() => {
+    // Native Android WebView / TWA doğrudan JS köprüsü fonksiyonları
+    (window as any).startNotiviaVoiceListen = () => {
+      handleMicClick();
+    };
+    (window as any).openNotiviaCamera = () => {
+      cameraInputRef.current?.click();
+    };
+    (window as any).openNotiviaManualNote = () => {
+      openManualModal();
+    };
+
+    const handleDeepLink = () => {
+      try {
+        const search = window.location.search;
+        const hash = window.location.hash.toLowerCase();
+        const params = new URLSearchParams(search);
+        const action = params.get('action') || params.get('mode');
+        const shouldListen =
+          action === 'listen' ||
+          params.get('listen') === 'true' ||
+          hash === '#listen' ||
+          hash === '#/listen' ||
+          search.includes('listen');
+        const shouldCamera =
+          action === 'camera' ||
+          params.get('camera') === 'true' ||
+          hash === '#camera' ||
+          search.includes('camera');
+        const shouldManual = action === 'manual' || hash === '#manual';
+
+        if (shouldListen) {
+          setTimeout(() => {
+            handleMicClick();
+          }, 400);
+        } else if (shouldCamera) {
+          setTimeout(() => {
+            cameraInputRef.current?.click();
+          }, 300);
+        } else if (shouldManual) {
+          setTimeout(() => {
+            openManualModal();
+          }, 300);
+        }
+
+        if (action || hash === '#listen' || hash === '#camera' || hash === '#manual') {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      } catch (err) {
+        console.warn('Deep link işleme bildirimi:', err);
+      }
+    };
+
+    const onNativeCustomAction = (event: any) => {
+      const act = event?.detail?.action || event?.data;
+      if (act === 'listen') {
+        handleMicClick();
+      } else if (act === 'camera') {
+        cameraInputRef.current?.click();
+      } else if (act === 'manual') {
+        openManualModal();
+      }
+    };
+
+    handleDeepLink();
+    window.addEventListener('hashchange', handleDeepLink);
+    window.addEventListener('notivia:action', onNativeCustomAction as EventListener);
+    window.addEventListener('notivia:listen', (() => handleMicClick()) as EventListener);
+
+    // Capacitor Native App Deep Link Dinleyicisi
+    let capListenerHandle: { remove: () => void } | null = null;
+    if (Capacitor.isPluginAvailable('App')) {
+      CapApp.addListener('appUrlOpen', (data) => {
+        const urlStr = data?.url || '';
+        if (urlStr.includes('listen')) {
+          handleMicClick();
+        } else if (urlStr.includes('camera')) {
+          cameraInputRef.current?.click();
+        } else if (urlStr.includes('manual')) {
+          openManualModal();
+        }
+      }).then((handle) => {
+        capListenerHandle = handle;
+      }).catch((err) => {
+        console.warn('Capacitor App listener bildirimi:', err);
+      });
+    }
+
+    return () => {
+      delete (window as any).startNotiviaVoiceListen;
+      delete (window as any).openNotiviaCamera;
+      delete (window as any).openNotiviaManualNote;
+      window.removeEventListener('hashchange', handleDeepLink);
+      window.removeEventListener('notivia:action', onNativeCustomAction as EventListener);
+      window.removeEventListener('notivia:listen', (() => handleMicClick()) as EventListener);
+      if (capListenerHandle) {
+        capListenerHandle.remove();
+      }
+    };
+  }, []);
+
   // Yeni bir girdi geldiğinde pasif koşullu kartları tarama
   const checkReactiveTriggers = (newInputText: string, existingCards: SimpleCardItem[]) => {
     const lowerInput = newInputText.toLowerCase();
@@ -862,6 +1017,12 @@ export default function App() {
     return existingCards.filter(card => {
       if (!card.tetikleyici || !card.tetikleyici.sart) return false;
       
+      // Hava durumu şartı kontrolü
+      if (card.tetikleyici.tip === 'hava') {
+        if (card.tetikleyici.sart === 'yagmur' && weather?.isRaining) return true;
+        if (card.tetikleyici.sart === 'don' && weather?.isFreezing) return true;
+      }
+
       // Tetikleyicinin anahtar kelimeleri yeni girdide geçiyor mu?
       const conditionWords = card.tetikleyici.sart.toLowerCase().split(' ');
       return conditionWords.some(word => word.length > 3 && lowerInput.includes(word));
@@ -873,10 +1034,14 @@ export default function App() {
     baslik: string;
     zaman?: string | null;
     tarih_iso?: string | null;
+    eksik_bilgi?: boolean;
+    netlestirme_sorusu?: string | null;
+    soru?: string | null;
     tetikleyici?: {
-      tip: string | null;
-      sart: string;
-      etiket: string;
+      tip?: string | null;
+      sart?: string;
+      aktif_mi?: boolean;
+      etiket?: string;
     } | null;
     hazirlik_zamani?: string | null;
     hazirlik_iso?: string | null;
@@ -888,6 +1053,8 @@ export default function App() {
     renk?: string;
     mediaId?: string | null;
     baglantili_hatirlatma?: string | null;
+    action_items?: ActionItem[] | null;
+    sesli_fisilti?: string | null;
     periyodik?: {
       tip: string;
       aralik_gun?: number;
@@ -959,6 +1126,16 @@ export default function App() {
         '⏳',
         null
       );
+    }
+
+    // Çoklu Medikal İlaç Alarmlarını Kur (@capacitor/local-notifications)
+    if (noteData.action_items && noteData.action_items.length > 0) {
+      const hasMedTimes = noteData.action_items.some(it => it.time || (it.task && /^\d{2}:\d{2}/.test(it.task)));
+      if (hasMedTimes) {
+        scheduleMedicationAlarms(noteData.action_items).catch(err => {
+          console.warn('scheduleMedicationAlarms hatası:', err);
+        });
+      }
     }
 
     if (conflictWith) {
@@ -1379,14 +1556,19 @@ export default function App() {
 
             // 3. Bilişsel Eylem & Not Oluşturucu (create_note_or_event)
             if (tool === 'create_note_or_event') {
+              const isMissingTime = args.eksik_bilgi || (!args.zaman && !args.tarih_iso && (args.baslik?.toLowerCase().includes('randevu') || args.baslik?.toLowerCase().includes('görüşme') || args.baslik?.toLowerCase().includes('buluşma') || args.baslik?.toLowerCase().includes('toplantı')));
+              const questionToAsk = args.soru || (isMissingTime ? 'Hangi gün ve saatte planlayalım?' : null);
+
               const createdNote = {
                 baslik: args.baslik,
-                zaman: args.zaman,
-                tarih_iso: args.tarih_iso,
+                zaman: isMissingTime ? null : args.zaman,
+                tarih_iso: isMissingTime ? null : args.tarih_iso,
                 hazirlik_zamani: args.hazirlik_zamani,
                 hazirlik_iso: args.hazirlik_iso,
                 action_items: args.action_items,
                 anomali_notu: args.anomali_notu,
+                eksik_bilgi: isMissingTime,
+                soru: questionToAsk,
                 ikon: args.ikon || '📌',
                 renk: args.renk || '#FEF3C7',
                 periyodik: args.periyodik,
@@ -1395,9 +1577,21 @@ export default function App() {
               };
 
               await addNote(createdNote);
-              const whisper = args.sesli_fisilti || generateWhisperText(createdNote);
-              if (isSpoken) {
-                speakFeedback(whisper);
+
+              if (isMissingTime && questionToAsk) {
+                setStatusText(questionToAsk);
+                if (isSpoken) {
+                  speakQuestion(questionToAsk, () => {
+                    setTimeout(() => {
+                      handleMicClick();
+                    }, 300);
+                  });
+                }
+              } else {
+                const whisper = args.sesli_fisilti || generateWhisperText(createdNote);
+                if (isSpoken) {
+                  speakFeedback(whisper);
+                }
               }
               resetMicUI();
               return;
@@ -1431,9 +1625,29 @@ export default function App() {
         if (sJson.success && sJson.data) {
           console.log("2. AI Sunucu Çıktısı:", JSON.stringify(sJson.data));
           console.log("3. Ayrıştırılmış Veri:", sJson.data);
-          const createdNote = { ...sJson.data, mediaId };
+          const isMissingTime = sJson.data.eksik_bilgi || (!sJson.data.zaman && !sJson.data.tarih_iso && (sJson.data.baslik?.toLowerCase().includes('randevu') || sJson.data.baslik?.toLowerCase().includes('görüşme') || sJson.data.baslik?.toLowerCase().includes('buluşma') || sJson.data.baslik?.toLowerCase().includes('toplantı')));
+          const questionToAsk = sJson.data.soru || (isMissingTime ? 'Hangi gün ve saatte planlayalım?' : null);
+
+          const createdNote = {
+            ...sJson.data,
+            zaman: isMissingTime ? null : sJson.data.zaman,
+            tarih_iso: isMissingTime ? null : sJson.data.tarih_iso,
+            eksik_bilgi: isMissingTime,
+            soru: questionToAsk,
+            mediaId,
+          };
           await addNote(createdNote);
-          if (isSpoken) {
+
+          if (isMissingTime && questionToAsk) {
+            setStatusText(questionToAsk);
+            if (isSpoken) {
+              speakQuestion(questionToAsk, () => {
+                setTimeout(() => {
+                  handleMicClick();
+                }, 300);
+              });
+            }
+          } else if (isSpoken) {
             const whisper = generateWhisperText(createdNote);
             speakFeedback(whisper);
           }
@@ -1449,9 +1663,29 @@ export default function App() {
       const fallback = extractSimpleNoteFromText(textInput, currentNow);
       console.log("2. Bilişsel Kural Motoru Devrede:", fallback);
       console.log("3. Ayrıştırılmış Veri:", fallback);
-      const createdNote = { ...fallback, mediaId };
+      const isMissingTime = fallback.eksik_bilgi || (!fallback.zaman && !fallback.tarih_iso && (fallback.baslik?.toLowerCase().includes('randevu') || fallback.baslik?.toLowerCase().includes('görüşme') || fallback.baslik?.toLowerCase().includes('buluşma') || fallback.baslik?.toLowerCase().includes('toplantı')));
+      const questionToAsk = fallback.soru || (isMissingTime ? 'Hangi gün ve saatte planlayalım?' : null);
+
+      const createdNote = {
+        ...fallback,
+        zaman: isMissingTime ? null : fallback.zaman,
+        tarih_iso: isMissingTime ? null : fallback.tarih_iso,
+        eksik_bilgi: isMissingTime,
+        soru: questionToAsk,
+        mediaId,
+      };
       await addNote(createdNote);
-      if (isSpoken) {
+
+      if (isMissingTime && questionToAsk) {
+        setStatusText(questionToAsk);
+        if (isSpoken) {
+          speakQuestion(questionToAsk, () => {
+            setTimeout(() => {
+              handleMicClick();
+            }, 300);
+          });
+        }
+      } else if (isSpoken) {
         const whisper = generateWhisperText(createdNote);
         speakFeedback(whisper);
       }
@@ -1556,16 +1790,25 @@ export default function App() {
     }
   };
 
-  // Sign out
+  // Sign out (iframe uyumlu ve anında temizleyen güvenli çıkış)
   const handleSignOut = async () => {
-    if (confirm('Hesaptan çıkış yapılsın mı?')) {
+    try {
       await signOut(auth);
-      setGoogleAccessToken(null);
-      setCurrentUser(null);
-      setSimulatedUser(null);
-      localStorage.removeItem(SIMULATED_USER_KEY);
-      setCards(getLocalNotes());
+    } catch (err) {
+      console.warn("SignOut bildirimi:", err);
     }
+    setGoogleAccessToken(null);
+    setCurrentUser(null);
+    setSimulatedUser(null);
+    try {
+      sessionStorage.removeItem('notivia_g_token');
+      localStorage.removeItem(SIMULATED_USER_KEY);
+    } catch {
+      // ignore
+    }
+    setCards(getLocalNotes());
+    setStatusText('Hesaptan çıkış yapıldı');
+    setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2000);
   };
 
   const activeUser = currentUser || simulatedUser;
@@ -1827,7 +2070,10 @@ export default function App() {
               // Kartın süresinin dolup dolmadığını ve tamamlanma durumunu kontrol et
               const isExpired = item.tarih_iso ? new Date(item.tarih_iso).getTime() < Date.now() : false;
               const isCompleted = isCompletedCard(item);
-              const cardBgColor = item.guncel_renk || item.renk || getCardColor(item.id, item.baslik);
+              const isWeatherTriggered = 
+                (item.tetikleyici?.sart === 'yagmur' && weather?.isRaining) ||
+                (item.tetikleyici?.sart === 'don' && weather?.isFreezing);
+              const cardBgColor = isWeatherTriggered ? '#FEE2E2' : (item.guncel_renk || item.renk || getCardColor(item.id, item.baslik));
               const isSelected = selectedCardIds.includes(item.id);
 
               return (
@@ -1836,7 +2082,9 @@ export default function App() {
                   className={`card p-3.5 rounded-2xl flex items-center justify-between transition-all duration-300 ${
                     item.isRemoving ? 'scale-95 opacity-0' : 'scale-100'
                   } ${
-                    isCompleted
+                    isWeatherTriggered
+                      ? 'ring-2 ring-red-500 bg-red-50 animate-pulse'
+                      : isCompleted
                       ? 'opacity-70 saturate-50 border-solid border-stone-300/80 shadow-none'
                       : isExpired 
                       ? 'opacity-95 border-dashed border-amber-300/80 shadow-2xs' 
@@ -1919,6 +2167,12 @@ export default function App() {
 
                       <div className="flex flex-col gap-0.5 mt-0.5">
                         <div className="flex items-center gap-1.5 flex-wrap">
+                          {isWeatherTriggered && (
+                            <span className="text-[10px] font-bold text-red-700 bg-white/90 px-2 py-0.5 rounded-md shadow-xs flex items-center gap-1 shrink-0">
+                              ⚡ ŞART GERÇEKLEŞTİ: {item.tetikleyici?.sart === 'yagmur' ? 'Yağmur Başladı!' : 'Hava 0°C Altında!'}
+                            </span>
+                          )}
+
                           {isExpired ? (
                             <span className="text-[9px] bg-stone-900/10 text-stone-600 px-1.5 py-0.5 rounded font-mono font-medium shrink-0 flex items-center gap-0.5">
                               ⌛ {t.expiredBadge} · {item.zaman || t.incompleteStatus}
@@ -2015,6 +2269,17 @@ export default function App() {
                           <div className="mt-1.5 flex items-start gap-1.5 bg-blue-500/10 text-blue-900 border border-blue-500/20 px-2 py-1 rounded-lg">
                             <span className="text-xs shrink-0">🔗</span>
                             <p className="text-[11px] font-medium leading-tight">{item.baglantili_hatirlatma}</p>
+                          </div>
+                        )}
+
+                        {/* Netleştirme Sorusu / Eksik Bilgi Uyarısı */}
+                        {(item.eksik_bilgi || item.netlestirme_sorusu || item.soru) && (
+                          <div className="mt-1.5 flex items-start gap-1.5 bg-sky-500/10 text-sky-950 border border-sky-500/20 px-2 py-1.5 rounded-lg shadow-2xs">
+                            <span className="text-xs shrink-0">❓</span>
+                            <div className="text-[11px] leading-tight">
+                              <span className="font-semibold text-sky-800 mr-1">Netleştirme Sorusu:</span>
+                              <span>{item.netlestirme_sorusu || item.soru || 'Hangi gün için planlayalım?'}</span>
+                            </div>
                           </div>
                         )}
 

@@ -36,6 +36,21 @@ export interface PredictiveInference {
  */
 export function getDomainTheme(domain: string): { ikon: string; renk: string } {
   const d = domain.toLowerCase();
+  if (d.includes('klinik') || d.includes('hemsire') || d.includes('doktor') || d.includes('cerrahi') || d.includes('preop') || d.includes('postop') || d.includes('hbys') || d.includes('order')) {
+    let ikon = '🩺';
+    if (d.includes('hemsire') || d.includes('tedavi') || d.includes('enjeksiyon') || d.includes('tetkik') || d.includes('order')) ikon = '💉';
+    else if (d.includes('nobet') || d.includes('servis') || d.includes('hastane')) ikon = '🏥';
+    return { ikon, renk: '#CCFBF1' };
+  }
+  if (d.includes('emniyet') || d.includes('polis') || d.includes('asayis') || d.includes('kolluk') || d.includes('gozalti') || d.includes('cevik')) {
+    let ikon = '🚔';
+    if (d.includes('ek_gorev') || d.includes('nobet') || d.includes('cevik')) ikon = '👮‍♂️';
+    else if (d.includes('adli') || d.includes('sevk')) ikon = '⚖️';
+    return { ikon, renk: '#DBEAFE' };
+  }
+  if (d.includes('hukuk') || d.includes('dava') || d.includes('durusma') || d.includes('mahkeme') || d.includes('avukat')) {
+    return { ikon: '⚖️', renk: '#FEF3C7' };
+  }
   if (d.includes('saglik') || d.includes('medikal') || d.includes('tahlil') || d.includes('asi') || d.includes('mr') || d.includes('ameliyat') || d.includes('ilac') || d.includes('alacak')) {
     let ikon = '🩺';
     if (d.includes('goz')) ikon = '👁️';
@@ -44,6 +59,84 @@ export function getDomainTheme(domain: string): { ikon: string; renk: string } {
     else if (d.includes('alacak')) ikon = '💰';
     else if (d.includes('ilac')) ikon = '💊';
     return { ikon, renk: '#F3E8FF' };
+  }
+  if (d.includes('asker') || d.includes('ictima') || d.includes('tekmil') || d.includes('tabur') || d.includes('boluk') || d.includes('silahlik') || d.includes('muhimmat') || d.includes('poligon') || d.includes('tatbikat') || d.includes('kademe')) {
+    let ikon = '🪖';
+    let renk = '#E2E8D5';
+    if (d.includes('silahlik') || d.includes('muhimmat') || d.includes('nobet') || d.includes('doldur')) {
+      ikon = '🛡️';
+      renk = '#E2E8D5';
+    } else if (d.includes('atis') || d.includes('poligon') || d.includes('hedef')) {
+      ikon = '🎯';
+      renk = '#E2E8D5';
+    } else if (d.includes('kademe') || d.includes('arac') || d.includes('bakim')) {
+      ikon = '🪖';
+      renk = '#E2E8F0';
+    }
+    return { ikon, renk };
+  }
+  if (d.includes('doktor') || d.includes('hekim') || d.includes('hemsire') || d.includes('hemşire') || d.includes('eczac') || d.includes('eczane') || d.includes('dis_hekimi') || d.includes('diş') || d.includes('dis') || d.includes('klinik') || d.includes('saglik') || d.includes('sağlık')) {
+    let ikon = '🩺';
+    let renk = '#E0F2FE';
+    if (d.includes('dis') || d.includes('diş') || d.includes('implant') || d.includes('protez') || d.includes('otoklav')) {
+      ikon = '🦷';
+      renk = '#EDE9FE';
+    } else if (d.includes('eczac') || d.includes('eczane') || d.includes('its') || d.includes('soguk_zincir') || d.includes('soğuk_zincir')) {
+      ikon = '💊';
+      renk = '#FEE2E2';
+    } else if (d.includes('hemsire') || d.includes('hemşire') || d.includes('dekubitus') || d.includes('dekübitus') || d.includes('sbar')) {
+      ikon = '💉';
+      renk = '#CCFBF1';
+    }
+    return { ikon, renk };
+  }
+  if (d.includes('insaat') || d.includes('beton') || d.includes('santiye') || d.includes('donati') || d.includes('kurleme') || d.includes('kirim')) {
+    return { ikon: '🏗️', renk: '#FEF3C7' };
+  }
+  if (d.includes('akademi') || d.includes('gozetmen') || d.includes('makale') || d.includes('hakemlik') || d.includes('peer') || d.includes('tubitak') || d.includes('bap') || d.includes('tez')) {
+    let ikon = '🎓';
+    let renk = '#DDD6FE';
+    if (d.includes('makale') || d.includes('hakem') || d.includes('peer') || d.includes('arastirma')) {
+      ikon = '🔬';
+      renk = '#DDD6FE';
+    } else if (d.includes('proje') || d.includes('tubitak') || d.includes('bap')) {
+      ikon = '🎓';
+      renk = '#E0E7FF';
+    }
+    return { ikon, renk };
+  }
+  if (d.includes('ogretmen') || d.includes('eokul') || d.includes('e-okul') || d.includes('sinav') || d.includes('yazili') || d.includes('kazanim')) {
+    return { ikon: '📚', renk: '#FEF08A' };
+  }
+  if (d.includes('elektrik') || d.includes('trafo') || d.includes('pano') || d.includes('loto') || d.includes('kompanzasyon') || d.includes('yuksek_gerilim')) {
+    return { ikon: '⚡', renk: '#FEE2E2' };
+  }
+  if (d.includes('makine') || d.includes('kompresor') || d.includes('kazan') || d.includes('hidrostatik') || d.includes('vibrasyon')) {
+    return { ikon: '⚙️', renk: '#E2E8F0' };
+  }
+  if (d.includes('yazilim') || d.includes('deploy') || d.includes('migration') || d.includes('rollback') || d.includes('staging') || d.includes('semver')) {
+    return { ikon: '💻', renk: '#E0F2FE' };
+  }
+  if (d.includes('esnaf') || d.includes('dukkan') || d.includes('veresiye') || d.includes('toptanci') || d.includes('tedarik') || d.includes('z_raporu') || d.includes('pos_kapanis') || d.includes('bagkur')) {
+    let ikon = '🏪';
+    let renk = '#FEF3C7';
+    if (d.includes('veresiye') || d.includes('defter') || d.includes('kazanc')) {
+      ikon = '📓';
+      renk = '#DCFCE7';
+    } else if (d.includes('toptan') || d.includes('tedarik') || d.includes('siparis')) {
+      ikon = '📦';
+      renk = '#FEF3C7';
+    } else if (d.includes('odeme') || d.includes('borc') || d.includes('cek')) {
+      ikon = '💸';
+      renk = '#FEE2E2';
+    }
+    return { ikon, renk };
+  }
+  if (d.includes('ebys') || d.includes('cimer') || d.includes('belgenet') || d.includes('dogrudan_temin') || d.includes('kamu') || d.includes('memur') || d.includes('tif') || d.includes('mys') || d.includes('paraf')) {
+    let ikon = '🗂️';
+    if (d.includes('imza') || d.includes('paraf') || d.includes('yazi')) ikon = '🖋️';
+    else if (d.includes('cimer') || d.includes('kurum') || d.includes('maliye')) ikon = '🏛️';
+    return { ikon, renk: '#FEF9C3' };
   }
   if (d.includes('burokrasi') || d.includes('resmi') || d.includes('hukuk') || d.includes('tapu') || d.includes('ehliyet') || d.includes('pasaport') || d.includes('vize') || d.includes('noter') || d.includes('kurum') || d.includes('egitim') || d.includes('zumre') || d.includes('kpss') || d.includes('nobet') || d.includes('rapor')) {
     let ikon = '🏛️';
@@ -113,51 +206,51 @@ const PREDICTIVE_GRAPH_PATTERNS: Array<{
 
   // 1b. Toplantı, Yönetim ve İş Görüşmeleri (Müdür, Veli, Kurul vb.)
   {
-    matcher: (l) => l.includes('toplantı') || (l.includes('müdür') && !l.includes('borç') && !l.includes('öde')) || l.includes('veli görüşme') || l.includes('öğretmenler kurul'),
+    matcher: (l) => l.includes('toplantı') || l.includes('toplanti') || l.includes('kurul') || (l.includes('müdür') && !l.includes('borç') && !l.includes('öde')) || l.includes('veli görüşme') || l.includes('öğretmenler kurul'),
     inference: {
       domain: 'yonetim_toplanti',
       hazirlikZamani: 'Toplantıdan 30 Dakika Önce',
       hazirlikSaatOncesi: 1,
       oncedenYapilacaklar: [
-        'Toplantı gündem maddelerini ve görüşülecek konuları hazırla',
-        'Gerekli evrak, dosya veya rapor çıktılarını hazır bulundur',
-        'Gündemle ilgili geçmiş notları gözden geçir'
+        'Toplantı gündem maddelerini ve görüşülecek konuları belirle',
+        'Önceki dönem karar tutanaklarını ve geçmiş notları incele',
+        'Islak imzalı hazirun listesi ve resmi evrak çıktılarını hazırla'
       ],
-      akilliFisilti: '🤝 Toplantı öncesi gündem maddelerini ve evrakları gözden geçirmek faydalı olacaktır.'
+      akilliFisilti: '🤝 Toplantı öncesi gündem maddelerini, önceki tutanakları ve hazirun listesini gözden geçirmek faydalı olacaktır.'
     }
   },
 
-  // 2. Uçak Yolculuğu / Uçuş / Seyahat
+  // 2. Seyahat, Tatil & Uçak Yolculuğu
   {
-    matcher: (l) => l.includes('uçak') || l.includes('uçuş') || l.includes('havaliman') || l.includes('bilet al') || l.includes('havaalanı'),
+    matcher: (l) => l.includes('seyahat') || l.includes('tatil') || l.includes('yolculuk') || l.includes('uçak') || l.includes('uçuş') || l.includes('havaliman') || l.includes('bilet al') || l.includes('havaalanı'),
     inference: {
       domain: 'ucak_seyahat',
-      hazirlikZamani: 'Uçuştan 24 Saat Önce',
+      hazirlikZamani: 'Yola Çıkmadan 24 Saat Önce',
       hazirlikSaatOncesi: 24,
       oncedenYapilacaklar: [
-        'Online check-in yap ve biniş kartını cüzdana kaydet',
-        'Kimlik veya pasaportun geçerlilik süresini teyit et',
-        'Kabin bagajı sıvı kısıtlamalarına dikkat et (100ml)',
-        'Uçuştan en az 2 saat önce havalimanında olacak şekilde çıkış saatini ayarla'
+        'Pasaport / vize ve kimlik belgelerinin geçerlilik süresini kontrol et',
+        'Yurt dışı çıkış harç pulunu temin et / online check-in yap',
+        'Hattın yurt dışı dolaşım (roaming) paketini aktif et',
+        'Evden çıkarken ana su vanasını kapat ve prizleri prizden çek'
       ],
-      akilliFisilti: '✈️ 24 saat kala online check-in açılır. Koltuğunuzu seçmeyi unutmayın.'
+      akilliFisilti: '✈️ Seyahat öncesi pasaport geçerliliği, roaming paketi, su vanası ve priz kontrollerini tamamlayın.'
     }
   },
 
-  // 3. Araç Muayenesi (TÜVTÜRK)
+  // 3. Araç Muayenesi & Bakımı (TÜVTÜRK / Servis)
   {
-    matcher: (l) => l.includes('araç muayene') || l.includes('tüvtürk') || l.includes('araba muayene') || (l.includes('muayene') && l.includes('araç')),
+    matcher: (l) => l.includes('araç muayene') || l.includes('tüvtürk') || l.includes('araba muayene') || (l.includes('muayene') && l.includes('araç')) || l.includes('araç bakım') || l.includes('periyodik bakım'),
     inference: {
       domain: 'arac_muayene',
       hazirlikZamani: '2 Gün Önce 14:00',
       hazirlikSaatOncesi: 48,
       oncedenYapilacaklar: [
-        'Trafik sigortası poliçesi güncel mi?',
-        'MTV veya HGS/OGS trafik cezası borcu sorgula (Borç varsa muayene yapılmaz)',
-        'Yangın tüpü, ilk yardım çantası ve 2 adet reflektör bagajda mı?',
-        'Tüm far, sinyal, stop ve plaka aydınlatmalarını yakıp kontrol et'
+        'MTV ve HGS/OGS trafik cezası borcu sorgula (Borç varsa muayene/işlem yapılmaz)',
+        'İlk yardım çantası, yangın tüpü ve 2 adet reflektörün bagajda olduğunu teyit et',
+        'Araç ruhsatı ve güncel zorunlu trafik sigortası poliçesini hazırla',
+        'Tüm far, sinyal, fren lambası ve plaka aydınlatmalarını kontrol et'
       ],
-      akilliFisilti: '🚗 Borcu olan araçlar muayeneye alınmaz. Borç sorgulamasını mutlaka önceden yapın.',
+      akilliFisilti: '🚗 MTV veya ceza borcu olan araçlar muayeneye alınmaz. Önceden borç sorgulaması yapın.',
       oneriAksiyonu: {
         baslik: 'TÜVTÜRK Randevu & Borç Sorgula',
         url: 'https://www.tuvturk.com.tr/'
@@ -227,9 +320,9 @@ const PREDICTIVE_GRAPH_PATTERNS: Array<{
         'Kombi altındaki manometre ibresini kontrol et (1.2 - 1.5 Bar olmalı)',
         'Basınç 1 barın altındaysa alt doldurma musluğunu yavaşça açarak su bas',
         'Isınmayan peteklerin purjör anahtarıyla havasını al',
-        'Filtre tıkanıklığı veya hata kodu (E01, F5 vb.) varsa not al'
+        '48 saat sonra bar basıncı kontrolü yap (Kaçak ve basınç düşme testi)'
       ],
-      akilliFisilti: '🔧 Kombi barı 1.0’ın altına düştüğünde cihaz korumaya geçer.'
+      akilliFisilti: '🔧 Kombi barı 1.0’ın altına düştüğünde cihaz korumaya geçer. Su bastıktan 48 saat sonra barı tekrar gözlemleyin.'
     }
   },
 
@@ -461,9 +554,9 @@ export const EXPANDED_LIFE_DOMAINS = [
       hazirlikSaatOncesi: 2,
       oncedenYapilacaklar: [
         'Akü kutup başlarında oksitlenme ve korozyon olup olmadığını incele',
-        'Voltmetre ile şarj dinamosunun alternatör voltajını (13.8 - 14.4V) ölçtür',
-        'Aracın Start-Stop özelliği varsa AGM/EFB uyumlu akü modeli seç',
-        'Eski akünün depozito bedelini yeni fiyattan düşür'
+        'Voltmetre ile alternatör voltajını (13.8 - 14.4V) ölçtür',
+        'Start-Stop özelliği varsa AGM/EFB uyumlu akü modeli taktır',
+        '48 saat sonra kutup başlarını ve marş voltajını tekrar kontrol et'
       ],
       akilliFisilti: '💡 4 yıldan eski aküler kış soğuklarında aniden voltaj bırakıp yolda bırakabilir.'
     }
@@ -480,7 +573,7 @@ export const EXPANDED_LIFE_DOMAINS = [
         'Ön ve arka balataların aşınma payını (3 mm altı kritik) kontrol ettir',
         'Fren hidrolik yağının nem oranını ölçtür (2 yılda bir değişim)',
         'Değişim sonrası ilk 200 km sert ve ani frenden kaçın (rodaj süresi)',
-        'Fren disklerinde fatura/çizik varsa taşlama veya değişim kararı al'
+        '48 saat sonra fren pedal hissi ve balata alışma performansını kontrol et'
       ],
       akilliFisilti: '💡 Yeni takılan fren balatalarının diske alışması için ilk 200 km ani frenden kaçının.'
     }

@@ -52,6 +52,7 @@ export async function parseWithGemini(
 
   if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '') {
     const candidateModels = [
+      'gemini-3.1-flash-lite',
       'gemini-3.8-flash',
       'gemini-flash-latest',
     ];
@@ -660,6 +661,7 @@ export async function parseSimpleWithGemini(
 
   if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '') {
     const candidateModels = [
+      'gemini-3.1-flash-lite',
       'gemini-3.8-flash',
       'gemini-flash-latest',
     ];
@@ -683,62 +685,49 @@ Görevin: Kullanıcının günlük hayattaki eksik, devrik, tek kelimelik veya s
 
 TEMEL BİLİŞSEL PROTOKOLLER:
 
-1. TEK KELİMEDEN / KISA GİRDİDEN ALAN (DOMAIN) ÇIKARIMI:
-Kullanıcı yalnızca bir anahtar kelime veya hedef belirtse dahi bağlamı derhal tespit et:
-- Sağlık & Medikal ("endoskopi", "göz muayenesi", "mr", "aşı", "tahlil", "implant", "ameliyat"):
-  * Açlık/tokluk süresi, kan sulandırıcı kısıtlaması, refakatçi gereksinimi, araç kullanma yasağı, alerji/kontrast madde kontrolü.
-- Taşıt & Donanım & Enerji ("muayene", "egzoz", "akü", "balata", "kış lastiği", "güneş paneli", "su arıtma", "kombi"):
-  * Borç/ceza sorgulama, poliçe güncelliği, avadanlık/şifreli bijon, voltaj/bar basınç değeri, filtre yıkama, sezonluk açı ayarı.
-- Bürokrasi & Resmi Kurum & Hukuk ("tapu", "ehliyet", "nikah", "noter", "veraset", "ikametgah", "tahliye taahhüdü", "sabıka"):
-  * Harç/vakıf payı dekontları, biyometrik fotoğraf, rayiç bedel, ıslak imza tarihi, DASK poliçesi, 20 iş günü yasal süreler.
-- Finans & Mülkiyet ("kira beyanı", "mtv", "aidat", "kredi kartı", "alacak", "borç", "icra"):
-  * İstisna haddi kıyası, banka açıklaması standardı, 7 günlük yasal itiraz süresi, gecikme faizi önlemi, asgari tutar tuzağı.
-- Eğitim & Kurumsal Görev ("zümre", "veli toplantısı", "nöbet", "kpss", "müfettiş", "rapor teslimi"):
-  * Karar tutanağı, başarı analizi, ıslak imza sirküleri, saat 10:00 sınav binası kapı kuralı, nöbet devir-teslimi.
-- Sosyal Yaşam & Tören ("düğün", "taziye", "sünnet", "kargo iade", "uçuş"):
-  * 14 günlük yasal cayma hakkı, ikram/lokma koordinasyonu, pıhtılaşma testi, online check-in (24 saat kuralı).
+1. BİLİŞSEL ALT GÖREV TÜRETİMİ (LEB DEMEDEN LEBLEBİYİ ANLAMA):
+- Seyahat / Tatil: Pasaport/vize geçerliliği, harç pulu, hat dolaşımı (roaming), ev su vanası ve priz kontrolü.
+- Araç Bakım / Muayene: MTV/ceza borcu kontrolü, ilk yardım çantası/yangın tüpü, ruhsat kontrolü.
+- Kurul / Toplantı: Gündem maddeleri, önceki karar tutanakları, ıslak imzalı hazirun listesi.
+- Donanım & Tesisat (Kombi, Balata, Akü): Müdahaleden 48 saat sonrasına kontrol adımı koy (örn: Kombi su basıldıysa "48 saat sonra bar basıncı kontrolü - Kaçak testi", Akü/Balata için "48 saat sonra voltaj/balata alıştırma kontrolü").
+- Sağlık & Medikal ("endoskopi", "göz muayenesi", "mr", "aşı", "tahlil", "implant", "ameliyat"): Açlık/tokluk süresi, kan sulandırıcı kısıtlaması, refakatçi gereksinimi.
+- Bürokrasi & Hukuk ("tapu", "ehliyet", "nikah", "noter", "veraset", "ikametgah", "tahliye taahhüdü", "sabıka"): Harç/vakıf payı dekontları, biyometrik fotoğraf, rayiç bedel.
 
-2. TERSİNE ZAMANLAMA PLANI (Inverted Scheduling):
-- Hedef etkinliğin saatinde hazır bulunabilmesi için gereken ön hazırlık vaktini ('hazirlik_zamani') ve kesin ISO alarm tarihini ('hazirlik_iso') hesapla.
-  * Uçuş / Vize / Pasaport: 24-48 saat önce (evrak & check-in).
-  * Aç karnına tahlil / Endoskopi: 12 saat önceki akşam 20:00-22:00 (yeme-içme kesme).
-  * Göz dibi muayenesi / Cerrahi: Randevu sabahı (refakatçi & toplu taşıma planı).
-  * Resmi daire / Sınav: 1 gün önce 16:00 (çıktı, kimlik ve dekont kontrolü).
-  * Araç muayenesi: 2 gün önce (vergi borcu ve yangın tüpü kontrolü).
+2. LİSTE, MARKET VE ÇOKLU GÖREV AYRIŞTIRMA:
+- Arka arkaya ürün veya görev sayıldığında ("et süt yumurta al", "raporu at sonra Ahmet'i ara"):
+  * Her bir maddeyi saf, temiz haliyle bağımsız bir 'action_items' elemanı yap ({ "task": "...", "is_completed": false }).
+  * Bağlaçları ("ve", "bir de", "sonra") ve dolgu kelimeleri temizle.
+  * Kart başlığını genel koy (Örn: "Market Alışverişi", "Ofis Görevleri").
+  * İkon: 🛒, Renk: #DCFCE7, Zaman: "Markette / Alışverişte".
 
-3. AKILLI REHBERLİK & ANOMALİ FISILTISI ('anomali_notu'):
-Kullanıcıyı bürokratik cezalardan, hak kayıplarından veya hayati aksaklıklardan koruyan net, tek cümlelik pratik bir rehberlik fısıltısı üret.
+3. ŞİVE TOLERANSI VE BOTANİK ZAMANLAMA KURALI:
+- Yöresel ağızları ("suvarıver", "verive gari", "sulayuver", "çiçekler susamış") standart niyetle karşıla.
+- Güneş Kuralı: Çiçek sulama talebi 11:00 - 17:00 arasında gelirse ASLA o saate kurma; yaprakların yanmasını önlemek için vaktini AKŞAM SERİNLİĞİNE (19:30) ötele.
+- Orkide: Gece ıslak kalırsa çürür; zamanı ertesi gün SABAH 09:30'a al ve daldırma sulama uyarısı ekle.
 
-4. FİNANSAL AYRIM & YÖN ANALİZİ:
-- "-den/-dan" eki alacak takibidir (İkon: 💰, Renk: #F3E8FF).
-- "-e/-a", "borç", "öde" ifadeleri ödeme takibidir (İkon: 💳, Renk: #FEE2E2).
-- Zaman veya saat sözcüklerini ("saat 9'da", "cuma") asla kişi veya tutar olarak algılama.
+4. HAVA DURUMU VE KOŞULLU TETİKLEYİCİLER:
+- Eğer görev zamana değil de meteorolojik bir şarta bağlıysa ("yağmur yağarsa", "don olursa"):
+  * "tetikleyici": { "tip": "hava", "sart": "yagmur" | "don", "aktif_mi": true }
+  * Zaman metnini "Şart Gerçekleştiğinde" olarak ayarla.
 
-5. ARAYÜZ VE GÖRSEL MİMARİ:
-- Resmi / Bürokrasi / Kurumsal: #E0F2FE (Pastel Mavi, 🏛️/🛂/🪪/📋)
-- Sosyal / İletişim / Tören: #DCFCE7 (Pastel Yeşil, 🤝/💍/💐/🕊️)
-- Teknik / Bakım / Muayene: #FEF3C7 (Pastel Sarı, 🔧/🚗/⚙️/🔋)
-- Finans / Acil / Borç: #FEE2E2 (Pastel Kırmızı, 💳/💸/⚠️/🚨)
-- Sağlık / Medikal / Alacak: #F3E8FF (Pastel Mor, 🩺/💊/👁️/🦷)
+5. EMANET, ALACAK VE SOSYAL BELLEK:
+- Biriyle paylaşılan eşya/para ("Ahmet'e lokma takımını verdim", "Mehmet'e 2000 TL borç verdim"):
+  * Türü emanet/alacak olarak işaretle.
+  * Vade belirtilmediyse 14 gün sonrasına sessiz bir teyit görevi koy ("Emanet/Borç teslim alındı mı?").
 
-6. ZAMAN VE PERİYODİK ÇÖZÜMLEME:
-- Saat söylenmediyse bağlama uygun varsayılan ata (Sabah: 09:00, Akşam: 21:00).
-- Referans Zaman (CURRENT_DATETIME): ${now}.${historyContext}
+6. EKSİK BİLGİ DİYALOG DÖNGÜSÜ (CLARIFICATION):
+- Kullanıcı kesin bir randevu/buluşma bildirip ("Ahmet'le buluşacağız", "Dişçiye gideceğim") gün ve saat hiç vermediyse:
+  * "eksik_bilgi": true
+  * "soru" / "netlestirme_sorusu": "Hangi gün ve saatte planlayalım?"
+  * "tarih_iso": null
+  * "zaman": null
+  * "sesli_fisilti": "Hangi gün ve saatte planlayalım?"
 
-7. LİSTE, MARKET VE ENVANTER AYRIŞTIRMA KURALI:
-- Kullanıcı "alınacaklar listesi", "pazar", "market", "bakkal" dediğinde veya arka arkaya ürün/nesne saydığında ("et süt yumurta ekmek su zeytin peynir"):
-  1. Başlığı net koy: "Market Alışveriş Listesi" veya "Pazar Alışverişi".
-  2. Sayılan istisnasız HER BİR ÜRÜNÜ tek tek 'action_items' dizisine dönüştür:
-     [
-       { "task": "Et", "is_completed": false },
-       { "task": "Süt", "is_completed": false },
-       { "task": "Yumurta (30'lu)", "is_completed": false },
-       { "task": "Ekmek", "is_completed": false },
-       { "task": "5 Lt Su", "is_completed": false }
-     ]
-  3. Ürünler arasında geçen "ve", "virgül", "sonra", "bir de", "başka" gibi bağlaçları temizle, her maddeye sadece saf ürün adını yaz.
-  4. İkon: 🛒, Renk: #DCFCE7 (Pastel Yeşil), Zaman: "Markette / Alışverişte".
-  5. Sesli Fısıltı: "Alışveriş listeniz X adet ürünle hazırlandı."
+7. SESLİ FISILTI PROTOKOLÜ (SESLİ GERİ BİLDİRİM):
+- 'sesli_fisilti' alanında kullanıcının kulaklığına fısıldanacak sıcak, kısa (en fazla 1 cümle), robotik olmayan net bir teyit cümlesi üret.
+
+ZAMAN REFERANSI:
+- Tüm saat hesaplamalarını CURRENT_DATETIME değerini (${now}) referans alarak yap.${historyContext}
 
 Kullanıcı girdisi: "${text}".
 
@@ -749,6 +738,8 @@ JSON ÇIKTI ŞEMASI (Yalnızca aşağıdaki şemaya uyan ham JSON üret, markdow
   "tarih_iso": "ISO-8601 string veya null",
   "hazirlik_zamani": "Ön hazırlık alarm vakti (Örn: '1 Gün Önce 20:00')",
   "hazirlik_iso": "Ön hazırlık alarmının çalacağı ISO-8601 string veya null",
+  "eksik_bilgi": false,
+  "soru": null,
   "action_items": [
     {
       "task": "Somut, uygulanabilir gizli kontrol adımı",
@@ -773,12 +764,16 @@ JSON ÇIKTI ŞEMASI (Yalnızca aşağıdaki şemaya uyan ham JSON üret, markdow
                 baslik: { type: Type.STRING, description: 'Kısa eylem (max 4 kelime)' },
                 zaman: { type: Type.STRING, description: 'Arayüzde görünecek sade metin' },
                 tarih_iso: { type: Type.STRING, description: 'Yalnızca kesin randevularda ISO-8601, koşulluysa null' },
+                eksik_bilgi: { type: Type.BOOLEAN, description: 'Randevu/görüşme bildirildiği halde zaman belirtilmemişse true' },
+                soru: { type: Type.STRING, description: 'Eksik bilgi varsa sorulacak soru (Örn: Hangi gün ve saatte planlayalım?)' },
+                netlestirme_sorusu: { type: Type.STRING, description: 'Eksik bilgi varsa sorulacak soru' },
                 tetikleyici: {
                   type: Type.OBJECT,
                   properties: {
-                    tip: { type: Type.STRING, description: 'finansal | mekan | kisi | durum | zincirleme' },
-                    sart: { type: Type.STRING, description: 'Gerçekleşmesi beklenen şart' },
-                    etiket: { type: Type.STRING, description: 'Arayüzde görünecek 2-3 kelimelik koşul rozeti (örn: ⚡ Maaş Gününde)' },
+                    tip: { type: Type.STRING, description: 'hava | konum | surekli | finansal | mekan | kisi | durum | zincirleme' },
+                    sart: { type: Type.STRING, description: 'yagmur | don | sanayi | market veya şart ifadesi' },
+                    aktif_mi: { type: Type.BOOLEAN, description: 'Tetikleyici aktif mi' },
+                    etiket: { type: Type.STRING, description: 'Arayüzde görünecek koşul rozeti (örn: ⚡ Maaş Gününde)' },
                   },
                 },
                 hazirlik_zamani: { type: Type.STRING, description: 'Ön hazırlık zamanı' },
@@ -819,10 +814,14 @@ JSON ÇIKTI ŞEMASI (Yalnızca aşağıdaki şemaya uyan ham JSON üret, markdow
             baslik: String(parsed.baslik || text.slice(0, 25)),
             zaman: parsed.zaman ? String(parsed.zaman) : null,
             tarih_iso: parsed.tarih_iso ? String(parsed.tarih_iso) : null,
-            tetikleyici: parsed.tetikleyici && parsed.tetikleyici.etiket ? {
+            eksik_bilgi: parsed.eksik_bilgi ? Boolean(parsed.eksik_bilgi) : undefined,
+            soru: parsed.netlestirme_sorusu ? String(parsed.netlestirme_sorusu) : (parsed.soru ? String(parsed.soru) : (parsed.eksik_bilgi ? 'Hangi gün ve saatte planlayalım?' : null)),
+            netlestirme_sorusu: parsed.netlestirme_sorusu ? String(parsed.netlestirme_sorusu) : (parsed.soru ? String(parsed.soru) : (parsed.eksik_bilgi ? 'Hangi gün için planlayalım?' : null)),
+            tetikleyici: parsed.tetikleyici && (parsed.tetikleyici.sart || parsed.tetikleyici.etiket) ? {
               tip: parsed.tetikleyici.tip || null,
               sart: String(parsed.tetikleyici.sart || ''),
-              etiket: String(parsed.tetikleyici.etiket || ''),
+              aktif_mi: parsed.tetikleyici.aktif_mi !== undefined ? Boolean(parsed.tetikleyici.aktif_mi) : true,
+              etiket: String(parsed.tetikleyici.etiket || `⚡ Şart: ${parsed.tetikleyici.sart || ''}`),
             } : null,
             periyodik: parsed.periyodik && parsed.periyodik.tip ? {
               tip: parsed.periyodik.tip,
@@ -887,19 +886,33 @@ export async function sendMultimodalRequest(text?: string, base64Image?: string 
     },
   });
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-3.8-flash',
-    contents: [{ parts }],
-    config: {
-      responseMimeType: 'application/json',
-      temperature: 0.1,
-    },
-  });
+  const candidateModels = [
+    'gemini-3.1-flash-lite',
+    'gemini-3.8-flash',
+    'gemini-flash-latest',
+  ];
 
-  const textOut = response.text;
-  if (!textOut) throw new Error('No candidate content');
-  const cleanJson = textOut.replace(/```json/gi, "").replace(/```/g, "").trim();
-  return JSON.parse(cleanJson);
+  for (const modelName of candidateModels) {
+    try {
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: [{ parts }],
+        config: {
+          responseMimeType: 'application/json',
+          temperature: 0.1,
+        },
+      });
+
+      const textOut = response.text;
+      if (textOut) {
+        const cleanJson = textOut.replace(/```json/gi, "").replace(/```/g, "").trim();
+        return JSON.parse(cleanJson);
+      }
+    } catch {
+      continue;
+    }
+  }
+  throw new Error('No candidate content could be generated');
 }
 
 export async function parseWithAIAndImage(
@@ -998,6 +1011,7 @@ JSON ÇIKTI ŞEMASI (Yalnızca aşağıdaki şemaya uyan ham JSON üret, markdow
 
   if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '') {
     const candidateModels = [
+      'gemini-3.1-flash-lite',
       'gemini-3.8-flash',
       'gemini-flash-latest',
     ];

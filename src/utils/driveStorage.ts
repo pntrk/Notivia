@@ -2,7 +2,7 @@
 // Notes are stored directly in the user's personal Google Drive account.
 // No user notes are stored in Firebase or any central database.
 
-import { getGoogleAccessToken } from '../firebase';
+import { getGoogleAccessToken, setGoogleAccessToken } from '../firebase';
 import type { SimpleCardItem } from '../App';
 
 const BACKUP_FILE_NAME = 'notivia_backup.json';
@@ -29,8 +29,13 @@ async function findBackupFile(token: string): Promise<string | null> {
       },
     });
 
+    if (res.status === 401) {
+      // Access token süresi dolmuş (Google access tokens 1 saat geçerlidir)
+      setGoogleAccessToken(null);
+      return null;
+    }
+
     if (!res.ok) {
-      console.warn('Drive dosya arama hatası:', res.status, res.statusText);
       return null;
     }
 
@@ -39,8 +44,7 @@ async function findBackupFile(token: string): Promise<string | null> {
       return data.files[0].id;
     }
     return null;
-  } catch (err) {
-    console.warn('Drive findBackupFile hatası:', err);
+  } catch {
     return null;
   }
 }
@@ -51,7 +55,7 @@ async function findBackupFile(token: string): Promise<string | null> {
 export async function loadNotesFromGoogleDrive(): Promise<DriveSyncResult> {
   const token = getGoogleAccessToken();
   if (!token) {
-    return { success: false, error: 'Google Access Token bulunamadı' };
+    return { success: false, error: 'Google hesabı bağlı değil veya oturum süresi doldu' };
   }
 
   try {
@@ -68,6 +72,11 @@ export async function loadNotesFromGoogleDrive(): Promise<DriveSyncResult> {
       },
     });
 
+    if (res.status === 401) {
+      setGoogleAccessToken(null);
+      return { success: false, error: 'Oturum süresi doldu, lütfen Google ile yeniden giriş yapın.' };
+    }
+
     if (!res.ok) {
       return { success: false, error: `Drive okuma hatası: ${res.status}` };
     }
@@ -81,7 +90,6 @@ export async function loadNotesFromGoogleDrive(): Promise<DriveSyncResult> {
 
     return { success: true, fileId, notes: [] };
   } catch (err: any) {
-    console.error('Google Drive’dan notlar yüklenemedi:', err);
     return { success: false, error: err?.message || 'Bilinmeyen hata' };
   }
 }
@@ -93,7 +101,7 @@ export async function loadNotesFromGoogleDrive(): Promise<DriveSyncResult> {
 export async function saveNotesToGoogleDrive(notes: SimpleCardItem[]): Promise<DriveSyncResult> {
   const token = getGoogleAccessToken();
   if (!token) {
-    return { success: false, error: 'Google Access Token bulunamadı' };
+    return { success: false, error: 'Google hesabı bağlı değil veya oturum süresi doldu' };
   }
 
   try {
@@ -121,6 +129,11 @@ export async function saveNotesToGoogleDrive(notes: SimpleCardItem[]): Promise<D
         },
         body: content,
       });
+
+      if (res.status === 401) {
+        setGoogleAccessToken(null);
+        return { success: false, error: 'Oturum süresi doldu, lütfen Google ile yeniden giriş yapın.' };
+      }
 
       if (!res.ok) {
         return { success: false, error: `Drive güncelleme hatası: ${res.status}` };
@@ -159,6 +172,11 @@ export async function saveNotesToGoogleDrive(notes: SimpleCardItem[]): Promise<D
         body: multipartRequestBody,
       });
 
+      if (res.status === 401) {
+        setGoogleAccessToken(null);
+        return { success: false, error: 'Oturum süresi doldu, lütfen Google ile yeniden giriş yapın.' };
+      }
+
       if (!res.ok) {
         return { success: false, error: `Drive dosya oluşturma hatası: ${res.status}` };
       }
@@ -167,7 +185,6 @@ export async function saveNotesToGoogleDrive(notes: SimpleCardItem[]): Promise<D
       return { success: true, fileId: data.id, notes };
     }
   } catch (err: any) {
-    console.error('Google Drive yedekleme hatası:', err);
     return { success: false, error: err?.message || 'Bilinmeyen hata' };
   }
 }

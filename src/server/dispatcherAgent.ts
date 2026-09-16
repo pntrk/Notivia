@@ -42,23 +42,23 @@ export const createNoteOrEventDeclaration: FunctionDeclaration = {
       },
       zaman: {
         type: Type.STRING,
-        description: "Arayüzde görünecek sade zaman metni (Örn: 'Salı 14:00')",
+        description: "Arayüzde gösterilecek sade zaman ifadesi (Örn: 'Bugün 19:30', '14 Gün Sonra')",
       },
       tarih_iso: {
         type: Type.STRING,
         description: 'Etkinliğin kesin ISO-8601 tarihi veya null',
       },
-      hazirlik_zamani: {
-        type: Type.STRING,
-        description: "Ön hazırlık zamanı (Örn: '1 Gün Önce 16:00')",
+      eksik_bilgi: {
+        type: Type.BOOLEAN,
+        description: 'Kritik zaman bilgisi eksik olup kullanıcıya soru sorulması gerekiyorsa true',
       },
-      hazirlik_iso: {
+      netlestirme_sorusu: {
         type: Type.STRING,
-        description: 'Ön hazırlık alarmının çalacağı ISO-8601 tarihi veya null',
+        description: "Eksik bilgi varsa kullanıcıya sesli yöneltilecek soru (Örn: 'Hangi gün için planlayalım?')",
       },
       action_items: {
         type: Type.ARRAY,
-        description: 'İşin arkasındaki gizli gereksinimlerden türetilen somut kontrol adımları',
+        description: 'Tiklenebilir görevler veya arka plandaki ön hazırlık adımları',
         items: {
           type: Type.OBJECT,
           properties: {
@@ -68,9 +68,19 @@ export const createNoteOrEventDeclaration: FunctionDeclaration = {
           required: ['task', 'is_completed'],
         },
       },
+      tetikleyici: {
+        type: Type.OBJECT,
+        description: 'Koşullu tetikleyici (hava, konum vb.)',
+        properties: {
+          tip: { type: Type.STRING, description: 'hava | konum | surekli' },
+          sart: { type: Type.STRING, description: 'yagmur | don | sanayi | market' },
+          aktif_mi: { type: Type.BOOLEAN },
+        },
+        required: ['tip', 'sart', 'aktif_mi'],
+      },
       anomali_notu: {
         type: Type.STRING,
-        description: 'Kritik rehberlik fısıltısı veya teknik uyarı',
+        description: 'Teknik uyarı, botanik tüyo veya operasyonel risk notu',
       },
       ikon: {
         type: Type.STRING,
@@ -78,14 +88,14 @@ export const createNoteOrEventDeclaration: FunctionDeclaration = {
       },
       renk: {
         type: Type.STRING,
-        description: 'Pastel kart arka plan rengi HEX (#E0F2FE, #FEF3C7, #FEE2E2, #DCFCE7, #F3E8FF)',
+        description: 'Pastel kart arka plan HEX kodu (#FEF3C7, #E0F2FE, #DCFCE7, #FEE2E2, #F3E8FF)',
       },
       sesli_fisilti: {
         type: Type.STRING,
-        description: "Kulaktan verilecek kısa sesli doğrulama (Örn: 'Muayene randevusu Salı 14:00 için kuruldu.')",
+        description: 'Kulaklıktan TTS ile okunacak 1 cümlelik insani teyit',
       },
     },
-    required: ['baslik', 'ikon', 'renk', 'sesli_fisilti'],
+    required: ['baslik', 'zaman', 'eksik_bilgi', 'action_items', 'ikon', 'renk', 'sesli_fisilti'],
   },
 };
 
@@ -150,10 +160,44 @@ KULLANILABİLİR ARAÇLAR:
 3. draft_message: Toplantı, randevu erteleme, bilgilendirme veya ödeme takibi için hazır mesaj/e-posta taslağı üretir.
    Parametreler: recipient, channel (whatsapp | email | sms), subject, message_body, sesli_fisilti.
 
-TEMEL DAVRANIŞ KURALLARI:
-- ASLA serbest metinle sohbet etme; daima uygun aracı fonksiyon çağrısı olarak çalıştır.
-- Tüm saat hesaplamalarını CURRENT_DATETIME değerini referans alarak yap. Saat söylenmediyse bağlama uygun varsayılan ata (Sabah: 09:00, Öğle: 13:00, Akşam: 19:00).
-- Her araç çağrısına kullanıcının kulaklığına veya hoparlörüne fısıldanacak 3-4 kelimelik net bir onay ifadesi ('sesli_fisilti') ekle.`;
+TEMEL ÇALIŞMA KURALLARI VE BİLİŞSEL ALANLAR:
+1. BİLİŞSEL ALT GÖREV TÜRETİMİ (LEB DEMEDEN LEBLEBİYİ ANLAMA):
+- Seyahat / Tatil: Pasaport/vize geçerliliği, harç pulu, hat dolaşımı (roaming), ev su vanası ve priz kontrolü.
+- Araç Bakım / Muayene: MTV/ceza borcu kontrolü, ilk yardım çantası/yangın tüpü, ruhsat kontrolü.
+- Kurul / Toplantı: Gündem maddeleri, önceki karar tutanakları, ıslak imzalı hazirun listesi.
+- Donanım & Tesisat (Kombi, Balata, Akü): Müdahaleden 48 saat sonrasına kontrol adımı koy (örn: Kombi su basıldıysa "48 saat sonra bar basıncı kontrolü - Kaçak testi").
+
+2. LİSTE, MARKET VE ÇOKLU GÖREV AYRIŞTIRMA:
+- Arka arkaya ürün veya görev sayıldığında ("et süt yumurta al", "raporu at sonra Ahmet'i ara"):
+  * Her bir maddeyi saf, temiz haliyle bağımsız bir 'action_items' elemanı yap ({ "task": "...", "is_completed": false }).
+  * Bağlaçları ("ve", "bir de", "sonra") temizle, kart başlığını genel koy (Örn: "Market Alışverişi").
+
+3. ŞİVE TOLERANSI VE BOTANİK ZAMANLAMA KURALI:
+- Yöresel ağızları ("suvarıver", "verive gari", "sulayuver", "çiçekler susamış") standart niyetle karşıla.
+- Güneş Kuralı: Çiçek sulama talebi 11:00 - 17:00 arasında gelirse ASLA o saate kurma; AKŞAM SERİNLİĞİNE (19:30) ötele.
+- Orkide: Gece ıslak kalırsa çürür; ertesi gün SABAH 09:30'a al ve daldırma sulama uyarısı ekle.
+
+4. HAVA DURUMU VE KOŞULLU TETİKLEYİCİLER:
+- Meteorolojik şarta bağlıysa ("yağmur yağarsa", "don olursa"):
+  * Zaman metnini "Şart Gerçekleştiğinde" yap, anomali ve tetikleyici bilgisini aktar.
+
+5. EMANET, ALACAK VE SOSYAL BELLEK:
+- Biriyle paylaşılan eşya/para ("Ahmet'e lokma takımını verdim", "Mehmet'e 2000 TL borç verdim"):
+  * Türü emanet/alacak olarak işaretle. Vade yoksa 14 gün sonrasına teyit adımı koy ("Emanet/Borç teslim alındı mı?").
+
+6. EKSİK BİLGİ DİYALOG DÖNGÜSÜ (CLARIFICATION):
+- Randevu/buluşma bildirildiği halde gün/saat verilmediyse:
+  * "eksik_bilgi": true
+  * "soru": "Hangi gün ve saatte planlayalım?"
+  * "tarih_iso": null
+  * "zaman": null
+  * "sesli_fisilti": "Hangi gün ve saatte planlayalım?"
+
+7. SESLİ FISILTI PROTOKOLÜ (SESLİ GERİ BİLDİRİM):
+- 'sesli_fisilti' alanında kullanıcının kulaklığına fısıldanacak sıcak, kısa (en fazla 1 cümle), robotik olmayan net bir teyit cümlesi üret.
+
+ZAMAN REFERANSI:
+- Tüm bağıl zamanları sana verilen CURRENT_DATETIME değerine göre ISO-8601 olarak hesapla.`;
 
 // Deterministic Dispatcher Engine (Yüksek Doğruluklu Deterministik Eşleme)
 export function dispatchDeterministic(input: string, currentDatetime: string): DispatchResponse {
@@ -313,23 +357,35 @@ export function dispatchDeterministic(input: string, currentDatetime: string): D
     color = '#FEE2E2';
   }
 
-  const voiceWhisper = `${baslik} ${simpleNote.zaman ? simpleNote.zaman + ' için ' : ''}kuruldu.`;
+  const isClarificationNeeded = !!(simpleNote.eksik_bilgi || (!simpleNote.zaman && !simpleNote.tarih_iso && (lower.includes('randevu') || lower.includes('görüşme') || lower.includes('buluşma') || lower.includes('toplantı'))));
+  const soruText = simpleNote.netlestirme_sorusu || simpleNote.soru || (isClarificationNeeded ? 'Hangi gün ve saatte planlayalım?' : null);
+  const zamanText = isClarificationNeeded ? 'Zaman Belirtilmedi' : (simpleNote.zaman || 'Bugün');
+  const voiceWhisper = isClarificationNeeded && soruText
+    ? soruText
+    : `${baslik} ${simpleNote.zaman ? simpleNote.zaman + ' için ' : ''}kuruldu.`;
 
   return {
     tool: 'create_note_or_event',
     arguments: {
       baslik,
-      zaman: simpleNote.zaman,
-      tarih_iso: simpleNote.tarih_iso || null,
-      hazirlik_zamani: simpleNote.hazirlik_zamani || null,
-      hazirlik_iso: simpleNote.hazirlik_iso || null,
+      zaman: zamanText,
+      tarih_iso: isClarificationNeeded ? null : (simpleNote.tarih_iso || null),
+      eksik_bilgi: isClarificationNeeded,
+      netlestirme_sorusu: isClarificationNeeded ? soruText : null,
+      soru: isClarificationNeeded ? soruText : null,
       action_items: simpleNote.action_items || [],
+      tetikleyici: simpleNote.tetikleyici ? {
+        tip: (simpleNote.tetikleyici.tip as any) || 'hava',
+        sart: simpleNote.tetikleyici.sart || '',
+        aktif_mi: simpleNote.tetikleyici.aktif_mi !== undefined ? simpleNote.tetikleyici.aktif_mi : true,
+      } : null,
       anomali_notu: simpleNote.anomali_notu || null,
       ikon: icon,
       renk: color,
       sesli_fisilti: voiceWhisper,
+      hazirlik_zamani: simpleNote.hazirlik_zamani || null,
+      hazirlik_iso: simpleNote.hazirlik_iso || null,
       periyodik: simpleNote.periyodik || null,
-      tetikleyici: simpleNote.tetikleyici || null,
     },
     sesli_fisilti: voiceWhisper,
     source: 'deterministic-dispatcher',
@@ -358,7 +414,11 @@ export async function dispatchWithGemini(input: string, currentDatetime: string)
     let functionCalls: any[] | undefined;
     let usedModel = 'gemini-3.8-flash';
 
-    const candidateModels = ['gemini-3.8-flash', 'gemini-flash-latest'];
+    const candidateModels = [
+      'gemini-3.1-flash-lite',
+      'gemini-3.8-flash',
+      'gemini-flash-latest',
+    ];
     for (const modelName of candidateModels) {
       try {
         const response = await ai.models.generateContent({
@@ -388,8 +448,8 @@ export async function dispatchWithGemini(input: string, currentDatetime: string)
           usedModel = modelName;
           break;
         }
-      } catch (callErr) {
-        console.warn(`[Dispatcher Tool Call Error on ${modelName}]:`, callErr);
+      } catch {
+        // 503 (high demand) veya 429 gibi geçici durumlarda sıradaki modele geç
         continue;
       }
     }

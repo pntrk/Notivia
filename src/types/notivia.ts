@@ -27,6 +27,8 @@ export interface CalendarEvent {
 export interface ActionItem {
   task: string;
   is_completed: boolean;
+  time?: string;
+  condition?: string;
 }
 
 export interface NotificationInfo {
@@ -42,9 +44,10 @@ export interface PeriodicLog {
 }
 
 export interface NotiviaTriggerInfo {
-  tip: 'finansal' | 'mekan' | 'kisi' | 'durum' | 'zincirleme' | null;
-  sart: string;
-  etiket: string;
+  tip?: 'hava' | 'konum' | 'surekli' | 'finansal' | 'mekan' | 'kisi' | 'durum' | 'zincirleme' | string | null;
+  sart?: string;
+  aktif_mi?: boolean;
+  etiket?: string;
 }
 
 export interface NotiviaSimpleNote {
@@ -54,6 +57,9 @@ export interface NotiviaSimpleNote {
   hazirlik_zamani?: string | null;
   hazirlik_iso?: string | null;
   anomali_notu?: string | null;
+  eksik_bilgi?: boolean;
+  soru?: string | null;
+  netlestirme_sorusu?: string | null;
   teshis_notu?: string | null;
   baglantili_hatirlatma?: string | null;
   tetikleyici?: NotiviaTriggerInfo | null;

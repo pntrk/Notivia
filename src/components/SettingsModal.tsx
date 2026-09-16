@@ -90,7 +90,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           }`}>
             <div className="flex items-center justify-between gap-3">
               {activeUser ? (
-                <>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
                   <div className="flex items-center gap-3 min-w-0">
                     <img
                       src={
@@ -101,25 +101,43 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       className="w-10 h-10 rounded-full object-cover border border-stone-300 dark:border-stone-700 shrink-0"
                     />
                     <div className="min-w-0">
-                      <p className="font-semibold text-xs truncate leading-snug">
-                        {activeUser.displayName || 'Kullanıcı'}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-semibold text-xs truncate leading-snug">
+                          {activeUser.displayName || 'Kullanıcı'}
+                        </p>
+                        <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Aktif Google Hesabı" />
+                      </div>
                       <p className="text-[11px] text-stone-500 dark:text-stone-400 truncate">
-                        {activeUser.email || ''}
+                        {activeUser.email || 'Google Hesabı'}
                       </p>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onSignOut();
-                      onClose();
-                    }}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-500/10 hover:bg-red-500/15 text-red-600 dark:text-red-400 transition-colors shrink-0 cursor-pointer"
-                  >
-                    {t.signOut}
-                  </button>
-                </>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onLogin();
+                        onClose();
+                      }}
+                      title="Google oturumunu ve Drive erişim yetkisini yenile"
+                      className="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-stone-200 dark:bg-stone-700 hover:bg-stone-300 dark:hover:bg-stone-600 text-stone-800 dark:text-stone-200 transition-colors cursor-pointer flex items-center gap-1"
+                    >
+                      <span>🔄</span>
+                      <span>{language === 'tr' ? 'Yenile' : 'Refresh'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onSignOut();
+                        onClose();
+                      }}
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-colors cursor-pointer flex items-center gap-1"
+                    >
+                      <span>🚪</span>
+                      <span>{t.signOut}</span>
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <>
                   <div className="flex items-center gap-3 min-w-0">

@@ -1,6 +1,6 @@
 {
   "name": "Notivia",
   "description": "Bilişsel yaşam asistanı çekirdek niyet çözümleme ve veri ayrıştırma (parser) motoru",
-  "requestFramePermissions": ["microphone", "camera"],
+  "requestFramePermissions": ["microphone", "camera", "geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -182,6 +182,29 @@ export default defineConfig(() => {
           start_url: '/',
           scope: '/',
           categories: ['productivity', 'utilities'],
+          shortcuts: [
+            {
+              name: 'Sesle Dinle',
+              short_name: 'Dinle',
+              description: 'Mikrofonu doğrudan başlat ve sesli not al',
+              url: '/?action=listen',
+              icons: [{ src: '/icon.svg', sizes: '192x192' }],
+            },
+            {
+              name: 'Fotoğraf Çek / Teşhis Et',
+              short_name: 'Fotoğraf',
+              description: 'Kamera veya galeriden görsel yükle ve teşhis et',
+              url: '/?action=camera',
+              icons: [{ src: '/icon.svg', sizes: '192x192' }],
+            },
+            {
+              name: 'Yeni Not Yaz',
+              short_name: 'Yaz',
+              description: 'Manuel veya klavye ile not ekleme modunu aç',
+              url: '/?action=manual',
+              icons: [{ src: '/icon.svg', sizes: '192x192' }],
+            },
+          ],
           icons: [
             {
               src: '/pwa-192x192.png',
