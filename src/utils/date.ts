@@ -122,3 +122,41 @@ export function extractDateTimeFromTurkish(
 if (typeof window !== 'undefined') {
   (window as any).extractDateTimeFromTurkish = extractDateTimeFromTurkish;
 }
+
+/**
+ * Bir ayın son haftasındaki hedef iş gününü (Varsayılan: Son Cuma veya son gün) hesaplar.
+ * Eğer içinde bulunulan ayın son iş günü geçmişse bir sonraki ayınkini döndürür.
+ */
+export function getNextMonthEndTargetDate(baseDate: Date = new Date(), targetHour: number = 10, targetMinute: number = 0): Date {
+  const findLastFridayOfMonth = (year: number, month: number): Date => {
+    // month is 0-indexed. ayın son günü: new Date(year, month + 1, 0)
+    const lastDay = new Date(year, month + 1, 0);
+    const dayOfWeek = lastDay.getDay(); // 0: Pazar, 5: Cuma
+    let offset = 0;
+    if (dayOfWeek === 5) {
+      offset = 0; // Zaten cuma
+    } else if (dayOfWeek === 6) {
+      offset = 1; // Cumartesi -> Cuma için 1 gün geri
+    } else {
+      // 0 (Pazar) -> 2 gün geri, 1 (Pazartesi) -> 3 gün geri vb.
+      offset = (dayOfWeek + 2) % 7;
+    }
+    const target = new Date(year, month, lastDay.getDate() - offset, targetHour, targetMinute, 0, 0);
+    return target;
+  };
+
+  let candidate = findLastFridayOfMonth(baseDate.getFullYear(), baseDate.getMonth());
+  // Eğer bu ayın son cuması şimdiden geçmişse, bir sonraki ayınkini al
+  if (candidate.getTime() <= baseDate.getTime()) {
+    let nextMonth = baseDate.getMonth() + 1;
+    let nextYear = baseDate.getFullYear();
+    if (nextMonth > 11) {
+      nextMonth = 0;
+      nextYear += 1;
+    }
+    candidate = findLastFridayOfMonth(nextYear, nextMonth);
+  }
+
+  return candidate;
+}
+

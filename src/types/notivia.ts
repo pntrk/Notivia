@@ -57,6 +57,11 @@ export interface NotiviaSimpleNote {
   teshis_notu?: string | null;
   baglantili_hatirlatma?: string | null;
   tetikleyici?: NotiviaTriggerInfo | null;
+  periyodik?: {
+    tip: 'aylik_son_hafta' | 'aylik' | 'haftalik' | 'yillik' | 'gunluk';
+    aralik_gun?: number;
+    bir_sonraki_tarih_iso?: string;
+  } | null;
   action_items?: ActionItem[] | null;
   ikon: string;
   renk: string;

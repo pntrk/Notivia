@@ -133,13 +133,21 @@ export async function requestDeviceNotificationPermission(): Promise<boolean> {
 }
 
 /**
- * Belirtilen tarih için yerel cihaz bildirim alarmı kurar
+ * Belirtilen tarih için yerel cihaz bildirim alarmı kurar.
+ * PWA Service Worker desteği varsa showNotification ile sistem bildirim tepsisine gönderir,
+ * ayrıca periyodik hatırlatıcılar için sonraki döngüyü otomatik kurar.
  */
 export function scheduleLocalDeviceReminder(
   id: string,
   title: string,
   targetDateIso: string,
-  icon: string = '📌'
+  icon: string = '📌',
+  periyodik?: {
+    tip: string;
+    aralik_gun?: number;
+    bir_sonraki_tarih_iso?: string;
+  } | null,
+  onRecurringTrigger?: (nextIso: string) => void
 ): void {
   if (typeof window === 'undefined') return;
 
@@ -159,24 +167,83 @@ export function scheduleLocalDeviceReminder(
   // Maksimum 24 güne kadar setTimeout güvenle çalışır (~2 milyar ms)
   if (diffMs > 24 * 24 * 60 * 60 * 1000) return;
 
-  const timerId = window.setTimeout(() => {
+  const timerId = window.setTimeout(async () => {
     // 1. Ses çal
     playNotificationChime();
 
-    // 2. Sistem / Cihaz Bildirimi gönder
+    // 2. Sistem / Cihaz Bildirimi gönder (ServiceWorker ve Notification)
     if ('Notification' in window && Notification.permission === 'granted') {
       try {
-        new Notification(`${icon} ${title}`, {
-          body: 'Notivia: Hatırlatma zamanı geldi!',
-          icon: '/favicon.ico',
-          tag: id,
-        });
+        const notifTitle = `${icon} ${title}`;
+        const notifBody = periyodik?.tip === 'aylik_son_hafta'
+          ? 'Notivia: Ay sonu toplantı zamanı geldi! Ajandanızı kontrol edin.'
+          : 'Notivia: Hatırlatma zamanı geldi!';
+
+        // ServiceWorker Registration üzerinden bildirim göster (PWA mobil cihazlarda arka planda daha güvenilirdir)
+        if ('serviceWorker' in navigator) {
+          const reg = await navigator.serviceWorker.ready.catch(() => null);
+          if (reg && reg.showNotification) {
+            reg.showNotification(notifTitle, {
+              body: notifBody,
+              icon: '/pwa-192x192.png',
+              badge: '/pwa-192x192.png',
+              tag: id,
+              renotify: true,
+              data: { url: '/' },
+            } as any);
+          } else {
+            new Notification(notifTitle, {
+              body: notifBody,
+              icon: '/pwa-192x192.png',
+              tag: id,
+            });
+          }
+        } else {
+          new Notification(notifTitle, {
+            body: notifBody,
+            icon: '/pwa-192x192.png',
+            tag: id,
+          });
+        }
       } catch (err) {
         console.warn('Bildirim açılamadı:', err);
       }
     }
 
     activeTimers.delete(id);
+
+    // 3. Periyodik döngü varsa otomatik sonraki ay / hafta hatırlatıcısını kur
+    if (periyodik) {
+      const nowNext = new Date();
+      let nextDate: Date;
+      if (periyodik.tip === 'aylik_son_hafta') {
+        // Gelecek ayın son Cuma gününü hesapla
+        let nextM = nowNext.getMonth() + 1;
+        let nextY = nowNext.getFullYear();
+        if (nextM > 11) {
+          nextM = 0;
+          nextY += 1;
+        }
+        const lastDay = new Date(nextY, nextM + 1, 0);
+        const dayOfWeek = lastDay.getDay();
+        let offset = 0;
+        if (dayOfWeek === 5) offset = 0;
+        else if (dayOfWeek === 6) offset = 1;
+        else offset = (dayOfWeek + 2) % 7;
+
+        nextDate = new Date(nextY, nextM, lastDay.getDate() - offset, 10, 0, 0, 0);
+      } else {
+        const addDays = periyodik.aralik_gun || 30;
+        nextDate = new Date(nowNext.getTime() + addDays * 24 * 60 * 60 * 1000);
+      }
+
+      const nextIso = nextDate.toISOString();
+      console.log(`Periyodik hatırlatıcı bir sonraki döneme kuruldu: ${nextIso}`);
+      scheduleLocalDeviceReminder(id, title, nextIso, icon, periyodik, onRecurringTrigger);
+      if (onRecurringTrigger) {
+        onRecurringTrigger(nextIso);
+      }
+    }
   }, diffMs);
 
   activeTimers.set(id, timerId);

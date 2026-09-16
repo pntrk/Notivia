@@ -650,10 +650,24 @@ TEMEL SÖZDİZİMİ VE ANLAM KURALLARI:
 4. Sağlık ve Reçete Eylemleri:
    - "Günde X kez tok karnına", "Doktor iç dedi" ifadelerinde eylem medikal takiptir ("💊 İlaç Takibi (3x1 Tok)").
 
-5. Zaman ve Hatırlatıcı Çözümleme Kuralları:
+5. Zaman, Hatırlatıcı ve Periyodik Çözümleme Kuralları:
    - Göreceli Gün Çözümlemesi: "CURRENT_DATETIME" değerini referans alarak "yarın", "pazartesi", "haftaya cuma" gibi ifadeleri kesin YYYY-MM-DD formatına dönüştür.
+   - Periyodik ve Döngüsel İfadeler: "Her ay sonu", "her ayın son haftası", "her ay", "ayda bir", "her hafta" gibi tekrarlayan eylemlerde "periyodik" nesnesi oluştur:
+     { "tip": "aylik_son_hafta"|"aylik"|"haftalik"|"gunluk", "aralik_gun": 30 }
+     "tarih_iso" alanına İÇİNDE BULUNULAN VEYA EN YAKIN AYIN SON İŞ GÜNÜNÜ (örn: son Cuma 10:00) ISO-8601 olarak ata. "zaman" alanına "Her Ay Sonu (Son Hafta)" veya ilgili döngüyü yaz.
    - Saat Belirtilmemişse Varsayılan Ekle: Kullanıcı "yarın randevu", "cuma veli toplantısı" gibi bir gün belirtip SAAT BELİRTMEDİYSE: "tarih_iso" alanını kesinlikle boş (null) bırakma. Standart iş/eylem saati olarak 09:00:00 ata. "zaman" etiketine "Yarın 09:00" yaz.
    - Randevu ve Hatırlatıcı İfadeleri: Cümlede "randevu", "toplantı", "görüşme", "teslim", "kontrol" gibi kelimeler geçiyorsa bu doğrudan bir takvim eylemidir.
+
+6. Predictive Action Graph (Leb Demeden Anlama & Ön Hazırlık Çıkarımı):
+   - Kullanıcı bir eylem veya randevu belirttiğinde, o olayın gerçekleşebilmesi için gereken görünmez ön adımları "action_items" olarak üret.
+   - Örnekler:
+     * Pasaport/Vize: ["Harç ve defter bedeli dekontu", "2 adet biyometrik fotoğraf", "Eski pasaport ve kimlik kartı"]
+     * Uçak/Seyahat: ["Online check-in yap ve biniş kartını al", "Kimlik/pasaport kontrolü", "Kabin bagajı sıvı kuralları"]
+     * Araç Muayenesi: ["Trafik sigortası poliçesi", "MTV ve ceza borcu sorgula", "İlk yardım çantası ve yangın tüpü"]
+     * Doktor/Kan Tahlili: ["10-12 saatlik açlık kuralı", "Su dışında bir şey tüketme", "Eski tahlil sonuçlarını yanına al"]
+     * Mülakat/Sunum: ["Şirket araştırması ve ürün incelemesi", "CV ve portfolyo linkleri", "Mikrofon/kamera testi"]
+   - "anomali_notu": Kullanıcının hayatını kolaylaştıracak tek cümlelik proaktif ipucu veya uyarı.
+   - "hazirlik_zamani": Ana eylemden önce yapılması gereken hazırlık hatırlatma zamanı (örn: "1 Gün Önce 17:00", "24 Saat Önce").
 
 Referans Zaman (CURRENT_DATETIME): ${now}.${historyContext}
 
@@ -701,6 +715,24 @@ Kullanıcı girdisi: "${text}".
                 hazirlik_zamani: { type: Type.STRING, description: 'Ön hazırlık zamanı' },
                 hazirlik_iso: { type: Type.STRING, description: 'Takvim/bildirim için hazırlık tarihi (ISO-8601)' },
                 anomali_notu: { type: Type.STRING, description: 'Kısa zeka tespiti veya null' },
+                action_items: {
+                  type: Type.ARRAY,
+                  items: {
+                    type: Type.OBJECT,
+                    properties: {
+                      task: { type: Type.STRING, description: 'Alt görev veya hazırlık adımı' },
+                      is_completed: { type: Type.BOOLEAN, description: 'Tamamlandı mı' },
+                    },
+                    required: ['task'],
+                  },
+                },
+                periyodik: {
+                  type: Type.OBJECT,
+                  properties: {
+                    tip: { type: Type.STRING, description: 'aylik_son_hafta | aylik | haftalik | yillik | gunluk' },
+                    aralik_gun: { type: Type.INTEGER, description: 'Gün aralığı (örn: 30)' },
+                  },
+                },
                 ikon: { type: Type.STRING, description: 'tek emoji' },
                 renk: { type: Type.STRING, description: 'pastel hex' },
               },
@@ -722,9 +754,20 @@ Kullanıcı girdisi: "${text}".
               sart: String(parsed.tetikleyici.sart || ''),
               etiket: String(parsed.tetikleyici.etiket || ''),
             } : null,
+            periyodik: parsed.periyodik && parsed.periyodik.tip ? {
+              tip: parsed.periyodik.tip,
+              aralik_gun: typeof parsed.periyodik.aralik_gun === 'number' ? parsed.periyodik.aralik_gun : 30,
+              bir_sonraki_tarih_iso: parsed.tarih_iso || undefined,
+            } : null,
             hazirlik_zamani: parsed.hazirlik_zamani ? String(parsed.hazirlik_zamani) : null,
             hazirlik_iso: parsed.hazirlik_iso ? String(parsed.hazirlik_iso) : null,
             anomali_notu: parsed.anomali_notu ? String(parsed.anomali_notu) : null,
+            action_items: Array.isArray(parsed.action_items) && parsed.action_items.length > 0
+              ? parsed.action_items.map((item: any) => ({
+                  task: String(item.task || item),
+                  is_completed: false,
+                }))
+              : null,
             ikon: String(parsed.ikon || '📌'),
             renk: String(parsed.renk || '#FEF3C7'),
           };

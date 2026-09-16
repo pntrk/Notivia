@@ -43,6 +43,7 @@ import {
   compressImage,
 } from './utils/mediaStorage.ts';
 import { PWAInstallButton } from './components/PWAInstallButton.tsx';
+import { NotificationPermissionPrompt } from './components/NotificationPermissionPrompt.tsx';
 import { OfflineIndicator } from './components/OfflineIndicator.tsx';
 
 interface SimpleCardItem {
@@ -60,6 +61,11 @@ interface SimpleCardItem {
   anomali_notu?: string | null;
   teshis_notu?: string | null;
   baglantili_hatirlatma?: string | null;
+  periyodik?: {
+    tip: string;
+    aralik_gun?: number;
+    bir_sonraki_tarih_iso?: string;
+  } | null;
   action_items?: ActionItem[] | null;
   calendar_event_id?: string | null;
   calendarEventId?: string | null;
@@ -337,6 +343,7 @@ export default function App() {
                   conflictWith: d.conflictWith || d.conflictWarning || null,
                   conflictWarning: d.conflictWith || d.conflictWarning || null,
                   action_items: d.action_items || null,
+                  periyodik: d.periyodik || null,
                   ikon: d.ikon || '📌',
                   renk: d.renk || '#FEF3C7',
                   mediaId: d.mediaId || null,
@@ -638,6 +645,11 @@ export default function App() {
     renk?: string;
     mediaId?: string | null;
     baglantili_hatirlatma?: string | null;
+    periyodik?: {
+      tip: string;
+      aralik_gun?: number;
+      bir_sonraki_tarih_iso?: string;
+    } | null;
   }) => {
     // Check reactive triggers against existing cards
     const triggeredCards = checkReactiveTriggers(noteData.baslik + ' ' + (noteData.zaman || ''), cards);
@@ -652,14 +664,39 @@ export default function App() {
     const nowIso = new Date().toISOString();
     const tempId = 'local_' + Date.now();
 
-    // Cihaz Takvimi / Yerel Hatırlatıcı Kur
+    // Cihaz Takvimi / Yerel & Push Bildirim Alarmı Kur
     if (noteData.tarih_iso) {
-      scheduleLocalDeviceReminder(tempId, noteData.baslik, noteData.tarih_iso, noteData.ikon);
+      scheduleLocalDeviceReminder(
+        tempId,
+        noteData.baslik,
+        noteData.tarih_iso,
+        noteData.ikon,
+        noteData.periyodik,
+        (nextIso) => {
+          // Bir sonraki periyodun bildirim güncellemesi
+          console.log(`Sonraki periyot tarihi güncellendi: ${nextIso}`);
+        }
+      );
       requestDeviceNotificationPermission().catch(() => {});
+    }
+
+    // Predictive Action Graph: Ön Hazırlık Alarmı Kur (Tersine Hatırlatıcı)
+    if (noteData.hazirlik_iso) {
+      const prepId = tempId + '_prep';
+      const prepTitle = `Ön Hazırlık: ${noteData.baslik}`;
+      scheduleLocalDeviceReminder(
+        prepId,
+        prepTitle,
+        noteData.hazirlik_iso,
+        '⏳',
+        null
+      );
     }
 
     if (conflictWith) {
       setStatusText(`Not eklendi (Çakışma: ${conflictWith})`);
+    } else if (noteData.periyodik) {
+      setStatusText('Periyodik hatırlatıcı kuruldu 🔄🔔');
     } else if (noteData.tarih_iso) {
       setStatusText('Cihaz hatırlatıcısı kuruldu ⏰');
     }
@@ -1260,6 +1297,14 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
           id="cards-container"
           className="flex-1 overflow-y-auto px-5 py-3 space-y-3 pb-32"
         >
+          {/* Bildirim İzin Talebi ve Durumu */}
+          <NotificationPermissionPrompt
+            onStatusChange={(msg) => {
+              setStatusText(msg);
+              setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 3000);
+            }}
+          />
+
           {/* Gizlenebilir Arama Alanı */}
           <div
             id="search-bar-container"
@@ -1377,6 +1422,15 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                                   📅 Takvimde
                                 </span>
                               )}
+                              {item.periyodik && (
+                                <span
+                                  className="text-[9px] bg-emerald-500/15 text-emerald-800 border border-emerald-500/30 px-1.5 py-0.5 rounded font-medium shrink-0 flex items-center gap-1 shadow-2xs"
+                                  title="Döngüsel bildirim devrede: Her dönem otomatik hatırlatılır"
+                                >
+                                  <span>🔄</span>
+                                  <span>{item.periyodik.tip === 'aylik_son_hafta' ? 'Ay Sonu Tekrarlı' : 'Periyodik'}</span>
+                                </span>
+                              )}
                               {item.tarih_iso && (
                                 <div className="flex items-center gap-1 shrink-0">
                                   <button
@@ -1447,11 +1501,11 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                         {/* Kart İçi Alt Görevler Alanı */}
                         {item.action_items && item.action_items.length > 0 && (
                           <div className="mt-2 pt-2 border-t border-black/5">
-                            <details className="group">
+                            <details className="group" open>
                               <summary className="text-[10px] font-semibold text-stone-600 flex items-center justify-between cursor-pointer list-none select-none">
                                 <span className="flex items-center gap-1">
                                   <span>📋</span>
-                                  <span>{item.action_items.filter(t => t.is_completed).length}/{item.action_items.length} Alt Görev</span>
+                                  <span>{item.action_items.filter(t => t.is_completed).length}/{item.action_items.length} Ön Hazırlık Adımı</span>
                                 </span>
                                 <span className="text-[9px] text-stone-400 group-open:rotate-180 transition-transform">▼</span>
                               </summary>
