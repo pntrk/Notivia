@@ -3,6 +3,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { parseWithGemini, parseSimpleWithGemini, parseWithAIAndImage } from './src/server/geminiParser.ts';
+import { dispatchWithGemini } from './src/server/dispatcherAgent.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,6 +48,34 @@ app.post('/api/parse-simple', async (req, res) => {
     return res.status(500).json({
       success: false,
       error: error?.message || 'Ayrıştırma hatası.',
+    });
+  }
+});
+
+// Autonomous Dispatcher Agent Endpoint (Function Calling: get_calendar_events, create_note_or_event, draft_message)
+app.post('/api/dispatch', async (req, res) => {
+  try {
+    const { input, current_datetime } = req.body;
+    const cleanInput = String(input || '').trim();
+    const now = String(current_datetime || new Date().toISOString());
+
+    if (!cleanInput) {
+      return res.status(400).json({
+        success: false,
+        error: 'Girdi metni boş olamaz.',
+      });
+    }
+
+    const result = await dispatchWithGemini(cleanInput, now);
+    return res.json({
+      success: true,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('[Notivia Dispatcher Error]:', error);
+    return res.status(500).json({
+      success: false,
+      error: error?.message || 'Yönlendirme hatası.',
     });
   }
 });

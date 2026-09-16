@@ -119,17 +119,35 @@ const activeTimers: Map<string, number> = new Map();
  * Tarayıcı / Cihaz bildirim izni ister
  */
 export async function requestDeviceNotificationPermission(): Promise<boolean> {
-  if (typeof window === 'undefined' || !('Notification' in window)) {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+  if (!('Notification' in window)) {
     return false;
   }
   if (Notification.permission === 'granted') {
     return true;
   }
-  if (Notification.permission !== 'denied') {
-    const perm = await Notification.requestPermission();
-    return perm === 'granted';
+  if (Notification.permission === 'denied') {
+    return false;
   }
-  return false;
+
+  try {
+    // iframe içinde bazı tarayıcılar requestPermission çağrısında hata fırlatabilir
+    const req = Notification.requestPermission();
+    let perm: NotificationPermission;
+    if (req && typeof req.then === 'function') {
+      perm = await req;
+    } else {
+      perm = await new Promise<NotificationPermission>((resolve) => {
+        Notification.requestPermission((p) => resolve(p));
+      });
+    }
+    return perm === 'granted';
+  } catch (err) {
+    console.warn('Tarayıcı bildirim izni istenirken kısıtlandı (muhtemelen iframe ortamı):', err);
+    return false;
+  }
 }
 
 /**
@@ -247,6 +265,187 @@ export function scheduleLocalDeviceReminder(
   }, diffMs);
 
   activeTimers.set(id, timerId);
+}
+
+/**
+ * Bellekteki tüm zamanlanmış zamanlayıcıları temizler (Örn: bildirimler kapatıldığında)
+ */
+export function clearAllScheduledReminders(): void {
+  activeTimers.forEach((timerId) => window.clearTimeout(timerId));
+  activeTimers.clear();
+}
+
+export interface SystemNotificationOptions {
+  title: string;
+  body: string;
+  icon?: string;
+  badge?: string;
+  tag?: string;
+  silent?: boolean;
+  data?: any;
+}
+
+/**
+ * Sistem bildirimi gösterir (PWA Service Worker veya standart Notification API)
+ * Ayrıca uygulama içi bildirim olayını ve sesli alarmı her durumda tetikler.
+ */
+export async function showSystemNotification(options: SystemNotificationOptions): Promise<boolean> {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  if (!options.silent) {
+    playNotificationChime();
+  }
+
+  // Uygulama içi bildirim dinleyicilerine her durumda bildirim objesini ilet
+  try {
+    window.dispatchEvent(new CustomEvent('notivia_notification', { detail: options }));
+  } catch {
+    // ignore
+  }
+
+  if (!('Notification' in window) || Notification.permission !== 'granted') {
+    return false;
+  }
+
+  const iconUrl = options.icon || '/icon.svg';
+  const badgeUrl = options.badge || '/icon.svg';
+
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready.catch(() => null);
+      if (reg && reg.showNotification) {
+        await reg.showNotification(options.title, {
+          body: options.body,
+          icon: iconUrl,
+          badge: badgeUrl,
+          tag: options.tag || `notivia-${Date.now()}`,
+          renotify: true,
+          data: options.data || { url: '/' },
+        } as any);
+        return true;
+      }
+    }
+
+    new Notification(options.title, {
+      body: options.body,
+      icon: iconUrl,
+      tag: options.tag || `notivia-${Date.now()}`,
+    });
+    return true;
+  } catch (err) {
+    console.warn('Sistem bildirimi gösterilirken hata:', err);
+    return false;
+  }
+}
+
+/**
+ * Kullanıcının mevcut tüm kartlarındaki ileri tarihli randevu, periyodik görev ve hazırlık alarmlarını sisteme kurar.
+ */
+export function scheduleAllCardReminders(cards: any[]): number {
+  if (!Array.isArray(cards) || typeof window === 'undefined') return 0;
+
+  let scheduledCount = 0;
+  const now = Date.now();
+
+  for (const card of cards) {
+    if (!card || card.tamamlandi) continue;
+
+    // 1. Ana randevu / etkinlik alarmı
+    if (card.tarih_iso) {
+      const targetTime = new Date(card.tarih_iso).getTime();
+      if (targetTime > now) {
+        scheduleLocalDeviceReminder(
+          card.id,
+          card.baslik || 'Hatırlatıcı',
+          card.tarih_iso,
+          card.ikon || '📌',
+          card.periyodik || null
+        );
+        scheduledCount++;
+      }
+    }
+
+    // 2. Ön hazırlık alarmı (Tersine takvim planlaması)
+    if (card.hazirlik_iso) {
+      const prepTime = new Date(card.hazirlik_iso).getTime();
+      if (prepTime > now) {
+        const prepId = `${card.id}_prep`;
+        const prepTitle = `Ön Hazırlık: ${card.baslik || 'Görev'}`;
+        scheduleLocalDeviceReminder(
+          prepId,
+          prepTitle,
+          card.hazirlik_iso,
+          '⏳',
+          null
+        );
+        scheduledCount++;
+      }
+    }
+  }
+
+  return scheduledCount;
+}
+
+/**
+ * Bilişsel Asistan: Günün randevu ve bekleyen görevlerini özetleyen anlık bildirim gönderir.
+ */
+export async function triggerDailyAssistantSummary(
+  cards: any[],
+  language: 'tr' | 'en' = 'tr'
+): Promise<boolean> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const todayCards = (cards || []).filter((c) => {
+    if (!c || c.tamamlandi) return false;
+    if (c.tarih_iso) {
+      const d = new Date(c.tarih_iso);
+      return d >= today && d < tomorrow;
+    }
+    return false;
+  });
+
+  if (todayCards.length === 0) {
+    return showSystemNotification({
+      title: language === 'tr' ? '✨ Notivia Bilişsel Asistan' : '✨ Notivia Cognitive Assistant',
+      body: language === 'tr'
+        ? 'Bugün için bekleyen planlanmış randevunuz bulunmuyor. Harika bir gün dileriz!'
+        : 'You have no pending scheduled appointments for today. Have a productive day!',
+      tag: 'notivia-daily-summary',
+    });
+  }
+
+  const firstTitles = todayCards
+    .slice(0, 2)
+    .map((c) => c.baslik)
+    .join(', ');
+  const moreText = todayCards.length > 2 ? ` (+${todayCards.length - 2})` : '';
+  const bodyText = language === 'tr'
+    ? `Bugün ajandanızda ${todayCards.length} plan var: ${firstTitles}${moreText}`
+    : `You have ${todayCards.length} scheduled items today: ${firstTitles}${moreText}`;
+
+  return showSystemNotification({
+    title: language === 'tr' ? '📋 Notivia: Günün Ajandası' : "📋 Notivia: Today's Schedule",
+    body: bodyText,
+    tag: 'notivia-daily-summary',
+  });
+}
+
+/**
+ * Bildirim mekanizmasını test etmek için anlık asistan uyarısı gönderir.
+ */
+export async function testAssistantNotification(language: 'tr' | 'en' = 'tr'): Promise<boolean> {
+  return showSystemNotification({
+    title: language === 'tr' ? '🔔 Notivia Bildirimleri Aktif' : '🔔 Notivia Notifications Active',
+    body: language === 'tr'
+      ? 'Harika! Cihaz bildirimleriniz sorunsuz çalışıyor. Randevularınız ve ön hazırlık adımlarınız vakti gelince hatırlatılacak.'
+      : 'Great! Device notifications are working smoothly. Your appointments and preparation tasks will alert on time.',
+    tag: 'notivia-test-ping',
+  });
 }
 
 /**

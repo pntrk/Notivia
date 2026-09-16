@@ -293,16 +293,8 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 
 // Initial connection test
 export async function testConnection() {
-  try {
-    if (db) {
-      await getDocFromServer(doc(db, 'test', 'connection'));
-    }
-  } catch (error) {
-    // Database may not be provisioned yet; fallback storage handles notes safely
-  }
+  // Firestore is not used for data storage; app uses local-first and Google Drive backup
 }
-
-testConnection();
 
 export interface FirebaseConfig {
   apiKey: string;

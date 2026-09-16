@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Mic } from 'lucide-react';
 import {
   auth,
   googleProvider,
@@ -26,6 +27,11 @@ import {
   scheduleLocalDeviceReminder,
   requestDeviceNotificationPermission,
   playNotificationChime,
+  showSystemNotification,
+  scheduleAllCardReminders,
+  clearAllScheduledReminders,
+  triggerDailyAssistantSummary,
+  testAssistantNotification,
 } from './utils/deviceCalendar.ts';
 import {
   saveLocalMedia,
@@ -38,8 +44,9 @@ import {
   saveNotesToGoogleDrive,
 } from './utils/driveStorage.ts';
 import { PWAInstallButton } from './components/PWAInstallButton.tsx';
-import { NotificationPermissionPrompt } from './components/NotificationPermissionPrompt.tsx';
 import { OfflineIndicator } from './components/OfflineIndicator.tsx';
+import { SettingsModal } from './components/SettingsModal.tsx';
+import { translations, type Language } from './utils/i18n.ts';
 
 export interface SimpleCardItem {
   id: string;
@@ -124,14 +131,14 @@ function generateWhisperText(note: {
   return `${note.baslik} kaydedildi.`;
 }
 
-function formatCreatedTime(rawTime: any): string {
+function formatCreatedTime(rawTime: any, lang: Language = 'tr'): string {
   if (!rawTime) return "";
   
   // Firestore Timestamp veya standart Date ayrıştırma
   const date = rawTime.toDate ? rawTime.toDate() : new Date(rawTime);
   if (isNaN(date.getTime())) return "";
 
-  return date.toLocaleDateString("tr-TR", {
+  return date.toLocaleDateString(lang === 'en' ? 'en-US' : 'tr-TR', {
     day: "numeric",
     month: "short",
     hour: "2-digit",
@@ -241,6 +248,203 @@ export default function App() {
 
   const [isSyncingDrive, setIsSyncingDrive] = useState<boolean>(false);
   const [driveSyncTime, setDriveSyncTime] = useState<string | null>(null);
+
+  // Otonom Ajan Yönlendirici (Autonomous Dispatcher) Sonuç Modalları
+  const [draftedMessage, setDraftedMessage] = useState<{
+    alici: string;
+    kanal: 'whatsapp' | 'email' | 'sms' | 'duyuru' | string;
+    konu?: string;
+    metin: string;
+    sesli_fisilti: string;
+  } | null>(null);
+
+  const [calendarQueryResults, setCalendarQueryResults] = useState<{
+    sorgu_tipi: string;
+    start_iso: string;
+    end_iso: string;
+    matchingCount: number;
+    matchingNotes: SimpleCardItem[];
+    sesli_fisilti: string;
+  } | null>(null);
+
+  // Ayarlar ve Tercihler State'leri
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    try {
+      const saved = localStorage.getItem('notivia_theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    } catch {
+      return 'light';
+    }
+  });
+  const [language, setLanguage] = useState<Language>(() => {
+    try {
+      const saved = localStorage.getItem('notivia_lang');
+      if (saved === 'tr' || saved === 'en') return saved;
+      const navLang = navigator.language?.toLowerCase() || '';
+      return navLang.startsWith('tr') ? 'tr' : 'en';
+    } catch {
+      return 'tr';
+    }
+  });
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const storedPref = localStorage.getItem('notivia_notifications_enabled');
+        if (storedPref !== null) {
+          return storedPref === 'true';
+        }
+        if ('Notification' in window && Notification.permission === 'granted') {
+          return true;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return false;
+  });
+
+  // Ekran üstü anlık asistan bildirim bildirici (Push Banner)
+  const [activeBannerNotification, setActiveBannerNotification] = useState<{
+    title: string;
+    body: string;
+    icon?: string;
+  } | null>(null);
+
+  const t = translations[language];
+
+  // Tema değişikliğinde html sınıfını ve localStorage'ı güncelle
+  useEffect(() => {
+    try {
+      localStorage.setItem('notivia_theme', theme);
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    } catch {
+      // ignore
+    }
+  }, [theme]);
+
+  // Dil değişikliğinde html lang ve localStorage'ı güncelle
+  useEffect(() => {
+    try {
+      localStorage.setItem('notivia_lang', language);
+      document.documentElement.lang = language;
+    } catch {
+      // ignore
+    }
+  }, [language]);
+
+  // Kartlar güncellendiğinde veya bildirimler açıkken alarmları sisteme kur
+  useEffect(() => {
+    if (notificationsEnabled && cards.length > 0) {
+      scheduleAllCardReminders(cards);
+    }
+  }, [cards, notificationsEnabled]);
+
+  // Uygulama içi push bildirim başlığı dinleyicisi
+  useEffect(() => {
+    const handleInAppNotif = (e: any) => {
+      const detail = e.detail;
+      if (detail && notificationsEnabled) {
+        setActiveBannerNotification({
+          title: detail.title || 'Notivia Bildirimi',
+          body: detail.body || '',
+          icon: detail.icon || '🔔',
+        });
+        const timer = window.setTimeout(() => {
+          setActiveBannerNotification(null);
+        }, 4500);
+        return () => window.clearTimeout(timer);
+      }
+    };
+
+    window.addEventListener('notivia_notification', handleInAppNotif);
+    return () => window.removeEventListener('notivia_notification', handleInAppNotif);
+  }, [notificationsEnabled]);
+
+  const handleToggleTheme = () => {
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
+  };
+
+  const handleSelectLanguage = (newLang: Language) => {
+    setLanguage(newLang);
+  };
+
+  const handleToggleNotifications = async () => {
+    if (notificationsEnabled) {
+      setNotificationsEnabled(false);
+      localStorage.setItem('notivia_notifications_enabled', 'false');
+      clearAllScheduledReminders();
+      setStatusText(language === 'tr' ? 'Bildirimler kapatıldı 🔕' : 'Notifications disabled 🔕');
+      setTimeout(() => setStatusText(t.speakOrWrite), 2500);
+      return;
+    }
+
+    // Bildirimleri aç
+    setNotificationsEnabled(true);
+    localStorage.setItem('notivia_notifications_enabled', 'true');
+    scheduleAllCardReminders(cards);
+
+    const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
+    let systemGranted = false;
+
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      try {
+        systemGranted = await requestDeviceNotificationPermission();
+      } catch {
+        systemGranted = false;
+      }
+    }
+
+    if (systemGranted) {
+      await showSystemNotification({
+        title: language === 'tr' ? '🔔 Notivia Bildirimleri Aktif' : '🔔 Notivia Notifications Active',
+        body: language === 'tr'
+          ? 'Masaüstü/cihaz bildirimleri ve sesli alarmlarınız aktif edildi.'
+          : 'Desktop notifications and audio alarms are active.',
+      });
+      setStatusText(language === 'tr' ? 'Masaüstü ve sesli bildirimler açıldı ✓' : 'System notifications enabled ✓');
+    } else {
+      await showSystemNotification({
+        title: language === 'tr' ? '🔔 Notivia Bildirimleri Açık' : '🔔 Notivia Notifications Active',
+        body: language === 'tr'
+          ? isInIframe
+            ? 'Uygulama içi sesli alarmlar aktif. Masaüstü pencereleri için uygulamayı yeni sekmede açabilirsiniz.'
+            : 'Uygulama içi sesli alarmlar ve hatırlatıcılar aktif edildi.'
+          : 'In-app audio alarms are active.',
+      });
+      setStatusText(
+        language === 'tr'
+          ? isInIframe
+            ? 'Uygulama içi alarmlar açıldı 🔔 (Masaüstü için yeni sekmede açın)'
+            : 'Uygulama içi sesli alarmlar açıldı 🔔'
+          : 'In-app alarms active 🔔'
+      );
+    }
+    setTimeout(() => setStatusText(t.speakOrWrite), 3500);
+  };
+
+  const handleSendTestNotification = async () => {
+    setNotificationsEnabled(true);
+    localStorage.setItem('notivia_notifications_enabled', 'true');
+    await requestDeviceNotificationPermission().catch(() => false);
+    await testAssistantNotification(language);
+    setStatusText(language === 'tr' ? 'Test bildirimi ve sesli zil çalındı 🔔' : 'Test notification & chime played 🔔');
+    setTimeout(() => setStatusText(t.speakOrWrite), 2500);
+  };
+
+  const handleRemindTodayTasks = async () => {
+    setNotificationsEnabled(true);
+    localStorage.setItem('notivia_notifications_enabled', 'true');
+    await requestDeviceNotificationPermission().catch(() => false);
+    await triggerDailyAssistantSummary(cards, language);
+    setStatusText(language === 'tr' ? 'Günün ajandası bildirildi 📋' : "Today's schedule notified 📋");
+    setTimeout(() => setStatusText(t.speakOrWrite), 2500);
+  };
 
   const recognitionRef = useRef<any>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -1109,6 +1313,113 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
       }
     }
 
+    // Sunucu tarafı Otonom Ajan Yönlendiricisini (Autonomous Dispatcher) çağır
+    if (textInput && !base64Image) {
+      try {
+        const dRes = await fetch('/api/dispatch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            input: textInput,
+            current_datetime: currentNow,
+          }),
+        });
+
+        if (dRes.ok) {
+          const dJson = await dRes.json();
+          if (dJson.success && dJson.data) {
+            const { tool, arguments: args, sesli_fisilti } = dJson.data;
+
+            // 1. Takvim & Ajanda Okuyucu (get_calendar_events)
+            if (tool === 'get_calendar_events') {
+              const startMs = new Date(args.start_iso).getTime();
+              const endMs = new Date(args.end_iso).getTime();
+              const matching = cards.filter((c) => {
+                if (!c.tarih_iso) return false;
+                const t = new Date(c.tarih_iso).getTime();
+                return t >= startMs && t <= endMs;
+              });
+
+              let whisper = args.sesli_fisilti || 'Ajandanız kontrol edildi.';
+              if (matching.length === 0) {
+                whisper = `${whisper} Belirtilen aralıkta herhangi bir planınız bulunmuyor.`;
+              } else {
+                whisper = `${whisper} ${matching.length} adet planınız var: ${matching.map((m) => m.baslik).join(', ')}`;
+              }
+
+              setCalendarQueryResults({
+                sorgu_tipi: args.period_label || args.sorgu_tipi || 'bugun',
+                start_iso: args.start_iso,
+                end_iso: args.end_iso,
+                matchingCount: matching.length,
+                matchingNotes: matching,
+                sesli_fisilti: whisper,
+              });
+
+              setStatusText(whisper);
+              if (isSpoken) {
+                speakFeedback(whisper);
+              }
+              resetMicUI();
+              return;
+            }
+
+            // 2. İletişim & Taslak Hazırlayıcı (draft_message)
+            if (tool === 'draft_message') {
+              const alici = args.recipient || args.alici || 'İlgili Kişi';
+              const kanal = args.channel || args.kanal || 'whatsapp';
+              const konu = args.subject || args.konu || 'Bilgilendirme';
+              const metin = args.message_body || args.metin || '';
+
+              setDraftedMessage({
+                alici,
+                kanal,
+                konu,
+                metin,
+                sesli_fisilti: args.sesli_fisilti || 'Mesaj taslağınız hazırlandı.',
+              });
+
+              const whisper = args.sesli_fisilti || `${alici} için ${kanal === 'email' ? 'e-posta' : 'mesaj'} taslağı hazırlandı.`;
+              setStatusText(whisper);
+              if (isSpoken) {
+                speakFeedback(whisper);
+              }
+              resetMicUI();
+              return;
+            }
+
+            // 3. Bilişsel Eylem & Not Oluşturucu (create_note_or_event)
+            if (tool === 'create_note_or_event') {
+              const createdNote = {
+                baslik: args.baslik,
+                zaman: args.zaman,
+                tarih_iso: args.tarih_iso,
+                hazirlik_zamani: args.hazirlik_zamani,
+                hazirlik_iso: args.hazirlik_iso,
+                action_items: args.action_items,
+                anomali_notu: args.anomali_notu,
+                ikon: args.ikon || '📌',
+                renk: args.renk || '#FEF3C7',
+                periyodik: args.periyodik,
+                tetikleyici: args.tetikleyici,
+                mediaId,
+              };
+
+              await addNote(createdNote);
+              const whisper = args.sesli_fisilti || generateWhisperText(createdNote);
+              if (isSpoken) {
+                speakFeedback(whisper);
+              }
+              resetMicUI();
+              return;
+            }
+          }
+        }
+      } catch (dispErr) {
+        console.warn('Otonom yönlendirici hatası, ayrıştırmaya devam ediliyor:', dispErr);
+      }
+    }
+
     // Sunucu tarafı proxy'yi çağır (GEMINI_API_KEY sunucuda güvenle saklanır)
     let parsedByServer = false;
     try {
@@ -1284,50 +1595,25 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
   });
 
   return (
-    <div className="bg-stone-100 text-stone-800 antialiased select-none min-h-screen flex items-center justify-center">
+    <div className={`min-h-screen flex items-center justify-center antialiased select-none transition-colors duration-200 ${
+      theme === 'dark' ? 'bg-stone-950 text-stone-100' : 'bg-stone-100 text-stone-800'
+    }`}>
       {/* Masaüstünde telefon gibi ortalanan, mobilde tam ekran olan kapsayıcı */}
-      <main className="w-full max-w-md h-[100dvh] flex flex-col justify-between bg-white relative shadow-sm overflow-hidden sm:border sm:border-stone-200">
+      <main className={`w-full max-w-md h-[100dvh] flex flex-col justify-between relative shadow-sm overflow-hidden sm:border transition-colors duration-200 ${
+        theme === 'dark' ? 'bg-stone-900 sm:border-stone-800 text-stone-100' : 'bg-white sm:border-stone-200 text-stone-800'
+      }`}>
         
-        {/* Üst Bar: Başlık & Senkronizasyon & Profil */}
+        {/* Üst Bar: Başlık & Ayarlar */}
         <header className="px-6 pt-6 pb-2 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-stone-900">Notivia</h1>
-            <div className="flex items-center gap-1.5">
-              <span
-                id="sync-status"
-                className={`text-[11px] font-medium transition-colors flex items-center gap-1 ${
-                  isCloudSync ? 'text-emerald-600' : 'text-stone-400'
-                }`}
-                title={
-                  isCloudSync
-                    ? isSyncingDrive
-                      ? 'Google Drive senkronize ediliyor...'
-                      : `Google Drive Yedekli (${driveSyncTime ? `Son: ${driveSyncTime}` : 'Hazır'})`
-                    : 'Kişisel verileriniz sadece bu cihazda saklanır'
-                }
-              >
-                {isCloudSync ? (
-                  <>
-                    <svg className={`w-3 h-3 ${isSyncingDrive ? 'animate-spin text-emerald-500' : 'text-emerald-600'}`} viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z" />
-                    </svg>
-                    {isSyncingDrive ? 'Drive Eşitleniyor...' : 'Google Drive Yedekli'}
-                  </>
-                ) : (
-                  'Lokal Mod'
-                )}
-              </span>
-              {isCloudSync && !isSyncingDrive && (
-                <button
-                  type="button"
-                  onClick={() => syncFromDrive()}
-                  title="Google Drive'dan şimdi eşitle"
-                  className="text-stone-400 hover:text-emerald-600 text-[10px] p-0.5 rounded transition-colors"
-                >
-                  ↻
-                </button>
-              )}
-            </div>
+          <div className="flex items-center gap-2.5">
+            <img
+              src="/icon.svg"
+              alt="Notivia Logo"
+              className="w-7 h-7 rounded-lg shadow-xs ring-1 ring-stone-900/10 dark:ring-white/15 shrink-0 object-contain"
+              width={28}
+              height={28}
+            />
+            <h1 className={`text-2xl font-bold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-stone-900'}`}>Notivia</h1>
           </div>
 
           <div id="auth-container" className="flex items-center gap-2">
@@ -1341,9 +1627,13 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                 setIsSelectMode((prev) => !prev);
                 setSelectedCardIds([]);
               }}
-              title={isSelectMode ? "Çoklu seçimden çık" : "Çoklu not seç / sil"}
+              title={isSelectMode ? t.exitMultiSelectTitle : t.multiSelectTitle}
               className={`p-1.5 rounded-full transition-colors ${
-                isSelectMode ? 'text-stone-900 bg-amber-200' : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100'
+                isSelectMode 
+                  ? 'text-stone-900 bg-amber-200' 
+                  : theme === 'dark'
+                  ? 'text-stone-400 hover:text-stone-200 hover:bg-stone-800'
+                  : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100'
               }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1358,9 +1648,11 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                 setShowSearch((prev) => !prev);
                 if (showSearch) setSearchQuery('');
               }}
-              title="Notlarda ara"
+              title={t.searchTitle}
               className={`p-1.5 rounded-full transition-colors ${
-                showSearch ? 'text-stone-900 bg-stone-200' : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100'
+                showSearch 
+                  ? theme === 'dark' ? 'text-white bg-stone-800' : 'text-stone-900 bg-stone-200'
+                  : theme === 'dark' ? 'text-stone-400 hover:text-stone-200 hover:bg-stone-800' : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100'
               }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1372,66 +1664,69 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
             <button
               type="button"
               onClick={handleToggleTextInput}
-              title="Metin ile yaz"
-              className="p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+              title={t.keyboardToggleTitle}
+              className={`p-1.5 rounded-full transition-colors ${
+                showTextInput
+                  ? theme === 'dark' ? 'text-white bg-stone-800' : 'text-stone-900 bg-stone-200'
+                  : theme === 'dark' ? 'text-stone-400 hover:text-stone-200 hover:bg-stone-800' : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100'
+              }`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
             </button>
 
-            {!activeUser ? (
-              <button
-                id="login-btn"
-                type="button"
-                onClick={handleLogin}
-                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border border-stone-200 text-stone-600 active:bg-stone-100 transition-colors cursor-pointer"
-              >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+            {/* Ayarlar ve Profil Butonu (Focus-mode & User Request) */}
+            <button
+              id="user-avatar-btn"
+              type="button"
+              onClick={() => setIsSettingsOpen(true)}
+              title={t.settingsTitle}
+              className={`relative p-1.5 rounded-full border transition-all active:scale-95 cursor-pointer ${
+                theme === 'dark'
+                  ? 'border-stone-700 bg-stone-800/80 text-stone-200 hover:bg-stone-700 hover:border-stone-600'
+                  : 'border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100 hover:border-stone-300'
+              }`}
+            >
+              {activeUser ? (
+                <div className="w-5 h-5 rounded-full overflow-hidden relative">
+                  <img
+                    id="user-avatar"
+                    src={
+                      activeUser.photoURL ||
+                      `https://api.dicebear.com/7.x/identicon/svg?seed=${activeUser.uid}`
+                    }
+                    alt={activeUser.displayName || 'Profile'}
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Minik ayar rozeti */}
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full border border-white" />
+                </div>
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
                   />
                   <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                   />
                 </svg>
-                Giriş
-              </button>
-            ) : (
-              <button
-                id="user-avatar-btn"
-                type="button"
-                onClick={handleSignOut}
-                title={`${activeUser.displayName || 'Kullanıcı'} - Çıkış yapmak için tıkla`}
-                className="w-8 h-8 rounded-full overflow-hidden border border-stone-200 active:scale-95 transition-transform cursor-pointer"
-              >
-                <img
-                  id="user-avatar"
-                  src={
-                    activeUser.photoURL ||
-                    `https://api.dicebear.com/7.x/identicon/svg?seed=${activeUser.uid}`
-                  }
-                  alt="Profil"
-                  className="w-full h-full object-cover"
-                />
-              </button>
-            )}
+              )}
+            </button>
           </div>
         </header>
 
         {/* Metin Girişi (Klavye Modu) */}
         {showTextInput && (
-          <div className="px-6 py-2 border-b border-stone-100 animate-in fade-in duration-150">
+          <div className={`px-6 py-2 border-b animate-in fade-in duration-150 ${
+            theme === 'dark' ? 'border-stone-800 bg-stone-900/60' : 'border-stone-100 bg-stone-50/50'
+          }`}>
             <form
               id="text-input-form"
               onSubmit={handleManualTextSubmit}
@@ -1442,16 +1737,20 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                 type="text"
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
-                placeholder="Salı 19:00 Ahmet abiyle çay..."
-                className="flex-1 text-xs px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-stone-400 text-stone-800"
+                placeholder={t.manualInputPlaceholder}
+                className={`flex-1 text-xs px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-stone-400 border ${
+                  theme === 'dark'
+                    ? 'bg-stone-800 border-stone-700 text-stone-100 placeholder-stone-500'
+                    : 'bg-stone-50 border border-stone-200 text-stone-800'
+                }`}
                 autoFocus
               />
               <button
                 type="submit"
                 disabled={!textInput.trim()}
-                className="px-3 py-2 bg-stone-900 text-white rounded-xl text-xs font-semibold disabled:opacity-40 cursor-pointer"
+                className="px-3 py-2 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-xl text-xs font-semibold disabled:opacity-40 cursor-pointer"
               >
-                Ekle
+                {t.addButton}
               </button>
             </form>
           </div>
@@ -1462,14 +1761,6 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
           id="cards-container"
           className="flex-1 overflow-y-auto px-5 py-3 space-y-3 pb-32"
         >
-          {/* Bildirim İzin Talebi ve Durumu */}
-          <NotificationPermissionPrompt
-            onStatusChange={(msg) => {
-              setStatusText(msg);
-              setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 3000);
-            }}
-          />
-
           {/* Gizlenebilir Arama Alanı */}
           <div
             id="search-bar-container"
@@ -1482,8 +1773,12 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Notlarda ara (isim, borç, araba, tarih)..."
-              className="w-full text-xs px-3.5 py-2 bg-stone-100/80 border border-stone-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-stone-400 text-stone-800"
+              placeholder={t.searchPlaceholder}
+              className={`w-full text-xs px-3.5 py-2 border rounded-xl focus:outline-hidden focus:ring-1 focus:ring-stone-400 ${
+                theme === 'dark'
+                  ? 'bg-stone-800/80 border-stone-700 text-stone-100 placeholder-stone-500'
+                  : 'bg-stone-100/80 border-stone-200 text-stone-800'
+              }`}
             />
           </div>
 
@@ -1502,9 +1797,9 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                   }}
                   className="text-stone-300 hover:text-white underline font-medium cursor-pointer"
                 >
-                  {selectedCardIds.length === filteredCards.length ? 'Seçimi Kaldır' : 'Tümünü Seç'}
+                  {selectedCardIds.length === filteredCards.length ? t.clearSelection : t.selectAll}
                 </button>
-                <span className="text-stone-400">({selectedCardIds.length} seçili)</span>
+                <span className="text-stone-400">({selectedCardIds.length} {t.selectedCount})</span>
               </div>
 
               <div className="flex items-center gap-2">
@@ -1516,7 +1811,7 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                   }}
                   className="px-2.5 py-1 text-stone-300 hover:text-white rounded-lg hover:bg-stone-800 transition-colors cursor-pointer"
                 >
-                  İptal
+                  {t.cancelSelection}
                 </button>
                 <button
                   type="button"
@@ -1527,7 +1822,7 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
-                  Seçilenleri Sil ({selectedCardIds.length})
+                  {t.deleteSelected} ({selectedCardIds.length})
                 </button>
               </div>
             </div>
@@ -1535,7 +1830,7 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
 
           {filteredCards.length === 0 ? (
             <div className="text-center text-xs text-stone-400 mt-10">
-              {searchQuery ? 'Aramanızla eşleşen not bulunamadı.' : 'Henüz not yok. Konuş veya fotoğraf çek.'}
+              {searchQuery ? t.noSearchResults : t.emptyNotesDesc}
             </div>
           ) : (
             sortNotiviaCards(filteredCards).map((item) => {
@@ -1636,42 +1931,42 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                         <div className="flex items-center gap-1.5 flex-wrap">
                           {isExpired ? (
                             <span className="text-[9px] bg-stone-900/10 text-stone-600 px-1.5 py-0.5 rounded font-mono font-medium shrink-0 flex items-center gap-0.5">
-                              ⌛ Vadesi Geçti · {item.zaman || 'Tamamlanmadı'}
+                              ⌛ {t.expiredBadge} · {item.zaman || t.incompleteStatus}
                             </span>
                           ) : (
                             <>
                               {item.tetikleyici?.etiket ? (
                                 <span
                                   className="text-[10px] bg-white/85 text-stone-800 font-semibold px-2 py-0.5 rounded-md shrink-0 flex items-center gap-1 shadow-2xs border border-stone-900/10"
-                                  title={item.tetikleyici.sart ? `Koşul: ${item.tetikleyici.sart}` : undefined}
+                                  title={item.tetikleyici.sart ? `${t.conditionLabel}: ${item.tetikleyici.sart}` : undefined}
                                 >
                                   {item.tetikleyici.etiket}
                                 </span>
                               ) : (
                                 <p className="text-[11px] text-stone-600 truncate">
-                                  {item.zaman || 'Hatırlatıcı yok'}
+                                  {item.zaman || t.noReminder}
                                 </p>
                               )}
                               {item.hazirlik_zamani && (
                                 <span
                                   className="text-[9px] bg-white/80 text-amber-900 border border-amber-300/40 px-1.5 py-0.5 rounded font-medium shrink-0 flex items-center gap-0.5 shadow-2xs"
-                                  title={`Ön Hazırlık: ${item.hazirlik_zamani}`}
+                                  title={`${t.prepLeadTime}: ${item.hazirlik_zamani}`}
                                 >
                                   ⏳ {item.hazirlik_zamani}
                                 </span>
                               )}
                               {(item.calendarEventId || item.calendar_event_id) && (
                                 <span className="text-[9px] bg-white/70 text-stone-700 px-1 rounded shadow-2xs font-medium shrink-0">
-                                  📅 Takvimde
+                                  📅 {t.inCalendarBadge}
                                 </span>
                               )}
                               {item.periyodik && (
                                 <span
                                   className="text-[9px] bg-emerald-500/15 text-emerald-800 border border-emerald-500/30 px-1.5 py-0.5 rounded font-medium shrink-0 flex items-center gap-1 shadow-2xs"
-                                  title="Döngüsel bildirim devrede: Her dönem otomatik hatırlatılır"
+                                  title={t.periodicBadge}
                                 >
                                   <span>🔄</span>
-                                  <span>{item.periyodik.tip === 'aylik_son_hafta' ? 'Ay Sonu Tekrarlı' : 'Periyodik'}</span>
+                                  <span>{item.periyodik.tip === 'aylik_son_hafta' ? (language === 'tr' ? 'Ay Sonu Tekrarlı' : 'End of Month') : t.periodicBadge}</span>
                                 </span>
                               )}
                               {item.tarih_iso && (
@@ -1683,17 +1978,17 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                                       exportToDeviceCalendar({
                                         title: `${item.ikon || '📌'} ${item.baslik}`,
                                         startDate: new Date(item.tarih_iso!),
-                                        description: `Notivia Hatırlatıcı: ${item.baslik}`
+                                        description: `Notivia: ${item.baslik}`
                                       });
                                       playNotificationChime();
-                                      setStatusText('Cihaz takvimine (.ics) aktarıldı');
-                                      setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
+                                      setStatusText(language === 'tr' ? 'Cihaz takvimine (.ics) aktarıldı' : 'Exported to device calendar (.ics)');
+                                      setTimeout(() => setStatusText(t.speakOrWrite), 2500);
                                     }}
                                     className="text-[9px] bg-amber-100/90 hover:bg-amber-200 text-amber-900 border border-amber-300/80 px-1.5 py-0.5 rounded font-medium shrink-0 flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95 transition-all"
-                                    title="iPhone / Android Cihaz Takvimine (.ics) Ekle"
+                                    title={t.exportDeviceCalendar}
                                   >
                                     <span>📲</span>
-                                    <span>Cihaz Takvimine Ekle</span>
+                                    <span>{t.exportDeviceCalendar}</span>
                                   </button>
                                 </div>
                               )}
@@ -1703,7 +1998,7 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                           {/* Oluşturulma Zaman Damgası */}
                           {item.createdAt && (
                             <span className="text-[9px] text-stone-400 font-mono tracking-tight select-none ml-1">
-                              · {formatCreatedTime(item.createdAt)}
+                              · {formatCreatedTime(item.createdAt, language)}
                             </span>
                           )}
                         </div>
@@ -1712,7 +2007,7 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                         {(item.conflictWith || item.conflictWarning) && (
                           <p className="text-[10px] text-amber-700 font-medium flex items-center gap-1 mt-0.5">
                             <span>⚠️</span>
-                            <span className="truncate">'{item.conflictWith || item.conflictWarning}' ile çakışıyor</span>
+                            <span className="truncate">'{item.conflictWith || item.conflictWarning}' {t.conflictsWith}</span>
                           </p>
                         )}
 
@@ -1748,7 +2043,7 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                               <summary className="text-[10px] font-semibold text-stone-600 flex items-center justify-between cursor-pointer list-none select-none">
                                 <span className="flex items-center gap-1">
                                   <span>📋</span>
-                                  <span>{item.action_items.filter(t => t.is_completed).length}/{item.action_items.length} Ön Hazırlık Adımı</span>
+                                  <span>{item.action_items.filter(t => t.is_completed).length}/{item.action_items.length} {t.prepStepsTitle}</span>
                                 </span>
                                 <span className="text-[9px] text-stone-400 group-open:rotate-180 transition-transform">▼</span>
                               </summary>
@@ -1795,7 +2090,7 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                         shareNote(item);
                       }}
                       className="w-7 h-7 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-700 hover:bg-black/5 active:bg-black/10 transition-colors cursor-pointer"
-                      title="Notu paylaş veya kopyala"
+                      title={t.shareOrCopy}
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
@@ -1810,7 +2105,7 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                         directDeleteNote(item.id);
                       }}
                       className="w-7 h-7 rounded-full flex items-center justify-center text-stone-400 hover:text-red-600 hover:bg-red-50/80 active:bg-red-100 transition-colors cursor-pointer"
-                      title="Notu sil"
+                      title={t.deleteNoteTitle}
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1829,7 +2124,7 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                           ? 'bg-stone-800 border-stone-800 text-white shadow-xs'
                           : 'border-stone-300/80 text-stone-400 hover:text-stone-700 hover:border-stone-400 active:bg-white/80'
                       }`}
-                      title={isCompleted ? "Tamamlandı (Geri açmak için tıkla)" : "Tamamla (En alta üstü çizili gönderir)"}
+                      title={isCompleted ? t.reopenTitle : t.completeTitle}
                     >
                       ✓
                     </button>
@@ -1841,12 +2136,20 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
         </section>
 
         {/* Alt Kontrol Barı (Kamera + Mikrofon + Klavye) */}
-        <footer className="absolute bottom-0 inset-x-0 p-6 flex flex-col items-center bg-gradient-to-t from-white via-white/95 to-transparent pointer-events-auto">
+        <footer className={`absolute bottom-0 inset-x-0 p-6 flex flex-col items-center bg-gradient-to-t pointer-events-auto transition-colors duration-200 ${
+          theme === 'dark'
+            ? 'from-stone-900 via-stone-900/95 to-transparent'
+            : 'from-white via-white/95 to-transparent'
+        }`}>
           {/* Metin Giriş Formu (Açılır/Kapanır) */}
           <form
             id="text-input-form"
             onSubmit={handleManualTextSubmit}
-            className={`w-full mb-3 flex items-center gap-2 bg-stone-50 p-1.5 pl-3 rounded-2xl border border-stone-200 shadow-sm transition-all duration-200 ${
+            className={`w-full mb-3 flex items-center gap-2 p-1.5 pl-3 rounded-2xl border shadow-sm transition-all duration-200 ${
+              theme === 'dark'
+                ? 'bg-stone-800 border-stone-700 text-stone-100'
+                : 'bg-stone-50 border-stone-200 text-stone-800'
+            } ${
               showTextInput ? 'opacity-100 scale-100' : 'hidden opacity-0 scale-95 pointer-events-none'
             }`}
           >
@@ -1856,38 +2159,27 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
               type="text"
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
-              placeholder="Bir not yazın..."
-              className="flex-1 bg-transparent text-sm text-stone-800 placeholder-stone-400 outline-hidden py-1"
+              placeholder={t.manualInputPlaceholder}
+              className="flex-1 bg-transparent text-sm outline-hidden py-1"
             />
             <button
               type="submit"
-              className="px-3 py-1.5 bg-stone-900 text-white text-xs font-semibold rounded-xl active:scale-95 transition-all shrink-0 cursor-pointer"
+              className="px-3 py-1.5 bg-stone-900 dark:bg-white text-white dark:text-stone-900 text-xs font-semibold rounded-xl active:scale-95 transition-all shrink-0 cursor-pointer"
             >
-              Ekle
+              {t.addButton}
             </button>
           </form>
-
-          <p
-            id="status-text"
-            className={`text-xs mb-3 font-medium transition-colors ${
-              isListening
-                ? 'text-red-500 font-semibold'
-                : statusText.includes('Görsel') || statusText.includes('inceleniyor')
-                ? 'text-amber-600 font-semibold'
-                : statusText.includes('çözümlüyor') || statusText === 'Kaydediliyor...'
-                ? 'text-stone-700 font-semibold'
-                : 'text-stone-400'
-            }`}
-          >
-            {statusText}
-          </p>
 
           <div className="flex items-center gap-4">
             {/* Kamera / Galeri Butonu */}
             <label
               htmlFor="camera-input"
-              className="w-12 h-12 bg-stone-100 border border-stone-200 text-stone-700 rounded-full flex items-center justify-center shadow-xs active:scale-90 transition-all cursor-pointer"
-              title="Fotoğraf Çek / Görsel Yükle"
+              className={`w-12 h-12 border rounded-full flex items-center justify-center shadow-xs active:scale-90 transition-all cursor-pointer ${
+                theme === 'dark'
+                  ? 'bg-stone-800 border-stone-700 text-stone-200 hover:bg-stone-700'
+                  : 'bg-stone-100 border-stone-200 text-stone-700 hover:bg-stone-200/80'
+              }`}
+              title={t.cameraTitle}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -1922,23 +2214,13 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
               className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all duration-200 cursor-pointer ${
                 isListening
                   ? 'bg-red-500 scale-105 animate-pulse text-white'
-                  : 'bg-stone-900 text-white'
+                  : theme === 'dark' ? 'bg-white text-stone-900 hover:bg-stone-100' : 'bg-stone-900 text-white hover:bg-stone-800'
               }`}
             >
-              <svg
+              <Mic
                 id="mic-icon"
                 className="w-7 h-7"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 02-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                />
-              </svg>
+              />
             </button>
 
             {/* Klavye / Metin Girişi Toggle Butonu */}
@@ -1946,11 +2228,11 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
               id="keyboard-toggle-btn"
               type="button"
               onClick={handleToggleTextInput}
-              title="Metin ile Yaz"
+              title={t.keyboardToggleTitle}
               className={`w-12 h-12 rounded-full flex items-center justify-center border shadow-xs active:scale-90 transition-all cursor-pointer ${
                 showTextInput
-                  ? 'bg-stone-800 text-white border-stone-800'
-                  : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200/70'
+                  ? theme === 'dark' ? 'bg-white text-stone-900 border-white' : 'bg-stone-800 text-white border-stone-800'
+                  : theme === 'dark' ? 'bg-stone-800 text-stone-200 border-stone-700 hover:bg-stone-700' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200/70'
               }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1970,14 +2252,14 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
           <div className="absolute bottom-28 inset-x-6 z-30 flex items-center justify-between bg-stone-900 text-white text-xs px-4 py-2.5 rounded-2xl shadow-xl border border-stone-800 animate-in fade-in slide-in-from-bottom-2 duration-200">
             <div className="flex items-center gap-2 truncate pr-2">
               <span className="text-red-400 font-bold">🗑</span>
-              <span className="truncate">"{undoToast.item.baslik}" silindi</span>
+              <span className="truncate">"{undoToast.item.baslik}" {t.deletedToast}</span>
             </div>
             <button
               type="button"
               onClick={handleUndo}
               className="text-amber-300 hover:text-amber-200 font-bold shrink-0 ml-3 underline decoration-amber-400/50 hover:decoration-amber-300 transition-colors cursor-pointer"
             >
-              Geri Al
+              {t.undoButton}
             </button>
           </div>
         )}
@@ -1993,12 +2275,16 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
       )}
       <div
         id="manual-modal"
-        className={`fixed inset-x-0 bottom-0 max-w-md mx-auto bg-white rounded-t-3xl p-6 shadow-2xl border-t border-stone-200 z-50 transition-transform duration-300 ${
+        className={`fixed inset-x-0 bottom-0 max-w-md mx-auto rounded-t-3xl p-6 shadow-2xl border-t z-50 transition-transform duration-300 ${
+          theme === 'dark'
+            ? 'bg-stone-900 border-stone-800 text-stone-100'
+            : 'bg-white border-stone-200 text-stone-900'
+        } ${
           showManualModal ? 'translate-y-0' : 'translate-y-full hidden'
         }`}
       >
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-sm font-bold text-stone-900">Manuel Not Oluştur</h3>
+          <h3 className={`text-sm font-bold ${theme === 'dark' ? 'text-white' : 'text-stone-900'}`}>{t.manualModalTitle}</h3>
           <button
             type="button"
             onClick={closeManualModal}
@@ -2014,9 +2300,13 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
             type="text"
             value={manualTitle}
             onChange={(e) => setManualTitle(e.target.value)}
-            placeholder="Not başlığı (örn: Kira Ödemesi)"
+            placeholder={t.manualModalTitlePlaceholder}
             required
-            className="w-full text-xs px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-stone-400 text-stone-800"
+            className={`w-full text-xs px-3.5 py-2.5 border rounded-xl focus:outline-hidden focus:ring-1 focus:ring-stone-400 ${
+              theme === 'dark'
+                ? 'bg-stone-800 border-stone-700 text-stone-100 placeholder-stone-500'
+                : 'bg-stone-50 border-stone-200 text-stone-800'
+            }`}
           />
 
           <input
@@ -2024,11 +2314,17 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
             type="datetime-local"
             value={manualDatetime}
             onChange={(e) => setManualDatetime(e.target.value)}
-            className="w-full text-xs px-3.5 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:outline-hidden text-stone-700"
+            className={`w-full text-xs px-3.5 py-2.5 border rounded-xl focus:outline-hidden ${
+              theme === 'dark'
+                ? 'bg-stone-800 border-stone-700 text-stone-200'
+                : 'bg-stone-50 border-stone-200 text-stone-700'
+            }`}
           />
 
           <div className="flex items-center justify-between px-1 py-1">
-            <label className="text-xs text-stone-600 flex items-center gap-2 cursor-pointer">
+            <label className={`text-xs flex items-center gap-2 cursor-pointer ${
+              theme === 'dark' ? 'text-stone-300' : 'text-stone-600'
+            }`}>
               <input
                 id="manual-sync-cal"
                 type="checkbox"
@@ -2036,15 +2332,15 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                 onChange={(e) => setManualSyncCal(e.target.checked)}
                 className="rounded text-stone-900"
               />
-              Google Takvim'e işle
+              {t.syncToGoogleCalendar}
             </label>
           </div>
 
           <button
             type="submit"
-            className="w-full py-2.5 bg-stone-900 text-white rounded-xl text-xs font-semibold active:scale-95 transition-transform cursor-pointer"
+            className="w-full py-2.5 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-xl text-xs font-semibold active:scale-95 transition-transform cursor-pointer"
           >
-            Kaydet
+            {t.saveButton}
           </button>
         </form>
       </div>
@@ -2069,6 +2365,185 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
 
       {/* PWA Çevrimdışı Durum Göstergesi */}
       <OfflineIndicator />
+
+      {/* Otonom Ajan: İletişim & Taslak Mesaj Modalı (draft_message) */}
+      {draftedMessage && (
+        <div
+          id="draft-message-modal"
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+        >
+          <div className="w-full max-w-md bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-md">
+                  ✉️ İletişim Taslağı ({draftedMessage.kanal.toUpperCase()})
+                </span>
+                <h3 className="text-base font-semibold text-stone-900 dark:text-stone-100 mt-1">
+                  Kime: {draftedMessage.alici}
+                </h3>
+                {draftedMessage.konu && (
+                  <p className="text-xs text-stone-500 dark:text-stone-400">Konu: {draftedMessage.konu}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setDraftedMessage(null)}
+                className="w-7 h-7 rounded-full text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 flex items-center justify-center cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-3 bg-stone-50 dark:bg-stone-800/80 rounded-xl border border-stone-200/80 dark:border-stone-700/80 text-sm text-stone-800 dark:text-stone-200 leading-relaxed select-all whitespace-pre-wrap">
+              {draftedMessage.metin}
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(draftedMessage.metin);
+                  setStatusText('Metin panoya kopyalandı ✓');
+                  setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
+                }}
+                className="flex-1 py-2 px-3 bg-stone-900 dark:bg-white text-white dark:text-stone-900 text-xs font-semibold rounded-xl active:scale-95 transition-all text-center cursor-pointer"
+              >
+                📋 Metni Kopyala
+              </button>
+
+              {draftedMessage.kanal === 'email' ? (
+                <a
+                  href={`mailto:?subject=${encodeURIComponent(draftedMessage.konu || 'Bilgilendirme')}&body=${encodeURIComponent(draftedMessage.metin)}`}
+                  className="py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl active:scale-95 transition-all text-center"
+                >
+                  ✉️ E-postayı Aç
+                </a>
+              ) : (
+                <a
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(draftedMessage.metin)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl active:scale-95 transition-all text-center"
+                >
+                  🟢 WhatsApp
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Otonom Ajan: Takvim & Ajanda Sorgu Sonucu Modalı (get_calendar_events) */}
+      {calendarQueryResults && (
+        <div
+          id="calendar-query-modal"
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+        >
+          <div className="w-full max-w-md bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md">
+                  🗓️ Ajanda Taraması
+                </span>
+                <h3 className="text-base font-semibold text-stone-900 dark:text-stone-100 mt-1">
+                  {calendarQueryResults.sorgu_tipi === 'bugun'
+                    ? 'Bugünkü Programınız'
+                    : calendarQueryResults.sorgu_tipi === 'yarin'
+                    ? 'Yarınki Randevularınız'
+                    : 'Takvim Planlarınız'}
+                </h3>
+                <p className="text-xs text-stone-500 dark:text-stone-400">
+                  {calendarQueryResults.matchingCount === 0
+                    ? 'Belirtilen zaman aralığında kayıtlı plan bulunamadı.'
+                    : `Toplam ${calendarQueryResults.matchingCount} kayıt tespit edildi:`}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCalendarQueryResults(null)}
+                className="w-7 h-7 rounded-full text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 flex items-center justify-center cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {calendarQueryResults.matchingCount > 0 ? (
+              <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                {calendarQueryResults.matchingNotes.map((note) => (
+                  <div
+                    key={note.id}
+                    className="p-2.5 rounded-xl border border-stone-200/80 dark:border-stone-700/80 bg-stone-50 dark:bg-stone-800/60 flex items-center gap-3"
+                  >
+                    <span className="text-xl shrink-0">{note.ikon || '📌'}</span>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs font-semibold text-stone-900 dark:text-stone-100 truncate">
+                        {note.baslik}
+                      </h4>
+                      <p className="text-[11px] text-stone-500 dark:text-stone-400 truncate">
+                        {note.zaman || 'Saat belirtilmemiş'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 text-center rounded-xl bg-stone-50 dark:bg-stone-800/40 border border-stone-200 dark:border-stone-800 text-xs text-stone-500">
+                Bu zaman aralığı için ajandanız tamamen boş.
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setCalendarQueryResults(null)}
+              className="w-full py-2 bg-stone-900 dark:bg-white text-white dark:text-stone-900 text-xs font-semibold rounded-xl active:scale-95 transition-all cursor-pointer"
+            >
+              Tamam
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Ekran Üstü Canlı Bildirim Kartı (Push Banner Toast) */}
+      {activeBannerNotification && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-60 w-full max-w-sm px-4 pointer-events-auto">
+          <div className="bg-stone-900/95 dark:bg-stone-100/95 backdrop-blur-md text-white dark:text-stone-900 p-3.5 rounded-2xl shadow-2xl border border-stone-700/80 dark:border-stone-300/80 flex items-start gap-3 animate-in slide-in-from-top-4 duration-250">
+            <span className="text-2xl shrink-0 leading-none mt-0.5">{activeBannerNotification.icon || '🔔'}</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <h4 className="text-xs font-bold truncate tracking-tight">{activeBannerNotification.title}</h4>
+                <span className="text-[10px] opacity-60 shrink-0 font-medium">Notivia</span>
+              </div>
+              <p className="text-[11px] opacity-90 leading-relaxed mt-0.5 line-clamp-2">{activeBannerNotification.body}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveBannerNotification(null)}
+              aria-label="Kapat"
+              className="text-stone-400 hover:text-white dark:hover:text-stone-900 p-1 rounded-md transition-colors cursor-pointer shrink-0"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Ayarlar ve Profil Modalı */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        activeUser={activeUser}
+        onLogin={handleLogin}
+        onSignOut={handleSignOut}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        language={language}
+        onSelectLanguage={handleSelectLanguage}
+        notificationsEnabled={notificationsEnabled}
+        onToggleNotifications={handleToggleNotifications}
+        notificationSupported={typeof window !== 'undefined' && 'Notification' in window}
+        onSendTestNotification={handleSendTestNotification}
+        onRemindTodayTasks={handleRemindTodayTasks}
+      />
     </div>
   );
 }

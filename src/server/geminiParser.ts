@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type } from '@google/genai';
-import type { NotiviaParsedNote, NotiviaCategory, NotiviaPriority, NotiviaSimpleNote } from '../types/notivia.js';
-import { extractSimpleNoteFromText } from '../utils/simpleNote.js';
+import type { NotiviaParsedNote, NotiviaCategory, NotiviaPriority, NotiviaSimpleNote } from '../types/notivia.ts';
+import { extractSimpleNoteFromText } from '../utils/simpleNote.ts';
 
 const SYSTEM_INSTRUCTION = `Sen "Notivia" adlı bilişsel yaşam asistanının çekirdek niyet çözümleme ve veri ayrıştırma (parser) motorusun.
 Görevin: Kullanıcının ayaküstü, devrik, dağınık, imalı veya sesle kaydedilmiş girdilerini analiz etmek; söylenmeyen gereksinimleri ("leb demeden leblebiyi anlayarak") alt görevlere dönüştürmek ve arayüzde görselleştirilmeye hazır katı bir JSON nesnesi üretmektir.
@@ -398,8 +398,24 @@ export function runCognitiveFallback(
   let detailedNote = `"${input}" ifadesi bilişsel olarak analiz edildi. İma edilen tüm alt gereksinimler çıkartıldı.`;
   const actionItems: { task: string; is_completed: boolean }[] = [];
 
+  // Scenario: Toplantı / Müdür / Kurul / Resmi Görüşme
+  if (lower.includes('toplantı') || lower.includes('toplanti') || lower.includes('müdür') || lower.includes('veli') || lower.includes('kurul') || lower.includes('görüşme')) {
+    category = 'İş';
+    priority = 'yuksek';
+    icon = '🤝 📋';
+    colorHex = '#E0F2FE'; // Pastel Mavi
+    badgeText = 'Toplantı';
+    summary = lower.includes('müdür') ? 'Müdürle Toplantı' : (lower.includes('veli') ? 'Veli Toplantısı' : 'Toplantı Randevusu');
+    hasEvent = true;
+    detailedNote = `${summary} planlandı. Toplantı gündem maddeleri, ilgili evraklar ve notlar alt adımlara ayrıştırıldı.`;
+    actionItems.push(
+      { task: 'Toplantı gündem maddelerini ve görüşülecek konuları hazırla', is_completed: false },
+      { task: 'Gerekli evrak, dosya veya rapor çıktılarını hazır bulundur', is_completed: false },
+      { task: 'Gündemle ilgili geçmiş notları gözden geçir', is_completed: false }
+    );
+  }
   // Scenario: Araç Muayenesi / Otomotiv
-  if (lower.includes('muayene') || lower.includes('araba') || lower.includes('tüvtürk') || lower.includes('araç')) {
+  else if (lower.includes('muayene') || lower.includes('araba') || lower.includes('tüvtürk') || lower.includes('araç')) {
     category = 'Bakım & Onarım';
     priority = 'yuksek';
     icon = '🚗 🔧';

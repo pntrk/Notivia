@@ -5,6 +5,7 @@ import path from 'path';
 import { defineConfig, type Plugin } from 'vite';
 import dotenv from 'dotenv';
 import { parseWithGemini, parseWithAIAndImage } from './src/server/geminiParser.ts';
+import { dispatchWithGemini } from './src/server/dispatcherAgent.ts';
 
 dotenv.config();
 
@@ -22,6 +23,42 @@ function notiviaApiPlugin(): Plugin {
               has_api_key: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY'),
             })
           );
+          return;
+        }
+
+        if (req.url === '/api/dispatch' && req.method === 'POST') {
+          let bodyStr = '';
+          req.on('data', (chunk) => {
+            bodyStr += chunk;
+          });
+          req.on('end', async () => {
+            try {
+              const body = JSON.parse(bodyStr || '{}');
+              const input = String(body.input || body.text || '').trim();
+              const currentDatetime = String(body.current_datetime || new Date().toISOString());
+
+              if (!input) {
+                res.statusCode = 400;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: false, error: 'Girdi metni boş olamaz.' }));
+                return;
+              }
+
+              const result = await dispatchWithGemini(input, currentDatetime);
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: true, data: result }));
+            } catch (err: any) {
+              console.error('[Vite Plugin API /api/dispatch error]:', err);
+              res.statusCode = 500;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(
+                JSON.stringify({
+                  success: false,
+                  error: err?.message || 'Yönlendirme hatası.',
+                })
+              );
+            }
+          });
           return;
         }
 

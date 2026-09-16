@@ -46,6 +46,22 @@ const PREDICTIVE_GRAPH_PATTERNS: Array<{
     }
   },
 
+  // 1b. Toplantı, Yönetim ve İş Görüşmeleri (Müdür, Veli, Kurul vb.)
+  {
+    matcher: (l) => l.includes('toplantı') || (l.includes('müdür') && !l.includes('borç') && !l.includes('öde')) || l.includes('veli görüşme') || l.includes('öğretmenler kurul'),
+    inference: {
+      domain: 'yonetim_toplanti',
+      hazirlikZamani: 'Toplantıdan 30 Dakika Önce',
+      hazirlikSaatOncesi: 1,
+      oncedenYapilacaklar: [
+        'Toplantı gündem maddelerini ve görüşülecek konuları hazırla',
+        'Gerekli evrak, dosya veya rapor çıktılarını hazır bulundur',
+        'Gündemle ilgili geçmiş notları gözden geçir'
+      ],
+      akilliFisilti: '🤝 Toplantı öncesi gündem maddelerini ve evrakları gözden geçirmek faydalı olacaktır.'
+    }
+  },
+
   // 2. Uçak Yolculuğu / Uçuş / Seyahat
   {
     matcher: (l) => l.includes('uçak') || l.includes('uçuş') || l.includes('havaliman') || l.includes('bilet al') || l.includes('havaalanı'),
