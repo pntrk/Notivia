@@ -345,33 +345,70 @@ export function runCognitiveFallback(
     }
   }
 
-  // Time of Day defaults (as instructed: Sabah: 09:00, Öğle: 13:00, Akşam: 19:00, Gece: 21:30)
-  if (lower.includes('sabah')) {
-    targetDate.setHours(9, 0, 0, 0);
+  // Time of Day and explicit time detection (24-hour conversion, Akşam 9 = 21:00)
+  const isEvening = lower.includes('akşam') || lower.includes('aksam');
+  const isNight = lower.includes('gece');
+  const isAfternoon = lower.includes('öğleden sonra') || lower.includes('ogleden sonra');
+  const isMorning = lower.includes('sabah');
+  const isNoon = lower.includes('öğle') || lower.includes('öğlen');
+
+  const timeMatch = lower.match(/(?:saat\s*)?(\d{1,2})[:.](\d{2})/) ||
+    lower.match(/(?:saat\s*|akşam\s*|aksam\s*|sabah\s*|gece\s*|öğlen\s*)(\d{1,2})(?:\s*['’]?(?:da|de|ta|te))?/) ||
+    lower.match(/\b(\d{1,2})\s*(?:['’]?(?:da|de|ta|te))\b/) ||
+    lower.match(/saat\s*(\d{1,2})/);
+
+  let hour: number | null = null;
+  let min = 0;
+
+  if (timeMatch) {
+    hour = parseInt(timeMatch[1], 10);
+    min = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
     hasSpecificTime = true;
-  } else if (lower.includes('öğlen') || lower.includes('öğle') || lower.includes('öğleden sonra')) {
-    targetDate.setHours(13, 0, 0, 0);
-    hasSpecificTime = true;
-  } else if (lower.includes('akşam')) {
-    targetDate.setHours(19, 0, 0, 0);
-    hasSpecificTime = true;
-  } else if (lower.includes('gece')) {
-    targetDate.setHours(21, 30, 0, 0);
-    hasSpecificTime = true;
+    hasEvent = true;
+  } else if (lower.includes('dokuz')) {
+    hour = 9; hasSpecificTime = true; hasEvent = true;
+  } else if (lower.includes('sekiz')) {
+    hour = 8; hasSpecificTime = true; hasEvent = true;
+  } else if (lower.includes('yedi')) {
+    hour = 7; hasSpecificTime = true; hasEvent = true;
+  } else if (lower.includes('on bir') || lower.includes('onbir')) {
+    hour = 11; hasSpecificTime = true; hasEvent = true;
+  } else if (lower.includes('on iki') || lower.includes('oniki')) {
+    hour = 12; hasSpecificTime = true; hasEvent = true;
+  } else if (lower.includes('on')) {
+    hour = 10; hasSpecificTime = true; hasEvent = true;
+  }
+
+  if (hour !== null) {
+    if (isEvening && hour < 12) {
+      hour += 12; // Akşam 9 = 21:00
+    } else if (isAfternoon && hour < 12) {
+      hour += 12;
+    } else if (isNight && hour >= 9 && hour <= 11) {
+      hour += 12;
+    }
   } else {
-    // Check for explicit time like 14:00, 15.30, saat 3'te
-    const timeMatch = lower.match(/(?:saat\s*)?(\d{1,2})[:.](\d{2})/) || lower.match(/saat\s*(\d{1,2})/);
-    if (timeMatch) {
-      const hour = parseInt(timeMatch[1], 10);
-      const min = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
-      targetDate.setHours(hour, min, 0, 0);
-      hasSpecificTime = true;
-      hasEvent = true;
+    if (isEvening) {
+      hour = 21; min = 0; hasSpecificTime = true; hasEvent = true;
+    } else if (isNight) {
+      hour = 22; min = 0; hasSpecificTime = true; hasEvent = true;
+    } else if (isNoon) {
+      hour = 13; min = 0; hasSpecificTime = true; hasEvent = true;
+    } else if (isMorning) {
+      hour = 9; min = 0; hasSpecificTime = true; hasEvent = true;
     } else if (hasEvent) {
-      // Default to 13:00 if an event date was scheduled without specific hour
-      targetDate.setHours(13, 0, 0, 0);
+      hour = 13; min = 0;
     } else {
       isAllDay = true;
+    }
+  }
+
+  if (hour !== null) {
+    targetDate.setHours(hour, min, 0, 0);
+    // Gün belirtilmediyse ve saat geçmişse yarına planla
+    if (!hasEvent && targetDate.getTime() <= refDate.getTime()) {
+      targetDate.setDate(targetDate.getDate() + 1);
+      hasEvent = true;
     }
   }
 

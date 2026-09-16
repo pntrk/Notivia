@@ -150,61 +150,117 @@ function parseTurkishTemporal(text: string, baseDate: Date): TemporalParseResult
     hasDate = true;
   }
 
-  // Saat tespiti: "saat 9 da", "saat 9", "09:00", "9:00", "14:30", "9 da", "9'da", "9'de"
-  let hour = 9, minute = 0;
+  // 2. Saat / Vakit Tespiti (Sayısal veya metinsel)
+  let hour: number | null = null;
+  let minute = 0;
   let hasSpecificTime = false;
 
-  const clockRegex = /(?:saat\s*)?(\d{1,2})[:.](\d{2})|saat\s*(\d{1,2})|\b(\d{1,2})\s*(?:'da|'de|da|de|'te|'te|ta|te)\b/;
-  const clockMatch = lower.match(clockRegex);
+  // Zaman dilimi etiketleri
+  const isEvening = /akşam|aksam/i.test(lower);
+  const isNight = /gece/i.test(lower);
+  const isAfternoon = /öğleden sonra|ogleden sonra/i.test(lower);
+  const isMorning = /sabah/i.test(lower);
+  const isNoon = /öğlen|oglen|öğle|ogle/i.test(lower);
 
-  if (clockMatch) {
-    if (clockMatch[1]) {
-      hour = parseInt(clockMatch[1], 10);
-      minute = parseInt(clockMatch[2], 10);
-      hasSpecificTime = true;
-      hasDate = true;
-    } else if (clockMatch[3]) {
-      hour = parseInt(clockMatch[3], 10);
-      minute = 0;
-      hasSpecificTime = true;
-      hasDate = true;
-    } else if (clockMatch[4]) {
-      const parsedVal = parseInt(clockMatch[4], 10);
-      if (parsedVal >= 1 && parsedVal <= 24) {
-        hour = parsedVal;
-        minute = 0;
-        hasSpecificTime = true;
-        hasDate = true;
-      }
-    }
-  } else if (lower.includes('sabah')) {
-    hour = 9;
+  // Türkçe sayı kelimeleri
+  const numberWords: Record<string, number> = {
+    'bir': 1, 'iki': 2, 'üç': 3, 'uc': 3, 'dört': 4, 'dort': 4,
+    'beş': 5, 'bes': 5, 'altı': 6, 'alti': 6, 'yedi': 7, 'sekiz': 8,
+    'dokuz': 9, 'on': 10, 'on bir': 11, 'onbir': 11, 'on iki': 12, 'oniki': 12,
+    'yirmi': 20, 'yirmi bir': 21, 'yirmibir': 21, 'yirmi iki': 22, 'yirmi üç': 23
+  };
+
+  // Format: "21:00", "21.00", "9:30"
+  const colonMatch = lower.match(/\b(\d{1,2})[:.](\d{2})\b/);
+  if (colonMatch) {
+    hour = parseInt(colonMatch[1], 10);
+    minute = parseInt(colonMatch[2], 10);
     hasSpecificTime = true;
-  } else if (lower.includes('öğle') || lower.includes('öğlen')) {
-    hour = 13;
-    hasSpecificTime = true;
-  } else if (lower.includes('akşam')) {
-    hour = 19;
-    hasSpecificTime = true;
-  } else if (lower.includes('gece')) {
-    hour = 21;
-    minute = 30;
-    hasSpecificTime = true;
+    hasDate = true;
   }
 
+  // Format: "akşam 9", "saat 9", "9da", "9'da", "9 da"
+  if (hour === null) {
+    const digitMatch = lower.match(/(?:saat\s*|akşam\s*|aksam\s*|sabah\s*|gece\s*|öğlen\s*)(\d{1,2})(?:\s*['’]?(?:da|de|ta|te))?/i) ||
+      lower.match(/\b(\d{1,2})\s*(?:['’]?(?:da|de|ta|te))\b/i);
+    if (digitMatch) {
+      hour = parseInt(digitMatch[1], 10);
+      hasSpecificTime = true;
+      hasDate = true;
+    }
+  }
+
+  // Format: Metinsel saat (dokuzda, sekizde, on birde)
+  if (hour === null) {
+    for (const [word, val] of Object.entries(numberWords)) {
+      const reg = new RegExp(`\\b(?:saat\\s*)?${word}(?:['’]?(?:da|de|ta|te))?\\b`, 'i');
+      if (reg.test(lower)) {
+        hour = val;
+        hasSpecificTime = true;
+        hasDate = true;
+        break;
+      }
+    }
+  }
+
+  // 12 saat formatından 24 saat formatına kesin dönüşüm (Akşam 9 = 21:00)
+  if (hour !== null) {
+    if (isEvening) {
+      if (hour < 12) hour += 12; // 9 -> 21, 8 -> 20
+    } else if (isAfternoon) {
+      if (hour < 12) hour += 12; // 3 -> 15
+    } else if (isNight) {
+      if (hour >= 9 && hour <= 11) hour += 12; // 10 -> 22
+      else if (hour === 12) hour = 0;
+    } else if (isNoon) {
+      if (hour >= 1 && hour <= 3) hour += 12;
+    }
+  } else {
+    // Sayı verilmemişse bağlamsal varsayılan saat ata
+    if (isEvening) { hour = 21; minute = 0; hasSpecificTime = true; }
+    else if (isNoon) { hour = 13; minute = 0; hasSpecificTime = true; }
+    else if (isNight) { hour = 22; minute = 0; hasSpecificTime = true; }
+    else if (isMorning) { hour = 9; minute = 0; hasSpecificTime = true; }
+    else { hour = 9; minute = 0; }
+  }
+
+  // Sınır koruması
+  if (hour < 0) hour = 0;
+  if (hour > 23) hour = 23;
+  if (minute < 0) minute = 0;
+  if (minute > 59) minute = 59;
+
   target.setHours(hour, minute, 0, 0);
+
+  // Gün açıkça belirtilmemişse ve hedef saat bugün için geçmişse yarına yuvarla
+  const nowMs = baseDate.getTime();
+  if (!hasDate && target.getTime() <= nowMs) {
+    target.setDate(target.getDate() + 1);
+    hasDate = true;
+  }
 
   const pad = (n: number) => String(n).padStart(2, '0');
   const iso = `${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}T${pad(hour)}:${pad(minute)}:00`;
   const gunIsimleri = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
 
-  const zamanStr = hasDate
-    ? `${gunIsimleri[target.getDay()]} ${pad(hour)}:${pad(minute)}`
-    : (hasSpecificTime ? `Bugün ${pad(hour)}:${pad(minute)}` : null);
+  const isToday = target.toDateString() === baseDate.toDateString();
+  const tomorrow = new Date(baseDate);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const isTomorrow = target.toDateString() === tomorrow.toDateString();
+
+  const labelPrefix = isToday
+    ? (isEvening ? 'Bu Akşam' : isMorning ? 'Bu Sabah' : 'Bugün')
+    : isTomorrow
+    ? (isEvening ? 'Yarın Akşam' : isMorning ? 'Yarın Sabah' : 'Yarın')
+    : gunIsimleri[target.getDay()];
+
+  const zamanStr = (hasDate || hasSpecificTime || isEvening || isMorning || isNoon || isNight)
+    ? `${labelPrefix} ${pad(hour)}:${pad(minute)}`
+    : null;
 
   return {
     zaman: zamanStr,
-    tarih_iso: hasDate || hasSpecificTime ? iso : null,
+    tarih_iso: hasDate || hasSpecificTime || isEvening || isMorning || isNoon || isNight ? iso : null,
     isRecurringDay,
     recurringDayName,
     hour,
@@ -511,7 +567,55 @@ export function extractSimpleNoteFromText(
     }, cleanInput);
   }
 
-  // 7. ÖNCELİK: DİĞER RANDEVU VE ETKİNLİKLER
+  // 7. ÖNCELİK: İLETİŞİM, TELEFONLA ARAMA VE ÇAĞRI HATIRLATICILARI
+  // "akşam 9da alpereni ara", "annemi ara", "doktoru ara", "mehmet beyi ara", "veli grubuna telefon et"
+  const isCall =
+    /\b(ara|aramak|ararsın|aransın|telefon et|çağrı yap|ulaş)\b/i.test(lower) &&
+    !lower.includes('araç') && !lower.includes('araba') && !lower.includes('arada') && !lower.includes('fırsat ara');
+
+  if (isCall) {
+    let personName = '';
+    // "alpereni ara", "annemi ara", "doktoru ara", "ahmet abiyi ara"
+    const callMatch = cleanInput.match(/\b([A-ZÇĞİÖŞÜa-zçğıöşü]+(?:\s+[A-ZÇĞİÖŞÜa-zçğıöşü]+)?)\s+(?:ara|aramak|telefon et|çağrı yap)\b/i);
+    if (callMatch) {
+      const candidate = callMatch[1].trim();
+      const temporalStopwords = ['akşam', 'aksam', 'sabah', 'öğlen', 'oglen', 'gece', 'yarın', 'yarin', 'bugün', 'bugun', 'saat', 'sonra', 'önce'];
+      const filteredWords = candidate.split(/\s+/).filter(w => !temporalStopwords.includes(w.toLowerCase()) && !/^\d+/.test(w));
+      if (filteredWords.length > 0) {
+        personName = filteredWords.join(' ');
+      }
+    }
+
+    if (!personName) {
+      const altMatch = cleanInput.match(/(?:ara|aramak|telefon et)\s+([A-ZÇĞİÖŞÜa-zçğıöşü]+)/i);
+      if (altMatch) {
+        personName = altMatch[1].trim();
+      }
+    }
+
+    let formattedTitle = 'Telefon Görüşmesi';
+    if (personName) {
+      const capName = personName.charAt(0).toLocaleUpperCase('tr-TR') + personName.slice(1);
+      formattedTitle = `${capName} Ara`;
+    }
+
+    return enrichWithPredictiveGraph({
+      baslik: formattedTitle,
+      zaman: periodicZaman || zaman || 'Bu Akşam 21:00',
+      tarih_iso: periodicIso || tarih_iso,
+      ikon: '📞',
+      renk: '#DCFCE7', // Pastel Yeşil (İletişim & Sosyal)
+      anomali_notu: '📞 Görüşülecek konuları ve notlarınızı önceden hazırlayın.',
+      action_items: [
+        { task: 'Görüşülecek ana konu başlıklarını hazırla', is_completed: false },
+        { task: 'Muhatabın müsaitlik durumunu teyit et', is_completed: false }
+      ],
+      tetikleyici,
+      periyodik
+    }, cleanInput);
+  }
+
+  // 8. ÖNCELİK: DİĞER RANDEVU VE ETKİNLİKLER
   if (
     lower.includes('randevu') || lower.includes('kuaför') || lower.includes('berber') ||
     lower.includes('uçak') || lower.includes('uçuş') || lower.includes('seyahat')
@@ -537,7 +641,7 @@ export function extractSimpleNoteFromText(
     }, cleanInput);
   }
 
-  // 8. ÖNCELİK: EMANET / İADE
+  // 9. ÖNCELİK: EMANET / İADE
   if (lower.includes('emanet') || lower.includes('geri ver') || lower.includes('iade') || lower.includes('aldım')) {
     return enrichWithPredictiveGraph({
       baslik: (cleanInput.slice(0, 24) + ' (İade)').slice(0, 30),
@@ -549,8 +653,18 @@ export function extractSimpleNoteFromText(
   }
 
   // G. GENEL DÜŞÜŞ (Fallback)
+  let cleanTitle = cleanInput
+    .replace(/\b(?:akşam|aksam|sabah|öğlen|oglen|gece|yarın|yarin|bugün|bugun)\b/gi, '')
+    .replace(/\b(?:saat\s*)?\d{1,2}(?:[:.]\d{2})?(?:\s*['’]?(?:da|de|ta|te))?\b/gi, '')
+    .replace(/\b(?:dokuzda|sekizde|yedide|altıda|beşte|dörtte|üçte|ikide|birde|onda)\b/gi, '')
+    .trim();
+  if (cleanTitle.length < 2) cleanTitle = cleanInput;
+  cleanTitle = cleanTitle.charAt(0).toLocaleUpperCase('tr-TR') + cleanTitle.slice(1);
+  const titleWords = cleanTitle.split(/\s+/);
+  if (titleWords.length > 4) cleanTitle = titleWords.slice(0, 4).join(' ');
+
   const baseResult: NotiviaSimpleNote = {
-    baslik: cleanInput.slice(0, 28) || 'Not',
+    baslik: cleanTitle || 'Not',
     zaman: periodicZaman || zaman || 'Not',
     tarih_iso: periodicIso || tarih_iso,
     ikon: periyodik ? '🔄' : '📌',

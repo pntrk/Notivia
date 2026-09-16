@@ -32,6 +32,8 @@ import {
   clearAllScheduledReminders,
   triggerDailyAssistantSummary,
   testAssistantNotification,
+  playMicListeningChime,
+  playMicDoneChime,
 } from './utils/deviceCalendar.ts';
 import {
   saveLocalMedia,
@@ -609,6 +611,7 @@ export default function App() {
 
         recognition.onstart = () => {
           setIsListening(true);
+          playMicListeningChime();
           if (pendingCapturedImageRef.current) {
             setStatusText('Görsel hazır. Bir şey söyleyecek misin?');
           } else {
@@ -1470,6 +1473,7 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
 
   // Ses bittiğinde hem ses metnini hem bekleyen görseli gönder
   const onSpeechCompleted = async (spokenText: string) => {
+    playMicDoneChime();
     const imageToSend = pendingCapturedImageRef.current;
     pendingCapturedImageRef.current = null; // Sıfırla
 
@@ -1849,7 +1853,7 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                     isCompleted
                       ? 'opacity-70 saturate-50 border-solid border-stone-300/80 shadow-none'
                       : isExpired 
-                      ? 'opacity-65 saturate-60 border-dashed border-stone-300' 
+                      ? 'opacity-95 border-dashed border-amber-300/80 shadow-2xs' 
                       : 'opacity-100 border-solid border-black/5 shadow-xs'
                   } ${isSelected ? 'ring-2 ring-stone-800' : ''}`}
                   style={{
@@ -1887,21 +1891,21 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                         onClick={() => viewFullImage(item.mediaId!)}
                       />
                     ) : (
-                      <span className={`text-2xl select-none shrink-0 ${isCompleted || isExpired ? 'grayscale-40' : ''}`}>
+                      <span className={`text-2xl select-none shrink-0 ${isCompleted ? 'grayscale-40' : ''}`}>
                         {item.ikon || '📌'}
                       </span>
                     )}
 
                     <div className="min-w-0 flex-1">
                       <h2
-                        contentEditable={!isExpired && !isCompleted}
+                        contentEditable={!isCompleted}
                         suppressContentEditableWarning={true}
                         spellCheck={false}
                         className={`font-semibold text-sm leading-tight outline-hidden ${
                           isCompleted
                             ? 'text-stone-500 line-through decoration-stone-500/70'
                             : isExpired
-                            ? 'text-stone-500 line-through decoration-stone-400/60'
+                            ? 'text-stone-800 cursor-text'
                             : 'text-stone-900 cursor-text'
                         }`}
                         onKeyDown={(e) => {
@@ -2170,6 +2174,26 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
             </button>
           </form>
 
+          {/* Sesli Asistan Durum ve Dalga Göstergesi */}
+          {isListening ? (
+            <div className="mb-3 px-3.5 py-1.5 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800/80 rounded-full flex items-center gap-2.5 shadow-sm animate-in fade-in duration-200">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
+              <span className="text-xs font-semibold text-red-600 dark:text-red-400 tracking-tight">
+                {statusText || 'Dinliyorum...'}
+              </span>
+              <div className="flex items-center gap-0.5 ml-1">
+                <span className="w-0.5 h-2 bg-red-500 rounded-full animate-pulse" style={{ animationDuration: '600ms', animationDelay: '0ms' }} />
+                <span className="w-0.5 h-3.5 bg-red-500 rounded-full animate-pulse" style={{ animationDuration: '600ms', animationDelay: '150ms' }} />
+                <span className="w-0.5 h-2.5 bg-red-500 rounded-full animate-pulse" style={{ animationDuration: '600ms', animationDelay: '300ms' }} />
+                <span className="w-0.5 h-4 bg-red-500 rounded-full animate-pulse" style={{ animationDuration: '600ms', animationDelay: '75ms' }} />
+              </div>
+            </div>
+          ) : statusText && statusText !== 'Söyle, çek ya da yaz' ? (
+            <div className="mb-2 px-3 py-1 bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 text-[11px] font-medium rounded-full border border-stone-200 dark:border-stone-700 shadow-2xs animate-in fade-in duration-200 max-w-[280px] truncate text-center">
+              {statusText}
+            </div>
+          ) : null}
+
           <div className="flex items-center gap-4">
             {/* Kamera / Galeri Butonu */}
             <label
@@ -2207,21 +2231,29 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
             />
 
             {/* Ana Mikrofon Butonu */}
-            <button
-              id="mic-btn"
-              type="button"
-              onClick={handleMicClick}
-              className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all duration-200 cursor-pointer ${
-                isListening
-                  ? 'bg-red-500 scale-105 animate-pulse text-white'
-                  : theme === 'dark' ? 'bg-white text-stone-900 hover:bg-stone-100' : 'bg-stone-900 text-white hover:bg-stone-800'
-              }`}
-            >
-              <Mic
-                id="mic-icon"
-                className="w-7 h-7"
-              />
-            </button>
+            <div className="relative flex items-center justify-center">
+              {isListening && (
+                <>
+                  <span className="absolute -inset-2.5 rounded-full bg-red-400/30 animate-ping pointer-events-none" />
+                  <span className="absolute -inset-1 rounded-full bg-red-500/20 animate-pulse pointer-events-none" />
+                </>
+              )}
+              <button
+                id="mic-btn"
+                type="button"
+                onClick={handleMicClick}
+                className={`relative w-16 h-16 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all duration-200 cursor-pointer ${
+                  isListening
+                    ? 'bg-red-500 scale-105 text-white shadow-red-500/30'
+                    : theme === 'dark' ? 'bg-white text-stone-900 hover:bg-stone-100' : 'bg-stone-900 text-white hover:bg-stone-800'
+                }`}
+              >
+                <Mic
+                  id="mic-icon"
+                  className="w-7 h-7"
+                />
+              </button>
+            </div>
 
             {/* Klavye / Metin Girişi Toggle Butonu */}
             <button
