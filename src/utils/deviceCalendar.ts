@@ -10,6 +10,7 @@ export interface CalendarEventData {
   endDate?: Date;
   description?: string;
   location?: string;
+  rrule?: string;
 }
 
 /**
@@ -19,15 +20,15 @@ export interface CalendarEventData {
 export function generateIcsContent(event: CalendarEventData): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   const formatIcsDate = (d: Date) =>
-    `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+    `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
 
   const dtStart = formatIcsDate(event.startDate);
   const end = event.endDate || new Date(event.startDate.getTime() + 60 * 60 * 1000);
   const dtEnd = formatIcsDate(end);
   const dtStamp = formatIcsDate(new Date());
   const uid = `notivia_${Date.now()}_${Math.random().toString(36).slice(2, 9)}@notivia.app`;
-  const cleanSummary = (event.title || 'Notivia Hatırlatıcı').replace(/\n/g, ' ');
-  const cleanDesc = (event.description || 'Notivia Bilişsel Yaşam Asistanı Hatırlatıcısı').replace(/\n/g, '\\n');
+  const cleanSummary = (event.title || 'Notivia Hatırlatıcı').replace(/[\r\n]+/g, ' ');
+  const cleanDesc = (event.description || 'Notivia Bilişsel Yaşam Asistanı Hatırlatıcısı').replace(/[\r\n]+/g, '\\n');
 
   return [
     'BEGIN:VCALENDAR',
@@ -40,6 +41,7 @@ export function generateIcsContent(event: CalendarEventData): string {
     `DTSTAMP:${dtStamp}`,
     `DTSTART:${dtStart}`,
     `DTEND:${dtEnd}`,
+    event.rrule ? `RRULE:${event.rrule}` : '',
     `SUMMARY:${cleanSummary}`,
     `DESCRIPTION:${cleanDesc}`,
     event.location ? `LOCATION:${event.location}` : '',
@@ -48,13 +50,14 @@ export function generateIcsContent(event: CalendarEventData): string {
     'BEGIN:VALARM',
     'TRIGGER:-PT15M',
     'ACTION:DISPLAY',
-    `DESCRIPTION:Hatırlatıcı: ${cleanSummary}`,
+    `DESCRIPTION:Hatırlatma: ${cleanSummary}`,
+    'X-APPLE-DEFAULT-ALARM:TRUE',
     'END:VALARM',
     // Etkinlik anında çalacak ikinci alarm
     'BEGIN:VALARM',
-    'TRIGGER:PT0M',
-    'ACTION:DISPLAY',
-    `DESCRIPTION:Şimdi: ${cleanSummary}`,
+    'TRIGGER:-PT1H',
+    'ACTION:AUDIO',
+    'ATTACH;VALUE=URI:Chord',
     'END:VALARM',
     'END:VEVENT',
     'END:VCALENDAR',

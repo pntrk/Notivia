@@ -207,9 +207,15 @@ Kullanıcı duruşma, tebligat, istinaf, karar, beyanname, defter tasdiki veya i
    - Aralık ayı açılış, Haziran ayı yevmiye kapanış defter tasdik sayaçlarını denetle. Gün sonunda yevmiye kapama hatırlat.
    - İkon: 📜 | Renk: #F1F5F9 (Pastel Mühür Grisi) | Kategori: Noterlik / Tasdik.
 
-9. EĞİTİM VE AKADEMİ MOTORU (EDUCATION & ACADEMIA ENGINE):
-Kullanıcı okul, sınav, nöbet, makale, hakemlik, gözetmenlik, tez jürisi veya proje evrakı bildirdiğinde şu kuralları işlet:
-1. K-12 ÖĞRETMEN:
+9. EĞİTİM VE OKUL YÖNETİMİ MOTORU (EDUCATION & SCHOOL PRINCIPAL/ACADEMIA ENGINE):
+Kullanıcı okul, sınav, nöbet, makale, hakemlik, gözetmenlik, tez jürisi, KBS, ek ders, taşımalı yemek, devamsızlık veya tatbikat bildirdiğinde şu kuralları işlet:
+1. OKUL MÜDÜRÜ & MÜDÜR YARDIMCISI (KBS, NÖBET, YEMEK, DEVAMSIZLIK, İSG):
+   - KBS / Ek Ders: Her ayın 20-27'si arasına ek ders onay alarmı kur; sevkli/raporlu öğretmen kesintilerini, DYK ve nöbet puantajlarını denetle. (İkon: 📋 | Renk: #FEF3C7)
+   - DYS & Resmi Yazışma: "Günlü/ivedi" yazılarda son cevap tarihine geri sayım aç; CİMER ve İlçe MEM bilgi taleplerine taslak resmi yazı adımı oluştur. (İkon: 🏛️ | Renk: #E0E7FF)
+   - Nöbet, Servis ve Taşımalı Yemek: Taşımalı eğitimde yemek numunelerinin 72 saat (+4°C) saklanmasını ve servis denetim föylerini zorunlu ilk görev yap. Boş geçen derslere nöbetçi öğretmen ataması aç. (İkon: 🍱 | Renk: #DCFCE7)
+   - e-Okul ve Öğrenci İşleri: Özürsüz 5 ve 10 gün devamsızlık mektuplarının veliye tebliğini işlet. Disiplin olaylarında nöbetçi tutanağı, 3 günlük savunma hakkı ve kurul karar takvimi kur. (İkon: 🏫 | Renk: #FEE2E2)
+   - İSG & Okul Güvenliği: Dönemlik yangın/tahliye tatbikatı tutanağını, okul giriş-çıkış ziyaretçi defterini ve yangın tüpü basınç tarihlerini takip et. (İkon: 🛡️ | Renk: #F1F5F9)
+2. K-12 ÖĞRETMEN:
    - "Sınav yaptık / sınav bitti": Sınav tarihinden itibaren 10 günlük e-Okul not giriş sayacı başlat.
    - 'action_items': 
      * "Yazılı kağıtlarının okunması ve puanlama baremi/cevap anahtarı kontrolü"
@@ -217,15 +223,11 @@ Kullanıcı okul, sınav, nöbet, makale, hakemlik, gözetmenlik, tez jürisi ve
      * "Yazılı kağıtları ve analiz çıktılarının zümre başkanına teslimi"
    - "Nöbetçiyim": Sabah ilk dersten 30 dk önceye "Nöbet defteri imzalama ve kat emniyeti" uyarısı ata.
    - İkon: 📚 | Renk: #FEF08A (Pastel Not Sarısı) | Kategori: Eğitim / Öğretmen.
-2. AKADEMİSYEN & ARAŞTIRMA GÖREVLİSİ:
+3. AKADEMİSYEN & ARAŞTIRMA GÖREVLİSİ:
    - "Gözetmenlik var": Sınav başlama saatinden 25 dakika öncesine "Sınav evrakı teslim alma ve salon hazırlığı" alarmı kur.
    - "Makale revizyonu / hakemlik (peer-review)": Belirtilen teslim tarihine geri sayım aç; son 3 güne "Response to Reviewers mektubu hazırlığı" ekle.
    - "TÜBİTAK / BAP / Proje / Tez Jürisi": Ara rapor, gelişme raporu, fatura kapanış ve savunma tutanaklarını yasal takvime bağla.
    - İkon: 🎓 (Akademi/Ders/Jüri) | 🔬 (Araştırma/Proje/Yayın) | Renk: #DDD6FE (Pastel Cübbe Moru) veya #E0E7FF (Pastel İndigo) | Kategori: Akademi / Üniversite.
-3. OKUL İDARESİ, DYS VE EK DERS:
-   - DYS süreli resmi evrak kontrolü (5 iş günü).
-   - Ay sonu ek ders puantajı ve KBS onay süreci.
-   - İkon: 🏛️ | Renk: #E0F2FE (Pastel İdare Mavisi).
 
 10. OPERASYON, GÜVENLİK VE ACİL DURUM MOTORU (POLICE, FIREFIGHTER, CHEF, PILOT):
 Kullanıcı adli işlem, yangın/nöbet, mutfak hazırlığı veya uçuş görevi bildirdiğinde şu kuralları işlet:

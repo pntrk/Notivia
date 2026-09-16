@@ -6,6 +6,9 @@ export type ProfessionDomain =
   | 'EMNIYET'
   | 'HAVACILIK'
   | 'MUTFAK'
+  | 'EGITIM'
+  | 'KURUMSAL'
+  | 'GUZELLIK'
   | 'GENEL';
 
 export interface ActionButtonConfig {
@@ -127,6 +130,51 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
       { id: 'haccp', label: 'HACCP Isı Kaydı', icon: '❄️', actionType: 'COPY_TEMPLATE' }
     ]
   },
+  EGITIM: {
+    domain: 'EGITIM',
+    displayName: 'Eğitim & Okul Yönetimi',
+    bgCard: 'bg-yellow-50/70 border-yellow-200',
+    borderAccent: 'border-l-amber-500',
+    badgeBg: 'bg-amber-100',
+    badgeText: 'text-amber-900',
+    btnPrimaryBg: 'bg-amber-600 hover:bg-amber-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'kbs_check', label: 'KBS Ek Ders Onayı', icon: '📋', actionType: 'TIMER' },
+      { id: 'dys_draft', label: 'DYS Yazı Taslağı', icon: '🏛️', actionType: 'COPY_TEMPLATE' },
+      { id: 'parent_notice', label: 'Veliye Devamsızlık Bildir', icon: '🏫', actionType: 'WHATSAPP' }
+    ]
+  },
+  KURUMSAL: {
+    domain: 'KURUMSAL',
+    displayName: 'Kurumsal Ofis & İK',
+    bgCard: 'bg-purple-50/70 border-purple-200',
+    borderAccent: 'border-l-purple-600',
+    badgeBg: 'bg-purple-100',
+    badgeText: 'text-purple-900',
+    btnPrimaryBg: 'bg-purple-700 hover:bg-purple-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'sgk_check', label: 'SGK İşe Giriş Bildirgesi', icon: '👥', actionType: 'TIMER' },
+      { id: 'meeting_buffer', label: 'Toplantı Brifing Dosyası', icon: '🗂️', actionType: 'COPY_TEMPLATE' },
+      { id: 'trial_eval', label: 'Deneme Süresi Formu', icon: '📝', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
+  GUZELLIK: {
+    domain: 'GUZELLIK',
+    displayName: 'Kuaför & Güzellik',
+    bgCard: 'bg-pink-50/70 border-pink-200',
+    borderAccent: 'border-l-pink-500',
+    badgeBg: 'bg-pink-100',
+    badgeText: 'text-pink-900',
+    btnPrimaryBg: 'bg-pink-600 hover:bg-pink-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'oryal_timer', label: 'Oryal / Açma Sayacı (40 Dk)', icon: '⏱️', actionType: 'TIMER' },
+      { id: 'elastic_check', label: '15. Dk Elastikiyet Kontrolü', icon: '✂️', actionType: 'TIMER' },
+      { id: 'sterilize_stock', label: 'Sterilizasyon & Sarf Stok', icon: '🧴', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
   GENEL: {
     domain: 'GENEL',
     displayName: 'Kişisel Asistan',
@@ -146,11 +194,20 @@ export function detectDomainFromNote(note: { ikon?: string; baslik?: string; ano
   const icon = note.ikon || '';
   const text = `${note.baslik || ''} ${note.anomali_notu || ''} ${note.teshis_notu || ''}`.toLowerCase();
 
-  if (icon === '⚖️' || icon === '🏛️' || icon === '📜' || text.includes('hukuk') || text.includes('duruşma') || text.includes('uyap') || text.includes('istinaf') || text.includes('tebligat') || text.includes('noter') || text.includes('beyanname')) {
+  if (icon === '⚖️' || icon === '📜' || (icon === '🏛️' && (text.includes('hukuk') || text.includes('mahkeme') || text.includes('savcı') || text.includes('hâkim') || text.includes('hakim'))) || text.includes('hukuk') || text.includes('duruşma') || text.includes('uyap') || text.includes('istinaf') || text.includes('tebligat') || text.includes('noter') || text.includes('beyanname')) {
     return 'HUKUK';
   }
   if (icon === '🩺' || icon === '💉' || icon === '🦷' || icon === '💊' || text.includes('ilaç') || text.includes('hasta') || text.includes('doktor') || text.includes('hemşire') || text.includes('klinik') || text.includes('sbar') || text.includes('dekübitus')) {
     return 'SAGLIK';
+  }
+  if (icon === '✂️' || text.includes('kuaför') || text.includes('kuafor') || text.includes('oryal') || text.includes('saç açma') || text.includes('sac acma') || text.includes('röfle') || text.includes('boya') || text.includes('keratin') || text.includes('fön') || text.includes('sterilizasyon')) {
+    return 'GUZELLIK';
+  }
+  if (icon === '👥' || (icon === '🗂️' && (text.includes('sekreter') || text.includes('yönetici') || text.includes('brifing') || text.includes('vip') || text.includes('toplantı'))) || text.includes('sekreter') || text.includes('insan kaynakları') || text.includes('işe giriş') || text.includes('işten çıkış') || text.includes('sgk') || text.includes('deneme süresi') || text.includes('yönetici asistanı') || text.includes('vip karşılama')) {
+    return 'KURUMSAL';
+  }
+  if (icon === '📚' || icon === '🎓' || icon === '🏫' || icon === '🍱' || (icon === '🏛️' && (text.includes('dys') || text.includes('okul') || text.includes('mem') || text.includes('müdür'))) || text.includes('e-okul') || text.includes('ek ders') || text.includes('kbs') || text.includes('devamsızlık') || text.includes('öğretmen') || text.includes('zümre') || text.includes('öğrenci') || text.includes('taşımalı') || text.includes('okul')) {
+    return 'EGITIM';
   }
   if (icon === '🔧' || icon === '🛠️' || icon === '⚡' || icon === '⚙️' || icon === '📐' || icon === '💻' || text.includes('loto') || text.includes('arıza') || text.includes('bakım') || text.includes('şantiye') || text.includes('mimar') || text.includes('teknik') || text.includes('tamir')) {
     return 'TEKNIK';

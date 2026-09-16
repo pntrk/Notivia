@@ -10,6 +10,9 @@ export const DOMAIN_KEYWORDS: Record<ProfessionDomain, RegExp> = {
   EMNIYET: /(gözaltı|şüpheli|nezarethane|fezleke|tutanak|asayiş|devriye|adli rapor|arama kararı)/i,
   HAVACILIK: /(uçuş|kokpit|ofp|metar|notam|dispatch|fdp|walkaround|fms|brifing)/i,
   MUTFAK: /(mise en place|servis|haccp|benmari|soğuk oda|stok|şef|garnitür|tadım)/i,
+  EGITIM: /(okul|öğretmen|ogretmen|müdür|mudur|kbs|ek ders|dys|devamsızlık|devamsizlik|taşımalı|tasimali|zümre|zumre|e-okul|eokul|öğrenci|ogrenci|tatbikat|disiplin|veli)/i,
+  KURUMSAL: /(sekreter|yönetici|yonetici|insan kaynakları|insan kaynaklari|ik\b|sgk|işe giriş|ise giris|işten çıkış|isten cikis|deneme süresi|deneme suresi|brifing|vip|karşılama|karsilama|check-in|checkin)/i,
+  GUZELLIK: /(kuaför|kuafor|berber|oryal|saç açma|sac acma|röfle|rofle|boya|keratin|fön|fon|sterilizasyon|sarf stok)/i,
   GENEL: /.*/
 };
 

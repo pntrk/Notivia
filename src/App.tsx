@@ -665,13 +665,47 @@ export default function App() {
       try {
         const recognition = new SpeechRecognition();
         recognition.lang = 'tr-TR';
-        recognition.continuous = true; // Kullanıcı duraklasa dahi dinlemeye devam eder
-        recognition.interimResults = true; // Konuşulanları anlık ekrana yansıtır
+        // Mobil cihazlarda continuous: true sorun yaratabildiği için false veya true bırakıp onend ile yakalayabiliriz.
+        // Şimdilik true bırakıp onend'de metin varsa göndermeyi sağlayalım.
+        recognition.continuous = true; 
+        recognition.interimResults = true; 
 
         let silenceTimer: any = null;
+        let currentTranscript = '';
+        let isSubmitted = false;
+
+        const submitTranscript = async () => {
+          if (isSubmitted) return;
+          isSubmitted = true;
+          
+          try {
+            recognition.stop();
+          } catch {
+            // ignore
+          }
+          
+          resetMicUI();
+          if (currentTranscript.trim()) {
+            if (onSpeechCompletedRef.current) {
+              await onSpeechCompletedRef.current(currentTranscript.trim());
+            } else if (processWithAIRef.current) {
+              await processWithAIRef.current(currentTranscript.trim(), null, true);
+            }
+          } else if (pendingCapturedImageRef.current) {
+            const imageToSend = pendingCapturedImageRef.current;
+            pendingCapturedImageRef.current = null;
+            setStatusText('Görsel teşhis ediliyor...');
+            resetMicUI();
+            if (processWithAIRef.current) {
+              await processWithAIRef.current('', imageToSend, false);
+            }
+          }
+        };
 
         recognition.onstart = () => {
           setIsListening(true);
+          isSubmitted = false;
+          currentTranscript = '';
           playMicListeningChime();
           if (pendingCapturedImageRef.current) {
             setStatusText('Görsel hazır. Dinleniyor...');
@@ -683,36 +717,16 @@ export default function App() {
         recognition.onresult = (event: any) => {
           clearTimeout(silenceTimer);
 
-          let fullTranscript = '';
+          currentTranscript = '';
           for (let i = 0; i < event.results.length; i++) {
-            fullTranscript += event.results[i][0].transcript + ' ';
+            currentTranscript += event.results[i][0].transcript + ' ';
           }
 
           setStatusText(`Dinleniyor (${event.results.length} parça)...`);
 
           // 3.5 saniye boyunca tek bir kelime dahi gelmezse listeyi tamamla ve AI'a gönder
-          silenceTimer = setTimeout(async () => {
-            try {
-              recognition.stop();
-            } catch {
-              // ignore
-            }
-            resetMicUI();
-            if (fullTranscript.trim()) {
-              if (onSpeechCompletedRef.current) {
-                await onSpeechCompletedRef.current(fullTranscript.trim());
-              } else if (processWithAIRef.current) {
-                await processWithAIRef.current(fullTranscript.trim(), null, true);
-              }
-            } else if (pendingCapturedImageRef.current) {
-              const imageToSend = pendingCapturedImageRef.current;
-              pendingCapturedImageRef.current = null;
-              setStatusText('Görsel teşhis ediliyor...');
-              resetMicUI();
-              if (processWithAIRef.current) {
-                await processWithAIRef.current('', imageToSend, false);
-              }
-            }
+          silenceTimer = setTimeout(() => {
+            submitTranscript();
           }, 3500);
         };
 
@@ -720,20 +734,29 @@ export default function App() {
           console.warn('SpeechRecognition bildirimi:', e?.error || e);
           clearTimeout(silenceTimer);
           setIsListening(false);
-          if (pendingCapturedImageRef.current) {
-            setStatusText('Görsel hazır. "Teşhis Et"e dokunabilir veya konuşabilirsin.');
-          } else {
-            resetMicUI();
+          // Eğer hata no-speech ise ve elimizde metin varsa göndermeyi deneyebiliriz.
+          if (e?.error !== 'no-speech' && e?.error !== 'aborted') {
+             if (pendingCapturedImageRef.current) {
+               setStatusText('Görsel hazır. "Teşhis Et"e dokunabilir veya konuşabilirsin.');
+             } else {
+               resetMicUI();
+             }
           }
         };
 
         recognition.onend = async () => {
           clearTimeout(silenceTimer);
           setIsListening(false);
-          if (pendingCapturedImageRef.current) {
-            setStatusText('Görsel hazır. İster sesle anlat, ister doğrudan tıkla.');
-          } else {
-            resetMicUI();
+          
+          // Eğer onend tetiklendiğinde elimizde henüz gönderilmemiş bir metin varsa gönder:
+          if (!isSubmitted && currentTranscript.trim()) {
+             submitTranscript();
+          } else if (!isSubmitted) {
+             if (pendingCapturedImageRef.current) {
+               setStatusText('Görsel hazır. İster sesle anlat, ister doğrudan tıkla.');
+             } else {
+               resetMicUI();
+             }
           }
         };
 
@@ -2219,10 +2242,19 @@ export default function App() {
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
+                                      let rruleStr = undefined;
+                                      if (item.periyodik) {
+                                        if (item.periyodik.tip === 'gunluk') rruleStr = 'FREQ=DAILY';
+                                        else if (item.periyodik.tip === 'haftalik') rruleStr = 'FREQ=WEEKLY';
+                                        else if (item.periyodik.tip === 'aylik') rruleStr = 'FREQ=MONTHLY';
+                                        else if (item.periyodik.tip === 'yillik') rruleStr = 'FREQ=YEARLY';
+                                        else if (item.periyodik.tip === 'aylik_son_hafta') rruleStr = 'FREQ=MONTHLY;BYSETPOS=-1;BYDAY=MO,TU,WE,TH,FR'; 
+                                      }
                                       exportToDeviceCalendar({
                                         title: `${item.ikon || '📌'} ${item.baslik}`,
                                         startDate: new Date(item.tarih_iso!),
-                                        description: `Notivia: ${item.baslik}`
+                                        description: `Notivia: ${item.baslik}`,
+                                        rrule: rruleStr
                                       });
                                       playNotificationChime();
                                       setStatusText(language === 'tr' ? 'Cihaz takvimine (.ics) aktarıldı' : 'Exported to device calendar (.ics)');

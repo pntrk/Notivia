@@ -135,6 +135,18 @@ export function getDomainTheme(domain: string): { ikon: string; renk: string } {
   if (d.includes('ogretmen') || d.includes('eokul') || d.includes('e-okul') || d.includes('sinav') || d.includes('yazili') || d.includes('kazanim')) {
     return { ikon: '📚', renk: '#FEF08A' };
   }
+  if (d.includes('ek_ders') || d.includes('kbs') || d.includes('puantaj')) {
+    return { ikon: '📋', renk: '#FEF3C7' };
+  }
+  if (d.includes('tasimali') || d.includes('yemek_numune') || d.includes('servis_denetim')) {
+    return { ikon: '🍱', renk: '#DCFCE7' };
+  }
+  if (d.includes('devamsizlik') || d.includes('disiplin')) {
+    return { ikon: '🏫', renk: '#FEE2E2' };
+  }
+  if (d.includes('tatbikat') || d.includes('okul_guvenlik') || d.includes('isg')) {
+    return { ikon: '🛡️', renk: '#F1F5F9' };
+  }
   if (d.includes('elektrik') || d.includes('trafo') || d.includes('pano') || d.includes('loto') || d.includes('kompanzasyon') || d.includes('yuksek_gerilim')) {
     return { ikon: '⚡', renk: '#FEE2E2' };
   }

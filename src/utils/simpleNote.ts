@@ -330,12 +330,144 @@ export function parseEduManagerNote(input: string, baseDate: Date): NotiviaSimpl
     lower.includes('gözetmenlik') || lower.includes('gozetmenlik') || lower.includes('makale') || lower.includes('hakemlik') ||
     lower.includes('peer-review') || lower.includes('peer review') || lower.includes('tübitak') || lower.includes('tubitak') ||
     lower.includes('bap') || lower.includes('tez jürisi') || lower.includes('tez jurisi') || lower.includes('araştırma görevlisi') ||
-    lower.includes('dys') || lower.includes('üst yazı') || lower.includes('ust yazi') ||
+    lower.includes('dys') || lower.includes('üst yazı') || lower.includes('ust yazi') || lower.includes('cimer') || lower.includes('ilçe mem') || lower.includes('ilce mem') ||
     lower.includes('zümre') || lower.includes('zumre') || lower.includes('öğretmenler kurul') || lower.includes('ogretmenler kurul') ||
     lower.includes('kulüp') || lower.includes('kulup') || lower.includes('ek ders') || lower.includes('kbs') ||
-    lower.includes('puantaj') || lower.includes('dyk');
+    lower.includes('puantaj') || lower.includes('dyk') ||
+    lower.includes('okul müdür') || lower.includes('okul mudur') || lower.includes('müdür yardımcısı') || lower.includes('mudur yardimcisi') ||
+    lower.includes('taşımalı') || lower.includes('tasimali') || lower.includes('yemek numune') || lower.includes('servis denetim') ||
+    lower.includes('devamsızlık mektubu') || lower.includes('devamsizlik') || lower.includes('disiplin kurulu') || lower.includes('disiplin') ||
+    lower.includes('tahliye tatbikatı') || lower.includes('yangın tatbikatı') || lower.includes('ziyaretçi defteri') || lower.includes('isg');
 
   if (!isEdu) return null;
+
+  // 1. OKUL YÖNETİMİ: KBS & Ek Ders Onay Takvimi (Ayın 20-27'si Arası)
+  if (lower.includes('ek ders') || lower.includes('kbs') || lower.includes('puantaj') || lower.includes('dyk')) {
+    const kbsDue = new Date(baseDate);
+    // Ayın 20-27'si arasına kur
+    kbsDue.setDate(24);
+    kbsDue.setHours(17, 0, 0, 0);
+
+    return {
+      baslik: 'KBS Ek Ders & Puantaj Onayı',
+      zaman: 'Her Ayın 20-27 Arası (KBS Onay)',
+      tarih_iso: kbsDue.toISOString(),
+      action_items: [
+        { task: 'Sevkli, izinli ve raporlu öğretmenlerin gün bazlı ek ders kesintilerini işle', is_completed: false },
+        { task: 'DYK (Destekleme Yetiştirme Kursu) ve haftalık nöbet puantajlarını doğrula', is_completed: false },
+        { task: 'KBS sistemi üzerinden veri girişini yap ve Malmüdürlüğü/Muhasebe onayına sun', is_completed: false }
+      ],
+      ikon: '📋',
+      renk: '#FEF3C7',
+      anomali_notu: 'KBS ek ders onayları her ayın 20-27\'si arasında tamamlanmalıdır; raporlu günlerin düşülmemesi kamu zararı oluşturur.',
+      sesli_fisilti: 'KBS ek ders onay takvimi, DYK/nöbet puantajı ve rapor kesinti adımları planlandı.'
+    };
+  }
+
+  // 2. OKUL YÖNETİMİ: Nöbet, Servis ve Taşımalı Yemek (72 Saat Numune)
+  if (lower.includes('taşımalı') || lower.includes('tasimali') || lower.includes('yemek numune') || lower.includes('servis denetim') || (lower.includes('nöbet') && (lower.includes('servis') || lower.includes('boş ders') || lower.includes('bos ders') || lower.includes('idare') || lower.includes('müdür')))) {
+    return {
+      baslik: 'Taşımalı Yemek, Servis & Nöbet Denetimi',
+      zaman: 'Günlük Denetim / 72 Saat Numune',
+      tarih_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'Taşımalı eğitim öğle yemeğinden steril kavanozla numune al ve +4°C dolapta 72 saat sakla', is_completed: false },
+        { task: 'Okul servis araçlarının emniyet kemeri, rehber personel ve kapasite denetim föyünü doldur', is_completed: false },
+        { task: 'Raporlu/sevkli öğretmenlerin boş geçen derslerine nöbetçi öğretmen görevlendirmesi yap', is_completed: false }
+      ],
+      ikon: '🍱',
+      renk: '#DCFCE7',
+      anomali_notu: 'Taşımalı yemek numuneleri mevzuat gereği etiketlenerek +4°C ortamda 72 saat saklanmalıdır; servis denetimleri haftalık kayıt altına alınır.',
+      sesli_fisilti: '72 saatlik yemek numunesi saklama, servis denetimi ve boş ders nöbetçi görevlendirmesi kuruldu.'
+    };
+  }
+
+  // 3. OKUL YÖNETİMİ: e-Okul, Devamsızlık Mektubu & Disiplin Takvimi
+  if (lower.includes('devamsızlık') || lower.includes('devamsizlik') || lower.includes('disiplin') || (lower.includes('öğrenci') && lower.includes('savunma'))) {
+    const isDiscipline = lower.includes('disiplin') || lower.includes('savunma');
+    const isAbsent = lower.includes('devamsızlık') || lower.includes('devamsizlik');
+
+    if (isDiscipline) {
+      const savunmaDue = new Date(baseDate);
+      savunmaDue.setDate(savunmaDue.getDate() + 3); // 3 günlük yasal savunma süresi
+
+      return {
+        baslik: 'Öğrenci Disiplin Kurulu Süreci',
+        zaman: 'Yasal Süre: 3 Gün (Savunma)',
+        tarih_iso: savunmaDue.toISOString(),
+        action_items: [
+          { task: 'Nöbetçi öğretmen ve olaya karışanların ıslak imzalı olay tutanağını dosyala', is_completed: false },
+          { task: 'Öğrenciye yazılı savunma tebligatı yap (3 iş günü yasal savunma süresi başlat)', is_completed: false },
+          { task: 'Okul Öğrenci Ödül ve Disiplin Kurulunu toplayıp karar tutanağını e-Okul\'a işle', is_completed: false }
+        ],
+        ikon: '🏫',
+        renk: '#FEE2E2',
+        anomali_notu: 'Disiplin süreçlerinde öğrenciye en az 3 iş günü savunma süresi tanınmadan ceza kurulunda karar alınamaz.',
+        sesli_fisilti: 'Disiplin süreci için nöbetçi tutanağı, 3 günlük savunma süresi ve kurul takvimi açıldı.'
+      };
+    }
+
+    return {
+      baslik: 'e-Okul Devamsızlık Mektubu Tebliği',
+      zaman: 'Özürsüz 5 / 10 Gün Eşiği',
+      tarih_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'e-Okul sisteminden özürsüz 5 ve 10 gün devamsızlık sınırına ulaşan öğrencileri listele', is_completed: false },
+        { task: 'Resmi devamsızlık bildirim mektubu ve iadeli taahhütlü posta/elden tebliğ zarfını hazırla', is_completed: false },
+        { task: 'Veli bilgilendirme ve tebellüğ belgesini öğrenci özlük dosyasına tak', is_completed: false }
+      ],
+      ikon: '🏫',
+      renk: '#FEE2E2',
+      anomali_notu: 'Özürsüz 5, 10 ve 15 gün devamsızlık yapan öğrencilerin velilerine iadeli taahhütlü bildirim yapılması yasal zorunluluktur.',
+      sesli_fisilti: 'e-Okul devamsızlık mektubu ve veli tebliğ adımları oluşturuldu.'
+    };
+  }
+
+  // 4. OKUL YÖNETİMİ: İSG, Yangın/Tahliye Tatbikatı & Okul Güvenliği
+  if (lower.includes('tatbikat') || lower.includes('isg') || lower.includes('ziyaretçi defteri') || lower.includes('ziyaretci') || (lower.includes('güvenlik') && lower.includes('okul'))) {
+    return {
+      baslik: 'Okul İSG & Güvenlik Denetimi',
+      zaman: 'Dönemlik / Periyodik İSG',
+      tarih_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'Dönemlik yangın ve acil durum tahliye tatbikatı planla, süre kronometresi ve tatbikat tutanağı tanzim et', is_completed: false },
+        { task: 'Okul ana giriş kapısı ziyaretçi kayıt defteri ve kimlik teslim protokolünü denetle', is_completed: false },
+        { task: 'Yangın tüpleri manometre basınçları ve periyodik dolum etiket tarihlerini kontrol et', is_completed: false }
+      ],
+      ikon: '🛡️',
+      renk: '#F1F5F9',
+      anomali_notu: 'MEB İSG mevzuatı gereği her eğitim-öğretim döneminde en az 1 kez acil durum tahliye tatbikatı yapılması ve tutanak altına alınması mecburidir.',
+      sesli_fisilti: 'Dönemlik tahliye tatbikatı, ziyaretçi defteri ve yangın tüpü İSG takip listesi oluşturuldu.'
+    };
+  }
+
+  // 5. OKUL YÖNETİMİ: DYS, CİMER & Resmi Yazışmalar (5 İş Günü)
+  if (lower.includes('dys') || lower.includes('üst yazı') || lower.includes('ust yazi') || lower.includes('cimer') || lower.includes('ilçe mem') || lower.includes('ilce mem')) {
+    const due = new Date(baseDate);
+    let addedDays = 0;
+    while (addedDays < 5) {
+      due.setDate(due.getDate() + 1);
+      if (due.getDay() !== 0 && due.getDay() !== 6) {
+        addedDays++;
+      }
+    }
+    due.setHours(17, 0, 0, 0);
+
+    return {
+      baslik: 'DYS & CİMER Resmi Yazışma',
+      zaman: '5 İş Günü İçinde (Yasal Cevap)',
+      tarih_iso: due.toISOString(),
+      action_items: [
+        { task: 'DYS gelen kutusundan \'günlü/ivedi\' yazıları ve CİMER bilgi taleplerini incele', is_completed: false },
+        { task: 'İlgili müdür yardımcısı veya zümreden bilgi toplayarak cevap taslağı hazırla', is_completed: false },
+        { task: 'Okul Müdürü e-imza onayına sunarak DYS üzerinden İlçe MEM\'e sevk et', is_completed: false }
+      ],
+      ikon: '🏛️',
+      renk: '#E0E7FF',
+      anomali_notu: 'Günlü ve ivedi DYS/CİMER yazışmalarında son cevap tarihi aşılmamalıdır; süre uzatımı gerekiyorsa ara yazı yazılmalıdır.',
+      sesli_fisilti: 'DYS ve CİMER resmi yazı takibi için 5 iş günü yasal geri sayımı başlatıldı.'
+    };
+  }
 
   // 1. AKADEMİSYEN & ARAŞTIRMA GÖREVLİSİ: Gözetmenlik
   if (lower.includes('gözetmenlik') || lower.includes('gozetmenlik')) {
@@ -1505,6 +1637,165 @@ export function parseProjectLogisticsFieldTechNote(input: string, baseDate: Date
   };
 }
 
+export function parseCorporateOfficePersonalCareNote(input: string, baseDate: Date): NotiviaSimpleNote | null {
+  const lower = input.toLowerCase();
+
+  const isCorporateOrCare = 
+    lower.includes('sekreter') || lower.includes('yönetici asistan') || lower.includes('yonetici asistan') ||
+    lower.includes('brifing') || lower.includes('ikram') || lower.includes('vip') || lower.includes('karşılama') || lower.includes('karsilama') ||
+    lower.includes('insan kaynakları') || lower.includes('insan kaynaklari') || lower.includes('işe giriş') || lower.includes('ise giris') ||
+    lower.includes('işten çıkış') || lower.includes('isten cikis') || lower.includes('sgk bildir') || lower.includes('sgk') || lower.includes('deneme süresi') || lower.includes('deneme suresi') ||
+    lower.includes('kuaför') || lower.includes('kuafor') || lower.includes('berber') || lower.includes('oryal') || lower.includes('saç açma') || lower.includes('sac acma') ||
+    lower.includes('röfle') || lower.includes('rofle') || lower.includes('saç boya') || lower.includes('sac boya') || lower.includes('keratin') ||
+    lower.includes('fön') || lower.includes('fon') || lower.includes('elastikiyet') || (lower.includes('sterilizasyon') && (lower.includes('makas') || lower.includes('tarak') || lower.includes('salon') || lower.includes('kuaför')));
+
+  if (!isCorporateOrCare) return null;
+
+  // 1. SEKRETER / YÖNETİCİ ASİSTANI
+  if (lower.includes('sekreter') || lower.includes('yönetici asistan') || lower.includes('yonetici asistan') || lower.includes('brifing') || lower.includes('vip') || lower.includes('karşılama') || lower.includes('karsilama') || (lower.includes('toplantı') && (lower.includes('ulaşım') || lower.includes('tampon') || lower.includes('ikram')))) {
+    const timeMatch = input.match(/(\d{1,2})[:.](\d{2})/);
+    let meetingZaman = 'Görüşme Öncesi (2 Saat Önce Brifing)';
+    let meetingIso = baseDate.toISOString();
+
+    if (timeMatch) {
+      const h = parseInt(timeMatch[1], 10);
+      const m = parseInt(timeMatch[2], 10);
+      const meetingDate = new Date(baseDate);
+      meetingDate.setHours(h - 2, m, 0, 0); // 2 saat öncesi brifing ve ikram teyidi
+      const mh = meetingDate.getHours().toString().padStart(2, '0');
+      const mm = meetingDate.getMinutes().toString().padStart(2, '0');
+      meetingZaman = `${mh}:${mm} (T-2 Saat Brifing & İkram)`;
+      meetingIso = meetingDate.toISOString();
+    }
+
+    return {
+      baslik: 'Yönetici Ajandası & VIP Brifing',
+      zaman: meetingZaman,
+      tarih_iso: meetingIso,
+      hazirlik_zamani: 'Görüşmeden 2 Saat Önce (Brifing & İkram)',
+      hazirlik_iso: meetingIso,
+      action_items: [
+        { task: 'Toplantılar arasına min. 30 dakika ulaşım ve toparlanma tamponu yerleştir', is_completed: false },
+        { task: 'Üst düzey görüşmeden 2 saat önce: Toplantı bilgi notu (brifing dosyası) ve ikram teyidini sağla', is_completed: false },
+        { task: 'Uçuşlarda T-24 saat öncesi online check-in yap ve VIP havalimanı karşılama/transfer zincirini koordine et', is_completed: false },
+        { task: 'Görüşme sonrası alınan aksiyon kararlarını ilgili birim yöneticilerine ilet', is_completed: false }
+      ],
+      ikon: '🗂️',
+      renk: '#EDE9FE',
+      anomali_notu: 'Yönetici ajandasında arka arkaya toplantılar arasına en az 30 dk tampon konulmalı, VIP görüşmelerde brifing dosyası 2 saat önce masada olmalıdır.',
+      sesli_fisilti: 'Yönetici ajandası tamponu, T-2 saat brifing dosyası ve VIP karşılama adımları hazırlandı.'
+    };
+  }
+
+  // 2. İNSAN KAYNAKLARI (T-1 SGK İşe Giriş, 10 Gün İşten Çıkış, 45 Gün Deneme Süresi Formu)
+  if (lower.includes('insan kaynakları') || lower.includes('insan kaynaklari') || lower.includes('işe giriş') || lower.includes('ise giris') || lower.includes('işten çıkış') || lower.includes('isten cikis') || lower.includes('sgk') || lower.includes('deneme süresi') || lower.includes('deneme suresi')) {
+    const isExit = lower.includes('işten çıkış') || lower.includes('isten cikis') || lower.includes('istifa') || lower.includes('fesih');
+    const isTrial = lower.includes('deneme süresi') || lower.includes('deneme suresi');
+
+    if (isExit) {
+      const exitDue = new Date(baseDate);
+      exitDue.setDate(exitDue.getDate() + 10); // 10 günlük yasal SGK işten çıkış bildirgesi süresi
+      exitDue.setHours(23, 59, 0, 0);
+
+      return {
+        baslik: 'SGK İşten Çıkış & İbra Süreci',
+        zaman: 'Yasal Süre: 10 Gün (SGK Bildirgesi)',
+        tarih_iso: exitDue.toISOString(),
+        action_items: [
+          { task: 'SGK e-Bildirge üzerinden 10 gün içinde işten ayrılış bildirgesini ver', is_completed: false },
+          { task: 'Zimmet iade tutanağı, şirket kartı ve kurumsal erişimlerin iptalini tamamla', is_completed: false },
+          { task: 'Kıdem/ihbar tazminatı ve kullanılmayan izin ücreti bordrosunu hesaplayıp imzalat', is_completed: false },
+          { task: 'İbraname ve çalışma belgesini ıslak imzalı olarak özlük dosyasına kaldır', is_completed: false }
+        ],
+        ikon: '👥',
+        renk: '#E0E7FF',
+        anomali_notu: 'İşten ayrılış bildirgesi fesih tarihinden itibaren 10 gün içinde SGK\'ya verilmezse idari para cezası uygulanır.',
+        sesli_fisilti: '10 günlük yasal SGK işten çıkış bildirgesi ve zimmet teslim adımları takvimlendi.'
+      };
+    }
+
+    if (isTrial) {
+      const trialDue = new Date(baseDate);
+      trialDue.setDate(trialDue.getDate() + 45); // 45. gün deneme süresi değerlendirmesi
+
+      return {
+        baslik: 'Deneme Süresi Değerlendirmesi',
+        zaman: '45. Gün (2 Aylık Süre Bitimi Öncesi)',
+        tarih_iso: trialDue.toISOString(),
+        action_items: [
+          { task: 'Bölüm yöneticisine 2 aylık deneme süresi performans değerlendirme formunu ilet', is_completed: false },
+          { task: 'Yönetici geri bildirimi ve KPI hedeflerine uyumunu analiz et', is_completed: false },
+          { task: 'Devam veya fesih kararını 60. gün dolmadan önce yazılı olarak tebliğ et', is_completed: false }
+        ],
+        ikon: '👥',
+        renk: '#E0E7FF',
+        anomali_notu: '2 aylık yasal deneme süresi dolmadan önce (45. günde) değerlendirme tamamlanmalıdır; 60 gün aşılırsa standart fesih hükümleri devreye girer.',
+        sesli_fisilti: 'Deneme süresi için 45. gün yönetici performans değerlendirme formu planlandı.'
+      };
+    }
+
+    // İşe Giriş (T-1 gün öncesi SGK zorunluluğu)
+    return {
+      baslik: 'SGK İşe Giriş & Özlük Dosyası',
+      zaman: 'T-1 Gün Önce (SGK Bildirge Zorunluluğu)',
+      tarih_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'KIRMIZI ALARM: İşe başlama tarihinden en az 1 gün önce SGK işe giriş bildirgesini onayla', is_completed: false },
+        { task: 'İş sözleşmesi, KVKK açık rıza metni ve zimmet teslim formunu ıslak imzalat', is_completed: false },
+        { task: 'Sağlık raporu, adli sicil kaydı ve mezuniyet belgelerini özlük dosyasına tak', is_completed: false },
+        { task: 'İşe giriş tarihinden 45 gün sonrasına \'2 Aylık Deneme Süresi Değerlendirme\' hatırlatması kur', is_completed: false }
+      ],
+      ikon: '👥',
+      renk: '#E0E7FF',
+      anomali_notu: 'SGK işe giriş bildirgesi işe başlama tarihinden en az 1 gün önce verilmelidir (İnşaat ve balıkçılık hariç); aksi takdirde asgari ücret tutarında ceza kesilir.',
+      sesli_fisilti: 'T-1 gün öncesi SGK işe giriş bildirgesi ve 45. gün deneme süresi takibi kuruldu.'
+    };
+  }
+
+  // 3. KUAFÖR & GÜZELLİK (Oryal/Saç Açma 35-40 dk, 15. dk Elastikiyet, Sterilizasyon & Stok)
+  const isBleachOrColor = lower.includes('oryal') || lower.includes('açma') || lower.includes('acma') || lower.includes('röfle') || lower.includes('rofle') || lower.includes('boya') || lower.includes('keratin') || lower.includes('elastikiyet');
+
+  if (isBleachOrColor) {
+    const timerDue = new Date(baseDate);
+    timerDue.setMinutes(timerDue.getMinutes() + 40); // 40 dk maksimum açma süresi
+
+    return {
+      baslik: 'Saç Açma (Oryal) & Boya Süreci',
+      zaman: '40 Dk Maksimum (Oryal Sayacı)',
+      tarih_iso: timerDue.toISOString(),
+      hazirlik_zamani: '15. Dakika (Elastikiyet Testi)',
+      hazirlik_iso: new Date(baseDate.getTime() + 15 * 60 * 1000).toISOString(),
+      action_items: [
+        { task: '15. Dakika: Saç tutamını çekerek elastikiyet ve kopma kontrolü yap (Kritik ara denetim)', is_completed: false },
+        { task: '35-40. Dakika: Açılma tonunu kontrol et ve saç derisinde yanma/ısı artışı varsa hemen yıkamaya al', is_completed: false },
+        { task: 'Randevu çizelgesine işlem ve kurutma için 45 dakikalık tampon süre ekle', is_completed: false },
+        { task: 'İşlem bitiminde asidik ph sabitleyici ve keratin bakım maskesi uygula', is_completed: false }
+      ],
+      ikon: '✂️',
+      renk: '#FCE7F3',
+      anomali_notu: 'Oryal saçta 40 dakikadan fazla bekletilmemelidir; 15. dakikada elastikiyet kontrolü yapılmazsa kimyasal yanma ve kopma riski oluşur.',
+      sesli_fisilti: 'Oryal açma için 40 dk sayaç ve 15. dakika elastikiyet kontrol adımı başlatıldı.'
+    };
+  }
+
+  // Kuaför Genel & Kapanış Rutini
+  return {
+    baslik: 'Kuaför Gün Sonu & Sterilizasyon',
+    zaman: 'Gün Sonu Kapanış',
+    tarih_iso: baseDate.toISOString(),
+    action_items: [
+      { task: 'Kullanılan makas, ustura ve fırçaları UV sterilizatör ve dezenfektan sıvısına koy', is_completed: false },
+      { task: 'Tek kullanımlık havlu, boya önlüğü ve eldiven sarf malzeme stok sayımını yap', is_completed: false },
+      { task: 'Boya ve oksidan tüplerinin kapaklarını sıkıca kapatıp serin dolaba diz', is_completed: false },
+      { task: 'Yarınki randevular için kimyasal işlem süre tamponlarını doğrula', is_completed: false }
+    ],
+    ikon: '✂️',
+    renk: '#FCE7F3',
+    anomali_notu: 'Hijyen yönetmeliği gereği kesici ve temaslı aletler her müşteri sonrası ve gün sonunda dezenfekte edilmelidir.',
+    sesli_fisilti: 'Kuaför gün sonu sterilizasyon ve sarf malzeme stok sayım listesi oluşturuldu.'
+  };
+}
+
 export function toSimpleNote(note: NotiviaParsedNote): NotiviaSimpleNote {
   let zamanStr: string | null = null;
   let tarihIso: string | null = null;
@@ -2065,6 +2356,12 @@ export function extractSimpleNoteFromText(
   const tradesmanResult = parseTradesmanLocalShopNote(cleanInput, baseDate);
   if (tradesmanResult) {
     return enrichWithPredictiveGraph(tradesmanResult, cleanInput);
+  }
+
+  // 9.5. ÖNCELİK: KURUMSAL OFİS, İK VE KİŞİSEL BAKIM MOTORU (CORPORATE HR & BEAUTY ENGINE)
+  const corporateCareResult = parseCorporateOfficePersonalCareNote(cleanInput, baseDate);
+  if (corporateCareResult) {
+    return enrichWithPredictiveGraph(corporateCareResult, cleanInput);
   }
 
   // 10. ÖNCELİK: SAĞLIK VE KLİNİK ÇALIŞANLARI MOTORU (HEALTHCARE & CLINICAL ENGINE)
