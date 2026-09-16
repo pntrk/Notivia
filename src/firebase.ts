@@ -62,8 +62,9 @@ if (getApps().length === 0) {
 export const auth: Auth = getAuth(app);
 export const db: Firestore = getFirestore(app, (firebaseConfig as any).firestoreDatabaseId);
 
-// Google Auth Provider (Standard authentication without external Calendar scopes)
+// Google Auth Provider with Google Drive scope for user backup & sync
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.addScope('https://www.googleapis.com/auth/drive.file');
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 // Token management (in-memory + sessionStorage as requested)

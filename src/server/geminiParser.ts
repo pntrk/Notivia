@@ -633,8 +633,8 @@ Görevin: Kullanıcının doğal Türkçe ifadelerini "Özne - Nesne/Meblağ - Y
 TEMEL SÖZDİZİMİ VE ANLAM KURALLARI:
 
 1. İsmin Halleri ve Finansal Rol Dağılımı:
-   - İsmin Yönelme Hali (-e, -a): Hedef muhataptır, giden bir değeri ifade eder ("Ali hocaya 750 at" -> Ödeme Takibi, Renk: #FEE2E2, İkon: 💳).
-   - İsmin Ayrılma Hali (-den, -dan): Kaynak muhataptır, gelen bir değeri ifade eder ("Ahmet abiden 5000 alacağım var" -> Alacak Takibi, Renk: #DCFCE7, İkon: 💰).
+   - İsmin Yönelme Hali (-e, -a): Hedef muhataptır, giden bir değeri ifade eder. ("Ali hocaya 750 at"). Başlığı KESİNLİKLE "Kişi: Meblağ Ödeme" formatında yap (Örn: "Ali: 750 Ödeme"). Renk: #FEE2E2, İkon: 💳.
+   - İsmin Ayrılma Hali (-den, -dan): Kaynak muhataptır, gelen bir değeri ifade eder. ("Ahmet abiden 5000 alacağım var"). Başlığı KESİNLİKLE "Kişi: Meblağ Alacak" formatında yap (Örn: "Ahmet: 5000 Alacak"). Renk: #DCFCE7, İkon: 💰.
    - Vade belirtilmemişse "tarih_iso": null dön; rastgele takvim randevusu oluşturma.
 
 2. Kurumsal ve Üçüncü Şahıs Bildirimleri (Tersine Zamanlama):
@@ -668,6 +668,15 @@ TEMEL SÖZDİZİMİ VE ANLAM KURALLARI:
      * Mülakat/Sunum: ["Şirket araştırması ve ürün incelemesi", "CV ve portfolyo linkleri", "Mikrofon/kamera testi"]
    - "anomali_notu": Kullanıcının hayatını kolaylaştıracak tek cümlelik proaktif ipucu veya uyarı.
    - "hazirlik_zamani": Ana eylemden önce yapılması gereken hazırlık hatırlatma zamanı (örn: "1 Gün Önce 17:00", "24 Saat Önce").
+
+7. Kısa & Eksik Girdi Çözümleme (2-3 Kelimeden Tam Niyet Çıkarımı):
+   - Kullanıcı devrik, özensiz veya sadece 2-3 kelime yazsa dahi ("klima temizlik", "muayene", "kombi bar", "filtre değiştim", "tahlil sabah", "fatura kes", "tapu harcı"):
+   - Asla "Not" veya "Randevu" gibi sığ başlıklar üretme. O alandaki uzman bir yönetici asistanı gibi derin niyetini anla:
+     * "klima temizlik" -> Başlık: "Klima Filtre & Sezon Bakımı", İkon: "❄️", Renk: "#E0F2FE", action_items: ["Toz filtrelerini çıkarıp ılık suyla yıka", "Evaporatör dezenfektan sprey sık", "Tahliye hortumunu kontrol et"].
+     * "kombi bar" -> Başlık: "Kombi Su Basınç Dengeleme", İkon: "🔧", Renk: "#FEF3C7", anomali_notu: "💡 İdeal basınç 1.2 - 1.5 Bar arasıdır.", action_items: ["Alt doldurma musluğuyla suyu 1.5 bara getir", "Petek havasını al"].
+     * "tahlil sabah" -> Başlık: "Kan Tahlili & Açlık Takibi", İkon: "🩸", anomali_notu: "💡 10-12 saat açlık şarttır.", action_items: ["Akşam 22:00 sonrası yemek ve çayı kes", "Sabah sadece su iç"].
+     * "fatura kes" -> Başlık: "E-Arşiv Fatura Kesimi", İkon: "🧾", Renk: "#DCFCE7", action_items: ["Müşteri vergi ve unvanını doğrula", "GİB portalından e-arşiv taslağı oluştur"].
+   - Kullanıcının eksik bıraktığı tüm alanları senaryo uzmanlığıyla kusursuz tamamla.
 
 Referans Zaman (CURRENT_DATETIME): ${now}.${historyContext}
 

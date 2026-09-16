@@ -187,6 +187,8 @@ const PREDICTIVE_GRAPH_PATTERNS: Array<{
   }
 ];
 
+import { matchShortScenario } from './scenarioDatabase.ts';
+
 /**
  * Kullanıcı girdisini analiz ederek gizli ön koşulları ve hazırlık adımlarını çıkarır.
  */
@@ -198,6 +200,18 @@ export function inferPredictiveActions(text: string): PredictiveInference | null
     if (pattern.matcher(lower)) {
       return pattern.inference;
     }
+  }
+
+  // 2. Genişletilmiş Kısa Senaryo Veritabanından (Scenario Database) çıkarım yap
+  const shortMatch = matchShortScenario(text);
+  if (shortMatch) {
+    return {
+      domain: shortMatch.id,
+      hazirlikZamani: shortMatch.hazirlikZamani,
+      hazirlikSaatOncesi: shortMatch.hazirlikSaatOncesi,
+      oncedenYapilacaklar: shortMatch.oncedenYapilacaklar,
+      akilliFisilti: shortMatch.akilliFisilti
+    };
   }
 
   return null;

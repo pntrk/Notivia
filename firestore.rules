@@ -2,53 +2,11 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Global safety net - default deny all
+    // Note backups are stored exclusively in the user's personal Google Drive account.
+    // Firebase Firestore is not used for personal data storage.
+    // Default deny all access to documents.
     match /{document=**} {
       allow read, write: if false;
-    }
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
-    function incoming() {
-      return request.resource.data;
-    }
-
-    function existing() {
-      return resource.data;
-    }
-
-    function isValidNote(data) {
-      return data.baslik is string && data.baslik.size() > 0 && data.baslik.size() <= 300 &&
-        (!('zaman' in data) || data.zaman == null || (data.zaman is string && data.zaman.size() <= 200)) &&
-        (!('tarih_iso' in data) || data.tarih_iso == null || (data.tarih_iso is string && data.tarih_iso.size() <= 100)) &&
-        (!('hazirlik_zamani' in data) || data.hazirlik_zamani == null || (data.hazirlik_zamani is string && data.hazirlik_zamani.size() <= 200)) &&
-        (!('hazirlik_iso' in data) || data.hazirlik_iso == null || (data.hazirlik_iso is string && data.hazirlik_iso.size() <= 100)) &&
-        (!('teshis_notu' in data) || data.teshis_notu == null || (data.teshis_notu is string && data.teshis_notu.size() <= 300)) &&
-        (!('anomali_notu' in data) || data.anomali_notu == null || (data.anomali_notu is string && data.anomali_notu.size() <= 300)) &&
-        (!('baglantili_hatirlatma' in data) || data.baglantili_hatirlatma == null || (data.baglantili_hatirlatma is string && data.baglantili_hatirlatma.size() <= 300)) &&
-        (!('conflictWith' in data) || data.conflictWith == null || (data.conflictWith is string && data.conflictWith.size() <= 300)) &&
-        (!('conflictWarning' in data) || data.conflictWarning == null || (data.conflictWarning is string && data.conflictWarning.size() <= 300)) &&
-        (!('tetikleyici' in data) || data.tetikleyici == null || data.tetikleyici is map) &&
-        (!('mediaId' in data) || data.mediaId == null || (data.mediaId is string && data.mediaId.size() <= 128)) &&
-        (!('createdAt' in data) || data.createdAt == null || data.createdAt is timestamp || (data.createdAt is string && data.createdAt.size() <= 100)) &&
-        (!('calendar_event_id' in data) || data.calendar_event_id == null || (data.calendar_event_id is string && data.calendar_event_id.size() <= 256)) &&
-        (!('calendarEventId' in data) || data.calendarEventId == null || (data.calendarEventId is string && data.calendarEventId.size() <= 256)) &&
-        data.ikon is string && data.ikon.size() <= 20 &&
-        data.renk is string && data.renk.size() <= 20;
-    }
-
-    // User personal notes collection
-    match /users/{userId}/notes/{noteId} {
-      allow list, get: if isSignedIn() && request.auth.uid == userId;
-      allow create: if isSignedIn() && request.auth.uid == userId && isValidId(noteId) && isValidNote(incoming());
-      allow update: if isSignedIn() && request.auth.uid == userId && isValidId(noteId) && isValidNote(incoming());
-      allow delete: if isSignedIn() && request.auth.uid == userId && isValidId(noteId);
     }
   }
 }

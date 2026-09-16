@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   auth,
-  db,
   googleProvider,
   GoogleAuthProvider,
   signInWithPopup,
@@ -10,24 +9,16 @@ import {
   signOut,
   onAuthStateChanged,
   setGoogleAccessToken,
+  getGoogleAccessToken,
   createCalendarEvent,
   deleteCalendarEvent,
   updateCalendarEventTitle,
   checkCalendarConflicts,
-  collection,
-  addDoc,
-  deleteDoc,
-  updateDoc,
-  doc,
-  onSnapshot,
-  query,
-  orderBy,
-  serverTimestamp,
-  handleFirestoreError,
-  OperationType,
   type User,
 } from './firebase.ts';
 import { extractSimpleNoteFromText } from './utils/simpleNote.ts';
+import { getCardColor } from './utils/cardColors.ts';
+import { checkEpisodicMemory } from './utils/episodicMemory.ts';
 import type { ActionItem } from './types/notivia.ts';
 import {
   exportToDeviceCalendar,
@@ -42,11 +33,15 @@ import {
   deleteLocalMedia,
   compressImage,
 } from './utils/mediaStorage.ts';
+import {
+  loadNotesFromGoogleDrive,
+  saveNotesToGoogleDrive,
+} from './utils/driveStorage.ts';
 import { PWAInstallButton } from './components/PWAInstallButton.tsx';
 import { NotificationPermissionPrompt } from './components/NotificationPermissionPrompt.tsx';
 import { OfflineIndicator } from './components/OfflineIndicator.tsx';
 
-interface SimpleCardItem {
+export interface SimpleCardItem {
   id: string;
   baslik: string;
   zaman?: string | null;
@@ -76,6 +71,16 @@ interface SimpleCardItem {
   mediaId?: string | null;
   createdAt?: any;
   isRemoving?: boolean;
+  tamamlandi?: boolean;
+  guncel_renk?: string;
+}
+
+export function isCompletedCard(card: SimpleCardItem): boolean {
+  if (card.tamamlandi) return true;
+  if (card.action_items && card.action_items.length > 0) {
+    return card.action_items.every((item) => item.is_completed);
+  }
+  return false;
 }
 
 const LOCAL_STORAGE_KEY = 'notivia_local_notes';
@@ -138,24 +143,31 @@ function sortNotiviaCards(cards: SimpleCardItem[]): SimpleCardItem[] {
   const now = Date.now();
 
   return [...cards].sort((a, b) => {
+    const isCompletedA = isCompletedCard(a);
+    const isCompletedB = isCompletedCard(b);
+
+    // 1. Öncelik: Tamamlanmış (tik atılmış) kartlar en altlarda gösterilir
+    if (isCompletedA && !isCompletedB) return 1;
+    if (!isCompletedA && isCompletedB) return -1;
+
     const timeA = a.tarih_iso ? new Date(a.tarih_iso).getTime() : null;
     const timeB = b.tarih_iso ? new Date(b.tarih_iso).getTime() : null;
 
     const isExpiredA = timeA !== null && timeA < now;
     const isExpiredB = timeB !== null && timeB < now;
 
-    // 1. Öncelik: Süresi geçmiş olanlar her zaman listenin en dibine
+    // 2. Öncelik: Süresi geçmiş olanlar tamamlanmamışlar arasında altta
     if (isExpiredA && !isExpiredB) return 1;
     if (!isExpiredA && isExpiredB) return -1;
 
-    // 2. Öncelik: Yaklaşan aktif randevular (önümüzdeki 48 saat) en üste
+    // 3. Öncelik: Yaklaşan aktif randevular (önümüzdeki 48 saat) en üste
     const isUpcomingA = timeA && timeA >= now && (timeA - now) < 48 * 3600 * 1000;
     const isUpcomingB = timeB && timeB >= now && (timeB - now) < 48 * 3600 * 1000;
 
     if (isUpcomingA && !isUpcomingB) return -1;
     if (!isUpcomingA && isUpcomingB) return 1;
 
-    // 3. Öncelik: Kendi içlerinde en yeni oluşturulan en üstte
+    // 4. Öncelik: Kendi içlerinde en yeni oluşturulan en üstte
     const getCreatedMs = (val: any) => {
       if (!val) return 0;
       if (val.toDate) return val.toDate().getTime();
@@ -211,6 +223,10 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [modalImgSrc, setModalImgSrc] = useState<string | null>(null);
 
+  // Çoklu seçim ve toplu silme modu
+  const [isSelectMode, setIsSelectMode] = useState<boolean>(false);
+  const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
+
   // Geri alma state'i
   const [undoToast, setUndoToast] = useState<{
     item: SimpleCardItem;
@@ -223,10 +239,12 @@ export default function App() {
   const [manualDatetime, setManualDatetime] = useState<string>('');
   const [manualSyncCal, setManualSyncCal] = useState<boolean>(true);
 
+  const [isSyncingDrive, setIsSyncingDrive] = useState<boolean>(false);
+  const [driveSyncTime, setDriveSyncTime] = useState<string | null>(null);
+
   const recognitionRef = useRef<any>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const manualTextInputRef = useRef<HTMLInputElement | null>(null);
-  const firestoreUnsubRef = useRef<(() => void) | null>(null);
   const pendingCapturedImageRef = useRef<string | null>(null);
   const onSpeechCompletedRef = useRef<((spoken: string) => Promise<void>) | null>(null);
   const processWithAIRef = useRef<((text?: string, base64Image?: string | null, isSpoken?: boolean) => Promise<void>) | null>(null);
@@ -244,7 +262,7 @@ export default function App() {
     } catch {
       // ignore
     }
-    return []; // Mock 'Ahmet Abi' ve 'Su Filtresi' kayıtları tamamen temizlendi
+    return [];
   };
 
   const saveLocalNotes = (notes: SimpleCardItem[]) => {
@@ -255,7 +273,68 @@ export default function App() {
     }
   };
 
-  // Firebase Auth & Firestore synchronization
+  // Google Drive'a arka planda sessizce yedekleme tetikleyici
+  const triggerDriveBackup = async (currentNotes: SimpleCardItem[]) => {
+    const token = getGoogleAccessToken();
+    if (!token) return;
+    setIsSyncingDrive(true);
+    try {
+      const result = await saveNotesToGoogleDrive(currentNotes);
+      if (result.success) {
+        setDriveSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        console.log("Notlar kullanıcının kişisel Google Drive'ına yedeklendi ✓");
+      }
+    } catch (err) {
+      console.warn("Google Drive yedekleme hatası:", err);
+    } finally {
+      setIsSyncingDrive(false);
+    }
+  };
+
+  // Google Drive'dan notları çekme ve lokal ile birleştirme
+  const syncFromDrive = async () => {
+    const token = getGoogleAccessToken();
+    if (!token) return;
+    setIsSyncingDrive(true);
+    setStatusText("Drive'dan notlar yükleniyor...");
+    try {
+      const driveResult = await loadNotesFromGoogleDrive();
+      if (driveResult.success && driveResult.notes) {
+        const local = getLocalNotes();
+        // Eğer Drive'da yedek dosyası varsa ve boş değilse
+        if (driveResult.notes.length > 0) {
+          // Drive'daki notlar ile lokali birleştir (ID eşleşmelerine göre)
+          const mergedMap = new Map<string, SimpleCardItem>();
+          // Önce drive verisini ekle
+          driveResult.notes.forEach((n) => mergedMap.set(n.id, n));
+          // Sonra lokaldeki yeni olanları koru
+          local.forEach((n) => mergedMap.set(n.id, n));
+          const mergedList = Array.from(mergedMap.values());
+          setCards(mergedList);
+          saveLocalNotes(mergedList);
+          // Drive'ı güncel son haliyle besle
+          await saveNotesToGoogleDrive(mergedList);
+        } else if (local.length > 0) {
+          // Drive'da henüz dosya yok ama yerelde notlar varsa, ilk yedeklemeyi yap
+          await saveNotesToGoogleDrive(local);
+          setCards(local);
+        } else {
+          setCards([]);
+        }
+        setDriveSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        setStatusText("Google Drive ile eşitlendi ✓");
+        setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
+      }
+    } catch (err) {
+      console.warn("Drive sync hatası:", err);
+      setStatusText("Drive senkronizasyonunda sorun oluştu");
+      setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
+    } finally {
+      setIsSyncingDrive(false);
+    }
+  };
+
+  // Firebase Auth (Sadece Google Giriş Protokolü) & Google Drive Senkronizasyonu
   useEffect(() => {
     try {
       const storedSim = localStorage.getItem(SIMULATED_USER_KEY);
@@ -270,13 +349,14 @@ export default function App() {
     let isMounted = true;
 
     // Mobil cihazlardan redirect ile dönüldüyse sonucu yakala
-    getRedirectResult(auth).then((result) => {
+    getRedirectResult(auth).then(async (result) => {
       if (result) {
         const credential = GoogleAuthProvider.credentialFromResult(result);
         const token = credential?.accessToken || null;
         if (token) {
           setGoogleAccessToken(token);
           console.log("Mevcut Google Token başarıyla alındı (Redirect):", token);
+          await syncFromDrive();
         }
         setStatusText('Google hesabı bağlandı ✓');
         setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
@@ -293,75 +373,11 @@ export default function App() {
         if (!isMounted) return;
         setCurrentUser(user);
 
-        if (user && db) {
-          if (firestoreUnsubRef.current) {
-            firestoreUnsubRef.current();
-            firestoreUnsubRef.current = null;
-          }
-
-          // Migrate local notes to Firestore if any
-          const local = getLocalNotes();
-          if (local.length > 0) {
-            for (const note of local) {
-              try {
-                await addDoc(collection(db, 'users', user.uid, 'notes'), {
-                  ...note,
-                  createdAt: serverTimestamp(),
-                });
-              } catch {
-                // ignore
-              }
-            }
-            try {
-              localStorage.removeItem(LOCAL_STORAGE_KEY);
-            } catch {
-              // ignore
-            }
-          }
-
-          // Listen live to Firestore notes collection
-          const notesRef = collection(db, 'users', user.uid, 'notes');
-          const q = query(notesRef, orderBy('createdAt', 'desc'));
-
-          firestoreUnsubRef.current = onSnapshot(
-            q,
-            (snapshot) => {
-              const cloudNotes: SimpleCardItem[] = [];
-              snapshot.forEach((docSnap) => {
-                const d = docSnap.data();
-                cloudNotes.push({
-                  id: docSnap.id,
-                  baslik: d.baslik || 'Not',
-                  zaman: d.zaman || null,
-                  tarih_iso: d.tarih_iso || null,
-                  hazirlik_zamani: d.hazirlik_zamani || null,
-                  hazirlik_iso: d.hazirlik_iso || null,
-                  anomali_notu: d.anomali_notu || null,
-                  teshis_notu: d.teshis_notu || null,
-                  calendarEventId: d.calendarEventId || d.calendar_event_id || null,
-                  calendar_event_id: d.calendarEventId || d.calendar_event_id || null,
-                  conflictWith: d.conflictWith || d.conflictWarning || null,
-                  conflictWarning: d.conflictWith || d.conflictWarning || null,
-                  action_items: d.action_items || null,
-                  periyodik: d.periyodik || null,
-                  ikon: d.ikon || '📌',
-                  renk: d.renk || '#FEF3C7',
-                  mediaId: d.mediaId || null,
-                  createdAt: d.createdAt,
-                });
-              });
-              setCards(cloudNotes);
-            },
-            (error) => {
-              handleFirestoreError(error, OperationType.LIST, `users/${user.uid}/notes`);
-              setCards(getLocalNotes());
-            }
-          );
+        if (user) {
+          // Google hesabı bağlandı. Notlar Firestore'a ASLA kaydedilmez.
+          // Doğrudan kullanıcının Google Drive'ındaki dosyadan yüklenir ve yedeklenir.
+          await syncFromDrive();
         } else {
-          if (firestoreUnsubRef.current) {
-            firestoreUnsubRef.current();
-            firestoreUnsubRef.current = null;
-          }
           setCards(getLocalNotes());
         }
       });
@@ -369,9 +385,6 @@ export default function App() {
       return () => {
         isMounted = false;
         unsubscribeAuth();
-        if (firestoreUnsubRef.current) {
-          firestoreUnsubRef.current();
-        }
       };
     } catch {
       setCards(getLocalNotes());
@@ -658,6 +671,31 @@ export default function App() {
       noteData.baglantili_hatirlatma = `Hazır buradayken: ${relatedNames}`;
     }
 
+    // Episodic Memory (Geçmiş Örüntüleri ve Bakiye Mahsuplaşması) kontrolü
+    const episodicResult = checkEpisodicMemory(noteData, cards);
+    if (episodicResult.newCardUpdates) {
+      noteData = { ...noteData, ...episodicResult.newCardUpdates };
+    }
+
+    if (episodicResult.pastCardUpdates.length > 0) {
+      // Geçmiş kartları bellekte güncelle
+      setCards(prevCards => {
+        const nextCards = [...prevCards];
+        for (const update of episodicResult.pastCardUpdates) {
+          const idx = nextCards.findIndex(c => c.id === update.id);
+          if (idx !== -1) {
+            nextCards[idx] = { ...nextCards[idx], ...update.changes };
+          }
+        }
+        return nextCards;
+      });
+
+      // Firebase / LocalStorage yansıt
+      for (const update of episodicResult.pastCardUpdates) {
+        updateNoteTitle(update.id, update.changes.baslik || '', null, update.changes.ikon || '📌');
+      }
+    }
+
     // Takvime yaz ve çakışma bilgisini al
     const { eventId, conflictWith } = await createCalendarEvent(noteData);
 
@@ -712,7 +750,7 @@ export default function App() {
       teshis_notu: noteData.teshis_notu || null,
       baglantili_hatirlatma: noteData.baglantili_hatirlatma || null,
       action_items: (noteData as any).action_items || null,
-      createdAt: currentUser ? serverTimestamp() : nowIso // Lokal ve bulut uyumu
+      createdAt: nowIso,
     };
 
     const newCard: SimpleCardItem = {
@@ -726,17 +764,8 @@ export default function App() {
     local.unshift(newCard);
     saveLocalNotes(local);
 
-    if (currentUser && db) {
-      const pathForWrite = `users/${currentUser.uid}/notes`;
-      try {
-        const docRef = await addDoc(collection(db, 'users', currentUser.uid, 'notes'), payload);
-        setCards((prev) =>
-          prev.map((c) => (c.id === tempId ? { ...c, id: docRef.id } : c))
-        );
-      } catch (error) {
-        handleFirestoreError(error, OperationType.CREATE, pathForWrite);
-      }
-    }
+    // Google Drive'a sessizce yedekle
+    triggerDriveBackup(local);
   };
 
   // 1. Alt görev tamamlama / geri alma fonksiyonu
@@ -753,17 +782,48 @@ export default function App() {
       prev.map((c) => (c.id === cardId ? { ...c, action_items: updatedTasks } : c))
     );
 
-    // Firestore & LocalStorage Güncelle
-    if (currentUser && db && !cardId.startsWith('local_')) {
-      const noteRef = doc(db, 'users', currentUser.uid, 'notes', cardId);
-      await updateDoc(noteRef, { action_items: updatedTasks });
-    } else {
-      const local = getLocalNotes();
-      const locItem = local.find((n) => n.id === cardId);
-      if (locItem) {
-        locItem.action_items = updatedTasks;
-        saveLocalNotes(local);
-      }
+    const local = getLocalNotes();
+    const locItem = local.find((n) => n.id === cardId);
+    if (locItem) {
+      locItem.action_items = updatedTasks;
+      saveLocalNotes(local);
+      triggerDriveBackup(local);
+    }
+  };
+
+  // Kartın tamamlanma durumunu (tik atma) değiştirme - yok etmek yerine altlara üstü çizili atar
+  const toggleCardCompleted = async (cardId: string) => {
+    const targetCard = cards.find((c) => c.id === cardId);
+    if (!targetCard) return;
+
+    const nextCompleted = !isCompletedCard(targetCard);
+
+    // Varsa tüm action_items maddelerini de aynı duruma getir
+    const updatedTasks = targetCard.action_items
+      ? targetCard.action_items.map((task) => ({ ...task, is_completed: nextCompleted }))
+      : null;
+
+    setCards((prev) =>
+      prev.map((c) => {
+        if (c.id !== cardId) return c;
+        return {
+          ...c,
+          tamamlandi: nextCompleted,
+          action_items: updatedTasks || c.action_items,
+        };
+      })
+    );
+
+    setStatusText(nextCompleted ? 'Not tamamlandı olarak işaretlendi ✓' : 'Not geri açıldı');
+    setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2000);
+
+    const local = getLocalNotes();
+    const locItem = local.find((n) => n.id === cardId);
+    if (locItem) {
+      locItem.tamamlandi = nextCompleted;
+      if (updatedTasks) locItem.action_items = updatedTasks;
+      saveLocalNotes(local);
+      triggerDriveBackup(local);
     }
   };
 
@@ -780,16 +840,9 @@ export default function App() {
         console.warn('Medya silme hatası:', err)
       );
     }
-    if (currentUser && db && !card.id.startsWith('local_')) {
-      const pathForDelete = `users/${currentUser.uid}/notes/${card.id}`;
-      try {
-        await deleteDoc(doc(db, 'users', currentUser.uid, 'notes', card.id));
-      } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, pathForDelete);
-      }
-    }
     const local = getLocalNotes().filter((n) => n.id !== card.id);
     saveLocalNotes(local);
+    triggerDriveBackup(local);
   };
 
   // Geri Alma Aksiyonu
@@ -805,12 +858,8 @@ export default function App() {
     setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2000);
   };
 
-  const deleteNote = (
-    id: string,
-    calendarEventId?: string | null,
-    mediaId?: string | null
-  ) => {
-    // Eğer zaten bekleyen başka bir silme işlemi varsa onu hemen kalıcılaştır
+  // Tek tek doğrudan silme fonksiyonu (kullanıcı çöp kutusuna basarak direkt silebilir)
+  const directDeleteNote = (id: string) => {
     if (undoToast) {
       commitPendingDeletion(undoToast.item);
       clearTimeout(undoToast.timerId);
@@ -819,16 +868,93 @@ export default function App() {
     const targetCard = cards.find((c) => c.id === id);
     if (!targetCard) return;
 
-    // 1. Ekrandan anında kaldır (Hızlı UI tepkisi)
     setCards((prev) => prev.filter((c) => c.id !== id));
+    setSelectedCardIds((prev) => prev.filter((selectedId) => selectedId !== id));
 
-    // 2. 5 saniyelik zamanlayıcı başlat (Geri alınmazsa kalıcı silinecek)
     const timerId = setTimeout(async () => {
       await commitPendingDeletion(targetCard);
       setUndoToast(null);
     }, 5000);
 
     setUndoToast({ item: targetCard, timerId });
+    setStatusText('Not silindi (Geri alabilirsiniz)');
+  };
+
+  // Çoklu seçim ile seçilen tüm notları silme
+  const deleteSelectedNotes = async () => {
+    if (selectedCardIds.length === 0) return;
+    const count = selectedCardIds.length;
+    
+    if (undoToast) {
+      commitPendingDeletion(undoToast.item);
+      clearTimeout(undoToast.timerId);
+      setUndoToast(null);
+    }
+
+    const targetsToDelete = cards.filter((c) => selectedCardIds.includes(c.id));
+    setCards((prev) => prev.filter((c) => !selectedCardIds.includes(c.id)));
+    setSelectedCardIds([]);
+    setIsSelectMode(false);
+
+    setStatusText(`${count} not siliniyor...`);
+
+    // Hepsini kalıcı olarak sil
+    for (const card of targetsToDelete) {
+      await commitPendingDeletion(card);
+    }
+
+    setStatusText(`${count} not başarıyla silindi ✓`);
+    setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
+  };
+
+  // Notu Paylaşma Özelliği (Web Share API ve Kopyalama Desteği)
+  const shareNote = async (item: SimpleCardItem) => {
+    let shareText = `${item.ikon || '📌'} ${item.baslik}`;
+    if (item.zaman) {
+      shareText += `\n⏰ Zaman: ${item.zaman}`;
+    }
+    if (item.anomali_notu) {
+      shareText += `\n⚠️ Not: ${item.anomali_notu}`;
+    }
+    if (item.action_items && item.action_items.length > 0) {
+      shareText += '\n\nGörevler:';
+      item.action_items.forEach((t) => {
+        shareText += `\n${t.is_completed ? '[✓]' : '[ ]'} ${t.task}`;
+      });
+    }
+    shareText += '\n\n— Notivia ile paylaşıldı';
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: item.baslik,
+          text: shareText,
+        });
+        setStatusText('Not paylaşıldı ✓');
+        setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2000);
+        return;
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+
+    // Web Share desteklenmiyorsa veya iptal edildiyse panoya kopyala
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setStatusText('Not metni panoya kopyalandı ✓');
+      setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
+    } catch {
+      setStatusText('Paylaşım metni panoya kopyalanamadı');
+    }
+  };
+
+  const deleteNote = (
+    id: string,
+    calendarEventId?: string | null,
+    mediaId?: string | null
+  ) => {
+    // Geriye dönük uyumluluk için directDeleteNote'a yönlendir
+    directDeleteNote(id);
   };
 
   // 2. Kartı Güncelleme (Lokal / Firestore)
@@ -846,25 +972,19 @@ export default function App() {
       updateCalendarEventTitle(calendarEventId, cleanTitle, icon);
     }
 
-    // Bulut veya yerel kayıt güncellemesi
-    if (currentUser && db && !id.startsWith('local_')) {
-      const noteRef = doc(db, 'users', currentUser.uid, 'notes', id);
-      try {
-        await updateDoc(noteRef, { baslik: cleanTitle });
-      } catch (error) {
-        handleFirestoreError(error, OperationType.UPDATE, `users/${currentUser.uid}/notes/${id}`);
-      }
-    } else {
-      const local = getLocalNotes();
-      const target = local.find((n) => n.id === id);
-      if (target) {
-        target.baslik = cleanTitle;
-        saveLocalNotes(local);
-      }
-      setCards((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, baslik: cleanTitle } : n))
-      );
+    const local = getLocalNotes();
+    const target = local.find((n) => n.id === id);
+    if (target) {
+      target.baslik = cleanTitle;
+      target.ikon = icon;
+      saveLocalNotes(local);
+      triggerDriveBackup(local);
     }
+    
+    // React state update (runs for both cloud and local)
+    setCards((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, baslik: cleanTitle, ikon: icon } : n))
+    );
   };
 
   // View full image in modal
@@ -1172,19 +1292,64 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
         <header className="px-6 pt-6 pb-2 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-stone-900">Notivia</h1>
-            <span
-              id="sync-status"
-              className={`text-[11px] font-medium transition-colors ${
-                isCloudSync ? 'text-emerald-600' : 'text-stone-400'
-              }`}
-            >
-              {isCloudSync ? 'Bulut Senkronize' : 'Lokal Mod'}
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span
+                id="sync-status"
+                className={`text-[11px] font-medium transition-colors flex items-center gap-1 ${
+                  isCloudSync ? 'text-emerald-600' : 'text-stone-400'
+                }`}
+                title={
+                  isCloudSync
+                    ? isSyncingDrive
+                      ? 'Google Drive senkronize ediliyor...'
+                      : `Google Drive Yedekli (${driveSyncTime ? `Son: ${driveSyncTime}` : 'Hazır'})`
+                    : 'Kişisel verileriniz sadece bu cihazda saklanır'
+                }
+              >
+                {isCloudSync ? (
+                  <>
+                    <svg className={`w-3 h-3 ${isSyncingDrive ? 'animate-spin text-emerald-500' : 'text-emerald-600'}`} viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z" />
+                    </svg>
+                    {isSyncingDrive ? 'Drive Eşitleniyor...' : 'Google Drive Yedekli'}
+                  </>
+                ) : (
+                  'Lokal Mod'
+                )}
+              </span>
+              {isCloudSync && !isSyncingDrive && (
+                <button
+                  type="button"
+                  onClick={() => syncFromDrive()}
+                  title="Google Drive'dan şimdi eşitle"
+                  className="text-stone-400 hover:text-emerald-600 text-[10px] p-0.5 rounded transition-colors"
+                >
+                  ↻
+                </button>
+              )}
+            </div>
           </div>
 
           <div id="auth-container" className="flex items-center gap-2">
             {/* PWA Uygulama Olarak Yükle Butonu */}
             <PWAInstallButton />
+
+            {/* Çoklu Seçim Modu Butonu */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsSelectMode((prev) => !prev);
+                setSelectedCardIds([]);
+              }}
+              title={isSelectMode ? "Çoklu seçimden çık" : "Çoklu not seç / sil"}
+              className={`p-1.5 rounded-full transition-colors ${
+                isSelectMode ? 'text-stone-900 bg-amber-200' : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+            </button>
 
             {/* Arama Toggle */}
             <button
@@ -1322,14 +1487,63 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
             />
           </div>
 
+          {/* Çoklu Seçim ve Toplu Silme Barı */}
+          {isSelectMode && (
+            <div className="flex items-center justify-between bg-stone-900 text-white text-xs px-3.5 py-2.5 rounded-xl mb-3 shadow-sm animate-in fade-in duration-150">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedCardIds.length === filteredCards.length) {
+                      setSelectedCardIds([]);
+                    } else {
+                      setSelectedCardIds(filteredCards.map((c) => c.id));
+                    }
+                  }}
+                  className="text-stone-300 hover:text-white underline font-medium cursor-pointer"
+                >
+                  {selectedCardIds.length === filteredCards.length ? 'Seçimi Kaldır' : 'Tümünü Seç'}
+                </button>
+                <span className="text-stone-400">({selectedCardIds.length} seçili)</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSelectMode(false);
+                    setSelectedCardIds([]);
+                  }}
+                  className="px-2.5 py-1 text-stone-300 hover:text-white rounded-lg hover:bg-stone-800 transition-colors cursor-pointer"
+                >
+                  İptal
+                </button>
+                <button
+                  type="button"
+                  disabled={selectedCardIds.length === 0}
+                  onClick={deleteSelectedNotes}
+                  className="px-3 py-1 bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:hover:bg-red-600 text-white font-semibold rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Seçilenleri Sil ({selectedCardIds.length})
+                </button>
+              </div>
+            </div>
+          )}
+
           {filteredCards.length === 0 ? (
             <div className="text-center text-xs text-stone-400 mt-10">
               {searchQuery ? 'Aramanızla eşleşen not bulunamadı.' : 'Henüz not yok. Konuş veya fotoğraf çek.'}
             </div>
           ) : (
             sortNotiviaCards(filteredCards).map((item) => {
-              // Kartın süresinin dolup dolmadığını kontrol et
+              // Kartın süresinin dolup dolmadığını ve tamamlanma durumunu kontrol et
               const isExpired = item.tarih_iso ? new Date(item.tarih_iso).getTime() < Date.now() : false;
+              const isCompleted = isCompletedCard(item);
+              const cardBgColor = item.guncel_renk || item.renk || getCardColor(item.id, item.baslik);
+              const isSelected = selectedCardIds.includes(item.id);
 
               return (
                 <div
@@ -1337,34 +1551,63 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                   className={`card p-3.5 rounded-2xl flex items-center justify-between transition-all duration-300 ${
                     item.isRemoving ? 'scale-95 opacity-0' : 'scale-100'
                   } ${
-                    isExpired 
+                    isCompleted
+                      ? 'opacity-70 saturate-50 border-solid border-stone-300/80 shadow-none'
+                      : isExpired 
                       ? 'opacity-65 saturate-60 border-dashed border-stone-300' 
-                      : 'opacity-100 border-solid border-black/5'
-                  }`}
+                      : 'opacity-100 border-solid border-black/5 shadow-xs'
+                  } ${isSelected ? 'ring-2 ring-stone-800' : ''}`}
                   style={{
-                    backgroundColor: item.renk || '#FEF3C7',
+                    backgroundColor: cardBgColor,
                     borderWidth: '1px',
                   }}
                 >
-                  <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="flex items-center gap-3 overflow-hidden flex-1">
+                    {/* Çoklu Seçim Modunda Seçim Kutucuğu */}
+                    {isSelectMode && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedCardIds((prev) =>
+                            prev.includes(item.id)
+                              ? prev.filter((id) => id !== item.id)
+                              : [...prev, item.id]
+                          );
+                        }}
+                        className={`w-5 h-5 rounded-md border flex items-center justify-center text-xs shrink-0 cursor-pointer transition-colors ${
+                          isSelected
+                            ? 'bg-stone-900 border-stone-900 text-white'
+                            : 'border-stone-400 bg-white/70 hover:bg-white text-transparent'
+                        }`}
+                        title={isSelected ? "Seçimi kaldır" : "Seç"}
+                      >
+                        ✓
+                      </button>
+                    )}
+
                     {item.mediaId ? (
                       <CardMediaThumbnail
                         mediaId={item.mediaId}
                         onClick={() => viewFullImage(item.mediaId!)}
                       />
                     ) : (
-                      <span className={`text-2xl select-none shrink-0 ${isExpired ? 'grayscale-40' : ''}`}>
+                      <span className={`text-2xl select-none shrink-0 ${isCompleted || isExpired ? 'grayscale-40' : ''}`}>
                         {item.ikon || '📌'}
                       </span>
                     )}
 
                     <div className="min-w-0 flex-1">
                       <h2
-                        contentEditable={!isExpired}
+                        contentEditable={!isExpired && !isCompleted}
                         suppressContentEditableWarning={true}
                         spellCheck={false}
                         className={`font-semibold text-sm leading-tight outline-hidden ${
-                          isExpired ? 'text-stone-500 line-through decoration-stone-400/60' : 'text-stone-900 cursor-text'
+                          isCompleted
+                            ? 'text-stone-500 line-through decoration-stone-500/70'
+                            : isExpired
+                            ? 'text-stone-500 line-through decoration-stone-400/60'
+                            : 'text-stone-900 cursor-text'
                         }`}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter') {
@@ -1542,20 +1785,55 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      deleteNote(
-                        item.id,
-                        item.calendarEventId || item.calendar_event_id,
-                        item.mediaId
-                      )
-                    }
-                    className="w-8 h-8 rounded-full border border-stone-300/70 flex items-center justify-center text-stone-400 active:bg-white/80 transition-colors shrink-0 ml-2 cursor-pointer"
-                    title={isExpired ? "Arşivle / Temizle" : "Tamamla"}
-                  >
-                    ✓
-                  </button>
+                  {/* Kart Aksiyonları: Paylaş, Doğrudan Sil ve Tamamla (Tik) */}
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                    {/* Paylaş Butonu */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        shareNote(item);
+                      }}
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-700 hover:bg-black/5 active:bg-black/10 transition-colors cursor-pointer"
+                      title="Notu paylaş veya kopyala"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                      </svg>
+                    </button>
+
+                    {/* Direkt Silme Butonu (Çöp Kutusu) */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        directDeleteNote(item.id);
+                      }}
+                      className="w-7 h-7 rounded-full flex items-center justify-center text-stone-400 hover:text-red-600 hover:bg-red-50/80 active:bg-red-100 transition-colors cursor-pointer"
+                      title="Notu sil"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+
+                    {/* Tamamlama Butonu (Tik: Yok etmek yerine alta üstü çizili gönderir) */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleCardCompleted(item.id);
+                      }}
+                      className={`w-7 h-7 rounded-full border flex items-center justify-center transition-colors cursor-pointer ${
+                        isCompleted
+                          ? 'bg-stone-800 border-stone-800 text-white shadow-xs'
+                          : 'border-stone-300/80 text-stone-400 hover:text-stone-700 hover:border-stone-400 active:bg-white/80'
+                      }`}
+                      title={isCompleted ? "Tamamlandı (Geri açmak için tıkla)" : "Tamamla (En alta üstü çizili gönderir)"}
+                    >
+                      ✓
+                    </button>
+                  </div>
                 </div>
               );
             })
@@ -1691,8 +1969,8 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
         {undoToast && (
           <div className="absolute bottom-28 inset-x-6 z-30 flex items-center justify-between bg-stone-900 text-white text-xs px-4 py-2.5 rounded-2xl shadow-xl border border-stone-800 animate-in fade-in slide-in-from-bottom-2 duration-200">
             <div className="flex items-center gap-2 truncate pr-2">
-              <span className="text-emerald-400 font-bold">✓</span>
-              <span className="truncate">"{undoToast.item.baslik}" tamamlandı</span>
+              <span className="text-red-400 font-bold">🗑</span>
+              <span className="truncate">"{undoToast.item.baslik}" silindi</span>
             </div>
             <button
               type="button"

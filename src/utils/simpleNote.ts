@@ -1,8 +1,12 @@
 import type { NotiviaParsedNote, NotiviaSimpleNote } from '../types/notivia.ts';
 import { getNextMonthEndTargetDate } from './date.ts';
 import { inferPredictiveActions } from './predictiveGraph.ts';
+import { matchShortScenario } from './scenarioDatabase.ts';
+import { getCardColor } from './cardColors.ts';
 export { extractDateTimeFromTurkish, getNextMonthEndTargetDate } from './date.ts';
 export { inferPredictiveActions } from './predictiveGraph.ts';
+export { matchShortScenario } from './scenarioDatabase.ts';
+export { getCardColor } from './cardColors.ts';
 
 export function toSimpleNote(note: NotiviaParsedNote): NotiviaSimpleNote {
   let zamanStr: string | null = null;
@@ -233,6 +237,27 @@ export function extractSimpleNoteFromText(
     }, cleanInput);
   }
 
+  // B2. KISA VE EKSİK İFADELER İÇİN GENİŞLETİLMİŞ SENARYO ÇÖZÜMLEMESİ (Leb Demeden Leblebiyi Anlama)
+  // Kullanıcı 2-3 kelime ile devrik veya özet dahi yazsa ("klima temizlik", "muayene tüvtürk", "tahlil sabah", "fatura kes", "kombi bar düştü")
+  const shortScenario = matchShortScenario(cleanInput);
+  if (shortScenario) {
+    return enrichWithPredictiveGraph({
+      baslik: shortScenario.baslik,
+      zaman: periodicZaman || zaman || shortScenario.varsayilanZaman,
+      tarih_iso: periodicIso || tarih_iso,
+      ikon: shortScenario.ikon,
+      renk: shortScenario.renk,
+      tetikleyici: tetikleyici || (shortScenario.tetikleyici ? {
+        tip: shortScenario.tetikleyici.tip,
+        sart: shortScenario.tetikleyici.sart,
+        etiket: shortScenario.tetikleyici.etiket
+      } : null),
+      periyodik,
+      anomali_notu: shortScenario.akilliFisilti,
+      hazirlik_zamani: shortScenario.hazirlikZamani
+    }, cleanInput);
+  }
+
   // C. KURUMSAL / BÜROKRASİ / 3. ŞAHIS DENETİM & RESMİ GÖREVLER
   if (
     lower.includes('müfettiş') || lower.includes('bakan') || lower.includes('denetim') ||
@@ -281,6 +306,7 @@ export function extractSimpleNoteFromText(
     else if (lower.includes('balata')) baslik = 'Fren Balata Değişimi';
     else if (lower.includes('lastik')) { baslik = 'Kışlık Lastik Değişimi'; ikon = '🛞'; }
     else if (lower.includes('kombi')) baslik = 'Kombi Basınç Kontrolü';
+    else if (lower.includes('filtre')) { baslik = 'Filtre Değişimi'; ikon = '💧'; }
 
     return enrichWithPredictiveGraph({
       baslik,
@@ -353,7 +379,7 @@ export function extractSimpleNoteFromText(
       zaman: zaman || 'Takip',
       tarih_iso,
       ikon: '🪜',
-      renk: '#F5F5F4'
+      renk: getCardColor(cleanInput, '#E0F2FE')
     }, cleanInput);
   }
 
@@ -363,7 +389,7 @@ export function extractSimpleNoteFromText(
     zaman: periodicZaman || zaman || 'Not',
     tarih_iso: periodicIso || tarih_iso,
     ikon: periyodik ? '🔄' : '📌',
-    renk: periyodik ? '#FEF3C7' : '#F5F5F4',
+    renk: periyodik ? '#FEF3C7' : getCardColor(cleanInput),
     periyodik,
   };
 
