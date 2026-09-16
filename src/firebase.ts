@@ -64,10 +64,7 @@ export const db: Firestore = getFirestore(app, (firebaseConfig as any).firestore
 
 // Google Auth Provider (Standard authentication without external Calendar scopes)
 export const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({
-  prompt: 'select_account',
-  client_id: '337388503929-cdmog5ep7103gchf32h27hagsmqc0pq1.apps.googleusercontent.com'
-});
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 // Token management (in-memory + sessionStorage as requested)
 const TOKEN_KEY = 'notivia_g_token';

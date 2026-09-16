@@ -269,12 +269,15 @@ export default function App() {
         if (token) {
           setGoogleAccessToken(token);
           console.log("Mevcut Google Token başarıyla alındı (Redirect):", token);
-          setStatusText('Google hesabı bağlandı ✓');
-          setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
         }
+        setStatusText('Google hesabı bağlandı ✓');
+        setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
       }
     }).catch((err) => {
       console.warn("Google Redirect Login Error:", err);
+      if (err?.code === 'auth/unauthorized-domain') {
+        setStatusText(`Domain yetkisiz: ${window.location.hostname} Firebase'e eklenmeli`);
+      }
     });
 
     try {
@@ -1055,45 +1058,40 @@ BİLİŞSEL ALT GÖREVLER (Action Items):
   const handleLogin = async () => {
     setStatusText('Google hesabı bağlanıyor...');
     
-    // Mobil Cihaz Tespiti
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    
     try {
-      if (isMobile) {
-        // Mobilde doğrudan redirect ile giriş yapmayı dene
-        await signInWithRedirect(auth, googleProvider);
-        return; // Yönlendirme yapılacağı için aşağı devam etmez
-      }
-      
+      // Modern mobil ve masaüstü tarayıcılarda kullanıcı tıklamasıyla tetiklenen popup en kararlı yöntemdir.
       const result = await signInWithPopup(auth, googleProvider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const token = credential?.accessToken || null;
       if (token) {
         setGoogleAccessToken(token);
         console.log("Mevcut Google Token başarıyla alındı:", token);
-        setStatusText('Google hesabı bağlandı ✓');
-      } else {
-        setStatusText('Giriş yapıldı ✓');
       }
+      setStatusText('Google hesabı bağlandı ✓');
       setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
     } catch (err: any) {
       console.warn('Google giriş uyarısı / hatası:', err?.code, err?.message || err);
+      
       if (err?.code === 'auth/popup-blocked') {
-        setStatusText('Popup engellendi, yönlendiriliyor...');
-        // Popup engellenirse otomatik olarak redirect metoduna düş
-        await signInWithRedirect(auth, googleProvider).catch(() => {
-          setStatusText('Yönlendirme de başarısız oldu.');
-          setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 3500);
-        });
+        setStatusText('Açılır pencere engellendi, yönlendiriliyor...');
+        try {
+          await signInWithRedirect(auth, googleProvider);
+        } catch (redirectErr: any) {
+          setStatusText(`Yönlendirme hatası: ${redirectErr?.message || redirectErr?.code || 'Bilinmeyen hata'}`);
+          setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 4000);
+        }
       } else if (err?.code === 'auth/unauthorized-domain') {
-        setStatusText('Önizleme yetkisi bekleniyor (Lokal mod aktif)');
-        setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 3500);
+        const currentHost = window.location.hostname;
+        setStatusText(`Domain yetkisiz: Firebase Console'da "${currentHost}" eklenmeli`);
+        alert(`Firebase Hatası: "${currentHost}" alan adı henüz Firebase Console > Authentication > Settings > Authorized domains bölümüne eklenmemiş.`);
+        setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 5000);
       } else if (err?.code === 'auth/cancelled-popup-request' || err?.code === 'auth/popup-closed-by-user') {
         setStatusText('Giriş penceresi kapatıldı');
-        setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 3500);
+        setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
       } else {
-        setStatusText('Giriş yapılamadı (Lokal mod devrede)');
-        setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 3500);
+        const msg = err?.message || err?.code || 'Giriş yapılamadı';
+        setStatusText(`Giriş hatası: ${msg}`);
+        setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 4500);
       }
     }
   };
