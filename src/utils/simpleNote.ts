@@ -63,6 +63,28 @@ export function toSimpleNote(note: NotiviaParsedNote): NotiviaSimpleNote {
   };
 }
 
+// Metin içindeki maddeleri, yeni satırları veya ayıraçları kontrol listesine dönüştürücü
+export function parseTextToChecklist(rawText: string): { task: string; is_completed: boolean }[] {
+  // 1. Yeni satırlara, tirelere, yıldızlara veya virgüllere göre parçala
+  const lines = rawText
+    .split(/\r?\n|(?<=[^0-9]),|(?<=[a-zA-ZğüşıöçĞÜŞİÖÇ])\s*-\s*|\s*•\s*/)
+    .map(line => line.trim())
+    // Liste başlığı veya boş satırları ele
+    .filter(line => line.length > 1 && !line.toLowerCase().endsWith('listesi:'));
+
+  return lines.map(line => {
+    // Başındaki "1.", "-", "*", "[ ]" gibi liste işaretlerini temizle
+    const cleanTask = line
+      .replace(/^(\d+[\.\)]|\-|\*|•|\[\s*\])\s*/, '')
+      .trim();
+
+    return {
+      task: cleanTask.charAt(0).toLocaleUpperCase('tr-TR') + cleanTask.slice(1),
+      is_completed: false
+    };
+  });
+}
+
 // 1. Türkçe Zaman ve Göreceli Periyot Ayrıştırıcı
 interface TemporalParseResult {
   zaman: string | null;
@@ -352,6 +374,63 @@ export function extractSimpleNoteFromText(
     tetikleyici = { tip: 'mekan', sart: 'Sanayi ziyareti', etiket: '📍 Sanayi Uğraması' };
   } else if (lower.includes('veli toplantıs') || lower.includes('toplantıda')) {
     tetikleyici = { tip: 'mekan', sart: 'Toplantı', etiket: '📍 Toplantıda' };
+  }
+
+  // 0. ÖNCELİK: LİSTE, MARKET VE ENVANTER / ÇOK SATIRLI GÖREV LİSTESİ AYRIŞTIRMA KURALI
+  if (lower.includes('alınacak') || lower.includes('market') || lower.includes('liste') || lower.includes('bakkal') || lower.includes('pazar') || cleanInput.includes('\n')) {
+    // Çok satırlı genel görev listesi ise
+    if (cleanInput.includes('\n') || (cleanInput.includes('-') && cleanInput.split('-').length >= 3)) {
+      const parsedItems = parseTextToChecklist(cleanInput);
+      if (parsedItems.length > 0) {
+        const isShopping = lower.includes('market') || lower.includes('pazar') || lower.includes('alınacak') ||
+          parsedItems.some(i => /süt|sut|ekmek|yumurta|peynir|zeytin|su|deterjan|yağ|yag/i.test(i.task));
+
+        return enrichWithPredictiveGraph({
+          baslik: isShopping ? (lower.includes('pazar') ? 'Pazar Alışverişi' : 'Market Alışveriş Listesi') : 'Görev Listesi',
+          zaman: isShopping ? 'Markette' : (zaman || 'Gerektiğinde'),
+          tarih_iso: tarih_iso || null,
+          action_items: parsedItems,
+          ikon: isShopping ? '🛒' : '📝',
+          renk: isShopping ? '#DCFCE7' : '#E0F2FE',
+          anomali_notu: `${parsedItems.length} madde listelendi.`,
+          sesli_fisilti: `Listeniz ${parsedItems.length} madde ile hazırlandı.`
+        }, cleanInput);
+      }
+    }
+
+    // "alınacaklar listesi", "marketten" gibi başlangıç kelimelerini temizle
+    const rawItemsText = cleanInput
+      .replace(/\b(alınacaklar|alınacak|listesi|market|bakkal|pazar|şunlar|al|almam lazım)\b/gi, '')
+      .trim();
+
+    // Virgül, "ve", "bir de", "ile" ve boşluklara göre maddeleri ayıkla
+    let rawList = rawItemsText.split(/,|\s+ve\s+|\s+bir de\s+|\s+ile\s+|\n/gi);
+    
+    // Eğer tek parça kaldıysa ve boşluklarla ayrılmış birden çok kelime varsa kelime bazlı böl
+    if (rawList.length === 1 && rawList[0].trim().split(/\s+/).length >= 2) {
+      rawList = rawList[0].trim().split(/\s+/);
+    }
+
+    const checklistItems = rawList
+      .map(item => item.trim())
+      .filter(item => item.length > 1)
+      .map(item => ({
+        task: item.charAt(0).toLocaleUpperCase('tr-TR') + item.slice(1),
+        is_completed: false
+      }));
+
+    if (checklistItems.length > 0) {
+      return enrichWithPredictiveGraph({
+        baslik: lower.includes('pazar') ? 'Pazar Alışverişi' : 'Market Alışveriş Listesi',
+        zaman: 'Markette',
+        tarih_iso: null,
+        action_items: checklistItems,
+        ikon: '🛒',
+        renk: '#DCFCE7',
+        anomali_notu: `${checklistItems.length} parça ürün listelendi.`,
+        sesli_fisilti: `Alışveriş listeniz ${checklistItems.length} parça ürünle hazırlandı.`
+      }, cleanInput);
+    }
   }
 
   // 1. ÖNCELİK: TOPLANTI, YÖNETİM & RESMİ GÖRÜŞMELER

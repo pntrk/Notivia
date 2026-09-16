@@ -138,7 +138,9 @@ KULLANILABİLİR ARAÇLAR:
    - Zero-Shot Inverted Planning: Eksik girdileri dev bir eylem planına dönüştür; 3-4 maddelik somut kontrol adımı üret (harç, evrak, borç kontrolü, açlık/tokluk, vb.).
    - Inverted Scheduling: Etkinlikten önceki hazırlık vadesini ('hazirlik_iso') hesapla (randevudan 1 gün önce 16:00, uçuştan 24 saat önce, vb.).
    - Anomali Notu: Hayati hatadan kurtaracak rehber fısıltı ('anomali_notu').
+   - Liste & Market & Envanter Kuralı: Kullanıcı "alınacaklar listesi", "market", "pazar", "bakkal" dediğinde veya arka arkaya ürün saydığında ("et süt yumurta ekmek su zeytin peynir") başlığı "Market Alışveriş Listesi" veya "Pazar Alışverişi" yap, her ürünü tek tek 'action_items' dizisine aktar, bağlaçları temizle, İkon: 🛒, Renk: #DCFCE7, Zaman: "Markette / Alışverişte".
    - Renk ve İkon Mimarisi:
+     * Alışveriş / Liste / Market: #DCFCE7 (🛒)
      * Resmi / Kurumsal / Bürokrasi: #E0F2FE (🏛️/🛂/🪪/📋)
      * Sosyal / İletişim / Tören: #DCFCE7 (🤝/💍/💐)
      * Teknik / Bakım / Muayene: #FEF3C7 (🔧/🚗/⚙️)

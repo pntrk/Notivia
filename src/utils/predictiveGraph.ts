@@ -52,6 +52,9 @@ export function getDomainTheme(domain: string): { ikon: string; renk: string } {
     else if (d.includes('egitim') || d.includes('zumre') || d.includes('kpss') || d.includes('nobet') || d.includes('rapor')) ikon = '📋';
     return { ikon, renk: '#E0F2FE' };
   }
+  if (d.includes('market') || d.includes('alisveris') || d.includes('alışveriş') || d.includes('pazar') || d.includes('liste') || d.includes('bakkal') || d.includes('envanter') || d.includes('eksik')) {
+    return { ikon: '🛒', renk: '#DCFCE7' };
+  }
   if (d.includes('botanik') || d.includes('cicek') || d.includes('bitki') || d.includes('sula') || d.includes('bahce') || d.includes('orkide') || d.includes('sardunya') || d.includes('kaktus') || d.includes('sukulent') || d.includes('pasa_kilici') || d.includes('baris_cicegi')) {
     let ikon = '🪴';
     if (d.includes('orkide') || d.includes('petunya')) ikon = '🌸';

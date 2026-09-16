@@ -725,6 +725,21 @@ Kullanıcıyı bürokratik cezalardan, hak kayıplarından veya hayati aksaklık
 - Saat söylenmediyse bağlama uygun varsayılan ata (Sabah: 09:00, Akşam: 21:00).
 - Referans Zaman (CURRENT_DATETIME): ${now}.${historyContext}
 
+7. LİSTE, MARKET VE ENVANTER AYRIŞTIRMA KURALI:
+- Kullanıcı "alınacaklar listesi", "pazar", "market", "bakkal" dediğinde veya arka arkaya ürün/nesne saydığında ("et süt yumurta ekmek su zeytin peynir"):
+  1. Başlığı net koy: "Market Alışveriş Listesi" veya "Pazar Alışverişi".
+  2. Sayılan istisnasız HER BİR ÜRÜNÜ tek tek 'action_items' dizisine dönüştür:
+     [
+       { "task": "Et", "is_completed": false },
+       { "task": "Süt", "is_completed": false },
+       { "task": "Yumurta (30'lu)", "is_completed": false },
+       { "task": "Ekmek", "is_completed": false },
+       { "task": "5 Lt Su", "is_completed": false }
+     ]
+  3. Ürünler arasında geçen "ve", "virgül", "sonra", "bir de", "başka" gibi bağlaçları temizle, her maddeye sadece saf ürün adını yaz.
+  4. İkon: 🛒, Renk: #DCFCE7 (Pastel Yeşil), Zaman: "Markette / Alışverişte".
+  5. Sesli Fısıltı: "Alışveriş listeniz X adet ürünle hazırlandı."
+
 Kullanıcı girdisi: "${text}".
 
 JSON ÇIKTI ŞEMASI (Yalnızca aşağıdaki şemaya uyan ham JSON üret, markdown blokları veya fazladan karşılama metni ekleme):

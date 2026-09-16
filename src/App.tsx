@@ -612,38 +612,60 @@ export default function App() {
       try {
         const recognition = new SpeechRecognition();
         recognition.lang = 'tr-TR';
-        recognition.continuous = false;
-        recognition.interimResults = false;
+        recognition.continuous = true; // Kullanıcı duraklasa dahi dinlemeye devam eder
+        recognition.interimResults = true; // Konuşulanları anlık ekrana yansıtır
+
+        let silenceTimer: any = null;
 
         recognition.onstart = () => {
           setIsListening(true);
           playMicListeningChime();
           if (pendingCapturedImageRef.current) {
-            setStatusText('Görsel hazır. Bir şey söyleyecek misin?');
+            setStatusText('Görsel hazır. Dinleniyor...');
           } else {
-            setStatusText('Dinliyorum...');
+            setStatusText('Dinleniyor...');
           }
         };
 
-        recognition.onresult = async (event: any) => {
-          const spoken = event.results?.[0]?.[0]?.transcript;
-          if (spoken && onSpeechCompletedRef.current) {
-            await onSpeechCompletedRef.current(spoken);
-          } else if (pendingCapturedImageRef.current) {
-            const imageToSend = pendingCapturedImageRef.current;
-            pendingCapturedImageRef.current = null;
-            setStatusText('Görsel teşhis ediliyor...');
-            resetMicUI();
-            if (processWithAIRef.current) {
-              await processWithAIRef.current('', imageToSend);
-            }
-          } else {
-            resetMicUI();
+        recognition.onresult = (event: any) => {
+          clearTimeout(silenceTimer);
+
+          let fullTranscript = '';
+          for (let i = 0; i < event.results.length; i++) {
+            fullTranscript += event.results[i][0].transcript + ' ';
           }
+
+          setStatusText(`Dinleniyor (${event.results.length} parça)...`);
+
+          // 3.5 saniye boyunca tek bir kelime dahi gelmezse listeyi tamamla ve AI'a gönder
+          silenceTimer = setTimeout(async () => {
+            try {
+              recognition.stop();
+            } catch {
+              // ignore
+            }
+            resetMicUI();
+            if (fullTranscript.trim()) {
+              if (onSpeechCompletedRef.current) {
+                await onSpeechCompletedRef.current(fullTranscript.trim());
+              } else if (processWithAIRef.current) {
+                await processWithAIRef.current(fullTranscript.trim(), null, true);
+              }
+            } else if (pendingCapturedImageRef.current) {
+              const imageToSend = pendingCapturedImageRef.current;
+              pendingCapturedImageRef.current = null;
+              setStatusText('Görsel teşhis ediliyor...');
+              resetMicUI();
+              if (processWithAIRef.current) {
+                await processWithAIRef.current('', imageToSend, false);
+              }
+            }
+          }, 3500);
         };
 
         recognition.onerror = async (e: any) => {
           console.warn('SpeechRecognition bildirimi:', e?.error || e);
+          clearTimeout(silenceTimer);
           setIsListening(false);
           if (pendingCapturedImageRef.current) {
             setStatusText('Görsel hazır. "Teşhis Et"e dokunabilir veya konuşabilirsin.');
@@ -653,6 +675,7 @@ export default function App() {
         };
 
         recognition.onend = async () => {
+          clearTimeout(silenceTimer);
           setIsListening(false);
           if (pendingCapturedImageRef.current) {
             setStatusText('Görsel hazır. İster sesle anlat, ister doğrudan tıkla.');
@@ -998,6 +1021,32 @@ export default function App() {
     }
   };
 
+  // 1.1 Karta alt görev / madde ekleme fonksiyonu
+  const addSubtaskToCard = (cardId: string, taskText: string) => {
+    if (!taskText.trim()) return;
+
+    const trimmed = taskText.trim();
+    setCards((prev) =>
+      prev.map((card) => {
+        if (card.id !== cardId) return card;
+        const currentTasks = card.action_items || [];
+        return {
+          ...card,
+          action_items: [...currentTasks, { task: trimmed, is_completed: false }],
+        };
+      })
+    );
+
+    const local = getLocalNotes();
+    const locItem = local.find((n) => n.id === cardId);
+    if (locItem) {
+      const currentTasks = locItem.action_items || [];
+      locItem.action_items = [...currentTasks, { task: trimmed, is_completed: false }];
+      saveLocalNotes(local);
+      triggerDriveBackup(local);
+    }
+  };
+
   // Kartın tamamlanma durumunu (tik atma) değiştirme - yok etmek yerine altlara üstü çizili atar
   const toggleCardCompleted = async (cardId: string) => {
     const targetCard = cards.find((c) => c.id === cardId);
@@ -1208,11 +1257,13 @@ export default function App() {
     (window as any).viewFullImage = viewFullImage;
     (window as any).updateNoteTitle = updateNoteTitle;
     (window as any).updateCalendarEventTitle = updateCalendarEventTitle;
+    (window as any).addSubtaskToCard = addSubtaskToCard;
     return () => {
       delete (window as any).deleteNote;
       delete (window as any).viewFullImage;
       delete (window as any).updateNoteTitle;
       delete (window as any).updateCalendarEventTitle;
+      delete (window as any).addSubtaskToCard;
     };
   }, [currentUser]);
 
@@ -1661,38 +1712,38 @@ export default function App() {
           </div>
         </header>
 
-        {/* Metin Girişi (Klavye Modu) */}
+        {/* Metin Girişi (Klavye Modu / Görev Listesi) */}
         {showTextInput && (
-          <div className={`px-6 py-2 border-b animate-in fade-in duration-150 ${
-            theme === 'dark' ? 'border-stone-800 bg-stone-900/60' : 'border-stone-100 bg-stone-50/50'
-          }`}>
-            <form
-              id="text-input-form"
-              onSubmit={handleManualTextSubmit}
-              className="flex gap-2"
-            >
-              <input
-                id="manual-text-input"
-                type="text"
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
-                placeholder={t.manualInputPlaceholder}
-                className={`flex-1 text-xs px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-stone-400 border ${
-                  theme === 'dark'
-                    ? 'bg-stone-800 border-stone-700 text-stone-100 placeholder-stone-500'
-                    : 'bg-stone-50 border border-stone-200 text-stone-800'
-                }`}
-                autoFocus
-              />
+          <form onSubmit={handleManualTextSubmit} className="p-3 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 animate-in fade-in duration-150">
+            <textarea
+              id="manual-text-input"
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              placeholder={`Maddeleri alt alta yazın veya yapıştırın:
+- Süt al
+- Faturayı öde
+- Raporu gönder`}
+              rows={3}
+              className="w-full text-xs p-2.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl outline-none resize-none text-stone-900 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-500 focus:ring-1 focus:ring-stone-400"
+              autoFocus
+              onKeyDown={(e) => {
+                // Enter'a basınca gönder (Shift+Enter yeni satır)
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleManualTextSubmit(e);
+                }
+              }}
+            />
+            <div className="flex justify-end gap-2 mt-2">
               <button
                 type="submit"
                 disabled={!textInput.trim()}
-                className="px-3 py-2 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-xl text-xs font-semibold disabled:opacity-40 cursor-pointer"
+                className="px-3 py-1.5 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-lg text-xs font-semibold disabled:opacity-40 cursor-pointer"
               >
-                {t.addButton}
+                Görev Listesi Oluştur
               </button>
-            </form>
-          </div>
+            </div>
+          </form>
         )}
 
         {/* Kart Listesi Alanı */}
@@ -2011,6 +2062,27 @@ export default function App() {
                                     </span>
                                   </div>
                                 ))}
+
+                                {/* Hızlı Alt Madde Ekleme */}
+                                <div className="pt-1">
+                                  <input
+                                    type="text"
+                                    placeholder="+ Madde ekle..."
+                                    className="w-full text-[10px] px-2 py-1 rounded bg-black/5 dark:bg-white/10 text-stone-800 dark:text-stone-100 placeholder-stone-400 outline-none border border-transparent focus:border-stone-400"
+                                    onClick={(e) => e.stopPropagation()}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        const val = e.currentTarget.value.trim();
+                                        if (val) {
+                                          addSubtaskToCard(item.id, val);
+                                          e.currentTarget.value = '';
+                                        }
+                                      }
+                                    }}
+                                  />
+                                </div>
                               </div>
                             </details>
                           </div>
