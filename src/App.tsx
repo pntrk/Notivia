@@ -665,10 +665,11 @@ export default function App() {
       try {
         const recognition = new SpeechRecognition();
         recognition.lang = 'tr-TR';
-        // Mobil cihazlarda continuous: true sorun yaratabildiği için false veya true bırakıp onend ile yakalayabiliriz.
-        // Şimdilik true bırakıp onend'de metin varsa göndermeyi sağlayalım.
-        recognition.continuous = true; 
-        recognition.interimResults = true; 
+        
+        // Mobil cihazlarda çift kelime (Ahmet Ahmet) ve stabilite sorunlarını çözmek için 
+        // continuous ve interimResults false yapılarak cihazın native VAD'ine (Voice Activity Detection) bırakılır.
+        recognition.continuous = false; 
+        recognition.interimResults = false; 
 
         let silenceTimer: any = null;
         let currentTranscript = '';

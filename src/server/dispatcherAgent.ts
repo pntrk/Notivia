@@ -412,12 +412,12 @@ export async function dispatchWithGemini(input: string, currentDatetime: string)
     const userPrompt = `Kullanıcı Girdisi: "${input}"\nCURRENT_DATETIME: ${currentDatetime}`;
 
     let functionCalls: any[] | undefined;
-    let usedModel = 'gemini-3.8-flash';
+    let usedModel = 'gemini-2.5-flash';
 
     const candidateModels = [
-      'gemini-3.1-flash-lite',
-      'gemini-3.8-flash',
-      'gemini-flash-latest',
+      'gemini-3.1-flash',
+      'gemini-2.5-flash', 'gemini-2.0-flash',
+      'gemini-3.1-8b',
     ];
     for (const modelName of candidateModels) {
       try {

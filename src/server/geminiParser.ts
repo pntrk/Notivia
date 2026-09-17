@@ -52,9 +52,9 @@ export async function parseWithGemini(
 
   if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '') {
     const candidateModels = [
-      'gemini-3.1-flash-lite',
-      'gemini-3.8-flash',
-      'gemini-flash-latest',
+      'gemini-3.1-flash',
+      'gemini-2.5-flash', 'gemini-2.0-flash',
+      'gemini-3.1-8b',
     ];
     for (const modelName of candidateModels) {
       try {
@@ -661,9 +661,9 @@ export async function parseSimpleWithGemini(
 
   if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '') {
     const candidateModels = [
-      'gemini-3.1-flash-lite',
-      'gemini-3.8-flash',
-      'gemini-flash-latest',
+      'gemini-3.1-flash',
+      'gemini-2.5-flash', 'gemini-2.0-flash',
+      'gemini-3.1-8b',
     ];
     for (const modelName of candidateModels) {
       try {
@@ -887,9 +887,9 @@ export async function sendMultimodalRequest(text?: string, base64Image?: string 
   });
 
   const candidateModels = [
-    'gemini-3.1-flash-lite',
-    'gemini-3.8-flash',
-    'gemini-flash-latest',
+    'gemini-3.1-flash',
+    'gemini-2.5-flash', 'gemini-2.0-flash',
+    'gemini-3.1-8b',
   ];
 
   for (const modelName of candidateModels) {
@@ -1011,9 +1011,9 @@ JSON ÇIKTI ŞEMASI (Yalnızca aşağıdaki şemaya uyan ham JSON üret, markdow
 
   if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '') {
     const candidateModels = [
-      'gemini-3.1-flash-lite',
-      'gemini-3.8-flash',
-      'gemini-flash-latest',
+      'gemini-3.1-flash',
+      'gemini-2.5-flash', 'gemini-2.0-flash',
+      'gemini-3.1-8b',
     ];
 
     for (const modelName of candidateModels) {
