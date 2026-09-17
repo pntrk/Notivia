@@ -909,20 +909,37 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
 
   // 13. EĞİTİM & ÖĞRETMENLİK (SINAV OKUMA, E-OKUL, NÖBET)
   {
+    id: 'egitim_tasimali_yemek_nobet',
+    category: 'resmi',
+    keywords: ['taşımalı yemek', 'tasimali yemek', 'yemek numune', 'yemek numunesi', 'taşımalı servis', '72 saat numune', 'öğle yemeği numune', 'taşımalı yemek & nöbet kontrolü'],
+    baslik: 'Taşımalı Yemek & Nöbet Kontrolü',
+    ikon: '🍱',
+    renk: '#DCFCE7',
+    varsayilanZaman: '18 Eylül 2026 Cuma 08:15',
+    hazirlikZamani: 'Yemek Öncesi / Sabah 08:15',
+    akilliFisilti: '🍱 Gıda güvenliği mevzuatı gereği taşımalı yemek numuneleri 72 saat boyunca +4°C saklanmak zorundadır.',
+    oncedenYapilacaklar: [
+      'Gelen öğle yemeğinden her çeşitten steril numune al, etiketle ve +4°C\'de 72 saat sakla',
+      'Taşımalı servis araçlarının yangın tüpü, emniyet kemeri ve şoför föyünü imzala',
+      'Raporlu öğretmenlerin sınıflarını tespit et ve boş derslere nöbetçi öğretmen görevlendir'
+    ]
+  },
+  {
     id: 'ogretmen_sinav_e_okul',
     category: 'resmi',
-    keywords: ['sınav okuma', 'yazılı okuma', 'e-okul not', 'not girişi', 'sınav bitti', 'sınav yaptık'],
-    baslik: 'Yazılı Okuma & e-Okul Girişi',
-    ikon: '📚',
+    domain: 'EGITIM',
+    keywords: ['sınav okuma', 'yazılı okuma', 'e-okul not', 'not girişi', 'sınav bitti', 'sınav yaptık', 'yazılı sınav not kilidi', 'yazılı sınav'],
+    baslik: 'Yazılı Sınav Not Kilidi (e-Okul)',
+    ikon: '✍️',
     renk: '#FEF08A',
-    varsayilanZaman: '10 Gün İçinde',
-    hazirlikZamani: 'Sınavdan Sonraki Hafta',
-    akilliFisilti: '📚 MEB mevzuatı gereği sınav sonuçları sınav tarihinden itibaren en geç 10 gün içinde e-Okul sistemine girilmelidir.',
+    varsayilanZaman: '27 Eylül 2026 Pazar 17:00 (10. Gün)',
+    hazirlikZamani: '20 Eylül Pazar (Kağıt Okuma Başlangıcı)',
+    akilliFisilti: '✍️ MEB Yönetmeliği uyarınca sınav sonuçları sınav tarihini takip eden en geç 10 gün içinde e-Okul\'a işlenmelidir.',
     oncedenYapilacaklar: [
-      'Cevap anahtarı ve puanlama baremine göre yazılı kağıtlarını oku',
-      'Kazanım analiz formunu doldurup sınıf başarı ortalamasını çıkar',
-      'e-Okul sistemine notları girerek veli bilgilendirmesini sağla',
-      'Yazılı kağıtları ve analiz çıktılarını zümre başkanına teslim et'
+      'Sınav cevap anahtarı ve puanlama baremini okul panosuna as',
+      'Yazılı kağıtlarını oku ve kazanım analiz tablosunu doldur',
+      '27 Eylül öncesi: e-Okul sistemine notları ve analizleri girip kilitle',
+      'Sınav kağıtlarını ve analiz çıktısını ıslak imzayla zümre başkanına teslim et'
     ]
   },
 

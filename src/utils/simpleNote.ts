@@ -148,6 +148,124 @@ export function dispatchDomainRule(
     };
   }
 
+  // Eğitim & Okul Yönetimi Tespiti
+  if (
+    domain === 'EGITIM' ||
+    /(kbs|ek ders|taşımalı|yemek numune|nöbetçi öğretmen|dys|devamsızlık mektubu|yazılı yaptık|sınav okuma|e-okul|gözetmenlik|hakemlik|tez jürisi)/i.test(text)
+  ) {
+    const isKbs = /(kbs|ek ders|puantaj)/i.test(text);
+    const isExam = /(yazılı|sınav yaptık|sınav bitti|not girişi)/i.test(text);
+    const isFoodOrDuty = /(taşımalı|numune|yemek|nöbet)/i.test(text);
+    const isAcademia = /(gözetmenlik|hakemlik|makale|bap|tübitak|jüri)/i.test(text);
+
+    let baslik = 'Eğitim & Yönetim Görevi';
+    let ikon = '📚';
+    let renk = '#FEF08A';
+
+    // 10 Günlük e-Okul Not Kilidi Hesabı
+    if (isExam) {
+      const baseDate = targetIso ? new Date(targetIso) : new Date();
+      const deadlineDate = new Date(baseDate.getTime() + 10 * 24 * 60 * 60 * 1000);
+      deadlineDate.setHours(17, 0, 0, 0);
+      const deadlineIso = deadlineDate.toISOString();
+
+      return {
+        baslik: 'Yazılı Sınav Not Kilidi (e-Okul)',
+        zaman: `${deadlineDate.getDate()} ${new Intl.DateTimeFormat('tr-TR', { month: 'short' }).format(deadlineDate)} 17:00 (10. Gün)`,
+        tarih_iso: deadlineIso,
+        hazirlik_zamani: 'Sınavdan 3 Gün Sonra (Okuma Başlangıcı)',
+        eksik_bilgi: false,
+        action_items: [
+          { task: 'Cevap anahtarını ve puanlama baremini okul panosuna as', is_completed: false },
+          { task: 'Yazılı kağıtlarını oku ve kazanım analiz tablosunu doldur', is_completed: false },
+          { task: 'e-Okul sistemine notları gir ve sınav analiz çıktısını zümre başkanına teslim et', is_completed: false }
+        ],
+        anomali_notu: 'MEB Yönetmeliği uyarınca sınav sonuçları sınav tarihini takip eden en geç 10 gün içinde e-Okul\'a işlenmelidir.',
+        ikon: '✍️',
+        renk: '#FEF08A',
+        sesli_fisilti: 'Yazılı sınav için 10 günlük e-Okul not giriş sayacı başlatıldı.'
+      };
+    }
+
+    // KBS / Ek Ders Döngüsü
+    if (isKbs) {
+      return {
+        baslik: 'KBS Ek Ders Onay & Puantaj',
+        zaman: 'Her Ayın 24\'ü 17:00',
+        tarih_iso: targetIso || null,
+        eksik_bilgi: false,
+        action_items: [
+          { task: 'Raporlu, sevkli ve izinli öğretmenlerin ek ders kesintilerini puantaja işle', is_completed: false },
+          { task: 'Nöbet, DYK ve ders dışı kulüp faaliyet saatlerini kontrol et', is_completed: false },
+          { task: 'KBS sistemi üzerinden bordroyu hesaplat ve Malmüdürlüğü/Muhasebeye ilet', is_completed: false }
+        ],
+        anomali_notu: 'Ek ders puantajları her ayın 20-27\'si arasında tamamlanmalıdır; onay gecikmesi maaş ödemelerini aksatır.',
+        ikon: '📋',
+        renk: '#FEF3C7',
+        sesli_fisilti: 'KBS ek ders onay ve puantaj kontrol kartı açıldı.'
+      };
+    }
+
+    // Taşımalı Yemek & Güvenlik
+    if (isFoodOrDuty) {
+      return {
+        baslik: 'Taşımalı Yemek & Nöbet Kontrolü',
+        zaman: targetDateText || 'Sabah 08:15',
+        tarih_iso: targetIso || null,
+        eksik_bilgi: false,
+        action_items: [
+          { task: 'Öğle yemeği numunesini steril kavanoza al, etiketle ve +4°C dolapta 72 saat sakla', is_completed: false },
+          { task: 'Öğrenci servis araçlarının emniyet kemeri ve şoför denetim föyünü imzala', is_completed: false },
+          { task: 'Boş geçen sınıflar için nöbetçi öğretmen görevlendirmesini yap', is_completed: false }
+        ],
+        anomali_notu: 'Gıda güvenliği mevzuatı gereği taşımalı yemek numuneleri 72 saat boyunca +4°C saklanmak zorundadır.',
+        ikon: '🍱',
+        renk: '#DCFCE7',
+        sesli_fisilti: 'Taşımalı yemek numune ve nöbet görev föyü oluşturuldu.'
+      };
+    }
+
+    // Akademisyen (Gözetmenlik / Hakemlik)
+    if (isAcademia) {
+      const isProctor = /gözetmenlik/i.test(text);
+      return {
+        baslik: isProctor ? 'Sınav Gözetmenliği' : 'Akademik Hakemlik / Revizyon',
+        zaman: targetDateText || 'Planlanan Saat',
+        tarih_iso: targetIso || null,
+        hazirlik_zamani: isProctor ? 'Sınavdan 25 Dk Önce (Evrak Teslim)' : null,
+        eksik_bilgi: false,
+        action_items: isProctor
+          ? [
+              { task: 'Sınav salon başkanlığından soru kitapçıkları ve yoklama listesini teslim al', is_completed: false },
+              { task: 'Öğrenci kimlik kontrolü yap ve sınav salon oturma düzenini sağla', is_completed: false },
+              { task: 'Sınav bitiminde optik formları sayıp tutanakla teslim et', is_completed: false }
+            ]
+          : [
+              { task: 'Makalenin metodoloji ve kaynakça kontrolünü tamamla', is_completed: false },
+              { task: 'Dergi portalı üzerinden hakem değerlendirme raporunu sisteme yükle', is_completed: false }
+            ],
+        anomali_notu: isProctor ? 'Gözetmenlik evrakları sınav başlamadan en az 20 dakika önce teslim alınmalıdır.' : null,
+        ikon: isProctor ? '🎓' : '🔬',
+        renk: '#DDD6FE',
+        sesli_fisilti: isProctor ? 'Gözetmenlik için 25 dakika öncesine hazırlık alarmı kuruldu.' : 'Akademik görev kaydedildi.'
+      };
+    }
+
+    return {
+      baslik,
+      zaman: targetDateText || 'Mesai İçi',
+      tarih_iso: targetIso || null,
+      eksik_bilgi: false,
+      action_items: [
+        { task: 'Görev detaylarını ve resmi evrak kayıtlarını kontrol et', is_completed: false },
+        { task: 'İdare onaylı karar veya tutanağı dosyala', is_completed: false }
+      ],
+      ikon,
+      renk,
+      sesli_fisilti: 'Eğitim ve okul yönetimi görevi kaydedildi.'
+    };
+  }
+
   return null;
 }
 
@@ -748,9 +866,9 @@ export function parseEduManagerNote(input: string, baseDate: Date): NotiviaSimpl
       zaman: 'Son 10 Gün (Not Kilitleme)',
       tarih_iso: due.toISOString(),
       action_items: [
-        { task: 'Yazılı kağıtlarının okunması ve puanlama baremi/cevap anahtarı kontrolü', is_completed: false },
-        { task: 'e-Okul sistemine notların ve kazanım analizlerinin girilmesi', is_completed: false },
-        { task: 'Yazılı kağıtları ve analiz çıktılarının zümre başkanına teslimi', is_completed: false }
+        { task: 'Yazılı kağıtlarını puanlama baremine göre oku ve cevap anahtarını panoya as', is_completed: false },
+        { task: 'e-Okul sistemine notları ve kazanım analizlerini gir', is_completed: false },
+        { task: 'Sınav analiz formu çıktısını alıp zümre başkanına teslim et', is_completed: false }
       ],
       ikon: '📚',
       renk: '#FEF08A',
@@ -781,14 +899,14 @@ export function parseEduManagerNote(input: string, baseDate: Date): NotiviaSimpl
       zaman: nobetZaman,
       tarih_iso: nobetIso,
       action_items: [
-        { task: 'Nöbet defterini teslim alma/imzalama ve kat emniyeti kontrolü', is_completed: false },
-        { task: 'Bahçe ve koridor güvenlik taraması', is_completed: false },
-        { task: 'Teneffüs giriş-çıkış denetimi', is_completed: false }
+        { task: 'Nöbet defteri imzalama ve kat/bahçe emniyeti kontrolü', is_completed: false },
+        { task: 'Bahçe ve koridor güvenlik taraması ile boş geçen dersleri idareye bildirme', is_completed: false },
+        { task: 'Teneffüs giriş-çıkış denetimi ve kat emniyetini sağlama', is_completed: false }
       ],
       ikon: '📚',
       renk: '#FEF08A',
-      anomali_notu: 'Nöbet görevi ders başlamadan en az 30 dakika önce başlar ve teneffüslerde kesintisiz sürer.',
-      sesli_fisilti: 'Nöbet göreviniz ilk dersten 30 dakika öncesine ayarlandı.'
+      anomali_notu: 'Nöbet görevi ilk ders başlamadan en az 30 dakika önce başlar ve teneffüslerde kesintisiz sürer.',
+      sesli_fisilti: 'Sabah ilk dersten 30 dakika önceye nöbet defteri imzalama ve kat emniyeti uyarısı atandı.'
     };
   }
 
@@ -2751,6 +2869,8 @@ export function extractSimpleNoteFromText(
       const eduResult = parseEduManagerNote(cleanInput, baseDate);
       if (eduResult) return enrichWithPredictiveGraph(eduResult, cleanInput);
     } else if (activeDomain === 'EGITIM') {
+      const domainRuleResult = dispatchDomainRule('EGITIM', cleanInput, zaman, tarih_iso);
+      if (domainRuleResult) return enrichWithPredictiveGraph(domainRuleResult, cleanInput);
       const eduResult = parseEduManagerNote(cleanInput, baseDate);
       if (eduResult) return enrichWithPredictiveGraph(eduResult, cleanInput);
       const studentResult = parseAcademicStudentSuiteNote(cleanInput, baseDate);

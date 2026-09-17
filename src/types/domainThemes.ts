@@ -120,16 +120,17 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
   EGITIM: {
     domain: 'EGITIM',
     displayName: 'Eğitim & Okul Yönetimi',
-    bgCard: 'bg-yellow-50/70 border-yellow-200',
+    bgCard: 'bg-amber-50/70 border-amber-200',
     borderAccent: 'border-l-amber-500',
     badgeBg: 'bg-amber-100',
     badgeText: 'text-amber-900',
     btnPrimaryBg: 'bg-amber-600 hover:bg-amber-700',
     btnPrimaryText: 'text-white',
     actions: [
-      { id: 'kbs_check', label: 'KBS Ek Ders Onayı', icon: '📋', actionType: 'TIMER' },
-      { id: 'dys_draft', label: 'DYS Yazı Taslağı', icon: '🏛️', actionType: 'COPY_TEMPLATE' },
-      { id: 'parent_notice', label: 'Veliye Devamsızlık Bildir', icon: '🏫', actionType: 'WHATSAPP' }
+      { id: 'kbs_counter', label: '20-27 Ek Ders / KBS', icon: '📋', actionType: 'TIMER' },
+      { id: 'exam_10days', label: '10 Gün Sınav Sayacı', icon: '✍️', actionType: 'TIMER' },
+      { id: 'food_sample', label: '72s Yemek Numunesi', icon: '🍱', actionType: 'LOTO_CHECK' },
+      { id: 'proctor_alarm', label: 'Gözetmenlik (T-25)', icon: '🎓', actionType: 'TIMER' }
     ]
   },
 
