@@ -1119,7 +1119,35 @@ import { matchShortScenario } from './scenarioDatabase.ts';
  */
 export function inferPredictiveActions(text: string, now: Date = new Date()): PredictiveInference | null {
   if (!text) return null;
-  const lower = text.toLowerCase();
+  let lower = text.toLowerCase();
+  
+  // Kelime bazlı göreceli süreleri dakikaya dönüştür
+  lower = lower
+    .replace(/yarım\s*saat\s*sonra/gi, '30 dakika sonra')
+    .replace(/çeyrek\s*saat\s*sonra/gi, '15 dakika sonra')
+    .replace(/bir\s*buçuk\s*saat\s*sonra/gi, '90 dakika sonra')
+    .replace(/uyandır/gi, 'alarm kur');
+
+  // TEMEL İLKE: KULLANICIYA YAPAY İŞ ÇIKARMA (MİKRO GÖREV KURALI)
+  // Tekil alarmlar, süreli sayaçlar, tekil tansiyon/vitamin, çamaşır/fırın/ocak, çöp ve standart randevularda
+  // kullanıcıya yapay iş çıkarılmamalı, alt adımlar üretilmemelidir.
+  const isMicroTaskCandidate =
+    lower.includes('alarm') ||
+    lower.includes('kaldır') ||
+    /(\d+)\s*(dakika|dk|saat)\s*sonra/.test(lower) ||
+    lower.includes('tansiyon ilac') ||
+    lower.includes('vitamin') ||
+    lower.includes('çamaşır') ||
+    lower.includes('ocağın altı') ||
+    lower.includes('fırını kapat') ||
+    lower.includes('çöpü çıkar') ||
+    lower.includes('çöp') ||
+    (lower.includes('diş') && (lower.includes('randevu') || lower.includes('hekim') || lower.includes('salı') || lower.includes('çarşamba') || lower.includes('perşembe') || lower.includes('cuma') || lower.includes('yarın') || lower.includes('bugün'))) ||
+    (lower.includes('doktor') && lower.includes('randevu'));
+
+  if (isMicroTaskCandidate && !lower.includes('vize') && !lower.includes('final') && !lower.includes('ameliyat') && !lower.includes('cerrahi') && !lower.includes('implant cerrahi')) {
+    return null;
+  }
 
   let matched: PredictiveInference | null = null;
 

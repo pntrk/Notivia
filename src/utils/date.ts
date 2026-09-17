@@ -232,6 +232,7 @@ export function extractDateTimeFromTurkish(
 // Global window binding
 if (typeof window !== 'undefined') {
   (window as any).extractDateTimeFromTurkish = extractDateTimeFromTurkish;
+  (window as any).parseDailyLifeTime = parseDailyLifeTime;
 }
 
 /**
@@ -376,5 +377,75 @@ export function getTaxCalendarDeadlines(year: number, monthZeroBased: number) {
     sgkDeadlineIso: fmt(finalSgk),
     isSgkRolled
   };
+}
+
+export interface ParsedTimeResult {
+  isoString: string;
+  displayZaman: string;
+  isAlarm: boolean;
+  sureDakika?: number;
+}
+
+export function parseDailyLifeTime(rawText: string): ParsedTimeResult | null {
+  let text = rawText.toLowerCase().trim();
+
+  // Kelime bazlı göreceli süreleri dakikaya dönüştür
+  text = text
+    .replace(/yarım\s*saat\s*sonra/gi, '30 dakika sonra')
+    .replace(/çeyrek\s*saat\s*sonra/gi, '15 dakika sonra')
+    .replace(/bir\s*buçuk\s*saat\s*sonra/gi, '90 dakika sonra')
+    .replace(/uyandır/gi, 'alarm kur');
+
+  const now = new Date();
+
+  // 1. "X dakika / saat sonra" (Zamanlayıcı / Geri Sayım)
+  const relativeMatch = text.match(/(\d+)\s*(dakika|dk|saat)\s*sonra/);
+  if (relativeMatch) {
+    const value = parseInt(relativeMatch[1], 10);
+    const unit = relativeMatch[2];
+    const minutes = unit.startsWith('saat') ? value * 60 : value;
+    const targetDate = new Date(now.getTime() + minutes * 60 * 1000);
+
+    return {
+      isoString: targetDate.toISOString(),
+      displayZaman: `${value} ${unit} sonra (${targetDate.getHours().toString().padStart(2, '0')}:${targetDate.getMinutes().toString().padStart(2, '0')})`,
+      isAlarm: true,
+      sureDakika: minutes
+    };
+  }
+
+  // 2. "Sabah 9", "Akşam 8", "Öğlen 1" veya doğrudan "09:00"
+  const timeRegex = /(sabah|öğlen|akşam|gece)?\s*(\d{1,2})(?::(\d{2}))?\s*(?:'da|'de|'te|'ta|da|de|alarm|kaldır|hatırlat)?/;
+  const match = text.match(timeRegex);
+
+  if (match && (text.includes('alarm') || text.includes('kaldır') || text.includes('hatırlat') || match[1])) {
+    const period = match[1]; // sabah, akşam vs.
+    let hours = parseInt(match[2], 10);
+    const minutes = match[3] ? parseInt(match[3], 10) : 0;
+
+    // Saat dilimi düzeltmesi (12h -> 24h dönüşümü)
+    if (period === 'akşam' && hours < 12) hours += 12;
+    if (period === 'öğlen' && hours < 12 && hours !== 12) hours += 12;
+    if (period === 'gece' && hours === 12) hours = 0;
+
+    const targetDate = new Date(now.getTime());
+    targetDate.setHours(hours, minutes, 0, 0);
+
+    // Eğer belirtilen saat bugün geçtiyse, hedef yarındır
+    if (targetDate.getTime() <= now.getTime()) {
+      targetDate.setDate(targetDate.getDate() + 1);
+    }
+
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const isTomorrow = targetDate.getDate() !== now.getDate();
+
+    return {
+      isoString: targetDate.toISOString(),
+      displayZaman: `${isTomorrow ? 'Yarın ' : 'Bugün '}${pad(hours)}:${pad(minutes)}`,
+      isAlarm: text.includes('alarm') || text.includes('kaldır')
+    };
+  }
+
+  return null;
 }
 

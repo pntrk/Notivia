@@ -162,6 +162,20 @@ KULLANILABİLİR ARAÇLAR:
    Parametreler: recipient, channel (whatsapp | email | sms), subject, message_body, sesli_fisilti.
 
 TEMEL ÇALIŞMA KURALLARI VE BİLİŞSEL ALANLAR:
+0. TEMEL İLKE: KULLANICIYA YAPAY İŞ ÇIKARMA (MİKRO GÖREV KURALI):
+- Tekil Alarmlar ve Hatırlatıcılar:
+  * Kullanıcı "sabah 9'da alarm kur", "yarın 8'de kaldır", "20 dk sonra fırını kapat" dediğinde:
+    - 'action_items' listesini KESİNLİKLE BOŞ BIRAK ([]). 
+    - Tersine planlama veya hazırlık alarmı türetme.
+    - Görev tipini doğrudan alarm veya sayaç olarak belirle.
+  * Sadece karmaşık ve içinde gerçekten hazırlık gerektiren durumlarda (örn: "haftaya vizeler başlıyor") alt adımlar üret.
+- Günlük Yaşamın 5 Temel Çekirdeği:
+  * İlaç/Vitamin: "Akşam tansiyon ilacımı hatırlat" -> Tekil saat alarmı, 'action_items': [].
+  * Ev/Mutfak: "40 dakika sonra çamaşırları as", "Ocağın altını kapat" -> Süreli sayaç alarmı, 'action_items': [].
+  * Alışveriş: "Eve gelirken ekmek ve maden suyu al" -> Basit kontrol listesi (yalnızca istenen 2 madde).
+  * Çöp/Rutin: "Yarın sabah çöpü çıkarmayı unutma" -> Sabah 08:00 hatırlatıcısı, 'action_items': [].
+  * Randevu: "Salı 14:30 diş hekimi" -> Sadece randevu kartı + 30 dk önce yola çıkış, 'action_items': [].
+
 1. BİLİŞSEL ALT GÖREV TÜRETİMİ (LEB DEMEDEN LEBLEBİYİ ANLAMA):
 - Seyahat / Tatil: Pasaport/vize geçerliliği, harç pulu, hat dolaşımı (roaming), ev su vanası ve priz kontrolü.
 - Araç Bakım / Muayene: MTV/ceza borcu kontrolü, ilk yardım çantası/yangın tüpü, ruhsat kontrolü.
@@ -404,16 +418,34 @@ export async function dispatchWithGemini(
   userDomain?: string
 ): Promise<DispatchResponse> {
   const cleanInput = (input || '').trim();
-  const lower = cleanInput.toLowerCase();
+  let lower = cleanInput.toLowerCase();
+
+  // Kelime bazlı göreceli süreleri dakikaya dönüştür
+  lower = lower
+    .replace(/yarım\s*saat\s*sonra/gi, '30 dakika sonra')
+    .replace(/çeyrek\s*saat\s*sonra/gi, '15 dakika sonra')
+    .replace(/bir\s*buçuk\s*saat\s*sonra/gi, '90 dakika sonra')
+    .replace(/uyandır/gi, 'alarm kur');
 
   // 1. ÖNCELİK: YEREL VE BİLİŞSEL KURAL MOTORU KONTROLÜ
-  // 2-3 kelimelik kısa senaryolar veya belirgin kurumsal/mesleki kalıplar varsa
+  // 2-3 kelimelik kısa senaryolar, tekil alarmlar, sayaçlar veya belirgin kurumsal/mesleki kalıplar varsa
   // API'ye gitmeden anında, sıfır gecikmeyle ve sıfır maliyetle yerel motoru çalıştırır.
   const shortScenario = matchShortScenario(cleanInput, userDomain);
   const isDirectCalendar = lower.includes('neyim var') || lower.includes('programım nasıl') || lower.includes('müsait miyim') || lower.includes('ajandam');
   const isDirectMessage = lower.includes('mesajı hazırla') || lower.includes('mail taslağı') || lower.includes('gelemeyeceğimi söyle');
+  const isMicroTaskFast =
+    lower.includes('alarm') ||
+    lower.includes('kaldır') ||
+    lower.includes('uyandır') ||
+    /(\d+)\s*(dakika|dk|saat)\s*sonra/.test(lower) ||
+    lower.includes('tansiyon ilac') ||
+    lower.includes('çamaşır') ||
+    lower.includes('ocağın altı') ||
+    lower.includes('fırını kapat') ||
+    lower.includes('çöp') ||
+    (lower.includes('diş') && lower.includes('randevu'));
 
-  if (shortScenario || isDirectCalendar || isDirectMessage) {
+  if (shortScenario || isDirectCalendar || isDirectMessage || isMicroTaskFast) {
     return dispatchDeterministic(cleanInput, currentDatetime, userDomain);
   }
 

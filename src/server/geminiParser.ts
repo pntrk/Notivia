@@ -9,6 +9,20 @@ Görevin: Kullanıcının ayaküstü, devrik, dağınık, imalı veya sesle kayd
 GÖREV: Kullanıcının yeni girdisini ve varsa verilen 'GEÇMİŞ NOTLAR' listesini karşılaştır.
 
 GÖREV VE ANLAM AYRIŞTIRMA KURALLARI:
+0. TEMEL İLKE: KULLANICIYA YAPAY İŞ ÇIKARMA (MİKRO GÖREV KURALI):
+   - Tekil Alarmlar ve Hatırlatıcılar:
+     * Kullanıcı "sabah 9'da alarm kur", "yarın 8'de kaldır", "20 dk sonra fırını kapat" dediğinde:
+       'action_items' listesini KESİNLİKLE BOŞ BIRAK ([]). 
+       Tersine planlama veya hazırlık alarmı türetme.
+       Görev tipini doğrudan alarm veya sayaç olarak belirle.
+     * Sadece karmaşık ve içinde gerçekten hazırlık gerektiren durumlarda (örn: "haftaya vizeler başlıyor") alt adımlar üret.
+   - Günlük Yaşamın 5 Temel Çekirdeği:
+     * İlaç/Vitamin: "Akşam tansiyon ilacımı hatırlat" -> Tekil saat alarmı, 'action_items': [].
+     * Ev/Mutfak: "40 dakika sonra çamaşırları as", "Ocağın altını kapat" -> Süreli sayaç alarmı, 'action_items': [].
+     * Alışveriş: "Eve gelirken ekmek ve maden suyu al" -> Basit kontrol listesi (yalnızca istenen maddeler).
+     * Çöp/Rutin: "Yarın sabah çöpü çıkarmayı unutma" -> Sabah 08:00 hatırlatıcısı, 'action_items': [].
+     * Randevu: "Salı 14:30 diş hekimi" -> Sadece randevu kartı + 30 dk önce yola çıkış, 'action_items': [].
+
 1. Kişi İsimleri ve Eylem Ayrımı:
    - Girdide bir kişi adı geçmesi (Ahmet, Mehmet vb.) o kişinin ziyaret edileceği anlamına GELMEZ.
    - "Ahmet'ten alacağım var", "Mehmet'e borç verdim" gibi ifadeler KESİNLİKLE 'Finans' kategorisidir. Başlığı "Buluşma" veya "Ziyaret" yapma; doğrudan "Alacak Takibi" veya "Borç Takibi" yap.
@@ -53,9 +67,29 @@ export async function parseWithGemini(
   const cleanInput = (userInput || '').trim();
 
   // 0. ÖNCELİK: YEREL VE BİLİŞSEL KURAL MOTORU KONTROLÜ
-  // 2-3 kelimelik kısa ve net senaryolarda API'ye gitmeden doğrudan yerel kural motorunu çalıştır
+  // 2-3 kelimelik kısa ve net senaryolarda veya tekil alarmlarda API'ye gitmeden doğrudan yerel kural motorunu çalıştır
+  let lower = cleanInput.toLowerCase();
+  
+  // Kelime bazlı göreceli süreleri dakikaya dönüştür
+  lower = lower
+    .replace(/yarım\s*saat\s*sonra/gi, '30 dakika sonra')
+    .replace(/çeyrek\s*saat\s*sonra/gi, '15 dakika sonra')
+    .replace(/bir\s*buçuk\s*saat\s*sonra/gi, '90 dakika sonra')
+    .replace(/uyandır/gi, 'alarm kur');
+  const isMicroTaskFast =
+    lower.includes('alarm') ||
+    lower.includes('kaldır') ||
+    lower.includes('uyandır') ||
+    /(\d+)\s*(dakika|dk|saat)\s*sonra/.test(lower) ||
+    lower.includes('tansiyon ilac') ||
+    lower.includes('çamaşır') ||
+    lower.includes('ocağın altı') ||
+    lower.includes('fırını kapat') ||
+    lower.includes('çöp') ||
+    (lower.includes('diş') && lower.includes('randevu'));
+
   const shortScenario = matchShortScenario(cleanInput, userDomain);
-  if (shortScenario) {
+  if (shortScenario || isMicroTaskFast) {
     const deterministicData = runCognitiveFallback(cleanInput, currentDatetime, pastNotes, userDomain);
     return {
       data: deterministicData,

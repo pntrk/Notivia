@@ -4,19 +4,37 @@ import {
   calculateOffsetIso,
   rollToNextBusinessDay,
   calculateUetsDeadline,
-  getTaxCalendarDeadlines
+  getTaxCalendarDeadlines,
+  parseDailyLifeTime,
+  type ParsedTimeResult
 } from './date.ts';
 import { inferPredictiveActions } from './predictiveGraph.ts';
 import { matchShortScenario } from './scenarioDatabase.ts';
 import { getCardColor } from './cardColors.ts';
+import {
+  findFermentationRecipe,
+  buildFermentationCard,
+  FERMENTATION_REGISTRY,
+  type FermentationPhase,
+  type FermentationRecipe
+} from './fermentationScheduler.ts';
+export {
+  findFermentationRecipe,
+  buildFermentationCard,
+  FERMENTATION_REGISTRY,
+  type FermentationPhase,
+  type FermentationRecipe
+} from './fermentationScheduler.ts';
 export {
   extractDateTimeFromTurkish,
   getNextMonthEndTargetDate,
   calculateOffsetIso,
   rollToNextBusinessDay,
   calculateUetsDeadline,
-  getTaxCalendarDeadlines
+  getTaxCalendarDeadlines,
+  parseDailyLifeTime,
 } from './date.ts';
+export type { ParsedTimeResult } from './date.ts';
 export { inferPredictiveActions } from './predictiveGraph.ts';
 export { matchShortScenario } from './scenarioDatabase.ts';
 export { getCardColor } from './cardColors.ts';
@@ -2576,6 +2594,23 @@ const DAYS_DISPLAY: Record<string, string> = {
 
 function parseTurkishTemporal(text: string, baseDate: Date): TemporalParseResult {
   const lower = text.toLowerCase();
+
+  // 0. "X dakika / saat sonra", "Sabah 9", "Akşam 8'de kaldır / alarm" doğrudan tespiti
+  const dailyLife = parseDailyLifeTime(text);
+  if (dailyLife) {
+    const targetDate = new Date(dailyLife.isoString);
+    const hour = targetDate.getHours();
+    const minute = targetDate.getMinutes();
+    return {
+      zaman: dailyLife.displayZaman,
+      tarih_iso: dailyLife.isoString,
+      isRecurringDay: false,
+      recurringDayName: null,
+      hour,
+      minute,
+    };
+  }
+
   const target = new Date(baseDate.getTime());
   let hasDate = false;
 
@@ -2743,6 +2778,386 @@ function parseTurkishTemporal(text: string, baseDate: Date): TemporalParseResult
   };
 }
 
+/**
+ * TEMEL İLKE: KULLANICIYA YAPAY İŞ ÇIKARMA (MİKRO GÖREV KURALI)
+ * 1. Tekil Alarmlar ve Hatırlatıcılar ("sabah 9'da alarm kur", "yarın 8'de kaldır", "20 dk sonra fırını kapat")
+ *    - 'action_items' listesini KESİNLİKLE BOŞ BIRAK ([]).
+ *    - Tersine planlama veya hazırlık alarmı türetme.
+ *    - Görev tipini doğrudan alarm veya sayaç olarak belirle.
+ * 2. Günlük Yaşamın 5 Temel Çekirdeği:
+ *    - İlaç/Vitamin: "Akşam tansiyon ilacımı hatırlat" -> Tekil saat alarmı, alt görev yok ([]).
+ *    - Ev/Mutfak: "40 dakika sonra çamaşırları as", "Ocağın altını kapat" -> Süreli sayaç alarmı ([]).
+ *    - Alışveriş: "Eve gelirken ekmek ve maden suyu al" -> Basit kontrol listesi (yalnızca talep edilen ürünler).
+ *    - Çöp/Rutin: "Yarın sabah çöpü çıkarmayı unutma" -> Sabah 08:00 hatırlatıcısı ([]).
+ *    - Randevu: "Salı 14:30 diş hekimi" -> Sadece randevu kartı + 30 dk önce yola çıkış ([]).
+ */
+export function detectDailyLifeCoreOrSingleAlarm(cleanInput: string, baseDate: Date = new Date()): NotiviaSimpleNote | null {
+  let lower = cleanInput.toLowerCase().trim();
+  
+  // Kelime bazlı göreceli süreleri dakikaya dönüştür
+  lower = lower
+    .replace(/yarım\s*saat\s*sonra/gi, '30 dakika sonra')
+    .replace(/çeyrek\s*saat\s*sonra/gi, '15 dakika sonra')
+    .replace(/bir\s*buçuk\s*saat\s*sonra/gi, '90 dakika sonra')
+    .replace(/uyandır/gi, 'alarm kur');
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+
+  // İstisna: Sadece karmaşık ve içinde gerçekten hazırlık gerektiren durumlarda alt adımlar üret:
+  // Örn: "haftaya vizeler başlıyor", "ameliyat", "implant cerrahisi", "pasaport", "araç muayenesi"
+  if (
+    lower.includes('vize') ||
+    lower.includes('final') ||
+    lower.includes('büt') ||
+    lower.includes('ameliyat') ||
+    lower.includes('cerrahi') ||
+    lower.includes('yatış') ||
+    lower.includes('yatis') ||
+    lower.includes('pasaport') ||
+    lower.includes('vize başvuru') ||
+    lower.includes('muayene istasyonu') ||
+    lower.includes('tüvtürk') ||
+    lower.includes('tuvturk')
+  ) {
+    return null;
+  }
+
+  // -------------------------------------------------------------
+  // 1. GÜNLÜK YAŞAM ÇEKİRDEĞİ 1: İLAÇ / VİTAMİN
+  // Örn: "Akşam tansiyon ilacımı hatırlat", "Sabah vitaminimi al", "Gece magnezyumu unutma"
+  // Kural: Tekil saat alarmı, alt görev KESİNLİKLE BOŞ ([]).
+  // -------------------------------------------------------------
+  const isMedicine = 
+    (lower.includes('tansiyon ilac') || lower.includes('tansiyon hap') ||
+     lower.includes('şeker ilac') || lower.includes('seker ilac') ||
+     lower.includes('vitamin') || lower.includes('aspirin') ||
+     lower.includes('magnezyum') || lower.includes('demir ilac') ||
+     lower.includes('b12') || lower.includes('d vitamini') ||
+     lower.includes('omega 3') || lower.includes('omega-3') ||
+     (lower.includes('ilac') && !lower.includes('ilaçlama')) ||
+     lower.includes('hapımı') || lower.includes('hapimi') || lower.includes('hapı iç') || lower.includes('hapi ic')) &&
+     // Çoklu ilaç rejimi değilse (örn. "sabah aç şu, öğlen bu" değilse)
+     !((lower.includes('sabah') && lower.includes('öğlen')) || (lower.includes('sabah') && lower.includes('akşam') && lower.includes('gece')));
+
+  if (isMedicine) {
+    let baslik = 'İlaç Hatırlatıcısı';
+    if (lower.includes('tansiyon')) baslik = 'Tansiyon İlacı';
+    else if (lower.includes('vitamin')) baslik = 'Günlük Vitamin';
+    else if (lower.includes('magnezyum')) baslik = 'Magnezyum';
+    else if (lower.includes('aspirin')) baslik = 'Aspirin';
+    else if (lower.includes('şeker') || lower.includes('seker')) baslik = 'Şeker İlacı';
+
+    let hour = 19;
+    let minute = 30;
+    let zaman = 'Bugün 19:30';
+
+    if (lower.includes('sabah')) {
+      hour = 9;
+      minute = 0;
+      zaman = 'Sabah 09:00';
+    } else if (lower.includes('öğlen') || lower.includes('oglen')) {
+      hour = 13;
+      minute = 30;
+      zaman = 'Öğlen 13:30';
+    } else if (lower.includes('gece') || lower.includes('yatarken')) {
+      hour = 22;
+      minute = 30;
+      zaman = 'Gece 22:30';
+    } else if (lower.includes('akşam') || lower.includes('aksam')) {
+      hour = 19;
+      minute = 30;
+      zaman = 'Akşam 19:30';
+    }
+
+    // Belirli bir saat söylenmişse (örn: 20:00 veya 8'de)
+    const timeMatch = lower.match(/(\d{1,2})(?::(\d{2}))?\s*(?:'de|'da|'te|'ta|de|da)/);
+    if (timeMatch) {
+      hour = parseInt(timeMatch[1], 10);
+      minute = timeMatch[2] ? parseInt(timeMatch[2], 10) : 0;
+      if ((lower.includes('akşam') || lower.includes('aksam')) && hour < 12) hour += 12;
+      zaman = `Bugün ${pad(hour)}:${pad(minute)}`;
+    }
+
+    const targetDate = new Date(baseDate);
+    targetDate.setHours(hour, minute, 0, 0);
+    if (targetDate.getTime() <= baseDate.getTime()) {
+      targetDate.setDate(targetDate.getDate() + 1);
+      zaman = `Yarın ${pad(hour)}:${pad(minute)}`;
+    }
+
+    return {
+      baslik,
+      zaman,
+      tarih_iso: targetDate.toISOString(),
+      action_items: [], // KESİNLİKLE BOŞ
+      ikon: '💊',
+      renk: '#F3E8FF', // Pastel Mor
+      deviceNotificationEnabled: true,
+      isAlarm: true,
+      isMicroTask: true,
+      anomali_notu: '💊 İlacınızı belirtilen saatte bir bardak su ile alınız.',
+      sesli_fisilti: `${baslik} için ${zaman} alarmı kuruldu.`
+    };
+  }
+
+  // -------------------------------------------------------------
+  // 2. GÜNLÜK YAŞAM ÇEKİRDEĞİ 2: EV / MUTFAK (Süreli Sayaç Alarmı)
+  // Örn: "40 dakika sonra çamaşırları as", "Ocağın altını kapat", "20 dk sonra fırını kapat"
+  // Kural: Süreli sayaç alarmı, alt görev KESİNLİKLE BOŞ ([]).
+  // -------------------------------------------------------------
+  const isKitchenHome = 
+    lower.includes('çamaşır') || lower.includes('camasir') ||
+    lower.includes('ocağın altı') || lower.includes('ocagin alti') || lower.includes('ocağı kapat') || lower.includes('ocagi kapat') || lower.includes('ocak') ||
+    lower.includes('fırını kapat') || lower.includes('firini kapat') || lower.includes('fırından al') || lower.includes('firindan al') || lower.includes('fırın') ||
+    lower.includes('çayın altı') || lower.includes('cayin alti') || lower.includes('çayı demle') || lower.includes('cayi demle') ||
+    lower.includes('suyu kapat') || lower.includes('ütü fiş') || lower.includes('utu fis');
+
+  // Geri sayım süresi tespiti ("40 dakika sonra", "20 dk sonra", vb.)
+  const relativeMatch = lower.match(/(\d+)\s*(dakika|dk|saat)\s*sonra/);
+  
+  if (isKitchenHome || relativeMatch) {
+    let minutes = 20; // Varsayılan mutfak/sayaç süresi
+    let unit = 'dakika';
+    let hasExplicitDuration = false;
+
+    if (relativeMatch) {
+      const val = parseInt(relativeMatch[1], 10);
+      unit = relativeMatch[2].startsWith('saat') ? 'saat' : 'dakika';
+      minutes = unit === 'saat' ? val * 60 : val;
+      hasExplicitDuration = true;
+    } else if (lower.includes('çamaşır') || lower.includes('camasir')) {
+      minutes = 45;
+    } else if (lower.includes('ocak') || lower.includes('ocağın altı')) {
+      minutes = 15;
+    } else if (lower.includes('fırın') || lower.includes('firin')) {
+      minutes = 25;
+    } else if (lower.includes('çay') || lower.includes('cay')) {
+      minutes = 15;
+    }
+
+    const targetDate = new Date(baseDate.getTime() + minutes * 60 * 1000);
+    const displayZaman = `${hasExplicitDuration ? relativeMatch![1] + ' ' + relativeMatch![2] : minutes + ' dakika'} sonra (${pad(targetDate.getHours())}:${pad(targetDate.getMinutes())})`;
+
+    let baslik = 'Zamanlayıcı';
+    let ikon = '⏱️';
+
+    if (lower.includes('çamaşır') || lower.includes('camasir')) {
+      baslik = 'Çamaşırları As';
+      ikon = '🧺';
+    } else if (lower.includes('ocak') || lower.includes('ocağın altı') || lower.includes('ocagin alti')) {
+      baslik = 'Ocağın Altını Kapat';
+      ikon = '🍳';
+    } else if (lower.includes('fırın') || lower.includes('firin')) {
+      baslik = 'Fırını Kapat';
+      ikon = '🥧';
+    } else if (lower.includes('çay') || lower.includes('cay')) {
+      baslik = 'Çayı Kapat / Demle';
+      ikon = '🫖';
+    } else {
+      // Genel sayaç / alarm başlığını temizle
+      let clean = cleanInput
+        .replace(/(\d+)\s*(dakika|dk|saat)\s*sonra/gi, '')
+        .replace(/\b(alarm|kur|kaldır|kaldir|hatırlat|hatirlat|bana|beni|bir|haber ver|ara)\b/gi, '')
+        .trim();
+      if (clean.length > 2) {
+        baslik = clean.charAt(0).toLocaleUpperCase('tr-TR') + clean.slice(1);
+      } else {
+        baslik = `${minutes} Dk Sayaç`;
+      }
+    }
+
+    return {
+      baslik: baslik.slice(0, 32),
+      zaman: displayZaman,
+      tarih_iso: targetDate.toISOString(),
+      sureDakika: minutes,
+      action_items: [], // KESİNLİKLE BOŞ
+      ikon,
+      renk: '#FEF3C7',
+      deviceNotificationEnabled: true,
+      isAlarm: true,
+      isMicroTask: true,
+      anomali_notu: `⏱️ ${displayZaman} için geri sayım sayacı devrede.`,
+      sesli_fisilti: `${baslik} için ${displayZaman} sayacı başlatıldı.`
+    };
+  }
+
+  // -------------------------------------------------------------
+  // 1.B: TEKİL SAAT ALARMLARI ("sabah 9'da alarm kur", "yarın 8'de kaldır", "saat 7'de beni uyandır")
+  // -------------------------------------------------------------
+  const isExplicitAlarmCommand = 
+    lower.includes('alarm') || lower.includes('kaldır') || lower.includes('kaldir') ||
+    lower.includes('uyandır') || lower.includes('uyandir');
+
+  if (isExplicitAlarmCommand) {
+    const dailyTime = parseDailyLifeTime(cleanInput);
+    if (dailyTime) {
+      let cleanTitle = cleanInput
+        .replace(/(sabah|öğlen|akşam|gece)?\s*(\d{1,2})(?::(\d{2}))?\s*(?:'da|'de|'te|'ta|da|de|alarm|kaldır|kaldir|hatırlat|hatirlat|uyandır|uyandir)?/gi, '')
+        .replace(/\b(alarm|kaldır|kaldir|hatırlat|hatirlat|uyandır|uyandir|kur|bana|beni|bir)\b/gi, '')
+        .trim();
+
+      if (!cleanTitle || cleanTitle.length < 2) {
+        cleanTitle = 'Uyanış Alarmı';
+      } else {
+        cleanTitle = cleanTitle.charAt(0).toLocaleUpperCase('tr-TR') + cleanTitle.slice(1);
+      }
+
+      return {
+        baslik: cleanTitle.slice(0, 32),
+        zaman: dailyTime.displayZaman,
+        tarih_iso: dailyTime.isoString,
+        action_items: [], // KESİNLİKLE BOŞ
+        ikon: '⏰',
+        renk: '#FEF3C7',
+        deviceNotificationEnabled: true,
+        isAlarm: true,
+        isMicroTask: true,
+        anomali_notu: `🔔 ${dailyTime.displayZaman} için alarm ve cihaz bildirimi devrede.`,
+        sesli_fisilti: `${cleanTitle} için ${dailyTime.displayZaman} alarmı kuruldu.`
+      };
+    }
+  }
+
+  // -------------------------------------------------------------
+  // 3. GÜNLÜK YAŞAM ÇEKİRDEĞİ 3: ALIŞVERİŞ (Basit Kontrol Listesi)
+  // Örn: "Eve gelirken ekmek ve maden suyu al", "Marketten süt yumurta al"
+  // Kural: Yalnızca istenen ürünleri içeren temiz bir kontrol listesi.
+  // -------------------------------------------------------------
+  const isShopping = 
+    (lower.includes('eve gelirken') && lower.includes('al')) ||
+    (lower.includes('gelirken') && lower.includes('al')) ||
+    (lower.includes('markete gidince') && lower.includes('al')) ||
+    (lower.includes('marketten') && lower.includes('al')) ||
+    (lower.includes('bakkaldan') && lower.includes('al')) ||
+    (lower.includes('alınacaklar') || lower.includes('alinacaklar')) ||
+    (lower.includes('alınacak') && lower.includes('liste')) ||
+    ((lower.includes('ekmek') || lower.includes('süt') || lower.includes('yumurta') || lower.includes('maden suyu')) && lower.includes('al'));
+
+  if (isShopping) {
+    // Liste maddelerini çıkar
+    let rawItems = cleanInput
+      .replace(/\b(eve gelirken|gelirken|markete gidince|marketten|bakkaldan|manavdan|pazardan|şunları|sunlari|alınacaklar|alınacak|listesi|almayı unutma|almayi unutma|al|bana|bir de|biraz)\b/gi, '')
+      .trim();
+
+    const parts = rawItems
+      .split(/,|\s+ve\s+|\s+bir de\s+|\s+ile\s+|\n/gi)
+      .map(p => p.trim())
+      .filter(p => p.length >= 2);
+
+    if (parts.length > 0) {
+      const checklist = parts.map(p => ({
+        task: p.charAt(0).toLocaleUpperCase('tr-TR') + p.slice(1),
+        is_completed: false
+      }));
+
+      return {
+        baslik: lower.includes('pazar') ? 'Pazar Alışverişi' : 'Alışveriş Listesi',
+        zaman: lower.includes('eve gelirken') ? 'Eve Gelirken' : 'Markette',
+        tarih_iso: null,
+        action_items: checklist, // Sadece kullanıcının saydığı ürünler!
+        ikon: '🛒',
+        renk: '#DCFCE7',
+        isMicroTask: true,
+        anomali_notu: `🛒 ${checklist.length} parça alışveriş ürünü listelendi.`,
+        sesli_fisilti: `Alışveriş listeniz ${checklist.length} ürünle hazırlandı.`
+      };
+    }
+  }
+
+  // -------------------------------------------------------------
+  // 4. GÜNLÜK YAŞAM ÇEKİRDEĞİ 4: ÇÖP / RUTİN (Sabah 08:00 Hatırlatıcısı)
+  // Örn: "Yarın sabah çöpü çıkarmayı unutma", "Çöpü çıkar", "Çöpleri at"
+  // Kural: Sabah 08:00 hatırlatıcısı, alt görev KESİNLİKLE BOŞ ([]).
+  // -------------------------------------------------------------
+  const isTrashRoutine = 
+    lower.includes('çöp') || lower.includes('cop') ||
+    lower.includes('çöpleri') || lower.includes('copleri');
+
+  if (isTrashRoutine) {
+    const targetDate = new Date(baseDate);
+    let hour = 8;
+    let minute = 0;
+    let zaman = 'Yarın Sabah 08:00';
+
+    if (lower.includes('akşam') || lower.includes('aksam') || lower.includes('gece') || lower.includes('bu akşam')) {
+      hour = 20;
+      minute = 0;
+      targetDate.setHours(hour, minute, 0, 0);
+      zaman = 'Bu Akşam 20:00';
+      if (targetDate.getTime() <= baseDate.getTime()) {
+        targetDate.setDate(targetDate.getDate() + 1);
+        zaman = 'Yarın Akşam 20:00';
+      }
+    } else {
+      // Varsayılan: Yarın sabah 08:00
+      targetDate.setDate(targetDate.getDate() + 1);
+      targetDate.setHours(8, 0, 0, 0);
+    }
+
+    return {
+      baslik: 'Çöpü Çıkar',
+      zaman,
+      tarih_iso: targetDate.toISOString(),
+      action_items: [], // KESİNLİKLE BOŞ
+      ikon: '🗑️',
+      renk: '#F1F5F9',
+      deviceNotificationEnabled: true,
+      isAlarm: true,
+      isMicroTask: true,
+      anomali_notu: '🗑️ Sabah çöp kamyonu geçmeden önce kapı önüne çıkarınız.',
+      sesli_fisilti: 'Çöpü çıkarma hatırlatıcısı yarın sabah 08:00 için kuruldu.'
+    };
+  }
+
+  // -------------------------------------------------------------
+  // 5. GÜNLÜK YAŞAM ÇEKİRDEĞİ 5: RANDEVU (Sadece Randevu Kartı + 30 Dk Önce Yola Çıkış)
+  // Örn: "Salı 14:30 diş hekimi", "Salı 14:30 diş randevusu", "Yarın 15:00 doktor randevusu"
+  // Kural: Sadece randevu kartı + 30 dk önce yola çıkış, alt görev KESİNLİKLE BOŞ ([]).
+  // -------------------------------------------------------------
+  const isAppointment = 
+    lower.includes('diş hekim') || lower.includes('dis hekim') ||
+    lower.includes('dişçi') || lower.includes('disci') ||
+    lower.includes('diş randevu') || lower.includes('dis randevu') ||
+    ((lower.includes('doktor') || lower.includes('hekim') || lower.includes('hastane') || lower.includes('sağlık ocağı')) && (lower.includes('randevu') || lower.includes('muayene')));
+
+  if (isAppointment) {
+    const temporal = parseTurkishTemporal(cleanInput, baseDate);
+    const appointmentIso = temporal.tarih_iso;
+    let prepIso: string | null = null;
+    let zamanDisplay = temporal.zaman || 'Randevu Günü';
+
+    if (appointmentIso) {
+      try {
+        const appTime = new Date(appointmentIso).getTime();
+        const prepTime = new Date(appTime - 30 * 60 * 1000); // 30 dk önce
+        prepIso = prepTime.toISOString();
+      } catch {}
+    }
+
+    const isDentist = lower.includes('diş') || lower.includes('dis');
+    const baslik = isDentist ? 'Diş Hekimi Randevusu' : 'Doktor Randevusu';
+    const ikon = isDentist ? '🦷' : '🩺';
+
+    return {
+      baslik,
+      zaman: zamanDisplay,
+      tarih_iso: appointmentIso,
+      hazirlik_zamani: '30 Dk Önce Yola Çıkış',
+      hazirlik_iso: prepIso,
+      action_items: [], // KESİNLİKLE BOŞ! (Yapay alt adımlar üretilmez)
+      ikon,
+      renk: '#E0F2FE',
+      isMicroTask: true,
+      deviceNotificationEnabled: true,
+      anomali_notu: '🚗 30 dakika önce yola çıkış hatırlatılacaktır.',
+      sesli_fisilti: `${baslik} ${zamanDisplay} için kaydedildi. 30 dakika önce yola çıkış hatırlatılacak.`
+    };
+  }
+
+  return null;
+}
+
 // 2. Sözdizimsel Anlam ve Rol Çözümleyici (Özne - Nesne - Yüklem)
 export function extractSimpleNoteFromText(
   input: string,
@@ -2753,6 +3168,13 @@ export function extractSimpleNoteFromText(
   const cleanInput = input.trim();
   const lower = cleanInput.toLowerCase();
   const baseDate = refDatetime ? new Date(refDatetime) : new Date();
+
+  // ⚡ TEMEL İLKE: KULLANICIYA YAPAY İŞ ÇIKARMA (MİKRO GÖREV KURALI)
+  // Tekil alarmlar, süreli sayaçlar ve 5 temel günlük yaşam çekirdeği doğrudan tespit edilir.
+  const microCore = detectDailyLifeCoreOrSingleAlarm(cleanInput, baseDate);
+  if (microCore) {
+    return microCore;
+  }
 
   const temporal = parseTurkishTemporal(cleanInput, baseDate);
   const { zaman, tarih_iso, isRecurringDay, recurringDayName, hour, minute } = temporal;
@@ -2849,6 +3271,13 @@ export function extractSimpleNoteFromText(
       anomali_notu: shortScenario.akilliFisilti,
       hazirlik_zamani: shortScenario.hazirlikZamani
     }, cleanInput);
+  }
+
+  // 0.02 ÖNCELİK: FERMANTASYON & EV YAPIMI ÜRÜN REÇETELERİ (Bira, Turşu, Sirke, Zeytin)
+  const fermentationMatch = findFermentationRecipe(cleanInput);
+  if (fermentationMatch) {
+    const fermCard = buildFermentationCard(fermentationMatch, baseDate);
+    return fermCard;
   }
 
   // 0.05 ÖNCELİK: KULLANICININ SEÇTİĞİ ALANIN MOTORUNU ÖNCELİKLİ ÇALIŞTIRMA
@@ -2994,6 +3423,33 @@ export function extractSimpleNoteFromText(
         sesli_fisilti: `Alışveriş listeniz ${checklistItems.length} parça ürünle hazırlandı.`
       }, cleanInput);
     }
+  }
+
+  // 0.2 ÖNCELİK: DOĞRUDAN GÜNLÜK YAŞAM ALARMI VE GERİ SAYIM ZAMANLAYICISI ("X dk sonra", "Sabah 9'da kaldır")
+  const dailyTime = parseDailyLifeTime(cleanInput);
+  if (dailyTime && dailyTime.isAlarm) {
+    let cleanTitle = cleanInput
+      .replace(/(\d+)\s*(dakika|dk|saat)\s*sonra/gi, '')
+      .replace(/(sabah|öğlen|akşam|gece)?\s*(\d{1,2})(?::(\d{2}))?\s*(?:'da|'de|'te|'ta|da|de|alarm|kaldır|hatırlat)?/gi, '')
+      .replace(/\b(alarm|kaldır|hatırlat|uyandır|kur|bana|beni|bir)\b/gi, '')
+      .trim();
+    if (!cleanTitle || cleanTitle.length < 2) {
+      cleanTitle = dailyTime.sureDakika ? `${dailyTime.sureDakika} Dk Zamanlayıcı` : 'Alarm & Hatırlatıcı';
+    } else {
+      cleanTitle = cleanTitle.charAt(0).toLocaleUpperCase('tr-TR') + cleanTitle.slice(1);
+    }
+
+    return enrichWithPredictiveGraph({
+      baslik: cleanTitle.slice(0, 32),
+      zaman: dailyTime.displayZaman,
+      tarih_iso: dailyTime.isoString,
+      ikon: '⏰',
+      renk: '#FEF3C7',
+      deviceNotificationEnabled: true,
+      isAlarm: true,
+      anomali_notu: `🔔 ${dailyTime.displayZaman} için alarm ve cihaz bildirimi devrede.`,
+      sesli_fisilti: `${cleanTitle} için ${dailyTime.displayZaman} alarmı kuruldu.`
+    }, cleanInput);
   }
 
   // 1. ÖNCELİK: TOPLANTI, YÖNETİM & RESMİ GÖRÜŞMELER
@@ -3508,6 +3964,12 @@ export function extractSimpleNoteFromText(
  * Ön hazırlık adımları, tersine bildirim zamanı ve rehberlik fısıltısı ekler.
  */
 function enrichWithPredictiveGraph(note: NotiviaSimpleNote, input: string): NotiviaSimpleNote {
+  // ⚡ TEMEL İLKE: KULLANICIYA YAPAY İŞ ÇIKARMA (MİKRO GÖREV KURALI)
+  // Tekil alarmlar ve mikro-görevlere yapay alt görevler veya tersine hazırlık adımları eklenmez!
+  if (note.isAlarm || note.isMicroTask) {
+    return note;
+  }
+
   const predictive = inferPredictiveActions(input);
   if (!predictive) return note;
 

@@ -1,5 +1,6 @@
 import type { ProfessionDomain, DomainThemeConfig, ActionButtonConfig } from './domainThemes.ts';
 export * from './domainThemes.ts';
+export * from './fermentation.ts';
 
 export type NotiviaCategory =
   | 'Sosyal'
@@ -75,6 +76,10 @@ export interface NotiviaSimpleNote {
   ikon: string;
   renk: string;
   sesli_fisilti?: string | null;
+  deviceNotificationEnabled?: boolean;
+  isAlarm?: boolean;
+  isMicroTask?: boolean;
+  sureDakika?: number;
 }
 
 export interface NotiviaParsedNote {

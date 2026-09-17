@@ -102,6 +102,27 @@ export interface Translations {
   conflictsWith: string;
   preparationSteps: string;
   listeningActive: string;
+
+  // Aliases for backward & UI compatibility
+  expiredBadge: string;
+  incompleteStatus: string;
+  conditionLabel: string;
+  prepLeadTime: string;
+  inCalendarBadge: string;
+  periodicBadge: string;
+  exportDeviceCalendar: string;
+  prepStepsTitle: string;
+  shareOrCopy: string;
+  deleteNoteTitle: string;
+  reopenTitle: string;
+  completeTitle: string;
+  cameraTitle: string;
+  deletedToast: string;
+  undoButton: string;
+  manualModalTitle: string;
+  manualModalTitlePlaceholder: string;
+  syncToGoogleCalendar: string;
+  saveButton: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -201,6 +222,26 @@ export const translations: Record<Language, Translations> = {
     conflictsWith: 'ile çakışıyor',
     preparationSteps: 'Ön Hazırlık Adımı',
     listeningActive: 'Dinleniyor...',
+
+    expiredBadge: 'Vadesi Geçti',
+    incompleteStatus: 'Tamamlanmadı',
+    conditionLabel: 'Şart',
+    prepLeadTime: 'Ön Hazırlık',
+    inCalendarBadge: 'Takvimde',
+    periodicBadge: 'Döngüsel',
+    exportDeviceCalendar: 'Cihaz Takvimine Ekle',
+    prepStepsTitle: 'Ön Hazırlık Adımları',
+    shareOrCopy: 'Paylaş / Kopyala',
+    deleteNoteTitle: 'Notu Sil',
+    reopenTitle: 'Geri Aç',
+    completeTitle: 'Tamamla',
+    cameraTitle: 'Fotoğraf Çek / Görsel Yükle',
+    deletedToast: 'Not silindi',
+    undoButton: 'Geri Al',
+    manualModalTitle: 'Manuel Not Oluştur',
+    manualModalTitlePlaceholder: 'Not başlığı (örn: Randevu, Toplantı, İlaç)',
+    syncToGoogleCalendar: "Google Takvim'e işle",
+    saveButton: 'Kaydet',
   },
   en: {
     appName: 'Notivia',
@@ -298,5 +339,25 @@ export const translations: Record<Language, Translations> = {
     conflictsWith: 'conflicts with',
     preparationSteps: 'Preparation Step',
     listeningActive: 'Listening...',
+
+    expiredBadge: 'Overdue',
+    incompleteStatus: 'Pending',
+    conditionLabel: 'Condition',
+    prepLeadTime: 'Lead Time',
+    inCalendarBadge: 'On Calendar',
+    periodicBadge: 'Periodic',
+    exportDeviceCalendar: 'Add to Device Calendar',
+    prepStepsTitle: 'Preparation Steps',
+    shareOrCopy: 'Share / Copy',
+    deleteNoteTitle: 'Delete Note',
+    reopenTitle: 'Reopen',
+    completeTitle: 'Complete',
+    cameraTitle: 'Take Photo / Upload Image',
+    deletedToast: 'Note deleted',
+    undoButton: 'Undo',
+    manualModalTitle: 'Create Manual Note',
+    manualModalTitlePlaceholder: 'Note title (e.g., Meeting, Dentist, Pill)',
+    syncToGoogleCalendar: 'Sync to Google Calendar',
+    saveButton: 'Save',
   },
 };

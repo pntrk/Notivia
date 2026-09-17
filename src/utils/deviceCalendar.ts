@@ -4,6 +4,8 @@
  * RFC 5545 iCalendar standardında (.ics) doğrudan ve yerel bildirimlerle entegre çalışır.
  */
 
+import { alarmSound } from './alarmSound';
+
 export interface CalendarEventData {
   title: string;
   startDate: Date;
@@ -168,7 +170,8 @@ export function scheduleLocalDeviceReminder(
     aralik_gun?: number;
     bir_sonraki_tarih_iso?: string;
   } | null,
-  onRecurringTrigger?: (nextIso: string) => void
+  onRecurringTrigger?: (nextIso: string) => void,
+  isAlarm?: boolean
 ): void {
   if (typeof window === 'undefined') return;
 
@@ -189,17 +192,37 @@ export function scheduleLocalDeviceReminder(
   if (diffMs > 24 * 24 * 60 * 60 * 1000) return;
 
   const timerId = window.setTimeout(async () => {
-    // 1. Ses çal
-    playNotificationChime();
+    const notifTitle = `${icon} ${title}`;
+    const notifBody = periyodik?.tip === 'aylik_son_hafta'
+      ? 'Notivia: Ay sonu toplantı zamanı geldi! Ajandanızı kontrol edin.'
+      : (isAlarm ? 'Notivia: Alarm zamanı geldi!' : 'Notivia: Hatırlatma zamanı geldi!');
+
+    // 1. Ses çal / Alarm başlat
+    if (isAlarm) {
+      alarmSound.startAlarm();
+    } else {
+      playNotificationChime();
+    }
+
+    // Uygulama içi bildirim olayını tetikle
+    try {
+      window.dispatchEvent(
+        new CustomEvent('notivia_notification', {
+          detail: {
+            title: notifTitle,
+            body: notifBody,
+            icon,
+            isAlarm: !!isAlarm,
+          },
+        })
+      );
+    } catch {
+      // ignore
+    }
 
     // 2. Sistem / Cihaz Bildirimi gönder (ServiceWorker ve Notification)
     if ('Notification' in window && Notification.permission === 'granted') {
       try {
-        const notifTitle = `${icon} ${title}`;
-        const notifBody = periyodik?.tip === 'aylik_son_hafta'
-          ? 'Notivia: Ay sonu toplantı zamanı geldi! Ajandanızı kontrol edin.'
-          : 'Notivia: Hatırlatma zamanı geldi!';
-
         // ServiceWorker Registration üzerinden bildirim göster (PWA mobil cihazlarda arka planda daha güvenilirdir)
         if ('serviceWorker' in navigator) {
           const reg = await navigator.serviceWorker.ready.catch(() => null);
@@ -278,6 +301,25 @@ export function clearAllScheduledReminders(): void {
   activeTimers.clear();
 }
 
+/**
+ * Belirli bir nota ait zamanlayıcıyı iptal eder
+ */
+export function cancelScheduledReminder(id: string): boolean {
+  if (activeTimers.has(id)) {
+    window.clearTimeout(activeTimers.get(id));
+    activeTimers.delete(id);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Belirli bir kart için aktif zamanlayıcı olup olmadığını kontrol eder
+ */
+export function isReminderScheduled(id: string): boolean {
+  return activeTimers.has(id);
+}
+
 export interface SystemNotificationOptions {
   title: string;
   body: string;
@@ -285,6 +327,7 @@ export interface SystemNotificationOptions {
   badge?: string;
   tag?: string;
   silent?: boolean;
+  isAlarm?: boolean;
   data?: any;
 }
 
@@ -298,7 +341,11 @@ export async function showSystemNotification(options: SystemNotificationOptions)
   }
 
   if (!options.silent) {
-    playNotificationChime();
+    if (options.isAlarm) {
+      alarmSound.startAlarm();
+    } else {
+      playNotificationChime();
+    }
   }
 
   // Uygulama içi bildirim dinleyicilerine her durumda bildirim objesini ilet
@@ -364,7 +411,9 @@ export function scheduleAllCardReminders(cards: any[]): number {
           card.baslik || 'Hatırlatıcı',
           card.tarih_iso,
           card.ikon || '📌',
-          card.periyodik || null
+          card.periyodik || null,
+          undefined,
+          !!card.isAlarm
         );
         scheduledCount++;
       }
