@@ -25,7 +25,9 @@ export interface FermentationRecipe {
 
 export const FERMENTATION_REGISTRY: FermentationRecipe[] = [
   {
-    keywords: /(bira|kit).*(kuruldu|mayaladım|kovaya aldım|kurulum)/i,
+    // Bira Kurulumu ve Dolaylı İfadeler:
+    // "Kovayı doldurdum", "mayayı serptim", "şerbeti kilitledim", "yeni parti kurduk", "bira kiti bitti kapağı kapattım", "bira mayaladım", "kovaya aldım"
+    keywords: /(?:(?:bira|kit|parti).*(?:kuruldu|kurduk|kurdum|mayaladım|mayaladik|kovaya aldım|kovaya aldik|kurulum|kapağı kapattım|kapagi kapattim|bitti.*kapattım|kilitledim)|(?:kovayı|kovayi)\s+doldurdum|mayayı\s+serptim|mayayi\s+serptim|şerbeti\s+kilitledim|serbeti\s+kilitledim|yeni\s+parti\s+kurduk)/i,
     urun: 'Ev Yapımı Bira',
     ikon: '🍺',
     renk: '#FEF3C7',
@@ -51,7 +53,9 @@ export const FERMENTATION_REGISTRY: FermentationRecipe[] = [
     ]
   },
   {
-    keywords: /(turşu).*(kurdum|bastım|yaptım)/i,
+    // Turşu Kurulumu ve Dolaylı İfadeler:
+    // "Kornişonları kavanoza bastım", "turşuyu kurdum", "salamurayı döktüm", "lahana turşusu bastım"
+    keywords: /(?:(?:turşu|tursu).*(?:kurdum|kurduk|bastım|bastik|yaptım|yaptik|kurulum)|kornişon.*(?:bastım|kurdum|kavanoz)|salamurayı\s+döktüm|salamurayi\s+doktum|kavanoza\s+bastım|kavanoza\s+bastik)/i,
     urun: 'Ev Turşusu',
     ikon: '🥒',
     renk: '#DCFCE7',
@@ -71,7 +75,9 @@ export const FERMENTATION_REGISTRY: FermentationRecipe[] = [
     ]
   },
   {
-    keywords: /(sirke).*(kurdum|koydum|mayaladım)/i,
+    // Sirke Kurulumu:
+    // "Elma sirkesi kurdum", "sirke mayaladım", "üzüm sirkesi koydum"
+    keywords: /(?:(?:sirke).*(?:kurdum|kurduk|koydum|mayaladım|mayaladik|yaptım|bastım)|sirke\s+anası\s+koydum)/i,
     urun: 'Ev Yapımı Doğal Sirke',
     ikon: '🍎',
     renk: '#FEE2E2',
@@ -96,7 +102,34 @@ export const FERMENTATION_REGISTRY: FermentationRecipe[] = [
     ]
   },
   {
-    keywords: /(zeytin).*(kurdum|tatlandırma|çizdim|kırdım)/i,
+    // Şarap & Meyve Fermantasyonu:
+    keywords: /(?:(?:şarap|sarap).*(?:kurdum|kurduk|mayaladım|mayaladik|kovaya aldım|fermente)|üzüm\s+şırası\s+mayaladım)/i,
+    urun: 'Ev Yapımı Şarap',
+    ikon: '🍷',
+    renk: '#FCE7F3',
+    ipuclari: 'Damacanayı doğrudan ışıktan koruyun ve hava kilidi seviyesini haftalık denetleyin.',
+    araKontrol: {
+      herXGundeBir: 7,
+      bitisGunu: 28,
+      baslik: '🍷 Şarap Gaz Çıkışı & Hava Kilidi Kontrolü',
+      mesaj: 'Hava kilidindeki kabarcık sıklığını ve tortu çökme durumunu gözlemleyin.'
+    },
+    asamalar: [
+      {
+        gun: 28,
+        baslik: 'İlk Aktarma (Tortudan Ayırma)',
+        aksiyon: 'Sifon yardımıyla dip tortuyu havalandırmadan temiz ikinci damacanaya aktarın.'
+      },
+      {
+        gun: 90,
+        baslik: 'Olgunlaşma Bitişi & Şişeleme',
+        aksiyon: 'Berraklığı kontrol edin, mantar tıpa ile şişeleyin.'
+      }
+    ]
+  },
+  {
+    // Sofralık Zeytin Kurulumu:
+    keywords: /(?:(?:zeytin).*(?:kurdum|kurduk|tatlandırma|tatlandirma|çizdim|cizdim|kırdım|kirdim|bastım)|zeytinleri\s+çizip\s+suya\s+bastım)/i,
     urun: 'Sofralık Zeytin',
     ikon: '🫒',
     renk: '#E0E7FF',

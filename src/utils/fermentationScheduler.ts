@@ -4,20 +4,50 @@ import {
   type FermentationRecipe,
   FERMENTATION_REGISTRY
 } from '../types/fermentation.ts';
+import { detectFlexibleDomain } from './flexibleMatcher.ts';
 
 export * from '../types/fermentation.ts';
+export * from './flexibleMatcher.ts';
 
 /**
  * Kullanıcı girdisini Fermantasyon / Ev Yapımı Ürün Reçeteleri ile eşleştirir.
+ * DİKKAT: "Bira kiti sipariş ver", "turşuluk al", "sirke satın al" gibi ifadeler fermantasyon değil 'Alışveriş'tir.
  */
 export function findFermentationRecipe(input: string): FermentationRecipe | null {
   if (!input || typeof input !== 'string') return null;
   const trimmed = input.trim();
+  const lower = trimmed.toLowerCase();
+
+  // Alışveriş / Satın alma / Sipariş filtreleme kuralı
+  const isShoppingOrOrdering = /(?:sipariş\s*ver|siparis\s*ver|satın\s*al|satin\s*al|\bal\b|\balınacak\b|\balinacak\b|\blisteye\s*ekle\b|almayı\s*unutma)/i.test(lower);
+  const hasSetupOrFermentAction = /(?:kuruldu|kurduk|kurdum|kurulum|mayaladım|mayaladik|bastım|bastik|doldurdum|serptim|kilitledim|çizdim|cizdim|kırdım|kirdim|kovaya aldım|kapağı kapattım|kapagi kapattim)/i.test(lower);
+
+  // Eğer alışveriş ifadesi varsa ve açık bir kurulum/mayalama eylemi yoksa fermantasyon motoruna sokma
+  if (isShoppingOrOrdering && !hasSetupOrFermentAction) {
+    return null;
+  }
+
+  // 1. Regex tabanlı birebir kural kontrolü
   for (const recipe of FERMENTATION_REGISTRY) {
     if (recipe.keywords.test(trimmed)) {
       return recipe;
     }
   }
+
+  // 2. Esnek konsept & niyet eşleyici (flexibleMatcher)
+  const flexibleDomainId = detectFlexibleDomain(trimmed);
+  if (flexibleDomainId) {
+    if (flexibleDomainId === 'beer') {
+      return FERMENTATION_REGISTRY.find(r => r.urun === 'Ev Yapımı Bira') || null;
+    }
+    if (flexibleDomainId === 'pickle') {
+      return FERMENTATION_REGISTRY.find(r => r.urun === 'Ev Turşusu') || null;
+    }
+    if (flexibleDomainId === 'vinegar') {
+      return FERMENTATION_REGISTRY.find(r => r.urun === 'Ev Yapımı Doğal Sirke') || null;
+    }
+  }
+
   return null;
 }
 
