@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type, type FunctionDeclaration } from '@google/genai';
 import { extractSimpleNoteFromText } from '../utils/simpleNote.ts';
+import { matchShortScenario } from '../utils/scenarioDatabase.ts';
 
 // 1. Otonom Ajan Araç Tanımları (Function Declarations - Exact Formal Schema)
 export const getCalendarEventsDeclaration: FunctionDeclaration = {
@@ -200,7 +201,11 @@ ZAMAN REFERANSI:
 - Tüm bağıl zamanları sana verilen CURRENT_DATETIME değerine göre ISO-8601 olarak hesapla.`;
 
 // Deterministic Dispatcher Engine (Yüksek Doğruluklu Deterministik Eşleme)
-export function dispatchDeterministic(input: string, currentDatetime: string): DispatchResponse {
+export function dispatchDeterministic(
+  input: string,
+  currentDatetime: string,
+  userDomain?: string
+): DispatchResponse {
   const lower = input.toLowerCase().trim();
   const baseDate = currentDatetime ? new Date(currentDatetime) : new Date();
 
@@ -337,7 +342,7 @@ export function dispatchDeterministic(input: string, currentDatetime: string): D
   }
 
   // 3. KANAL: BİLİŞSEL EYLEM & NOT OLUŞTURUCU (create_note_or_event)
-  const simpleNote = extractSimpleNoteFromText(input, currentDatetime);
+  const simpleNote = extractSimpleNoteFromText(input, currentDatetime, undefined, userDomain);
 
   // Başlık maksimum 4 kelime kuralı
   let baslik = simpleNote.baslik;
@@ -393,10 +398,28 @@ export function dispatchDeterministic(input: string, currentDatetime: string): D
 }
 
 // Full Gemini Tool-Calling Autonomous Dispatcher
-export async function dispatchWithGemini(input: string, currentDatetime: string): Promise<DispatchResponse> {
+export async function dispatchWithGemini(
+  input: string,
+  currentDatetime: string,
+  userDomain?: string
+): Promise<DispatchResponse> {
+  const cleanInput = (input || '').trim();
+  const lower = cleanInput.toLowerCase();
+
+  // 1. ÖNCELİK: YEREL VE BİLİŞSEL KURAL MOTORU KONTROLÜ
+  // 2-3 kelimelik kısa senaryolar veya belirgin kurumsal/mesleki kalıplar varsa
+  // API'ye gitmeden anında, sıfır gecikmeyle ve sıfır maliyetle yerel motoru çalıştırır.
+  const shortScenario = matchShortScenario(cleanInput, userDomain);
+  const isDirectCalendar = lower.includes('neyim var') || lower.includes('programım nasıl') || lower.includes('müsait miyim') || lower.includes('ajandam');
+  const isDirectMessage = lower.includes('mesajı hazırla') || lower.includes('mail taslağı') || lower.includes('gelemeyeceğimi söyle');
+
+  if (shortScenario || isDirectCalendar || isDirectMessage) {
+    return dispatchDeterministic(cleanInput, currentDatetime, userDomain);
+  }
+
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
-    return dispatchDeterministic(input, currentDatetime);
+    return dispatchDeterministic(cleanInput, currentDatetime, userDomain);
   }
 
   try {
@@ -409,7 +432,7 @@ export async function dispatchWithGemini(input: string, currentDatetime: string)
       },
     });
 
-    const userPrompt = `Kullanıcı Girdisi: "${input}"\nCURRENT_DATETIME: ${currentDatetime}`;
+    const userPrompt = `Kullanıcı Girdisi: "${input}"\nCURRENT_DATETIME: ${currentDatetime}${userDomain && userDomain !== 'GENEL' ? `\nKULLANICININ ÇALIŞMA / UZMANLIK ALANI ODAĞI: ${userDomain}` : ''}`;
 
     let functionCalls: any[] | undefined;
     let usedModel = 'gemini-2.5-flash';
@@ -479,9 +502,9 @@ export async function dispatchWithGemini(input: string, currentDatetime: string)
     }
 
     // Fallback if no function call emitted
-    return dispatchDeterministic(input, currentDatetime);
+    return dispatchDeterministic(input, currentDatetime, userDomain);
   } catch (err) {
     console.warn('[Gemini Dispatcher Fallback]:', err);
-    return dispatchDeterministic(input, currentDatetime);
+    return dispatchDeterministic(input, currentDatetime, userDomain);
   }
 }

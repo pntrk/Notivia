@@ -1,3 +1,5 @@
+import type { ProfessionDomain } from '../types/domainThemes.ts';
+
 /**
  * Notivia Bilişsel Çıkarım Motoru: "Leb Demeden Leblebiyi Anlama" Senaryo Veritabanı
  * 
@@ -10,6 +12,7 @@
 export interface ShortScenarioMatch {
   id: string;
   category: 'resmi' | 'saglik' | 'ev_teknik' | 'arac_ulasim' | 'finans' | 'is_kariyer' | 'kisisel_yasam' | 'sosyal';
+  domain?: ProfessionDomain; // Eşleştiği mesleki veya yaşam alanı
   keywords: string[]; // Eşleşecek mikro kelimeler ve kökler
   matcher?: (lower: string, words: string[]) => boolean;
   baslik: string;
@@ -716,19 +719,706 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
       'Gövdeye su değdirmeden yalnızca toprağı nemlendir',
       'Saksı altlığında su bekletme'
     ]
+  },
+
+  // 8. KUAFÖR, GÜZELLİK & KİŞİSEL BAKIM MOTORU (HAIR SALON & BEAUTY)
+  {
+    id: 'kuafor_dip_acma',
+    category: 'is_kariyer',
+    keywords: ['dip açma', 'açıcı', 'dip boya', 'oryal', 'saç açma', 'dip açıcı', 'platin açma'],
+    baslik: 'Dip Açma & Nötralizasyon',
+    ikon: '💇‍♀️',
+    renk: '#FDF2F8',
+    varsayilanZaman: 'Bugün 15:45',
+    hazirlikZamani: 'Bugün 15:25 (Elastikiyet Kontrolü)',
+    hazirlikSaatOncesi: 0.33,
+    akilliFisilti: '💇‍♀️ 30 volüm açıcı hassas saçta 35 dakikayı aşarsa saç kopabilir; 15. dakikada elastikiyet testi şarttır.',
+    oncedenYapilacaklar: [
+      '15. dakika: Ense ve şakaktan tutam çekerek saçın elastikiyetini ve sararma tonunu kontrol et',
+      '35. dakika: Açıcıyı bekletmeden lavaboya al, ılık suyla tamamen durula ve mor şampuanla tonla',
+      'Dip ton açıldıktan sonra saç yapısını onarmak için pleks/keratin bakım maskesi uygula',
+      'Sonraki randevulu müşteri için tezgahı temizle, fırça ve tarakları dezenfekte et'
+    ]
+  },
+  {
+    id: 'kuafor_keratin_fon',
+    category: 'is_kariyer',
+    keywords: ['keratin bakım', 'keratin botoks', 'brezilya fönü', 'kalıcı fön'],
+    baslik: 'Keratin Bakım & Pres',
+    ikon: '✨',
+    renk: '#FDF2F8',
+    varsayilanZaman: 'Bugün 16:30',
+    hazirlikZamani: 'İşlem Öncesi Arındırma',
+    akilliFisilti: '✨ Keratin uygulamasında saç tuzsuz şampuanla 2 kez yıkanıp %100 kurutulmalıdır.',
+    oncedenYapilacaklar: [
+      'Arındırıcı (clarifying) tuzsuz şampuan ile saç pullarını aç',
+      'Keratini diplere değdirmeden ince tutamlar halinde eşit sür',
+      '20-30 dakika bekleme süresi sonrası fön çekip 230°C titanyum presle mühürle',
+      'Müşteriye 48 saat saçı bağlamaması ve ıslatmaması uyarısını ilet'
+    ]
+  },
+
+  // 9. OTOMOTİV & MEKANİK ACİL DURUM (BATARYA, BALATA, AKÜ)
+  {
+    id: 'oto_aku_degisim',
+    category: 'arac_ulasim',
+    keywords: ['akü bitti', 'akü bitti araba', 'akü takviye', 'marş basmıyor', 'akü değişimi', 'akü aldım'],
+    baslik: 'Akü Takviye & Değişim',
+    ikon: '🔋',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Hemen',
+    hazirlikZamani: 'Takviye Öncesi',
+    akilliFisilti: '🔋 Takviyede önce kırmızı (+) kutup, sonra siyah (-) şasi kutbu bağlanır.',
+    oncedenYapilacaklar: [
+      'Kırmızı kabloyu (+) kutuplara, siyah kabloyu verici araç (-) ve alıcı araç motor şasisine bağla',
+      'Çalıştırdıktan sonra kabloları ters sırayla çıkar',
+      'Yeni akü takıldıysa radyo kodunu ve cam otomatiklerini sıfırla',
+      'Şarj dinamosunun (alternatör) 13.8 - 14.4V şarj voltajını ölçtür'
+    ]
+  },
+  {
+    id: 'oto_fren_balata',
+    category: 'arac_ulasim',
+    keywords: ['fren ötüyor', 'balata bitti', 'fren balatası', 'balata değiştim', 'disk taşlama', 'fren pedalı yumuşak'],
+    baslik: 'Fren Balata & Disk Değişimi',
+    ikon: '🛑',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Servis / Değişim',
+    hazirlikZamani: 'İlk 200 Km Alıştırma',
+    akilliFisilti: '🛑 Yeni balatalarda ilk 200 km ani sert frenden kaçınılmalıdır, aksi halde diskler camlaşır.',
+    oncedenYapilacaklar: [
+      'Ön ve arka balata aşınma sensör kablolarını yenile',
+      'Fren hidrolik seviyesini (DOT4) kontrol et ve gerekirse tazele',
+      'Kaliper pimlerini yüksek ısı gresi ile yağla',
+      'İlk 200 km boyunca rodaj için yumuşak frenleme yap'
+    ]
+  },
+
+  // 10. İNŞAAT, ŞANTİYE & MÜHENDİSLİK (BETON, LOTO, TRAFO)
+  {
+    id: 'insaat_beton_dokum',
+    category: 'is_kariyer',
+    keywords: ['beton döktük', 'beton döküldü', 'şantiye beton', 'c30 beton', 'c35 beton', 'slump testi', 'beton kırım'],
+    baslik: 'Beton Dökümü & Laboratuvar',
+    ikon: '🏗️',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Döküm Günü',
+    hazirlikZamani: 'Dökümden 1 Saat Önce',
+    akilliFisilti: '🏗️ Beton döküm anından itibaren 7. ve 28. günlerde laboratuvar kırım testi ve 3 gün kür sulaması şarttır.',
+    oncedenYapilacaklar: [
+      'Transmikser irsaliyelerinden C30/C35 sınıfı ve slump değerini kontrol et',
+      'Yapı denetim eşliğinde küp/silindir numuneleri etiketle ve su havuzuna al',
+      '7 gün ve 28 gün sonraki laboratuvar basınç dayanım kırım tarihlerini takvime işle',
+      'Dökümden sonraki ilk 72 saat sabah-akşam düzenli kür sulaması yap'
+    ]
+  },
+  {
+    id: 'elektrik_loto_trafo',
+    category: 'is_kariyer',
+    keywords: ['trafo bakım', 'loto', 'yüksek gerilim', 'pano bakım', 'şalter indi', 'kompanzasyon'],
+    baslik: 'Elektrik Pano Bakım & LOTO',
+    ikon: '⚡',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Planlı Kesinti Saati',
+    hazirlikZamani: 'Müdahale Öncesi Emniyet',
+    akilliFisilti: '⚡ Can güvenliği gereği panoda LOTO (Kilitleme-Etiketleme) yapılmadan ve sıfır gerilim ölçülmeden müdahale edilemez.',
+    oncedenYapilacaklar: [
+      'Ana kesiciyi aç ve asma kilit ile etiket (LOTO) uygulayarak kilitle',
+      'Çift kutuplu gerilim kontrol kalemiyle fazlarda sıfır enerji teyidi yap',
+      'İzole halı, dielektrik eldiven ve ark siperliği kuşan',
+      'Kompanzasyon panosunda endüktif %20, kapasitif %15 cezai sınırları denetle'
+    ]
+  },
+
+  // 11. HUKUK & ADLİYE (DURUŞMA, TEBLİGAT, İCRA)
+  {
+    id: 'hukuk_uyap_tebligat',
+    category: 'resmi',
+    domain: 'HUKUK',
+    keywords: ['uyap tebligat', 'e-tebligat', 'tebligat geldi', 'istinaf süresi', 'cevap dilekçesi'],
+    baslik: 'UYAP E-Tebligat & Süre Takibi',
+    ikon: '⚖️',
+    renk: '#E0E7FF',
+    varsayilanZaman: '5 Gün + 14 Gün Yasal Süre',
+    hazirlikZamani: 'Tebliğ Tarihi',
+    akilliFisilti: '⚖️ Tebligat Kanunu 7/a gereğince elektronik tebligat muhatabın adresine ulaştığı günü izleyen 5. günün sonunda tebliğ sayılır.',
+    oncedenYapilacaklar: [
+      'Tebligat Kanunu 7/a 5. gün kuralına göre kesin tebliğ tarihini hesapla',
+      'İtiraz/İstinaf süresinin son gününe (mesai 17:00) takvim alarmı kur',
+      'Dilekçe ve delil listesini UYAP Avukat Portalından hazırla',
+      'e-İmza ile son gün mesai bitimine kadar sisteme yükle'
+    ]
+  },
+  {
+    id: 'hukuk_durusma_adliye',
+    category: 'resmi',
+    domain: 'HUKUK',
+    keywords: ['duruşma', 'duruşmam var', 'ağır ceza duruşma', 'asliye ceza duruşma', 'iş mahkemesi duruşma'],
+    baslik: 'Adliye Mahkeme Duruşması',
+    ikon: '🏛️',
+    renk: '#E0E7FF',
+    varsayilanZaman: 'Duruşma Günü (30 Dk Önce)',
+    hazirlikZamani: 'Duruşmadan 30 Dk Önce Adliye',
+    akilliFisilti: '🏛️ Çakışan duruşma ihtimaline karşı mazeret dilekçesi hazırda tutulmalı, cübbe ve dosya kontrol edilmelidir.',
+    oncedenYapilacaklar: [
+      'Duruşma saatinden 30 dakika önce duruşma salonu kapısında hazır bulun',
+      'Mübaşire vekaletname veya yetki belgesini ibraz et',
+      'Çakışma varsa diğer mahkemeye önceden UYAP mazeret dilekçesi gönder',
+      'Duruşma zaptı ve ara kararları UYAP üzerinden gecikmeksizin kaydet'
+    ]
+  },
+
+  // 12. MALİ MÜŞAVİRLİK & VERGİ (BEYANNAME, SGK, KDV)
+  {
+    id: 'smmm_kdv_beyanname',
+    category: 'finans',
+    domain: 'FINANS',
+    keywords: ['kdv beyanname', 'muhsgk', 'muhtasar beyanname', 'kdv son gün', 'beyanname onay'],
+    baslik: 'KDV & MUHSGK Beyanname Onayı',
+    ikon: '📊',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Ayın 26’sı 23:59',
+    hazirlikZamani: 'Ayın 24’ü 14:00',
+    akilliFisilti: '📊 KDV ve MUHSGK beyannameleri her ayın 26. günü saat 23:59’a kadar onaylanmalıdır.',
+    oncedenYapilacaklar: [
+      'Mükellef faturaları ve banka ekstre mutabakatlarını tamamla',
+      'GİB e-Beyanname portalı üzerinden onay bekleyenleri kontrol et',
+      'Tahakkuk fişlerini ve ödeme makbuzlarını mükellefe PDF olarak ilet',
+      'Ödeme vadesi için ay sonu banka hatırlatması kur'
+    ]
+  },
+  {
+    id: 'smmm_sgk_e_defter',
+    category: 'finans',
+    domain: 'FINANS',
+    keywords: ['sgk prim', 'e-defter berat', 'bağkur öde', 'ay sonu bordro'],
+    baslik: 'SGK Prim & e-Defter Beratı',
+    ikon: '📈',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Ayın Son Günü 23:59',
+    hazirlikZamani: 'Ay Sonundan 2 Gün Önce',
+    akilliFisilti: '📈 e-Defter berat yüklemeleri ve SGK prim ödemeleri ayın son günü mesai bitimine kadar yapılmalıdır.',
+    oncedenYapilacaklar: [
+      'SGK tahakkuklarını kontrol et ve otomatik ödeme talimatını teyit et',
+      'e-Defter beratlarını mali mühür ile imzalayıp GİB sistemine yükle',
+      'Yükleme onay beratlarını arşiv klasörüne ve buluta yedekle'
+    ]
+  },
+
+  // 13. EĞİTİM & ÖĞRETMENLİK (SINAV OKUMA, E-OKUL, NÖBET)
+  {
+    id: 'ogretmen_sinav_e_okul',
+    category: 'resmi',
+    keywords: ['sınav okuma', 'yazılı okuma', 'e-okul not', 'not girişi', 'sınav bitti', 'sınav yaptık'],
+    baslik: 'Yazılı Okuma & e-Okul Girişi',
+    ikon: '📚',
+    renk: '#FEF08A',
+    varsayilanZaman: '10 Gün İçinde',
+    hazirlikZamani: 'Sınavdan Sonraki Hafta',
+    akilliFisilti: '📚 MEB mevzuatı gereği sınav sonuçları sınav tarihinden itibaren en geç 10 gün içinde e-Okul sistemine girilmelidir.',
+    oncedenYapilacaklar: [
+      'Cevap anahtarı ve puanlama baremine göre yazılı kağıtlarını oku',
+      'Kazanım analiz formunu doldurup sınıf başarı ortalamasını çıkar',
+      'e-Okul sistemine notları girerek veli bilgilendirmesini sağla',
+      'Yazılı kağıtları ve analiz çıktılarını zümre başkanına teslim et'
+    ]
+  },
+
+  // 14. POLİS, İTFAİYE & ACİL DURUM (GÖZALTI, SCBA, DEVRİYE)
+  {
+    id: 'asayis_gozalti_fezleke',
+    category: 'resmi',
+    keywords: ['gözaltı', 'yakalama tutanağı', 'adli muayene', 'fezleke'],
+    baslik: 'Gözaltı & Savcılık Fezlekesi',
+    ikon: '👮',
+    renk: '#BFDBFE',
+    varsayilanZaman: '24 Saat Yasal Süre',
+    hazirlikZamani: 'Gözaltı Bitimine 6 Saat Kala',
+    akilliFisilti: '👮 24 saatlik yasal gözaltı süresi aşılmamalı; giriş ve çıkış adli muayene raporları eksiksiz alınmalıdır.',
+    oncedenYapilacaklar: [
+      'Şüphelinin giriş adli muayene raporunu hastaneden temin et',
+      'Üst arama ve adli emanet teslim-tesellüm tutanağını tanzim et',
+      'İfade alma işlemi sonrası avukat eşliğinde imzaları tamamla',
+      'Süre bitimine en az 6 saat kala savcılık fezlekesini hazırla'
+    ]
+  },
+  {
+    id: 'itfaiye_scba_nobet',
+    category: 'resmi',
+    keywords: ['itfaiye nöbet', 'scba', 'solunum tüpü', 'arazöz', 'yangın tüpü basınç'],
+    baslik: 'İtfaiye Nöbet & SCBA Kontrolü',
+    ikon: '🚒',
+    renk: '#FECACA',
+    varsayilanZaman: 'Nöbet Devir 08:00',
+    hazirlikZamani: 'Nöbet Başlangıcı',
+    akilliFisilti: '🚒 SCBA solunum tüpü basınçları 300 Bar altında olmamalı; arazöz su-köpük vanaları kontrol edilmelidir.',
+    oncedenYapilacaklar: [
+      'SCBA tüp manometrelerini kontrol et (En az 300 Bar)',
+      'Arazöz su tankı, köpük seviyesi ve hidrolik kesici ayırıcı bataryalarını test et',
+      'Yangın tulumu, baret, çizme ve nomex başlık kondisyonunu denetle',
+      'Nöbet devir-teslim defterini kaşeleyip imzala'
+    ]
+  },
+
+  // 15. MUTFAK & ŞEF (MİSE EN PLACE, HACCP)
+  {
+    id: 'sef_mise_en_place',
+    category: 'is_kariyer',
+    keywords: ['mise en place', 'servis hazırlık', 'restoran servis', 'soğuk oda kontrol', 'haccp'],
+    baslik: 'Mutfak Mise en Place & Hazırlık',
+    ikon: '👨‍🍳',
+    renk: '#FED7AA',
+    varsayilanZaman: 'Servis Öncesi 16:30',
+    hazirlikZamani: 'Servisten 3 Saat Önce',
+    akilliFisilti: '👨‍🍳 Soğuk oda sıcaklığı +4°C, derin dondurucu -18°C olmalı; FIFO kuralı titizlikle uygulanmalıdır.',
+    oncedenYapilacaklar: [
+      'Soğuk oda ve dipfriz derece çizelgelerini doldur (+4°C / -18°C)',
+      'Tüm sos, garnitür ve proteinlerin mise en place hazırlığını tamamla',
+      'Bıçakları bileyleyip kesme tahtalarını çapraz bulaşma renk koduna göre hazırla',
+      'Servisten 45 dakika önce servis ekibiyle tadım brifingi yap'
+    ]
+  },
+
+  // 16. HAVACILIK & PİLOT (OFP, METAR, BRİFİNG)
+  {
+    id: 'pilot_ucushazirlik_ofp',
+    category: 'is_kariyer',
+    keywords: ['ofp', 'metar', 'taf', 'kokpit brifing', 'walkaround', 'ucuş brifing'],
+    baslik: 'Uçuş Öncesi OFP & METAR Brifingi',
+    ikon: '✈️',
+    renk: '#E0E7FF',
+    varsayilanZaman: 'Kalkıştan 90 Dk Önce',
+    hazirlikZamani: 'Uçuştan 2 Saat Önce',
+    akilliFisilti: '✈️ FDP dinlenme süresi ihlal edilmemeli; meydan METAR/TAF ve yedek meydan yakıt planı onaylanmalıdır.',
+    oncedenYapilacaklar: [
+      'Kalkış, varış ve yedek meydan METAR/TAF ve NOTAM bültenlerini incele',
+      'OFP (Operasyonel Uçuş Planı) yakıt ve rüzgar hesaplamalarını imzala',
+      'Kalkıştan 45 dakika önce uçağın fiziki dış kontrolünü (walkaround) tamamla',
+      'Kabin amiriyle uçuş emniyet ve türbülans brifingi gerçekleştir'
+    ]
+  },
+
+  // 17. KLİNİK, HEMŞİRE & ECZANE (ORDER, SBAR, SOĞUK ZİNCİR)
+  {
+    id: 'hemsire_sbar_devir',
+    category: 'saglik',
+    keywords: ['sbar', 'hemşire devir', 'hasta order', 'vital bulgu', 'pansuman'],
+    baslik: 'Hemşire Vardiya & SBAR Devri',
+    ikon: '💉',
+    renk: '#CCFBF1',
+    varsayilanZaman: 'Vardiya Sonu 07:30',
+    hazirlikZamani: 'Vardiyadan 45 Dk Önce',
+    akilliFisilti: '💉 İlaç uygulamalarında 5 Doğru Kuralı gözetilmeli; kritik hasta bilgileri SBAR yöntemiyle devredilmelidir.',
+    oncedenYapilacaklar: [
+      'Hasta vital bulgularını (tansiyon, nabız, ateş, SpO2) sisteme işle',
+      'Doktor order kontrolü ve 5 Doğru Kuralı teyidi yap',
+      '2 saatte bir yatan hastaların dekübitus pozisyon değişimini sağla',
+      'Vardiya bitiminde yeni ekibe yatak başı SBAR devri gerçekleştir'
+    ]
+  },
+  {
+    id: 'eczane_soguk_zincir',
+    category: 'saglik',
+    keywords: ['soğuk zincir', 'its bildirim', 'medula döküm', 'miad kontrol', 'eczane ilaç'],
+    baslik: 'Eczane Soğuk Zincir & İTS',
+    ikon: '💊',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Her Sabah 08:30',
+    hazirlikZamani: 'Açılışta',
+    akilliFisilti: '💊 Aşı ve biyolojik ürün dolapları 2-8°C arasında tutulmalı; sabah/akşam derece kaydı alınmalıdır.',
+    oncedenYapilacaklar: [
+      'İlaç buzdolabının sabah ve akşam ısı derecelerini (2-8°C) deftere işle',
+      'İlaç Takip Sistemi (İTS) üzerinden karekod satış ve mal alım bildirimlerini onayla',
+      'Miadı yaklaşan (son 3 ay) ilaçları raftan ayırıp iade listesine ekle',
+      'Ayın ilk haftası Medula reçete dökümünü SGK’ya teslim et'
+    ]
+  },
+
+  // 18. DEVLET MEMURU & RESMİ EVRAK (EBYS, CİMER, DOĞRUDAN TEMİN)
+  {
+    id: 'memur_ebys_evrak',
+    category: 'resmi',
+    keywords: ['ebys', 'belgenet', 'günlü evrak', 'acele yazı', 'paraf zinciri', 'cimer cevap'],
+    baslik: 'EBYS Günlü Evrak & Paraf',
+    ikon: '🗂️',
+    renk: '#FEF9C3',
+    varsayilanZaman: 'Son Gün 16:00',
+    hazirlikZamani: '1 İş Günü Önce',
+    akilliFisilti: '🗂️ Günlü ve süreli yazılarda yasal süre aşılmamalı; e-İmza sertifikası takılı olmalıdır.',
+    oncedenYapilacaklar: [
+      'Yazı taslağını hazırlayıp Standart Dosya Kodu (SDP) seçimi yap',
+      'Şef ve Şube Müdürü paraf zincirine sun',
+      'Nitelikli elektronik sertifika (e-İmza) ile nihai onayı alıp sayı/tarih ver',
+      'CİMER veya mahkeme bilgi talebi ise yasal süre sayacını kapat'
+    ]
+  },
+
+  // 19. ASKERİYE & TEKMİL (İÇTİMA, NÖBET, SİLAHLIK)
+  {
+    id: 'askeriye_ictima_nobet',
+    category: 'resmi',
+    keywords: ['içtima', 'tekmil', 'silahlık sayımı', 'doldur boşalt', 'nöbet devir teslim askeriye'],
+    baslik: 'Askeri İçtima & Silahlık Devri',
+    ikon: '🪖',
+    renk: '#E2E8D5',
+    varsayilanZaman: 'İçtima Öncesi (20 Dk Önce)',
+    hazirlikZamani: 'Faaliyetten 25 Dk Önce',
+    akilliFisilti: '🪖 İçtima saatinden 20 dakika önce mevcut ve künye sayımı tamamlanmalı, doldur-boşalt bizzat denetlenmelidir.',
+    oncedenYapilacaklar: [
+      'Mevcut ve künye kontrolü yap (Raporlu, izinli, nöbetçi personeli tespit et)',
+      'Kompozit başlık, hücum yeleği ve teçhizat denetimini sağla',
+      'Silahlık sayım cetvelini ve mühimmat sandığı kurşun mühürlerini fiziki say',
+      'Doldur-boşalt istasyonunda doldur-boşalt emniyetini bizzat denetle'
+    ]
+  },
+
+  // 20. PROJE, LOJİSTİK & ŞOFÖR (TAKOGRAF, AETR, TAKİP)
+  {
+    id: 'sofor_takograf_aetr',
+    category: 'arac_ulasim',
+    domain: 'LOJISTIK',
+    keywords: ['takograf', 'aetr', 'kantar', 'cmr', 'irsaliye', 'tır şoförü', 'uzun yol sürüş'],
+    baslik: 'Takograf & AETR Sürüş Takibi',
+    ikon: '🚛',
+    renk: '#FED7AA',
+    varsayilanZaman: 'Yola Çıkış',
+    hazirlikZamani: 'Kalkıştan 45 Dk Önce',
+    akilliFisilti: '🚛 AETR kuralları gereği 4.5 saatlik sürüşe 45 dakika mola verilmelidir; günlük azami sürüş 9 saattir.',
+    oncedenYapilacaklar: [
+      'Dijital takograf sürücü kartını tak ve günlük mod kontrolü yap',
+      'Dorse lastik havaları, pleyt kilidi ve emniyet zincirini kontrol et',
+      'İrsaliye, CMR ve kantar evraklarını araç torpidosuna al',
+      '4.5 saat dolmadan dinlenme tesisi ve güvenli park alanı planla'
+    ]
+  },
+
+  // 21. EMEKLİ YAŞAMI & SAĞLIK MOTORU (RETIRED LIFE & SENIOR HEALTH)
+  {
+    id: 'emekli_maas_tahsis',
+    category: 'finans',
+    domain: 'CALISMIYORUM',
+    keywords: ['emekli maaş', 'emekli maaşı', 'tahsis no', 'maaş günü', 'maaş çek', 'emekli bayram ikramiye', 'ikramiye yattı'],
+    baslik: 'Emekli Maaşı & İkramiye Çekimi',
+    ikon: '🏖️',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Maaş Günü 10:30',
+    hazirlikZamani: '1 Gün Önce Hesap Kontrolü',
+    akilliFisilti: '🏖️ Tahsis numarasının son hanesine göre maaş günü belirlenir; bankamatik yoğun saatlerinden kaçınılmalıdır.',
+    oncedenYapilacaklar: [
+      'e-Devlet 4A/4B/4C Emekli Aylık Bilgisi üzerinden kesin tahsis tutarını kontrol et',
+      'Promosyon veya bayram ikramiyesi farkının hesaba yansıyıp yansımadığını gör',
+      'Banka kartı şifresini ve günlük para çekme limitini teyit et',
+      'Yoğunluk olmaması için sabah 10:30 - 11:30 arası sakin bankamatiği tercih et'
+    ]
+  },
+  {
+    id: 'emekli_raporlu_ilac',
+    category: 'saglik',
+    domain: 'CALISMIYORUM',
+    keywords: ['raporlu ilaç', 'ilaç yazdırma', 'sağlık ocağı ilaç', 'tansiyon ilacı bitti', 'şeker ilacı bitti', 'ilaç raporu'],
+    baslik: 'Raporlu İlaç & Sağlık Ocağı',
+    ikon: '💊',
+    renk: '#F3E8FF',
+    varsayilanZaman: 'Bugün 09:30',
+    hazirlikZamani: 'İlaç Bitiminden 3 Gün Önce',
+    akilliFisilti: '💊 Raporlu ilaçlar bitmeden 15 gün önce Medula sisteminden tekrar reçete ettirilebilir.',
+    oncedenYapilacaklar: [
+      'e-Nabız üzerinden ilaç raporunun geçerlilik süresini denetle',
+      'Aile hekiminden sabah saatine sıra al ve aç karnına tahlil varsa planla',
+      'Reçete kodunu SMS olarak al ve eczaneden temin et',
+      'Kutu üzerindeki sabah/akşam doz talimatlarını eczacıya teyit ettir'
+    ]
+  },
+  {
+    id: 'emekli_hobi_yuruyus',
+    category: 'kisisel_yasam',
+    domain: 'CALISMIYORUM',
+    keywords: ['yürüyüş', 'sabah yürüyüşü', 'park yürüyüş', 'hobi bahçesi', 'tansiyon ölçümü'],
+    baslik: 'Sabah Yürüyüşü & Tansiyon',
+    ikon: '🌿',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Sabah 08:30',
+    hazirlikZamani: 'Kahvaltıdan 45 Dk Sonra',
+    akilliFisilti: '🌿 Sabah serinliğinde 30-45 dakikalık tempolu yürüyüş ve ardından istirahat tansiyonu dengeler.',
+    oncedenYapilacaklar: [
+      'Sabah tansiyon ilacını 1 bardak ılık su ile al',
+      'Rahat yürüyüş ayakkabısı ve mevsime uygun pamuklu kıyafet seç',
+      '30-40 dakikalık düz parkurda yürüyüş yap, su matarası taşı',
+      'Dinlendikten sonra dijital tansiyon aletiyle ölçüm yapıp deftere yaz'
+    ]
+  },
+
+  // 22. ÖĞRENCİ & KAMPÜS MOTORU (STUDENT & ACADEMIC LIFE)
+  {
+    id: 'ogrenci_vize_final_sinav',
+    category: 'resmi',
+    domain: 'OGRENCI',
+    keywords: ['vize sınavı', 'vize', 'final sınavı', 'final', 'bütünleme', 'sınav giriş belgesi', 'ders sınavı'],
+    baslik: 'Vize / Final Sınavı & Giriş',
+    ikon: '🎓',
+    renk: '#DDD6FE',
+    varsayilanZaman: 'Sınav Saati (30 Dk Önce)',
+    hazirlikZamani: 'Sınavdan 1 Gün Önce',
+    akilliFisilti: '🎓 Sınav giriş belgesi, geçerli öğrenci kimliği ve yumuşak kurşun kalem önceden hazır edilmelidir.',
+    oncedenYapilacaklar: [
+      'OBS üzerinden sınav salonunu, sıra numarasını ve saatini kontrol et',
+      'Öğrenci kimlik kartını ve fotoğraflı sınav giriş belgesini çantaya koy',
+      'Yedek kurşun kalem, silgi, kalemtıraş ve izin veriliyorsa hesap makinesini hazırla',
+      'Sınav başlamadan en az 25 dakika önce derslik kapısında hazır bulun'
+    ]
+  },
+  {
+    id: 'ogrenci_odev_proje_teslim',
+    category: 'is_kariyer',
+    domain: 'OGRENCI',
+    keywords: ['ödev teslim', 'proje teslim', 'lab raporu', 'intihal raporu', 'turnitin', 'ödevi yükle'],
+    baslik: 'Ödev & Proje Teslimi (Turnitin)',
+    ikon: '📝',
+    renk: '#DDD6FE',
+    varsayilanZaman: 'Teslim Günü 23:59',
+    hazirlikZamani: 'Teslimden 4 Saat Önce',
+    akilliFisilti: '📝 Turnitin intihal oranı %20 sınırını aşmamalı ve dosya formatı PDF olarak sisteme yüklenmelidir.',
+    oncedenYapilacaklar: [
+      'Turnitin veya intihal yazılımında benzerlik oranını (%20 altı) test et',
+      'Kaynakça ve APA formatı standartlarını gözden geçir',
+      'Word dosyasını PDF formatına dönüştürüp dosya boyutunu küçült',
+      'Üniversite Uzaktan Eğitim Sistemi (LMS/Canvas) üzerinden son teslimden önce yükle'
+    ]
+  },
+  {
+    id: 'ogrenci_kyk_ders_kaydi',
+    category: 'resmi',
+    domain: 'OGRENCI',
+    keywords: ['ders kaydı', 'ders seçimi', 'harç ödeme', 'kyk burs', 'kyk yurt', 'danışman onayı'],
+    baslik: 'Ders Kaydı & Danışman Onayı',
+    ikon: '🏫',
+    renk: '#DDD6FE',
+    varsayilanZaman: 'Kayıt Haftası Son Gün',
+    hazirlikZamani: 'Sistem Açılış Saati',
+    akilliFisilti: '🏫 Kontenjan dolmadan ders seçimi yapılmalı ve danışman onayına gönderilmelidir.',
+    oncedenYapilacaklar: [
+      'Varsa katkı payı / harç ücretini ATM veya internet bankacılığından yatır',
+      'Müfredat zorunlu ve seçmeli AKTS kredi toplamını hesapla',
+      'OBS üzerinden dersleri seçip danışman onayına ilet',
+      'Danışman onay durumunu OBS ve üniversite e-postasından takip et'
+    ]
+  },
+
+  // 23. ÇALIŞMIYORUM / EV YAŞAMI MOTORU (UNEMPLOYED / HOME LIFE / JOB SEEKING)
+  {
+    id: 'calismiyorum_is_basvurusu_cv',
+    category: 'is_kariyer',
+    domain: 'CALISMIYORUM',
+    keywords: ['iş başvurusu', 'cv güncelle', 'cv hazırla', 'özgeçmiş', 'iş ilanı', 'kariyer net', 'linkedin başvuru'],
+    baslik: 'İş Başvurusu & CV Güncelleme',
+    ikon: '💼',
+    renk: '#CCFBF1',
+    varsayilanZaman: 'Bugün 14:00',
+    hazirlikZamani: 'Başvuru Öncesi',
+    akilliFisilti: '💼 İlan anahtar kelimeleri CV’ye uyarlanmalı ve ön yazı firma özelinde kişiselleştirilmelidir.',
+    oncedenYapilacaklar: [
+      'CV’deki son tecrübeleri, eğitim ve yetkinlikleri güncelle',
+      'İlana özel anahtar kelimeleri ön yazıya (cover letter) entegre et',
+      'Referans kişilerin güncel telefon ve unvan bilgilerini doğrula',
+      'LinkedIn ve Kariyer portallarından PDF olarak başvuruyu tamamla'
+    ]
+  },
+  {
+    id: 'calismiyorum_mulakat_prova',
+    category: 'is_kariyer',
+    domain: 'CALISMIYORUM',
+    keywords: ['mülakat', 'iş mülakatı', 'iş görüşmesi', 'online mülakat', 'hr görüşme', 'ik mülakatı'],
+    baslik: 'İş Mülakatı & Online Görüşme',
+    ikon: '🎯',
+    renk: '#CCFBF1',
+    varsayilanZaman: 'Görüşme Saati (15 Dk Önce)',
+    hazirlikZamani: 'Görüşmeden 1 Gün Önce',
+    akilliFisilti: '🎯 Şirket projeleri incelenmeli; mikrofon, kamera ve aydınlatma test edilmelidir.',
+    oncedenYapilacaklar: [
+      'Şirketin son faaliyetlerini, vizyonunu ve sektördeki yerini araştır',
+      'Klasik mülakat sorularına (STAR tekniği) yanıt provaları yap',
+      'Zoom / Teams / Google Meet kamera, kulaklık ve internet bağlantısını sına',
+      'Sessiz, arka planı derli toplu ve iyi ışık alan bir çalışma köşesi hazırla'
+    ]
+  },
+  {
+    id: 'calismiyorum_gunluk_rutin_ev',
+    category: 'kisisel_yasam',
+    domain: 'CALISMIYORUM',
+    keywords: ['ev işleri', 'günlük rutin', 'haftalık plan', 'ev düzeni', 'kişisel hedef', 'kendime vakit'],
+    baslik: 'Günlük Yaşam Rutini & Hedefler',
+    ikon: '🏠',
+    renk: '#CCFBF1',
+    varsayilanZaman: 'Bugün 11:00',
+    hazirlikZamani: 'Sabah Planlama',
+    akilliFisilti: '🏠 Günlük yapılandırılmış rutin odaklanmayı ve zindeliği korumanın en etkili yoludur.',
+    oncedenYapilacaklar: [
+      'Günün en kritik 3 ana hedefini belirle (Örn: Eğitim, spor, ev)',
+      '1 saatlik odaklı öğrenme / kişisel gelişim veya yabancı dil pratiği yap',
+      'Ev düzeni, yemek hazırlığı veya alışveriş listesini tamamla',
+      'Akşam günün kazanımlarını ve yarının planını değerlendir'
+    ]
+  },
+
+  // 24. TİCARET & ESNAF MOTORU (SALES & LOCAL SHOP)
+  {
+    id: 'ticaret_teklif_sicak_takip',
+    category: 'finans',
+    domain: 'TICARET',
+    keywords: ['satış teklif', 'teklif takibi', 'fiyat teklifi', 'müşteri arama', 'teklif attım', 'opsiyon süresi'],
+    baslik: 'Teklif Sıcak Takibi (Follow-Up)',
+    ikon: '💼',
+    renk: '#FEF3C7',
+    varsayilanZaman: '24-48 Saat Sonra',
+    hazirlikZamani: 'Görüşme Öncesi Notlar',
+    akilliFisilti: '💼 Gönderilen teklifin 24-48 saat içinde nazikçe sorgulanması kapanış oranını %40 artırır.',
+    oncedenYapilacaklar: [
+      'Teklif detaylarını, iskonto oranını ve opsiyon bitiş tarihini aç',
+      'Müşterinin kritik beklentilerini ve bütçe hassasiyetini hatırla',
+      'Telefon veya WhatsApp ile nazik bir hatırlatma ve teyit mesajı ilet',
+      'Görüşme sonucunu CRM veya müşteri kartına not et'
+    ]
+  },
+  {
+    id: 'ticaret_kasa_z_raporu',
+    category: 'finans',
+    domain: 'TICARET',
+    keywords: ['z raporu', 'kasa sayımı', 'pos gün sonu', 'kasa kapat', 'gün sonu hasılat'],
+    baslik: 'Gün Sonu Kasa & Z Raporu',
+    ikon: '🧾',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Kapanış 20:30',
+    hazirlikZamani: 'Kapanıştan 15 Dk Önce',
+    akilliFisilti: '🧾 POS cihazlarından gün sonu alınmalı ve çekmecedeki fiziki nakit ile sistem mutabakatı yapılmalıdır.',
+    oncedenYapilacaklar: [
+      'Tüm POS cihazlarından Gün Sonu slip dökümlerini al',
+      'Yazar kasadan mali Z Raporu alıp günlük deftere zımbala',
+      'Kasada kalan avans bozuk parayı ayırıp günün net nakit cirosunu say',
+      'Kasa mutabakat tutanağını doldurup kasayı kilitle'
+    ]
+  },
+
+  // 25. ZİRAAT & BOTANİK MOTORU (AGRICULTURE & BOTANY)
+  {
+    id: 'ziraat_aksam_sulama',
+    category: 'ev_teknik',
+    domain: 'ZIRAAT',
+    keywords: ['çiçek sula', 'sulama', 'bahçe sula', 'suvarıver', 'sulayuver', 'çiçekler susamış', 'domates sula'],
+    baslik: 'Akşam Serinliği Sulaması',
+    ikon: '🌿',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Akşam 19:30',
+    hazirlikZamani: 'Güneş Battıktan Sonra',
+    akilliFisilti: '🌿 Güneş altında sulanan yapraklar mercek etkisiyle yanar; sulama daima akşam serinliğinde yapılmalıdır.',
+    oncedenYapilacaklar: [
+      'Toprağın 3-4 cm derinine parmak batırarak nem kontrolü yap',
+      'Güneşin tamamen batmasını ve toprağın soğumasını bekle (19:30)',
+      'Suyu doğrudan yapraklara değil, kök boğazına dinlendirilmiş suyla ver',
+      'Saksı tabağında biriken fazla suyu kök çürümesini önlemek için boşalt'
+    ]
+  },
+  {
+    id: 'ziraat_orkide_daldirma',
+    category: 'ev_teknik',
+    domain: 'ZIRAAT',
+    keywords: ['orkide sulama', 'orkide bakım', 'orkide su', 'orkide kökleri gri'],
+    baslik: 'Orkide Daldırma Sulama',
+    ikon: '🌸',
+    renk: '#FDF2F8',
+    varsayilanZaman: 'Yarın Sabah 09:30',
+    hazirlikZamani: 'Sabah Işığı',
+    akilliFisilti: '🌸 Orkideler gece ıslak kalırsa kök mantarı oluşur; işlem sabah 15 dk daldırma yöntemiyle yapılmalıdır.',
+    oncedenYapilacaklar: [
+      'Kök renginin yeşilden gümüş-griye döndüğünü kontrol et',
+      'Oda sıcaklığındaki dinlenmiş su dolu kaba saksıyı 15 dakika daldır',
+      'Sudan çıkarıp tüm fazla suyun süzülmesini bekle (Damlamasın)',
+      'Güneş alan ancak doğrudan yakıcı güneş almayan aydınlık yere koy'
+    ]
+  },
+
+  // 26. HUKUK & ADLİYE EK MOTORU (LEGAL SUITE EXPANDED)
+  {
+    id: 'hukuk_icra_haciz_talep',
+    category: 'resmi',
+    domain: 'HUKUK',
+    keywords: ['icra takibi', 'icra', 'ödeme emri', 'haciz talebi', 'ilamsız icra', 'icra dairesi'],
+    baslik: 'İcra Takibi & Ödeme Emri',
+    ikon: '⚖️',
+    renk: '#E0E7FF',
+    varsayilanZaman: 'Bugün 15:00',
+    hazirlikZamani: 'Takip Öncesi',
+    akilliFisilti: '⚖️ İcra takibinde borçlu TC/VKN ve faiz başlangıç tarihi UYAP İcra Portalında doğrulanmalıdır.',
+    oncedenYapilacaklar: [
+      'Alacak belgelerini, sözleşme veya faturayı UYAP İcra Portalına yükle',
+      'Harç ve gider avansını vakıfbank/UYAP üzerinden online öde',
+      'Tebligat zarfını tanzim edip PTT barkod takibine al',
+      'Ödeme emri kesinleştiğinde 7 günlük itiraz süresini takvime kur'
+    ]
+  },
+  {
+    id: 'hukuk_ihtarname_noter',
+    category: 'resmi',
+    domain: 'HUKUK',
+    keywords: ['ihtarname', 'noter ihtarname', 'tahliye ihtarnamesi', 'ihtar çek'],
+    baslik: 'Noter İhtarnamesi & PTT Şerhi',
+    ikon: '📜',
+    renk: '#E0E7FF',
+    varsayilanZaman: 'Mesai Bitimi 16:30',
+    hazirlikZamani: 'Noterden 1 Gün Önce',
+    akilliFisilti: '📜 İhtarnamenin muhataba tebliğ edildiği PTT tebliğ şerhi dava şartı ispatı için mutlaka temin edilmelidir.',
+    oncedenYapilacaklar: [
+      'İhtarname metnini ve fesih/talep maddelerini kanuni sürelere göre hazırla',
+      'Noterden 3 nüsha halinde tasdik ve tebliğ işlemlerini tamamla',
+      'PTT tebligat takip numarasıyla teslim gününü sistemden takip et',
+      'Tebliğ şerhli nüshayı noterden teslim alıp dava dosyasına ekle'
+    ]
   }
 ];
 
 /**
  * Kullanıcının söylediği 2-3 kelimelik kısa ve eksik ifadeleri
  * gelişmiş yaşam senaryolarıyla eşleştirip tam teşekküllü bir karta dönüştürür.
+ * 
+ * @param text Kullanıcı girdisi
+ * @param userDomain Kullanıcının ayarlardan seçtiği çalışma/uzmanlık alanı (Örn: 'HUKUK', 'OGRENCI', 'EMEKLİ')
  */
-export function matchShortScenario(text: string): ShortScenarioMatch | null {
+export function matchShortScenario(text: string, userDomain?: ProfessionDomain | string): ShortScenarioMatch | null {
   if (!text || text.trim().length === 0) return null;
   const lower = text.toLowerCase().trim();
   const words = lower.split(/\s+/);
 
-  // 1. Doğrudan anahtar kelime eşleşmesi
+  const hasDomainPriority = userDomain && userDomain !== 'GENEL';
+
+  // 1. ÖNCELİKLİ AŞAMA: Eğer kullanıcı belirli bir mesleki/yaşam alanı seçtiyse,
+  // ilk olarak O ALANA ait senaryoları test et! Böylece örneğin 'HUKUK' seçen avukat için
+  // hukuk kuralları en tepede önceliklendirilir.
+  if (hasDomainPriority) {
+    const domainScenarios = SCENARIO_DATABASE.filter(s => s.domain === userDomain);
+
+    // 1.a: Tam anahtar kelime eşleşmesi
+    for (const scenario of domainScenarios) {
+      if (scenario.matcher && scenario.matcher(lower, words)) {
+        return scenario;
+      }
+      for (const kw of scenario.keywords) {
+        if (lower.includes(kw)) {
+          return scenario;
+        }
+      }
+    }
+
+    // 1.b: Kök kelime veya benzerlik araması
+    for (const scenario of domainScenarios) {
+      for (const kw of scenario.keywords) {
+        const kwWords = kw.split(' ');
+        if (kwWords.every(w => words.some(userWord => userWord.startsWith(w) || userWord.includes(w)))) {
+          return scenario;
+        }
+      }
+    }
+  }
+
+  // 2. GENEL AŞAMA: Tüm senaryolar arasında eşleşme ara
   for (const scenario of SCENARIO_DATABASE) {
     if (scenario.matcher && scenario.matcher(lower, words)) {
       return scenario;
@@ -741,7 +1431,7 @@ export function matchShortScenario(text: string): ShortScenarioMatch | null {
     }
   }
 
-  // 2. Kök kelime veya benzerlik araması
+  // 3. Kök kelime veya benzerlik araması (Tüm veritabanı)
   for (const scenario of SCENARIO_DATABASE) {
     for (const kw of scenario.keywords) {
       const kwWords = kw.split(' ');

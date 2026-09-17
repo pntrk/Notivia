@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import type { NotiviaParsedNote, NotiviaCategory, NotiviaPriority, NotiviaSimpleNote } from '../types/notivia.ts';
 import { extractSimpleNoteFromText } from '../utils/simpleNote.ts';
+import { matchShortScenario } from '../utils/scenarioDatabase.ts';
 
 const SYSTEM_INSTRUCTION = `Sen "Notivia" adlı bilişsel yaşam asistanının çekirdek niyet çözümleme ve veri ayrıştırma (parser) motorusun.
 Görevin: Kullanıcının ayaküstü, devrik, dağınık, imalı veya sesle kaydedilmiş girdilerini analiz etmek; söylenmeyen gereksinimleri ("leb demeden leblebiyi anlayarak") alt görevlere dönüştürmek ve arayüzde görselleştirilmeye hazır katı bir JSON nesnesi üretmektir.
@@ -46,8 +47,22 @@ TEMEL YÖNERGELER:
 export async function parseWithGemini(
   userInput: string,
   currentDatetime: string,
-  pastNotes?: any[]
+  pastNotes?: any[],
+  userDomain?: string
 ): Promise<{ data: Omit<NotiviaParsedNote, 'id' | 'created_at' | 'raw_input' | 'reference_datetime'>; source: string }> {
+  const cleanInput = (userInput || '').trim();
+
+  // 0. ÖNCELİK: YEREL VE BİLİŞSEL KURAL MOTORU KONTROLÜ
+  // 2-3 kelimelik kısa ve net senaryolarda API'ye gitmeden doğrudan yerel kural motorunu çalıştır
+  const shortScenario = matchShortScenario(cleanInput, userDomain);
+  if (shortScenario) {
+    const deterministicData = runCognitiveFallback(cleanInput, currentDatetime, pastNotes, userDomain);
+    return {
+      data: deterministicData,
+      source: 'local-cognitive-engine',
+    };
+  }
+
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '') {
@@ -71,7 +86,11 @@ export async function parseWithGemini(
           ? `\nGEÇMİŞ NOTLAR:\n${JSON.stringify(pastNotes.slice(0, 20).map((n) => ({ baslik: n.baslik, zaman: n.zaman, tarih_iso: n.tarih_iso, createdAt: n.createdAt })), null, 2)}`
           : '';
 
-        const promptText = `CURRENT_DATETIME: ${currentDatetime}${historyContext}\nKULLANICI GİRDİSİ: ${userInput}`;
+        const domainContext = userDomain && userDomain !== 'GENEL'
+          ? `\nKULLANICININ ÇALIŞMA / UZMANLIK ALANI: ${userDomain}\nBu alandaki terminolojiyi ve mesleki gereksinimleri öncelikle gözet.`
+          : '';
+
+        const promptText = `CURRENT_DATETIME: ${currentDatetime}${domainContext}${historyContext}\nKULLANICI GİRDİSİ: ${userInput}`;
 
         const response = await ai.models.generateContent({
           model: modelName,
@@ -185,7 +204,7 @@ export async function parseWithGemini(
   }
 
   return {
-    data: runCognitiveFallback(userInput, currentDatetime, pastNotes),
+    data: runCognitiveFallback(userInput, currentDatetime, pastNotes, userDomain),
     source: 'cognitive-fallback',
   };
 }
@@ -251,10 +270,49 @@ function sanitizeParsedOutput(raw: any): Omit<NotiviaParsedNote, 'id' | 'created
 export function runCognitiveFallback(
   input: string,
   currentDatetime: string,
-  pastNotes?: any[]
+  pastNotes?: any[],
+  userDomain?: string
 ): Omit<NotiviaParsedNote, 'id' | 'created_at' | 'raw_input' | 'reference_datetime'> {
   const refDate = new Date(currentDatetime);
-  const lower = input.toLowerCase();
+  const cleanInput = (input || '').trim();
+  const lower = cleanInput.toLowerCase();
+
+  // 0. Öncelik: Kısa senaryo kontrolü
+  const shortScenario = matchShortScenario(cleanInput, userDomain);
+  if (shortScenario) {
+    const simple = extractSimpleNoteFromText(cleanInput, currentDatetime, pastNotes, userDomain);
+    return {
+      summary: simple.baslik,
+      detailed_note: shortScenario.akilliFisilti || `"${input}" ifadesi bilişsel olarak planlandı.`,
+      category: (shortScenario.category as any) || 'Genel',
+      priority: 'normal',
+      anomali_notu: shortScenario.akilliFisilti || null,
+      ui_meta: {
+        icon: shortScenario.ikon,
+        color_hex: shortScenario.renk,
+        badge_text: shortScenario.category || 'Not',
+      },
+      calendar_event: {
+        has_event: !!simple.tarih_iso,
+        title: simple.baslik,
+        start_datetime: simple.tarih_iso,
+        end_datetime: simple.tarih_iso,
+        is_all_day: false,
+        location: null,
+      },
+      action_items: (shortScenario.oncedenYapilacaklar || []).map((t) => ({ task: t, is_completed: false })),
+      notification: {
+        needs_reminder: !!simple.tarih_iso,
+        remind_at: simple.tarih_iso,
+        notification_text: shortScenario.akilliFisilti || `${simple.baslik} zamanı geldi.`,
+      },
+      periodic_log: {
+        is_periodic: !!simple.periyodik,
+        interval_days: simple.periyodik ? 7 : null,
+        next_due_date: simple.tarih_iso,
+      },
+    };
+  }
 
   // 1. Calculate Target Date and Time
   const targetDate = new Date(refDate.getTime());
@@ -655,8 +713,17 @@ export function runCognitiveFallback(
 export async function parseSimpleWithGemini(
   text: string,
   now: string,
-  pastNotes?: any[]
+  pastNotes?: any[],
+  userDomain?: string
 ): Promise<NotiviaSimpleNote> {
+  const cleanText = (text || '').trim();
+
+  // 0. Öncelik: Kullanıcı meslek/uzmanlık alanına göre yerel bilişsel motor kontrolü
+  const shortScenario = matchShortScenario(cleanText, userDomain);
+  if (shortScenario) {
+    return extractSimpleNoteFromText(cleanText, now, pastNotes, userDomain);
+  }
+
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (apiKey && apiKey !== 'MY_GEMINI_API_KEY' && apiKey.trim() !== '') {
@@ -678,6 +745,10 @@ export async function parseSimpleWithGemini(
 
         const historyContext = pastNotes && pastNotes.length > 0
           ? `\nGEÇMİŞ NOTLAR:\n${JSON.stringify(pastNotes.slice(0, 20).map((n) => ({ baslik: n.baslik, zaman: n.zaman, tarih_iso: n.tarih_iso, createdAt: n.createdAt })), null, 2)}`
+          : '';
+
+        const domainPrompt = userDomain && userDomain !== 'GENEL'
+          ? `\nKULLANICININ ÇALIŞMA / UZMANLIK ALANI: ${userDomain}\nBu alandaki terminolojiyi ve mesleki gereksinimleri öncelikle gözet.`
           : '';
 
         const prompt = `Sen "Notivia" bilişsel yaşam asistanının Evrensel Niyet Çözümleme ve Eylem Grafiği (Cognitive Action Graph) motorusun.
@@ -727,7 +798,7 @@ TEMEL BİLİŞSEL PROTOKOLLER:
 - 'sesli_fisilti' alanında kullanıcının kulaklığına fısıldanacak sıcak, kısa (en fazla 1 cümle), robotik olmayan net bir teyit cümlesi üret.
 
 ZAMAN REFERANSI:
-- Tüm saat hesaplamalarını CURRENT_DATETIME değerini (${now}) referans alarak yap.${historyContext}
+- Tüm saat hesaplamalarını CURRENT_DATETIME değerini (${now}) referans alarak yap.${domainPrompt}${historyContext}
 
 Kullanıcı girdisi: "${text}".
 
@@ -849,7 +920,7 @@ JSON ÇIKTI ŞEMASI (Yalnızca aşağıdaki şemaya uyan ham JSON üret, markdow
   }
 
   // Local fallback with reference datetime and past notes
-  return extractSimpleNoteFromText(text, now, pastNotes);
+  return extractSimpleNoteFromText(text, now, pastNotes, userDomain);
 }
 
 export async function sendMultimodalRequest(text?: string, base64Image?: string | null): Promise<any> {
@@ -919,11 +990,16 @@ export async function parseWithAIAndImage(
   text?: string,
   base64Image: string | null = null,
   referenceNow?: string,
-  pastNotes?: any[]
+  pastNotes?: any[],
+  userDomain?: string
 ): Promise<NotiviaSimpleNote> {
   const now = referenceNow || new Date().toISOString();
   const historyContext = pastNotes && pastNotes.length > 0
     ? `\nGEÇMİŞ NOTLAR:\n${JSON.stringify(pastNotes.slice(0, 20).map((n) => ({ baslik: n.baslik, zaman: n.zaman, tarih_iso: n.tarih_iso, createdAt: n.createdAt })), null, 2)}`
+    : '';
+
+  const domainContext = userDomain && userDomain !== 'GENEL'
+    ? `\nKULLANICININ ÇALIŞMA / UZMANLIK ALANI: ${userDomain}\nBu alandaki terminolojiyi ve mesleki gereksinimleri öncelikle gözet.`
     : '';
 
   const promptText = `Sen "Notivia" bilişsel yaşam asistanının Evrensel Niyet Çözümleme ve Eylem Grafiği (Cognitive Action Graph) motorusun.
@@ -972,7 +1048,7 @@ Kullanıcıyı bürokratik cezalardan, hak kayıplarından veya hayati aksaklık
 6. FÜZYON & GÖRSEL OKUMA (Multimodal):
 - Görseldeki sayaç, bar göstergesi, marka, son ödeme tarihi veya ikaz ışıklarını oku, ses/yazı ile birleştirerek teşhis koy.
 
-Referans Zaman (CURRENT_DATETIME): ${now}.${historyContext}
+Referans Zaman (CURRENT_DATETIME): ${now}.${domainContext}${historyContext}
 Kullanıcı Girdisi / Ses Notu: "${text || 'Görseldeki durumu teşhis et ve yapılması gereken işlemi belirle.'}".
 
 JSON ÇIKTI ŞEMASI (Yalnızca aşağıdaki şemaya uyan ham JSON üret, markdown blokları veya fazladan karşılama metni ekleme):
@@ -994,6 +1070,16 @@ JSON ÇIKTI ŞEMASI (Yalnızca aşağıdaki şemaya uyan ham JSON üret, markdow
   "renk": "Pastel HEX kodu (#E0F2FE, #DCFCE7, #FEF3C7, #FEE2E2, #F3E8FF)",
   "sesli_fisilti": "Kulaklıktan seslendirilecek 1 cümlelik teyit"
 }`;
+
+  // 0. ÖNCELİK: Görsel yoksa ve metin 2-3 kelimelik kısa/mesleki senaryo ile eşleşiyorsa
+  // API'ye gitmeden anında yerel deterministik motordan sonucu alarak sıfır gecikme ve sıfır token maliyeti sağla.
+  if (!base64Image && text && text.trim().length > 0) {
+    const cleanText = text.trim();
+    const shortScenario = matchShortScenario(cleanText, userDomain);
+    if (shortScenario) {
+      return extractSimpleNoteFromText(cleanText, now, pastNotes, userDomain);
+    }
+  }
 
   const parts: any[] = [{ text: promptText }];
 
@@ -1105,7 +1191,7 @@ JSON ÇIKTI ŞEMASI (Yalnızca aşağıdaki şemaya uyan ham JSON üret, markdow
     }
   }
 
-  const fallback = extractSimpleNoteFromText(text || 'Görsel analizi', now, pastNotes);
+  const fallback = extractSimpleNoteFromText(text || 'Görsel analizi', now, pastNotes, userDomain);
   if (base64Image && !text) {
     fallback.baslik = 'Görsel Teşhisi';
     fallback.ikon = '📷';

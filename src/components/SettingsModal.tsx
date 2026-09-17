@@ -1,6 +1,9 @@
 import React from 'react';
 import type { Language } from '../utils/i18n';
 import { translations } from '../utils/i18n';
+import type { ProfessionDomain } from '../types/domainThemes.ts';
+import { WORK_DOMAIN_OPTIONS } from '../types/domainThemes.ts';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -17,6 +20,8 @@ interface SettingsModalProps {
   notificationSupported: boolean;
   onSendTestNotification?: () => void;
   onRemindTodayTasks?: () => void;
+  workDomain?: ProfessionDomain;
+  onSelectWorkDomain?: (domain: ProfessionDomain) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -34,46 +39,53 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   notificationSupported,
   onSendTestNotification,
   onRemindTodayTasks,
+  workDomain = 'GENEL',
+  onSelectWorkDomain,
 }) => {
   if (!isOpen) return null;
 
   const t = translations[language];
   const isDark = theme === 'dark';
 
+  const selectedOption = WORK_DOMAIN_OPTIONS.find((opt) => opt.id === workDomain) || WORK_DOMAIN_OPTIONS[0];
+
   return (
     <div
       id="settings-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
         id="settings-modal"
-        className={`w-full max-w-md rounded-2xl shadow-2xl border overflow-hidden p-5 transition-colors ${
+        className={`w-full max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl border-t sm:border overflow-hidden px-4 pt-3 pb-6 sm:p-5 transition-colors max-h-[92dvh] sm:max-h-[90vh] overflow-y-auto overscroll-contain ${
           isDark
             ? 'bg-stone-900 border-stone-800 text-stone-100'
             : 'bg-white border-stone-200 text-stone-900'
         }`}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Mobil Çekme Tutamacı (Pull Handle) */}
+        <div className="w-12 h-1.5 rounded-full bg-stone-300 dark:bg-stone-700 mx-auto mb-3.5 sm:hidden shrink-0" />
+
         {/* Header */}
         <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-stone-200 dark:border-stone-800">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-700 dark:text-stone-300 text-base">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-stone-700 dark:text-stone-300 text-base shrink-0">
               ⚙️
             </div>
-            <div>
-              <h2 className="text-base font-bold tracking-tight">{t.settingsHeader}</h2>
-              <p className="text-[11px] text-stone-500 dark:text-stone-400">Notivia Tercihleri ve Profil</p>
+            <div className="min-w-0">
+              <h2 className="text-base font-bold tracking-tight truncate">{t.settingsHeader}</h2>
+              <p className="text-[11px] text-stone-500 dark:text-stone-400 truncate">Notivia Tercihleri ve Profil</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label={t.close}
-            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+            className={`w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded-xl transition-colors cursor-pointer active:scale-95 shrink-0 ${
               isDark
-                ? 'text-stone-400 hover:text-stone-200 hover:bg-stone-800'
-                : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100'
+                ? 'text-stone-400 hover:text-stone-200 hover:bg-stone-800 active:bg-stone-800'
+                : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100 active:bg-stone-100'
             }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,7 +95,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         {/* Ana Ayar Listesi (Modern Uncluttered Grouped Card) */}
-        <div className="space-y-4">
+        <div className="space-y-3.5 sm:space-y-4">
           {/* 1. Profil & Google Giriş Bölümü */}
           <div className={`p-3.5 rounded-xl border transition-colors ${
             isDark ? 'bg-stone-850/80 border-stone-800' : 'bg-stone-50/70 border-stone-200/80'
@@ -112,7 +124,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                     <button
                       type="button"
                       onClick={() => {
@@ -120,7 +132,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         onClose();
                       }}
                       title="Google oturumunu ve Drive erişim yetkisini yenile"
-                      className="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-stone-200 dark:bg-stone-700 hover:bg-stone-300 dark:hover:bg-stone-600 text-stone-800 dark:text-stone-200 transition-colors cursor-pointer flex items-center gap-1"
+                      className="px-3 py-2 sm:py-1.5 text-xs font-medium rounded-lg bg-stone-200 dark:bg-stone-750 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 transition-colors cursor-pointer flex items-center gap-1.5 min-h-[36px] sm:min-h-0 active:scale-95"
                     >
                       <span>🔄</span>
                       <span>{language === 'tr' ? 'Yenile' : 'Refresh'}</span>
@@ -131,7 +143,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         onSignOut();
                         onClose();
                       }}
-                      className="px-3 py-1.5 text-xs font-medium rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-colors cursor-pointer flex items-center gap-1"
+                      className="px-3 py-2 sm:py-1.5 text-xs font-medium rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-colors cursor-pointer flex items-center gap-1.5 min-h-[36px] sm:min-h-0 active:scale-95"
                     >
                       <span>🚪</span>
                       <span>{t.signOut}</span>
@@ -159,7 +171,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       onLogin();
                       onClose();
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 hover:opacity-90 active:scale-98 transition-all shrink-0 cursor-pointer shadow-xs"
+                    className="flex items-center gap-2 px-3.5 py-2.5 sm:py-1.5 text-xs font-semibold rounded-xl sm:rounded-lg bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 hover:opacity-90 active:scale-95 transition-all shrink-0 cursor-pointer shadow-xs min-h-[40px] sm:min-h-0"
                   >
                     <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
                       <path
@@ -186,6 +198,64 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
+          {/* 1.5. Çalıştığın Alan & Bilişsel Motor Odağı */}
+          <div
+            id="work-domain-selector-card"
+            className={`p-3.5 rounded-xl border transition-colors ${
+              isDark ? 'bg-stone-850/80 border-stone-800' : 'bg-stone-50/70 border-stone-200/80'
+            }`}
+          >
+            <div className="flex items-center gap-2.5 mb-2.5">
+              <div className="w-8 h-8 rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-sm shrink-0">
+                {selectedOption.icon}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-semibold text-xs leading-tight">
+                  {language === 'tr' ? 'Çalıştığın Alan & Motor Odağı' : 'Career & Cognitive Focus'}
+                </h3>
+              </div>
+            </div>
+
+            {/* Seçim Açılır Menüsü */}
+            <div className="relative">
+              <select
+                id="work-domain-select"
+                aria-label="Çalıştığın Alan Seçimi"
+                value={workDomain}
+                onChange={(e) => {
+                  if (onSelectWorkDomain) {
+                    onSelectWorkDomain(e.target.value as ProfessionDomain);
+                  }
+                }}
+                className={`w-full text-sm sm:text-xs font-medium py-3 sm:py-2 pl-3 pr-9 rounded-xl sm:rounded-lg border transition-all cursor-pointer outline-none appearance-none focus:ring-2 focus:ring-indigo-500/30 min-h-[44px] sm:min-h-0 ${
+                  isDark
+                    ? 'bg-stone-900 border-stone-750 text-stone-100 hover:border-stone-650'
+                    : 'bg-white border-stone-300 text-stone-800 hover:border-stone-400 shadow-2xs'
+                }`}
+              >
+                <optgroup label="Özel Durumlar">
+                  {WORK_DOMAIN_OPTIONS.filter((o) => o.category === 'ozel').map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.icon} {opt.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Meslek & Uzmanlık Grupları">
+                  {WORK_DOMAIN_OPTIONS.filter((o) => o.category === 'meslek').map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.icon} {opt.label}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-stone-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
           {/* 2. Sistem Ayarları Grubu (Görünüm, Bildirimler, Dil) */}
           <div className={`rounded-xl border divide-y transition-colors overflow-hidden ${
             isDark
@@ -207,26 +277,28 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={onToggleTheme}
-                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  isDark ? 'bg-amber-500' : 'bg-stone-300'
-                }`}
-                role="switch"
-                aria-checked={isDark}
-                aria-label={isDark ? t.themeLight : t.themeDark}
-              >
-                <span
-                  aria-hidden="true"
-                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    isDark ? 'translate-x-5' : 'translate-x-0'
+              <div className="min-w-[44px] min-h-[44px] flex items-center justify-center">
+                <button
+                  type="button"
+                  onClick={onToggleTheme}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    isDark ? 'bg-amber-500' : 'bg-stone-300 dark:bg-stone-700'
                   }`}
-                />
-              </button>
+                  role="switch"
+                  aria-checked={isDark}
+                  aria-label={isDark ? t.themeLight : t.themeDark}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      isDark ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
 
-            {/* Bildirimler & Alarmlar Satırı (Temizlenmiş, profesyonel optimize edilmiş) */}
+            {/* Bildirimler & Alarmlar Satırı */}
             <div className="p-3.5 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -244,24 +316,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  id="notification-toggle-switch"
-                  onClick={onToggleNotifications}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    notificationsEnabled ? 'bg-emerald-500' : 'bg-stone-300 dark:bg-stone-700'
-                  }`}
-                  role="switch"
-                  aria-checked={notificationsEnabled}
-                  aria-label={notificationsEnabled ? t.disableNotifications : t.enableNotifications}
-                >
-                  <span
-                    aria-hidden="true"
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      notificationsEnabled ? 'translate-x-5' : 'translate-x-0'
+                <div className="min-w-[44px] min-h-[44px] flex items-center justify-center">
+                  <button
+                    type="button"
+                    id="notification-toggle-switch"
+                    onClick={onToggleNotifications}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      notificationsEnabled ? 'bg-emerald-500' : 'bg-stone-300 dark:bg-stone-700'
                     }`}
-                  />
-                </button>
+                    role="switch"
+                    aria-checked={notificationsEnabled}
+                    aria-label={notificationsEnabled ? t.disableNotifications : t.enableNotifications}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        notificationsEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
               </div>
 
               {/* Bildirimler Açıkken Minimalist Eylem Butonları */}
@@ -271,7 +345,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <button
                       type="button"
                       onClick={onSendTestNotification}
-                      className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-300 transition-colors cursor-pointer flex items-center gap-1.5"
+                      className="px-3 py-2 sm:py-1 text-xs sm:text-[11px] font-medium rounded-lg bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-300 transition-colors cursor-pointer flex items-center gap-1.5 min-h-[36px] sm:min-h-0 active:scale-95"
                     >
                       <span>🔔</span>
                       <span>{t.sendTestNotification}</span>
@@ -282,7 +356,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <button
                       type="button"
                       onClick={onRemindTodayTasks}
-                      className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 dark:text-amber-200 transition-colors cursor-pointer flex items-center gap-1.5"
+                      className="px-3 py-2 sm:py-1 text-xs sm:text-[11px] font-medium rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 dark:text-amber-200 transition-colors cursor-pointer flex items-center gap-1.5 min-h-[36px] sm:min-h-0 active:scale-95"
                     >
                       <span>📋</span>
                       <span>{t.todaySummaryNotification}</span>
@@ -305,11 +379,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-1 bg-stone-100 dark:bg-stone-800 p-0.5 rounded-lg border border-stone-200/50 dark:border-stone-750">
+              <div className="flex items-center gap-1 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl border border-stone-200/50 dark:border-stone-750">
                 <button
                   type="button"
                   onClick={() => onSelectLanguage('tr')}
-                  className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1 min-h-[36px] sm:min-h-0 active:scale-95 ${
                     language === 'tr'
                       ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-xs'
                       : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
@@ -321,7 +395,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <button
                   type="button"
                   onClick={() => onSelectLanguage('en')}
-                  className={`px-2.5 py-1 text-[11px] font-semibold rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1 min-h-[36px] sm:min-h-0 active:scale-95 ${
                     language === 'en'
                       ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-xs'
                       : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
@@ -332,6 +406,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </button>
               </div>
             </div>
+
+            {/* Uygulamayı Cihaza Yükle (PWA) Satırı */}
+            <PWAInstallButton inSettings={true} />
           </div>
         </div>
 
@@ -340,7 +417,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 hover:opacity-90 active:scale-98 transition-all cursor-pointer shadow-xs text-center"
+            className="w-full py-3.5 sm:py-2.5 px-4 rounded-xl text-sm sm:text-xs font-semibold bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 hover:opacity-90 active:scale-98 transition-all cursor-pointer shadow-xs text-center min-h-[44px] flex items-center justify-center"
           >
             {t.close}
           </button>

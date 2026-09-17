@@ -1,12 +1,82 @@
 import type { NotiviaParsedNote, NotiviaSimpleNote } from '../types/notivia.ts';
-import { getNextMonthEndTargetDate } from './date.ts';
+import { getNextMonthEndTargetDate, calculateOffsetIso } from './date.ts';
 import { inferPredictiveActions } from './predictiveGraph.ts';
 import { matchShortScenario } from './scenarioDatabase.ts';
 import { getCardColor } from './cardColors.ts';
-export { extractDateTimeFromTurkish, getNextMonthEndTargetDate } from './date.ts';
+export { extractDateTimeFromTurkish, getNextMonthEndTargetDate, calculateOffsetIso } from './date.ts';
 export { inferPredictiveActions } from './predictiveGraph.ts';
 export { matchShortScenario } from './scenarioDatabase.ts';
 export { getCardColor } from './cardColors.ts';
+
+/**
+ * Kullanıcı isteğindeki Sınav/Öğrenci ve Çalışmıyorum/Kişisel Yaşam motor kuralları
+ */
+export function dispatchDomainRule(
+  domain: string | undefined,
+  text: string,
+  targetDateText?: string | null,
+  targetIso?: string | null
+): NotiviaSimpleNote | null {
+  // Sınav / Öğrenci tespiti
+  if (
+    domain === 'OGRENCI' ||
+    /(vize|final|büt|quiz|ödev|lms|turnitin|devamsızlık|burs|kyk|ders kaydı)/i.test(text)
+  ) {
+    const isExam = /(vize|final|büt|sınav)/i.test(text);
+    return {
+      baslik: isExam ? 'Sınav Oturumu & Çalışma Kampı' : 'Akademik Görev',
+      zaman: targetDateText || 'Tarih Belirtilmedi',
+      tarih_iso: targetIso || null,
+      hazirlik_zamani: isExam ? 'Sınavdan 2 Gün Önce (Soru Çözümü)' : null,
+      hazirlik_iso: isExam ? calculateOffsetIso(targetIso, -2) : null,
+      eksik_bilgi: !targetIso,
+      action_items: isExam
+        ? [
+            { task: 'Ders notları ve çıkmış sınav sorularını çöz', is_completed: false },
+            { task: 'Özet formül/kavram kağıdı hazırla', is_completed: false },
+            { task: 'Öğrenci kimliği ve sınav giriş yerini kontrol et', is_completed: false }
+          ]
+        : [
+            { task: 'LMS/Turnitin intihal oranını kontrol et', is_completed: false },
+            { task: 'Teslim formatını PDF olarak kaydet ve yükle', is_completed: false }
+          ],
+      anomali_notu: isExam ? 'Vize/Final notu geçme katsayısını doğrudan etkiler; T-2 gün kala soru kampı şarttır.' : null,
+      ikon: '🎓',
+      renk: '#DDD6FE',
+      sesli_fisilti: isExam ? 'Sınav takvimi ve tersine çalışma kampı planlandı.' : 'Akademik teslim görevi kaydedildi.'
+    };
+  }
+
+  // Çalışmıyorum / Kişisel Yaşam tespiti
+  if (
+    domain === 'CALISMIYORUM' ||
+    /(taahhüt|fatura|abonelik|su arıtma|kombi bakımı|gss|işkur|aidat|kira)/i.test(text)
+  ) {
+    const isPeriodic = /(filtre|kombi|bakım|temizlik|ilaç)/i.test(text);
+    return {
+      baslik: isPeriodic ? 'Ev Periyodik Bakım Döngüsü' : 'Kişisel & Ev Rutini',
+      zaman: targetDateText || 'Zamanı Geldiğinde',
+      tarih_iso: targetIso || null,
+      hazirlik_zamani: '1 Hafta Önce (Fiyat/Stok Kontrolü)',
+      eksik_bilgi: false,
+      action_items: isPeriodic
+        ? [
+            { task: 'Uyumlu yedek parça/filtre stok durumunu kontrol et', is_completed: false },
+            { task: 'Değişim/bakım işlemini uygula ve çalışma sızdırmazlığını gözlemle', is_completed: false }
+          ]
+        : [
+            { task: 'Son ödeme gününden önce bakiye/limit kontrolü sağla', is_completed: false }
+          ],
+      anomali_notu: 'Taahhütlü işlemlerde son 15 gün içinde bildirim yapılmazsa tarife cezalı fiyattan otomatik yenilenir.',
+      ikon: '🏠',
+      renk: '#F1F5F9',
+      periyodik: isPeriodic ? { tip: 'aylik', aralik_gun: 180 } : null,
+      sesli_fisilti: isPeriodic ? '6 aylık bakım döngüsü başlatıldı.' : 'Ödeme ve taahhüt takip kartı açıldı.'
+    };
+  }
+
+  return null;
+}
 
 // src/utils/simpleNote.ts içine medikal ayrıştırıcı
 export function parseMultiMedicationNote(input: string, baseDate: Date): NotiviaSimpleNote | null {
@@ -1796,6 +1866,329 @@ export function parseCorporateOfficePersonalCareNote(input: string, baseDate: Da
   };
 }
 
+export function parseAcademicStudentSuiteNote(input: string, baseDate: Date): NotiviaSimpleNote | null {
+  const lower = input.toLowerCase();
+
+  const isStudent = 
+    lower.includes('vize') || lower.includes('final') || lower.includes('büt') || lower.includes('bütünleme') ||
+    lower.includes('quiz') || lower.includes('ara sınav') || lower.includes('ara sinav') || lower.includes('mazeret sınavı') ||
+    lower.includes('sınav') || lower.includes('sinav') ||
+    lower.includes('ödev') || lower.includes('odev') || lower.includes('proje teslim') || lower.includes('lms') ||
+    lower.includes('turnitin') || lower.includes('intihal') || lower.includes('rapor teslim') || lower.includes('makale ödev') ||
+    lower.includes('devamsızlık') || lower.includes('devamsizlik') ||
+    lower.includes('ders kaydı') || lower.includes('ders kaydi') || lower.includes('ders seç') || lower.includes('ders sec') ||
+    lower.includes('add-drop') || lower.includes('add drop') || lower.includes('obs') || lower.includes('öys') || lower.includes('oys') ||
+    lower.includes('katkı payı') || lower.includes('katki payi') || lower.includes('harç') || lower.includes('harc') ||
+    lower.includes('kyk') || lower.includes('burs') || lower.includes('gano') || lower.includes('transkript');
+
+  if (!isStudent) return null;
+
+  // 1. SINAV KAMPI (TERSİNE ÇALIŞMA ZİNCİRİ: T-5, T-2, T-1)
+  if (lower.includes('vize') || lower.includes('final') || lower.includes('büt') || lower.includes('bütünleme') || lower.includes('quiz') || lower.includes('ara sınav') || lower.includes('ara sinav') || lower.includes('sınav') || lower.includes('sinav')) {
+    let examName = 'Sınav Hazırlık Kampı';
+    if (lower.includes('vize')) examName = 'Vize Sınavı Kampı';
+    else if (lower.includes('final')) examName = 'Final Sınavı Kampı';
+    else if (lower.includes('büt') || lower.includes('bütünleme')) examName = 'Bütünleme Sınavı Kampı';
+    else if (lower.includes('quiz')) examName = 'Quiz Hazırlık Kampı';
+
+    // Zaman ve tarih kestirimi
+    let zamanStr = 'Sınav Tarihi';
+    let examIso = baseDate.toISOString();
+
+    if (lower.includes('haftaya salı') || lower.includes('haftaya sali')) {
+      const target = new Date(baseDate);
+      const currentDay = target.getDay();
+      const daysUntilNextTuesday = (9 - currentDay) % 7 + 7;
+      target.setDate(target.getDate() + daysUntilNextTuesday);
+      target.setHours(10, 0, 0, 0);
+      zamanStr = 'Haftaya Salı 10:00';
+      examIso = target.toISOString();
+    } else if (lower.includes('yarın') || lower.includes('yarin')) {
+      const target = new Date(baseDate);
+      target.setDate(target.getDate() + 1);
+      target.setHours(10, 0, 0, 0);
+      zamanStr = 'Yarın 10:00';
+      examIso = target.toISOString();
+    }
+
+    return {
+      baslik: examName,
+      zaman: zamanStr,
+      tarih_iso: examIso,
+      hazirlik_zamani: 'T-5 Gün (Soru ve Not Kampı)',
+      hazirlik_iso: examIso,
+      action_items: [
+        { task: 'T-5 Gün: Ders notlarını toparla, eksik slaytları tamamla ve çıkmış sınav sorularını tara', is_completed: false },
+        { task: 'T-2 Gün: Özet formül kağıdı çıkar ve soru çözüm kampı yap', is_completed: false },
+        { task: 'T-1 Gün (19:00): Sınav salonu, optik kurşun kalem, silgi ve öğrenci kimlik kartını hazırla', is_completed: false }
+      ],
+      ikon: '🎓',
+      renk: '#DDD6FE',
+      anomali_notu: 'Sınav başarı zincirinde son gece çalışma yerine T-2 özet formül kampı ve T-1 salon/evrak teyidi başarı oranını %40 artırır.',
+      sesli_fisilti: 'Sınav için T-5 ders notları, T-2 soru kampı ve T-1 salon hazırlık zinciri oluşturuldu.'
+    };
+  }
+
+  // 2. ÖDEV, RAPOR VE PROJE TESLİMLERİ (LMS / TURNITIN)
+  if (lower.includes('ödev') || lower.includes('odev') || lower.includes('proje teslim') || lower.includes('lms') || lower.includes('turnitin') || lower.includes('intihal') || lower.includes('rapor teslim') || lower.includes('makale ödev')) {
+    return {
+      baslik: 'Ödev & Proje Teslim Takvimi',
+      zaman: 'Teslim Tarihi (LMS / Turnitin)',
+      tarih_iso: baseDate.toISOString(),
+      hazirlik_zamani: 'Teslimden 24 Saat Önce (Turnitin)',
+      hazirlik_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'Teslimden 24 saat önce: Turnitin/intihal benzerlik raporu al ve kaynakçayı APA formatında kontrol et', is_completed: false },
+        { task: 'Son 3 saat: PDF formatında LMS sistemine yükle ve teslim makbuzunu kaydet', is_completed: false },
+        { task: 'Danışman/Ders hocası proje yönergesi ve sayfa sınırları kontrolü', is_completed: false }
+      ],
+      ikon: '🎓',
+      renk: '#DDD6FE',
+      anomali_notu: 'LMS sistemlerinde teslim saatindeki sunucu yoğunluğunu önlemek için dosya en az 3 saat önceden yüklenip makbuz kaydedilmelidir.',
+      sesli_fisilti: 'Teslimden 24 saat öncesine Turnitin kontrolü ve son 3 saate LMS yükleme görevi kuruldu.'
+    };
+  }
+
+  // 3. DEVAMSIZLIK & YOKLAMA
+  if (lower.includes('devamsızlık') || lower.includes('devamsizlik')) {
+    return {
+      baslik: 'Devamsızlık & Yoklama Denetimi',
+      zaman: '%30 Yasal Devamsızlık Eşiği',
+      tarih_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'Dönemlik %30 yasal devamsızlık sınırını (Kritik eşik: 12 ders saati / 4 hafta) denetle', is_completed: false },
+        { task: 'Hocadan ve OBS üzerinden güncel yoklama durumunu teyit et', is_completed: false },
+        { task: 'Gerekiyorsa sağlık raporunu 5 iş günü içinde bölüm sekreterliğine ver', is_completed: false }
+      ],
+      ikon: '🎓',
+      renk: '#DDD6FE',
+      anomali_notu: '%30 yasal devamsızlık sınırı aşıldığında öğrenci NA (Devamsızlıktan Kaldı) notu alır.',
+      sesli_fisilti: '%30 yasal devamsızlık sınırı ve yoklama denetim adımları oluşturuldu.'
+    };
+  }
+
+  // 4. DERS KAYDI & OBS / ADD-DROP / HARÇ
+  if (lower.includes('ders kaydı') || lower.includes('ders kaydi') || lower.includes('ders seç') || lower.includes('ders sec') || lower.includes('add-drop') || lower.includes('add drop') || lower.includes('obs') || lower.includes('öys') || lower.includes('oys') || lower.includes('harç') || lower.includes('harc') || lower.includes('katkı payı') || lower.includes('katki payi')) {
+    return {
+      baslik: 'OBS Ders Kaydı & Danışman Onayı',
+      zaman: 'Kayıt Saatinden 15 Dk Önce',
+      tarih_iso: baseDate.toISOString(),
+      hazirlik_zamani: '15 Dk Önce (Sisteme Giriş)',
+      hazirlik_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'Ders kayıt saatinden 15 dk önce: ÖYS/OBS sistemine giriş ve harç/katkı payı teyidi', is_completed: false },
+        { task: 'Kontenjan dolmadan zorunlu ve seçmeli dersleri sepete ekle', is_completed: false },
+        { task: 'Danışman onayına gönder ve kayıt onay çıktısını sakla', is_completed: false }
+      ],
+      ikon: '🎓',
+      renk: '#DDD6FE',
+      anomali_notu: 'Ders kayıtlarında danışman onayı verilmeden kayıt kesinleşmez.',
+      sesli_fisilti: 'Ders kayıt saatinden 15 dakika öncesine OBS hazırlık ve danışman onay adımları kuruldu.'
+    };
+  }
+
+  // 5. KYK / BURS / GANO
+  return {
+    baslik: 'KYK Burs / Yurt & Başarı Takibi',
+    zaman: 'Dönem Sonu / Burs Periyodu',
+    tarih_iso: baseDate.toISOString(),
+    action_items: [
+      { task: 'KYK yurt/burs taahhütname onayını e-Devlet üzerinden tamamla', is_completed: false },
+      { task: 'Burs devamı için dönem sonu GANO / transkript başarı kriterini (Min 2.00) kontrol et', is_completed: false },
+      { task: 'Ziraat Genç Kart hesap hareketleri ve burs yatış gününü takip et', is_completed: false }
+    ],
+    ikon: '🎓',
+    renk: '#DDD6FE',
+    anomali_notu: 'KYK bursunun krediye dönmemesi için GANO\'nun 2.00 altına düşmemesi gerekir.',
+    sesli_fisilti: 'KYK burs/yurt taahhüt ve başarı takip adımları oluşturuldu.'
+  };
+}
+
+export function parsePersonalRoutineCareNote(input: string, baseDate: Date): NotiviaSimpleNote | null {
+  const lower = input.toLowerCase();
+
+  const isPersonalRoutine = 
+    lower.includes('taahhüt') || lower.includes('taahhut') || lower.includes('abonelik') || lower.includes('cayma') ||
+    lower.includes('vodafone') || lower.includes('turkcell') || lower.includes('türk telekom') || lower.includes('turk telekom') ||
+    lower.includes('superonline') || lower.includes('digiturk') || lower.includes('netflix') ||
+    lower.includes('gss') || lower.includes('gelir testi') || lower.includes('işkur') || lower.includes('iskur') ||
+    lower.includes('işsizlik maaşı') || lower.includes('issizlik maasi') || lower.includes('iş arayan') || lower.includes('is arayan') ||
+    lower.includes('su arıtma') || lower.includes('su aritma') || lower.includes('filtre değişim') || lower.includes('filtre degisim') ||
+    lower.includes('kombi bakım') || lower.includes('klima bakım') || lower.includes('klima temiz') ||
+    lower.includes('derin dondurucu') || lower.includes('buz çöz') || lower.includes('buz coz') || lower.includes('defrost') ||
+    lower.includes('ecza dolab') || lower.includes('kira') || lower.includes('aidat') ||
+    lower.includes('apartman aidat') || lower.includes('bina aidat') ||
+    (lower.includes('fatura') && (lower.includes('öde') || lower.includes('ode') || lower.includes('elektrik') || lower.includes('su') || lower.includes('doğalgaz') || lower.includes('dogalgaz') || lower.includes('internet')));
+
+  if (!isPersonalRoutine) return null;
+
+  // 1. ABONELİK VE TAAHHÜT BİTİŞ TAKİBİ (15 GÜN KALA)
+  if (lower.includes('taahhüt') || lower.includes('taahhut') || lower.includes('abonelik') || lower.includes('cayma') || lower.includes('vodafone') || lower.includes('turkcell') || lower.includes('türk telekom') || lower.includes('turk telekom') || lower.includes('superonline') || lower.includes('digiturk') || lower.includes('netflix') || (lower.includes('sigorta') && lower.includes('yenile'))) {
+    const alertDue = new Date(baseDate);
+    alertDue.setDate(alertDue.getDate() + 15);
+
+    return {
+      baslik: 'Abonelik & Taahhüt Yenileme',
+      zaman: 'Taahhüt Bitimine 15 Gün Kala',
+      tarih_iso: alertDue.toISOString(),
+      hazirlik_zamani: '15 Gün Önce (Tarife Araştırması)',
+      hazirlik_iso: alertDue.toISOString(),
+      action_items: [
+        { task: 'Taahhüt bitimine 15 gün kala: Cayma bedelsiz tarife değişikliği ve alternatif paket araştırması yap', is_completed: false },
+        { task: 'Mevcut operatörden sadakat indirimi veya taahhüt yenileme teklifi iste', is_completed: false },
+        { task: 'Yeni pakete geçiş durumunda modem/ekipman iade protokolünü denetle', is_completed: false }
+      ],
+      ikon: '🏠',
+      renk: '#F1F5F9',
+      anomali_notu: 'Taahhüt bittiğinde tarife otomatik olarak taahhütsüz fahiş fiyata geçer; son 15 gün cayma bedelsiz işlem dönemidir.',
+      sesli_fisilti: 'Taahhüt bitimine 15 gün kala cayma bedelsiz tarife araştırma alarmı kuruldu.'
+    };
+  }
+
+  // 2. KAMUSAL HAK VE BAŞVURU TAKİBİ (GSS, İŞKUR)
+  if (lower.includes('gss') || lower.includes('gelir testi') || lower.includes('işkur') || lower.includes('iskur') || lower.includes('işsizlik maaşı') || lower.includes('issizlik maasi') || lower.includes('iş arayan') || lower.includes('is arayan')) {
+    return {
+      baslik: 'GSS & İŞKUR Başvuru Takibi',
+      zaman: 'Yasal Takip / Başvuru',
+      tarih_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'e-Devlet üzerinden GSS prim borcu ve tescil durumunu kontrol et (Gerekirse Kaymakamlık Gelir Testi)', is_completed: false },
+        { task: 'İŞKUR iş arayan profil durumunu ve aktif kayıt yenileme periyodunu güncelle', is_completed: false },
+        { task: 'İşsizlik ödeneği başvuru şartları (Son 3 yılda 600 gün prim ve son 120 gün) kontrolü', is_completed: false }
+      ],
+      ikon: '🏠',
+      renk: '#F1F5F9',
+      anomali_notu: 'İŞKUR kayıtları düzenli güncellenmezse pasife düşer; GSS prim borcu gecikirse sağlık hizmeti kesintiye uğrayabilir.',
+      sesli_fisilti: 'GSS gelir testi ve İŞKUR kayıt yenileme takip adımları oluşturuldu.'
+    };
+  }
+
+  // 3. DÜZENSİZ EV DÖNGÜLERİ (PERİYODİK LOG: SU ARITMA 180G, KOMBİ/KLİMA 365G, DONDURUCU 90G, ECZA DOLABI 180G)
+  if (lower.includes('su arıtma') || lower.includes('su aritma') || lower.includes('filtre')) {
+    const due180 = new Date(baseDate);
+    due180.setDate(due180.getDate() + 180);
+
+    return {
+      baslik: 'Su Arıtma Filtre Değişimi',
+      zaman: '6 Ayda Bir (180 Gün)',
+      tarih_iso: due180.toISOString(),
+      periyodik: { tip: 'aylik', aralik_gun: 180, bir_sonraki_tarih_iso: due180.toISOString() },
+      action_items: [
+        { task: 'Sediman, granül aktif karbon ve blok karbon ön filtrelerini değiştir', is_completed: false },
+        { task: 'Membran filtre ve post karbon tatlandırıcı filtre geçirgenliğini test et', is_completed: false },
+        { task: 'TDS metre ile arıtılmış su ppm değerini ölç ve sızıntı kontrolü yap', is_completed: false }
+      ],
+      ikon: '🏠',
+      renk: '#F1F5F9',
+      anomali_notu: 'Su arıtma ön filtreleri 6 ayda bir değiştirilmezse membran tıkanır ve su kalitesi düşer.',
+      sesli_fisilti: '6 aylık su arıtma filtre değişim ve TDS kontrol döngüsü ajandaya işlendi.'
+    };
+  }
+
+  if (lower.includes('kombi') || lower.includes('klima')) {
+    const due365 = new Date(baseDate);
+    due365.setDate(due365.getDate() + 365);
+
+    return {
+      baslik: 'Kombi & Klima Periyodik Bakımı',
+      zaman: 'Yılda Bir (365 Gün)',
+      tarih_iso: due365.toISOString(),
+      periyodik: { tip: 'yillik', aralik_gun: 365, bir_sonraki_tarih_iso: due365.toISOString() },
+      action_items: [
+        { task: 'Kombi su basıncını 1.5 Bar seviyesine ayarla ve genleşme tankı havasını kontrol et', is_completed: false },
+        { task: 'Klima iç ünite antibakteriyel filtre temizliği ve dış ünite serpantin kontrolü', is_completed: false },
+        { task: 'Yetkili servis bakım formunu kaşeli olarak sakla', is_completed: false }
+      ],
+      ikon: '🏠',
+      renk: '#F1F5F9',
+      anomali_notu: 'Yıllık kombi ve klima bakımı yakıt tüketimini %15-20 azaltır ve cihaz ömrünü uzatır.',
+      sesli_fisilti: 'Yıllık kombi ve klima periyodik bakım döngüsü ajandaya işlendi.'
+    };
+  }
+
+  if (lower.includes('derin dondurucu') || lower.includes('buz çöz') || lower.includes('buz coz') || lower.includes('defrost')) {
+    const due90 = new Date(baseDate);
+    due90.setDate(due90.getDate() + 90);
+
+    return {
+      baslik: 'Derin Dondurucu Buz Çözme',
+      zaman: '3 Ayda Bir (90 Gün)',
+      tarih_iso: due90.toISOString(),
+      periyodik: { tip: 'aylik', aralik_gun: 90, bir_sonraki_tarih_iso: due90.toISOString() },
+      action_items: [
+        { task: 'Defrost: Cihazın fişini çek ve buzlanmayı doğal erimeye bırak (Kesici alet kullanma)', is_completed: false },
+        { task: 'Tahliye kanalını temizle, iç yüzeyi karbonatlı suyla dezenfekte et', is_completed: false },
+        { task: 'Dondurulmuş gıdaların son tüketim tarihlerini kontrol edip etiket rotasyonu yap', is_completed: false }
+      ],
+      ikon: '🏠',
+      renk: '#F1F5F9',
+      anomali_notu: 'Karlanma ve buzlanma motor yükünü artırarak elektrik sarfiyatını yükseltir; 90 günde bir eritilmelidir.',
+      sesli_fisilti: '3 aylık derin dondurucu defrost ve gıda rotasyon döngüsü kuruldu.'
+    };
+  }
+
+  if (lower.includes('ecza dolab')) {
+    const due180 = new Date(baseDate);
+    due180.setDate(due180.getDate() + 180);
+
+    return {
+      baslik: 'Ev Ecza Dolabı Miad Kontrolü',
+      zaman: '6 Ayda Bir (180 Gün)',
+      tarih_iso: due180.toISOString(),
+      periyodik: { tip: 'aylik', aralik_gun: 180, bir_sonraki_tarih_iso: due180.toISOString() },
+      action_items: [
+        { task: 'Miadı (SKT) geçmiş tüm ilaç, vitamin ve merhemleri ayıkla ve güvenli imha et', is_completed: false },
+        { task: 'Açıldıktan sonra 30 gün geçerli göz damlaları ve şurupların açılış tarihini kontrol et', is_completed: false },
+        { task: 'İlk yardım malzemelerini (steril gazlı bez, batikon, yara bandı, yanık kremi) tamamla', is_completed: false }
+      ],
+      ikon: '🏠',
+      renk: '#F1F5F9',
+      anomali_notu: 'Açılmış göz damlaları ve antibiyotik şuruplar 30 günden sonra bakteri üretebilir; 6 ayda bir ecza dolabı ayıklanmalıdır.',
+      sesli_fisilti: '6 aylık ecza dolabı miad kontrolü ve ilk yardım stok döngüsü kuruldu.'
+    };
+  }
+
+  // 4. FATURA, KİRA, AİDAT VE BÜTÇE KORUMASI
+  if (lower.includes('kira') || lower.includes('aidat') || lower.includes('apartman') || lower.includes('bina aidat')) {
+    const rentDue = new Date(baseDate);
+    rentDue.setDate(5); // Her ayın 1-5'i
+    rentDue.setHours(12, 0, 0, 0);
+
+    return {
+      baslik: lower.includes('kira') ? 'Ev Kirası Ödemesi' : 'Apartman Aidatı Ödemesi',
+      zaman: 'Her Ayın 1-5\'i Arası',
+      tarih_iso: rentDue.toISOString(),
+      action_items: [
+        { task: 'Banka havalesi ile açıklama kısmına \'Kira/Aidat Bedeli\' belirterek ödemeyi yap', is_completed: false },
+        { task: 'Banka dekontunu dijital arşive kaydet ve ev sahibine/yöneticiye ilet', is_completed: false },
+        { task: 'Gecikme zammı ve cezai şart riskini önle', is_completed: false }
+      ],
+      ikon: '🏠',
+      renk: '#F1F5F9',
+      anomali_notu: 'Kira ödemelerinde açıklama kısmına "YYYY Ayı Kira Bedeli" yazılması ve banka üzerinden yapılması yasal zorunluluktur.',
+      sesli_fisilti: 'Kira ve aidat ödeme adımları her ayın 1-5\'i arasına takvimleştirildi.'
+    };
+  }
+
+  // Fatura
+  return {
+    baslik: 'Fatura Ödeme & Gecikme Önleme',
+    zaman: 'Son Ödemeden 2 Gün Önce',
+    tarih_iso: baseDate.toISOString(),
+    hazirlik_zamani: 'Son Ödemeden 2 Gün Önce',
+    hazirlik_iso: baseDate.toISOString(),
+    action_items: [
+      { task: 'Son ödeme tarihinden 2 gün önce: Fatura tutarı ve otomatik ödeme limitini kontrol et', is_completed: false },
+      { task: 'Ödemeyi gerçekleştir ve dekont/referans numarasını sakla', is_completed: false },
+      { task: 'Açma-kapama bedeli ve gecikme faizi riskini önle', is_completed: false }
+    ],
+    ikon: '🏠',
+    renk: '#F1F5F9',
+    anomali_notu: 'Faturalar son ödeme gününden en az 2 gün önce ödenerek hafta sonu takas gecikmeleri ve açma-kapama masrafları önlenmelidir.',
+    sesli_fisilti: 'Fatura için son ödemeden 2 gün öncesine gecikme zammı önleme alarmı kuruldu.'
+  };
+}
+
 export function toSimpleNote(note: NotiviaParsedNote): NotiviaSimpleNote {
   let zamanStr: string | null = null;
   let tarihIso: string | null = null;
@@ -2082,7 +2475,8 @@ function parseTurkishTemporal(text: string, baseDate: Date): TemporalParseResult
 export function extractSimpleNoteFromText(
   input: string,
   refDatetime?: string,
-  pastNotes?: any[]
+  pastNotes?: any[],
+  userDomain?: string
 ): NotiviaSimpleNote {
   const cleanInput = input.trim();
   const lower = cleanInput.toLowerCase();
@@ -2164,7 +2558,84 @@ export function extractSimpleNoteFromText(
     tetikleyici = { tip: 'mekan', sart: 'Toplantı', etiket: '📍 Toplantıda' };
   }
 
-  // HAVA KOŞULU TETİKLEYİCİLERİ
+  // 0. ÖNCELİK: KISA SENARYO EŞLEŞTİRME ("Leb Demeden Leblebiyi Anlama" - 2-3 Kelimelik Doğrudan Eşleme)
+  const activeDomain = userDomain || (typeof window !== 'undefined' ? (localStorage.getItem('notivia_work_domain') as any) || undefined : undefined);
+  const shortScenario = matchShortScenario(cleanInput, activeDomain);
+  if (shortScenario) {
+    return enrichWithPredictiveGraph({
+      baslik: shortScenario.baslik,
+      zaman: periodicZaman || zaman || shortScenario.varsayilanZaman,
+      tarih_iso: periodicIso || tarih_iso,
+      ikon: shortScenario.ikon,
+      renk: shortScenario.renk,
+      tetikleyici: tetikleyici || (shortScenario.tetikleyici ? {
+        tip: shortScenario.tetikleyici.tip,
+        sart: shortScenario.tetikleyici.sart,
+        etiket: shortScenario.tetikleyici.etiket
+      } : null),
+      periyodik,
+      anomali_notu: shortScenario.akilliFisilti,
+      hazirlik_zamani: shortScenario.hazirlikZamani
+    }, cleanInput);
+  }
+
+  // 0.05 ÖNCELİK: KULLANICININ SEÇTİĞİ ALANIN MOTORUNU ÖNCELİKLİ ÇALIŞTIRMA
+  if (activeDomain && activeDomain !== 'GENEL') {
+    if (activeDomain === 'HUKUK') {
+      const legalResult = parseLegalNote(cleanInput, baseDate);
+      if (legalResult) return enrichWithPredictiveGraph(legalResult, cleanInput);
+    } else if (activeDomain === 'OGRENCI') {
+      const domainRuleResult = dispatchDomainRule('OGRENCI', cleanInput, zaman, tarih_iso);
+      if (domainRuleResult) return enrichWithPredictiveGraph(domainRuleResult, cleanInput);
+      const studentResult = parseAcademicStudentSuiteNote(cleanInput, baseDate);
+      if (studentResult) return enrichWithPredictiveGraph(studentResult, cleanInput);
+      const eduResult = parseEduManagerNote(cleanInput, baseDate);
+      if (eduResult) return enrichWithPredictiveGraph(eduResult, cleanInput);
+    } else if (activeDomain === 'EGITIM') {
+      const eduResult = parseEduManagerNote(cleanInput, baseDate);
+      if (eduResult) return enrichWithPredictiveGraph(eduResult, cleanInput);
+      const studentResult = parseAcademicStudentSuiteNote(cleanInput, baseDate);
+      if (studentResult) return enrichWithPredictiveGraph(studentResult, cleanInput);
+    } else if (activeDomain === 'CALISMIYORUM') {
+      const domainRuleResult = dispatchDomainRule('CALISMIYORUM', cleanInput, zaman, tarih_iso);
+      if (domainRuleResult) return enrichWithPredictiveGraph(domainRuleResult, cleanInput);
+      const personalRoutineResult = parsePersonalRoutineCareNote(cleanInput, baseDate);
+      if (personalRoutineResult) return enrichWithPredictiveGraph(personalRoutineResult, cleanInput);
+      const civilResult = parseCivilServantPublicOfficeNote(cleanInput, baseDate);
+      if (civilResult) return enrichWithPredictiveGraph(civilResult, cleanInput);
+      const corpResult = parseCorporateOfficePersonalCareNote(cleanInput, baseDate);
+      if (corpResult) return enrichWithPredictiveGraph(corpResult, cleanInput);
+    } else if (activeDomain === 'SAGLIK' || activeDomain === 'EMEKLİ' || (activeDomain as string) === 'EMEKLILIK') {
+      const clinicalResult = parseHealthcareClinicalNote(cleanInput, baseDate);
+      if (clinicalResult) return enrichWithPredictiveGraph(clinicalResult, cleanInput);
+      const multiMedResult = parseMultiMedicationNote(cleanInput, baseDate);
+      if (multiMedResult) return enrichWithPredictiveGraph(multiMedResult, cleanInput);
+    } else if (activeDomain === 'EMNIYET') {
+      const opResult = parseOperationSafetyEmergencyNote(cleanInput, baseDate);
+      if (opResult) return enrichWithPredictiveGraph(opResult, cleanInput);
+      const militaryResult = parseMilitaryCommanderNote(cleanInput, baseDate);
+      if (militaryResult) return enrichWithPredictiveGraph(militaryResult, cleanInput);
+    } else if (activeDomain === 'TEKNIK') {
+      const engResult = parseEngineeringSuiteNote(cleanInput, baseDate);
+      if (engResult) return enrichWithPredictiveGraph(engResult, cleanInput);
+    } else if (activeDomain === 'LOJISTIK' || activeDomain === 'HAVACILIK') {
+      const logResult = parseProjectLogisticsFieldTechNote(cleanInput, baseDate);
+      if (logResult) return enrichWithPredictiveGraph(logResult, cleanInput);
+    } else if (activeDomain === 'KURUMSAL') {
+      const civilResult = parseCivilServantPublicOfficeNote(cleanInput, baseDate);
+      if (civilResult) return enrichWithPredictiveGraph(civilResult, cleanInput);
+      const corpResult = parseCorporateOfficePersonalCareNote(cleanInput, baseDate);
+      if (corpResult) return enrichWithPredictiveGraph(corpResult, cleanInput);
+    } else if (activeDomain === 'TICARET' || activeDomain === 'MALIYE') {
+      const tradeResult = parseTradesmanLocalShopNote(cleanInput, baseDate);
+      if (tradeResult) return enrichWithPredictiveGraph(tradeResult, cleanInput);
+    } else if (activeDomain === 'MUTFAK' || activeDomain === 'GUZELLIK') {
+      const corpResult = parseCorporateOfficePersonalCareNote(cleanInput, baseDate);
+      if (corpResult) return enrichWithPredictiveGraph(corpResult, cleanInput);
+    }
+  }
+
+  // 0.1 ÖNCELİK: HAVA KOŞULU TETİKLEYİCİLERİ
   if (lower.includes('yağmur') || lower.includes('yagmur')) {
     return enrichWithPredictiveGraph({
       baslik: cleanInput.replace(/yağmur yağarsa/gi, '').trim() || 'Yağmur Önlemi',
@@ -2328,6 +2799,12 @@ export function extractSimpleNoteFromText(
     return enrichWithPredictiveGraph(eduResult, cleanInput);
   }
 
+  // 4.5. ÖNCELİK: ÖĞRENCİ & AKADEMİK YAŞAM MOTORU (STUDENT & ACADEMIC SUITE)
+  const studentResult = parseAcademicStudentSuiteNote(cleanInput, baseDate);
+  if (studentResult) {
+    return enrichWithPredictiveGraph(studentResult, cleanInput);
+  }
+
   // 5. ÖNCELİK: KAMU VE DEVLET MEMURU MOTORU (CIVIL SERVANT & PUBLIC OFFICE ENGINE)
   const civilServantResult = parseCivilServantPublicOfficeNote(cleanInput, baseDate);
   if (civilServantResult) {
@@ -2362,6 +2839,12 @@ export function extractSimpleNoteFromText(
   const corporateCareResult = parseCorporateOfficePersonalCareNote(cleanInput, baseDate);
   if (corporateCareResult) {
     return enrichWithPredictiveGraph(corporateCareResult, cleanInput);
+  }
+
+  // 9.8. ÖNCELİK: ÇALIŞMIYORUM, EV DÖNGÜSÜ & KİŞİSEL YAŞAM MOTORU (ROUTINE, HOME & BUDGET CARE)
+  const personalRoutineResult = parsePersonalRoutineCareNote(cleanInput, baseDate);
+  if (personalRoutineResult) {
+    return enrichWithPredictiveGraph(personalRoutineResult, cleanInput);
   }
 
   // 10. ÖNCELİK: SAĞLIK VE KLİNİK ÇALIŞANLARI MOTORU (HEALTHCARE & CLINICAL ENGINE)
@@ -2628,26 +3111,6 @@ export function extractSimpleNoteFromText(
       ikon: isPayable ? '💳' : '💰',
       renk: isPayable ? '#FEE2E2' : '#DCFCE7',
       tetikleyici
-    }, cleanInput);
-  }
-
-  // 6. ÖNCELİK: KISA SENARYO EŞLEŞTİRME (Leb Demeden Leblebiyi Anlama)
-  const shortScenario = matchShortScenario(cleanInput);
-  if (shortScenario) {
-    return enrichWithPredictiveGraph({
-      baslik: shortScenario.baslik,
-      zaman: periodicZaman || zaman || shortScenario.varsayilanZaman,
-      tarih_iso: periodicIso || tarih_iso,
-      ikon: shortScenario.ikon,
-      renk: shortScenario.renk,
-      tetikleyici: tetikleyici || (shortScenario.tetikleyici ? {
-        tip: shortScenario.tetikleyici.tip,
-        sart: shortScenario.tetikleyici.sart,
-        etiket: shortScenario.tetikleyici.etiket
-      } : null),
-      periyodik,
-      anomali_notu: shortScenario.akilliFisilti,
-      hazirlik_zamani: shortScenario.hazirlikZamani
     }, cleanInput);
   }
 

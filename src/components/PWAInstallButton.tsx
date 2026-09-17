@@ -2,14 +2,173 @@ import React, { useState } from 'react';
 import { Download, Share2, PlusSquare, CheckCircle, Smartphone, Monitor } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 
-export const PWAInstallButton: React.FC = () => {
+export interface PWAInstallButtonProps {
+  inSettings?: boolean;
+}
+
+export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({ inSettings = false }) => {
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [showIOSGuide, setShowIOSGuide] = useState(false);
   const [showGeneralGuide, setShowGeneralGuide] = useState(false);
 
-  // App is already opened in standalone installed PWA window
-  if (isInstalled) {
+  // App is already opened in standalone installed PWA window and not in settings
+  if (isInstalled && !inSettings) {
     return null;
+  }
+
+  // Ayarlar içi satır görünümü
+  if (inSettings) {
+    return (
+      <>
+        <div className="flex items-center justify-between p-3.5 gap-2.5">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="w-8 h-8 rounded-lg bg-stone-100 dark:bg-stone-800 flex items-center justify-center text-sm text-stone-600 dark:text-stone-300 shrink-0">
+              <Smartphone className="w-4 h-4 text-stone-600 dark:text-stone-300" />
+            </div>
+            <div className="min-w-0 flex-1 pr-1">
+              <p className="font-semibold text-xs leading-tight truncate sm:whitespace-normal">Uygulamayı Cihaza Yükle</p>
+              <p className="text-[11px] text-stone-500 dark:text-stone-400 line-clamp-1 sm:line-clamp-none">
+                {isInstalled ? 'Notivia cihazınızda yüklü' : 'Ana ekrana ekle, internetsiz ve tam ekran kullan'}
+              </p>
+            </div>
+          </div>
+
+          <div className="shrink-0">
+            {isInstalled ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+                <CheckCircle className="w-3.5 h-3.5" />
+                <span>Yüklü</span>
+              </span>
+            ) : isInstallable ? (
+              <button
+                type="button"
+                id="btn-pwa-install-settings"
+                onClick={install}
+                className="flex items-center gap-1.5 px-3.5 py-2 sm:py-1.5 text-xs font-semibold text-white bg-stone-900 hover:bg-stone-800 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white rounded-lg shadow-xs transition-all active:scale-95 cursor-pointer min-h-[38px] sm:min-h-0"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Yükle</span>
+              </button>
+            ) : isIOS ? (
+              <button
+                type="button"
+                id="btn-pwa-ios-settings"
+                onClick={() => setShowIOSGuide(true)}
+                className="flex items-center gap-1.5 px-3 py-2 sm:py-1.5 text-xs font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-750 border border-stone-300 dark:border-stone-700 rounded-lg transition-all active:scale-95 cursor-pointer min-h-[38px] sm:min-h-0"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Nasıl Yüklenir?</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                id="btn-pwa-general-settings"
+                onClick={() => setShowGeneralGuide(true)}
+                className="flex items-center gap-1.5 px-3 py-2 sm:py-1.5 text-xs font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-750 border border-stone-300 dark:border-stone-700 rounded-lg transition-all active:scale-95 cursor-pointer min-h-[38px] sm:min-h-0"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Rehber</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* iOS Safari Installation Modal */}
+        {showIOSGuide && (
+          <div 
+            id="modal-ios-pwa-guide"
+            className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200"
+            onClick={() => setShowIOSGuide(false)}
+          >
+            <div 
+              className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl border border-stone-200 text-stone-800"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-stone-900">iPhone / iPad'e Yükle</h3>
+                  <p className="text-xs text-stone-500">Tam ekran ve internetsiz kullanım</p>
+                </div>
+              </div>
+
+              <div className="space-y-3.5 text-sm text-stone-600 bg-stone-50 p-4 rounded-xl border border-stone-150">
+                <div className="flex items-start gap-2.5">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-stone-200 text-stone-800 flex items-center justify-center text-xs font-bold">1</span>
+                  <div>
+                    Safari'nin altındaki <Share2 className="inline-block w-4 h-4 text-blue-600 mx-0.5 align-text-bottom" /> <strong>Paylaş</strong> simgesine dokunun.
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-stone-200 text-stone-800 flex items-center justify-center text-xs font-bold">2</span>
+                  <div>
+                    Menüyü aşağı kaydırıp <PlusSquare className="inline-block w-4 h-4 text-stone-800 mx-0.5 align-text-bottom" /> <strong>Ana Ekrana Ekle</strong> seçeneğini seçin.
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-stone-200 text-stone-800 flex items-center justify-center text-xs font-bold">3</span>
+                  <div>
+                    Sağ üstteki <strong>Ekle</strong> butonuna basın. Notivia tıpkı App Store uygulaması gibi ana ekranınıza yerleşecektir!
+                  </div>
+                </div>
+              </div>
+
+              <button
+                id="btn-close-ios-guide"
+                onClick={() => setShowIOSGuide(false)}
+                className="mt-5 w-full py-2.5 bg-stone-900 hover:bg-stone-800 text-white text-sm font-medium rounded-xl transition cursor-pointer"
+              >
+                Anladım
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Desktop / Android General Guide Modal */}
+        {showGeneralGuide && (
+          <div 
+            id="modal-general-pwa-guide"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs animate-in fade-in duration-200"
+            onClick={() => setShowGeneralGuide(false)}
+          >
+            <div 
+              className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl border border-stone-200 text-stone-800"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-stone-100 border border-stone-200 flex items-center justify-center text-stone-700">
+                  <Monitor className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-stone-900">Uygulamayı Cihaza Yükle</h3>
+                  <p className="text-xs text-stone-500">Masaüstü ve Android cihazlar için</p>
+                </div>
+              </div>
+
+              <div className="space-y-3 text-sm text-stone-600 bg-stone-50 p-4 rounded-xl border border-stone-150">
+                <p>
+                  <strong>Bilgisayarda (Chrome / Edge):</strong> Adres çubuğunun en sağındaki <Download className="inline-block w-4 h-4 text-stone-700 mx-0.5 align-text-bottom" /> <strong>"Yükle"</strong> simgesine tıklayın.
+                </p>
+                <div className="border-t border-stone-200 my-2" />
+                <p>
+                  <strong>Android Telefonda:</strong> Tarayıcı menüsünü (üç nokta) açıp <strong>"Uygulamayı Yükle"</strong> veya <strong>"Ana Ekrana Ekle"</strong> seçeneğine dokunun.
+                </p>
+              </div>
+
+              <button
+                id="btn-close-general-guide"
+                onClick={() => setShowGeneralGuide(false)}
+                className="mt-5 w-full py-2.5 bg-stone-900 hover:bg-stone-800 text-white text-sm font-medium rounded-xl transition cursor-pointer"
+              >
+                Tamam
+              </button>
+            </div>
+          </div>
+        )}
+      </>
+    );
   }
 
   return (

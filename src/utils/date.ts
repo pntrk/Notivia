@@ -271,3 +271,18 @@ export function getNextMonthEndTargetDate(baseDate: Date = new Date(), targetHou
   return candidate;
 }
 
+/**
+ * ISO tarihini gün ofseti kadar kaydırıp yeni ISO döndürür
+ */
+export function calculateOffsetIso(targetIso: string | null | undefined, offsetDays: number): string | null {
+  if (!targetIso) return null;
+  try {
+    const d = new Date(targetIso);
+    if (isNaN(d.getTime())) return null;
+    d.setDate(d.getDate() + offsetDays);
+    return d.toISOString();
+  } catch {
+    return null;
+  }
+}
+

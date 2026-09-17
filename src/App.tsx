@@ -48,9 +48,9 @@ import {
   loadNotesFromGoogleDrive,
   saveNotesToGoogleDrive,
 } from './utils/driveStorage.ts';
-import { PWAInstallButton } from './components/PWAInstallButton.tsx';
 import { OfflineIndicator } from './components/OfflineIndicator.tsx';
 import { SettingsModal } from './components/SettingsModal.tsx';
+import { DOMAIN_REGISTRY, detectDomainFromNote, type ProfessionDomain } from './types/domainThemes.ts';
 import { translations, type Language } from './utils/i18n.ts';
 import { checkLocalWeather, type WeatherCondition } from './utils/weather.ts';
 
@@ -336,6 +336,30 @@ export default function App() {
     }
     return false;
   });
+
+  // Kullanıcının seçtiği uzmanlık / bilişsel alan (Hukuk, Maliye, Sağlık, Eğitim, Emekli, Öğrenci, vb.)
+  const [workDomain, setWorkDomain] = useState<ProfessionDomain>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('notivia_work_domain');
+        if (saved) return saved as ProfessionDomain;
+      }
+    } catch {
+      // ignore
+    }
+    return 'GENEL';
+  });
+
+  const handleSelectWorkDomain = (domain: ProfessionDomain) => {
+    setWorkDomain(domain);
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('notivia_work_domain', domain);
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   // Ekran üstü anlık asistan bildirim bildirici (Push Banner)
   const [activeBannerNotification, setActiveBannerNotification] = useState<{
@@ -1512,6 +1536,8 @@ export default function App() {
           body: JSON.stringify({
             input: textInput,
             current_datetime: currentNow,
+            userDomain: workDomain,
+            preferredDomain: workDomain,
           }),
         });
 
@@ -1637,6 +1663,8 @@ export default function App() {
           input: textInput,
           base64Image,
           current_datetime: currentNow,
+          userDomain: workDomain,
+          preferredDomain: workDomain,
           past_notes: cards.slice(0, 15).map((c) => ({
             baslik: c.baslik,
             zaman: c.zaman,
@@ -1684,7 +1712,7 @@ export default function App() {
 
     if (!parsedByServer) {
       // Çevrimdışı / Hızlı Kural Motoru (Türkçe Doğal Dil Ayrıştırıcı)
-      const fallback = extractSimpleNoteFromText(textInput, currentNow);
+      const fallback = extractSimpleNoteFromText(textInput, currentNow, cards.slice(0, 15), workDomain);
       console.log("2. Bilişsel Kural Motoru Devrede:", fallback);
       console.log("3. Ayrıştırılmış Veri:", fallback);
       const isMissingTime = fallback.eksik_bilgi || (!fallback.zaman && !fallback.tarih_iso && (fallback.baslik?.toLowerCase().includes('randevu') || fallback.baslik?.toLowerCase().includes('görüşme') || fallback.baslik?.toLowerCase().includes('buluşma') || fallback.baslik?.toLowerCase().includes('toplantı')));
@@ -1874,9 +1902,6 @@ export default function App() {
           </div>
 
           <div id="auth-container" className="flex items-center gap-2">
-            {/* PWA Uygulama Olarak Yükle Butonu */}
-            <PWAInstallButton />
-
             {/* Çoklu Seçim Modu Butonu */}
             <button
               type="button"
@@ -2237,6 +2262,21 @@ export default function App() {
                                   <span>{item.periyodik.tip === 'aylik_son_hafta' ? (language === 'tr' ? 'Ay Sonu Tekrarlı' : 'End of Month') : t.periodicBadge}</span>
                                 </span>
                               )}
+                              {(() => {
+                                const cardDomain = detectDomainFromNote(item);
+                                if (cardDomain && cardDomain !== 'GENEL') {
+                                  const dTheme = DOMAIN_REGISTRY[cardDomain];
+                                  return (
+                                    <span
+                                      className={`text-[9px] px-1.5 py-0.5 rounded font-medium shrink-0 flex items-center gap-0.5 shadow-2xs border ${dTheme?.badgeBg || 'bg-stone-100'} ${dTheme?.badgeText || 'text-stone-800'} border-black/10`}
+                                      title={`Bilişsel Alan: ${dTheme?.displayName || cardDomain}`}
+                                    >
+                                      {dTheme?.displayName || cardDomain}
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
                               {item.tarih_iso && (
                                 <div className="flex items-center gap-1 shrink-0">
                                   <button
@@ -2935,6 +2975,8 @@ export default function App() {
         notificationSupported={typeof window !== 'undefined' && 'Notification' in window}
         onSendTestNotification={handleSendTestNotification}
         onRemindTodayTasks={handleRemindTodayTasks}
+        workDomain={workDomain}
+        onSelectWorkDomain={handleSelectWorkDomain}
       />
     </div>
   );

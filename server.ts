@@ -25,11 +25,12 @@ app.get('/api/health', (_req, res) => {
 // Simple 5-field parsing endpoint matching exact user prompt (with image support)
 app.post('/api/parse-simple', async (req, res) => {
   try {
-    const { input, text, current_datetime, base64Image, image, past_notes, gecmis_notlar, history } = req.body;
+    const { input, text, current_datetime, base64Image, image, past_notes, gecmis_notlar, history, userDomain, preferredDomain, domain } = req.body;
     const cleanInput = String(input || text || '').trim();
     const now = String(current_datetime || new Date().toISOString());
     const media = base64Image || image || null;
     const past = Array.isArray(past_notes) ? past_notes : Array.isArray(gecmis_notlar) ? gecmis_notlar : Array.isArray(history) ? history : [];
+    const activeDomain = userDomain || preferredDomain || domain || undefined;
 
     if (!cleanInput && !media) {
       return res.status(400).json({
@@ -38,7 +39,7 @@ app.post('/api/parse-simple', async (req, res) => {
       });
     }
 
-    const simple = await parseWithAIAndImage(cleanInput, media, now, past);
+    const simple = await parseWithAIAndImage(cleanInput, media, now, past, activeDomain);
     return res.json({
       success: true,
       data: simple,
@@ -55,9 +56,10 @@ app.post('/api/parse-simple', async (req, res) => {
 // Autonomous Dispatcher Agent Endpoint (Function Calling: get_calendar_events, create_note_or_event, draft_message)
 app.post('/api/dispatch', async (req, res) => {
   try {
-    const { input, current_datetime } = req.body;
+    const { input, current_datetime, userDomain, preferredDomain, domain } = req.body;
     const cleanInput = String(input || '').trim();
     const now = String(current_datetime || new Date().toISOString());
+    const activeDomain = userDomain || preferredDomain || domain || undefined;
 
     if (!cleanInput) {
       return res.status(400).json({
@@ -66,7 +68,7 @@ app.post('/api/dispatch', async (req, res) => {
       });
     }
 
-    const result = await dispatchWithGemini(cleanInput, now);
+    const result = await dispatchWithGemini(cleanInput, now, activeDomain);
     return res.json({
       success: true,
       data: result,
@@ -84,10 +86,11 @@ app.post('/api/dispatch', async (req, res) => {
 app.post('/api/parse', async (req, res) => {
   const startTime = Date.now();
   try {
-    const { input, current_datetime, past_notes, gecmis_notlar, history } = req.body;
+    const { input, current_datetime, past_notes, gecmis_notlar, history, userDomain, preferredDomain, domain } = req.body;
     const cleanInput = String(input || '').trim();
     const currentDt = String(current_datetime || new Date().toISOString());
     const past = Array.isArray(past_notes) ? past_notes : Array.isArray(gecmis_notlar) ? gecmis_notlar : Array.isArray(history) ? history : [];
+    const activeDomain = userDomain || preferredDomain || domain || undefined;
 
     if (!cleanInput) {
       return res.status(400).json({
@@ -96,8 +99,8 @@ app.post('/api/parse', async (req, res) => {
       });
     }
 
-    const simple = await parseSimpleWithGemini(cleanInput, currentDt, past);
-    const { data, source } = await parseWithGemini(cleanInput, currentDt, past);
+    const simple = await parseSimpleWithGemini(cleanInput, currentDt, past, activeDomain);
+    const { data, source } = await parseWithGemini(cleanInput, currentDt, past, activeDomain);
     const processingTime = Date.now() - startTime;
 
     return res.json({
