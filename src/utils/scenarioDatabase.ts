@@ -830,23 +830,24 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
     ]
   },
 
-  // 11. HUKUK & ADLİYE (DURUŞMA, TEBLİGAT, İCRA)
+  // 11. HUKUK & ADLİYE (DURUŞMA, TEBLİGAT, İSTİNAF, İCRA)
   {
     id: 'hukuk_uyap_tebligat',
     category: 'resmi',
     domain: 'HUKUK',
-    keywords: ['uyap tebligat', 'e-tebligat', 'tebligat geldi', 'istinaf süresi', 'cevap dilekçesi'],
-    baslik: 'UYAP E-Tebligat & Süre Takibi',
+    keywords: ['uyap tebligat', 'uets', 'e-tebligat', 'tebligat geldi', 'istinaf süresi', 'istinafı', 'gerekçeli karar istinaf', 'cevap dilekçesi'],
+    baslik: 'Asliye Hukuk Gerekçeli Karar İstinafı',
     ikon: '⚖️',
     renk: '#E0E7FF',
-    varsayilanZaman: '5 Gün + 14 Gün Yasal Süre',
-    hazirlikZamani: 'Tebliğ Tarihi',
-    akilliFisilti: '⚖️ Tebligat Kanunu 7/a gereğince elektronik tebligat muhatabın adresine ulaştığı günü izleyen 5. günün sonunda tebliğ sayılır.',
+    varsayilanZaman: '06 Ekim 2026 Salı 23:59 (İstinaf Son Gün)',
+    hazirlikZamani: '05 Ekim Pazartesi (Dilekçe & Harç Hazırlığı)',
+    akilliFisilti: '⚖️ Tebligat Kanunu 7/a gereğince tebliğ 22 Eylül Salı gecesi yapılmış sayılır; süre 23 Eylül Çarşamba başlar ve 06 Ekim Salı 23:59\'da biter.',
     oncedenYapilacaklar: [
-      'Tebligat Kanunu 7/a 5. gün kuralına göre kesin tebliğ tarihini hesapla',
-      'İtiraz/İstinaf süresinin son gününe (mesai 17:00) takvim alarmı kur',
-      'Dilekçe ve delil listesini UYAP Avukat Portalından hazırla',
-      'e-İmza ile son gün mesai bitimine kadar sisteme yükle'
+      'UETS Mazbatası: 17 Eylül\'ü izleyen 5. günün sonu (22 Eylül Salı 23:59) tebliğ sayılır',
+      '23 Eylül Çarşamba: 2 haftalık yasal istinaf süresi fiilen başlar',
+      'Müvekkile istinaf harç ve gider avansı masraf bildirimini WhatsApp\'tan ilet',
+      'İstinaf başvuru dilekçesini gerekçeli karardaki delil hatalarına göre tanzim et',
+      '06 Ekim Salı 23:59 öncesi: UYAP Avukat Portal\'dan e-İmza ile sisteme gönder'
     ]
   },
   {
@@ -873,18 +874,19 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
     id: 'smmm_kdv_beyanname',
     category: 'finans',
     domain: 'FINANS',
-    keywords: ['kdv beyanname', 'muhsgk', 'muhtasar beyanname', 'kdv son gün', 'beyanname onay'],
-    baslik: 'KDV & MUHSGK Beyanname Onayı',
+    keywords: ['kdv beyanname', 'muhsgk', 'muhtasar beyanname', 'kdv son gün', 'eylül dönemi kdv', 'beyanname onay', 'tahakkuk bitişi'],
+    baslik: 'Eylül Dönemi KDV & MUHSGK Beyanı',
     ikon: '📊',
     renk: '#DCFCE7',
-    varsayilanZaman: 'Ayın 26’sı 23:59',
-    hazirlikZamani: 'Ayın 24’ü 14:00',
-    akilliFisilti: '📊 KDV ve MUHSGK beyannameleri her ayın 26. günü saat 23:59’a kadar onaylanmalıdır.',
+    varsayilanZaman: '28 Eylül 2026 Pazartesi 23:59 (Tahakkuk Bitişi)',
+    hazirlikZamani: '24 Eylül Perşembe (Fatura & Ön Matrah Teyidi)',
+    akilliFisilti: '📊 Ayın 26\'sı Cumartesi\'ye rastladığı için yasal beyan süresi VUK gereğince 28 Eylül Pazartesi 23:59\'a sarkmıştır.',
     oncedenYapilacaklar: [
-      'Mükellef faturaları ve banka ekstre mutabakatlarını tamamla',
-      'GİB e-Beyanname portalı üzerinden onay bekleyenleri kontrol et',
-      'Tahakkuk fişlerini ve ödeme makbuzlarını mükellefe PDF olarak ilet',
-      'Ödeme vadesi için ay sonu banka hatırlatması kur'
+      '26 Eylül Cumartesi gününe denk geldiği için beyanname son günü 28 Eylül Pazartesi\'ye uzamıştır',
+      'Mükelleflerin eksik e-Fatura, e-Arşiv ve banka ekstrelerini topla',
+      'Zirve/Luca muhasebe fişlerini kes ve KDV matrah kontrol raporunu dök',
+      'MUHSGK bordro bildirgelerini SGK ve Muhtasar yönünden eşitle',
+      'e-Beyanname sisteminden tahakkukları alıp mükelleflere PDF olarak ilet'
     ]
   },
   {
@@ -998,7 +1000,24 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
     ]
   },
 
-  // 17. KLİNİK, HEMŞİRE & ECZANE (ORDER, SBAR, SOĞUK ZİNCİR)
+  // 17. KLİNİK, HEMŞİRE, DOKTOR & ECZANE (ORDER, SBAR, KONSÜLTASYON, SOĞUK ZİNCİR)
+  {
+    id: 'doktor_acil_konsultasyon',
+    category: 'saglik',
+    keywords: ['acil konsültasyon', 'acil konsultasyon', 'genel cerrahi acil', 'stat kons', '30 dk sla', 'akut batın'],
+    baslik: 'Genel Cerrahi Acil Konsültasyon',
+    ikon: '🚨',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Bugün 14:45 (30 Dk SLA Sonu)',
+    hazirlikZamani: '30 Dk İçinde SLA',
+    akilliFisilti: '🚨 Acil konsültasyonlarda yasal yanıt süresi 30 dakikadır. Değerlendirme 30 dk içinde tamamlanmalıdır.',
+    oncedenYapilacaklar: [
+      'Acil servise intikal et ve hastanın akut batın muayenesini yap',
+      'Hemogram, CRP, Amilaz ve batın BT görüntülerini PACS üzerinden incele',
+      'Gerekliyse ameliyathane ekibine pre-op hazırlık bilgisini ilet',
+      'Konsültasyon kanaatini 30 dakika dolmadan HBYS\'ye işle ve kaydet'
+    ]
+  },
   {
     id: 'hemsire_sbar_devir',
     category: 'saglik',

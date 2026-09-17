@@ -1,9 +1,22 @@
 import type { NotiviaParsedNote, NotiviaSimpleNote } from '../types/notivia.ts';
-import { getNextMonthEndTargetDate, calculateOffsetIso } from './date.ts';
+import {
+  getNextMonthEndTargetDate,
+  calculateOffsetIso,
+  rollToNextBusinessDay,
+  calculateUetsDeadline,
+  getTaxCalendarDeadlines
+} from './date.ts';
 import { inferPredictiveActions } from './predictiveGraph.ts';
 import { matchShortScenario } from './scenarioDatabase.ts';
 import { getCardColor } from './cardColors.ts';
-export { extractDateTimeFromTurkish, getNextMonthEndTargetDate, calculateOffsetIso } from './date.ts';
+export {
+  extractDateTimeFromTurkish,
+  getNextMonthEndTargetDate,
+  calculateOffsetIso,
+  rollToNextBusinessDay,
+  calculateUetsDeadline,
+  getTaxCalendarDeadlines
+} from './date.ts';
 export { inferPredictiveActions } from './predictiveGraph.ts';
 export { matchShortScenario } from './scenarioDatabase.ts';
 export { getCardColor } from './cardColors.ts';
@@ -72,6 +85,66 @@ export function dispatchDomainRule(
       renk: '#F1F5F9',
       periyodik: isPeriodic ? { tip: 'aylik', aralik_gun: 180 } : null,
       sesli_fisilti: isPeriodic ? '6 aylık bakım döngüsü başlatıldı.' : 'Ödeme ve taahhüt takip kartı açıldı.'
+    };
+  }
+
+  // Sağlık, Klinik & Tıp Tespiti
+  if (
+    domain === 'SAGLIK' ||
+    /(konsültasyon|epikriz|pre-op|ameliyat|nöbet devri|sbar|dekübitus|pansuman|dikiş alma|soğuk zincir|aşı dolabı|otoklav|implant|order)/i.test(text)
+  ) {
+    const isUrgent = /(acil|stemi|arrest|kanama|koma)/i.test(text);
+    const isSurgery = /(ameliyat|cerrahi|pre-op|operasyon)/i.test(text);
+    const isHandover = /(nöbet devri|sbar|teslim)/i.test(text);
+
+    let baslik = 'Klinik Görev';
+    let ikon = '🩺';
+    let renk = '#E0F2FE';
+
+    if (isUrgent) {
+      baslik = 'Acil Konsültasyon / Müdahale';
+      ikon = '🚨';
+      renk = '#FEE2E2';
+    } else if (isSurgery) {
+      baslik = 'Pre-Op Cerrahi Hazırlığı';
+      ikon = '🏥';
+      renk = '#E0F2FE';
+    } else if (isHandover) {
+      baslik = 'SBAR Nöbet Devir Teslimi';
+      ikon = '💉';
+      renk = '#CCFBF1';
+    }
+
+    return {
+      baslik,
+      zaman: targetDateText || (isUrgent ? 'Hemen (30 Dk SLA)' : 'Mesai İçi'),
+      tarih_iso: targetIso || null,
+      hazirlik_zamani: isSurgery ? 'Operasyondan 8 Saat Önce (Açlık & Tetkik)' : null,
+      hazirlik_iso: isSurgery ? calculateOffsetIso(targetIso, -1) : null,
+      eksik_bilgi: false,
+      action_items: isSurgery
+        ? [
+            { task: 'NPO (Açlık) durumunu teyit et (minimum 8 saat)', is_completed: false },
+            { task: 'Anestezi konsültasyon onayı ve aydınlatılmış onam formunu dosyala', is_completed: false },
+            { task: 'Kan grubu, cross-match ve damar yolu açıklığını kontrol et', is_completed: false }
+          ]
+        : isHandover
+        ? [
+            { task: 'Yatan hastaların güncel vital bulgularını ve orderlarını kontrol et', is_completed: false },
+            { task: 'SBAR şablonuna göre kritik hastaları yeni nöbetçiye sözlü ve yazılı devret', is_completed: false }
+          ]
+        : [
+            { task: 'Hastanın klinik durumunu ve laboratuvar sonuçlarını değerlendir', is_completed: false },
+            { task: 'Konsültasyon/order notunu HBYS sistemine işle ve e-İmza ile onayla', is_completed: false }
+          ],
+      anomali_notu: isUrgent
+        ? 'Acil konsültasyon yanıt süresi kalite standartları gereği maksimum 30 dakikadır.'
+        : isSurgery
+        ? 'Açlık süresi ihlali aspirasyon pnömonisi riski yaratır, operasyon ertelenir.'
+        : null,
+      ikon,
+      renk,
+      sesli_fisilti: isUrgent ? '30 dakikalık acil konsültasyon sayacı başlatıldı.' : 'Klinik takip kartı oluşturuldu.'
     };
   }
 
@@ -202,56 +275,97 @@ export function parseLegalNote(input: string, baseDate: Date): NotiviaSimpleNote
     };
   }
 
-  // 2. MALİ MÜŞAVİR / SMMM: KDV/MUHSGK Beyanname (Ayın 26'sı), SGK & e-Defter Beratı
-  if (lower.includes('smmm') || lower.includes('mali müşavir') || lower.includes('mali musavir') || lower.includes('beyanname') || lower.includes('kdv') || lower.includes('muhsgk') || lower.includes('e-defter') || lower.includes('edefter') || lower.includes('berat') || lower.includes('mükellef') || lower.includes('mukellef')) {
-    const isTaxDue = lower.includes('kdv') || lower.includes('muhsgk') || lower.includes('beyanname') || lower.includes('26');
+  // 2. MALİ MÜŞAVİR VE FİNANS MOTORU (CPA & FINANCIAL SUITE)
+  if (lower.includes('smmm') || lower.includes('mali müşavir') || lower.includes('mali musavir') || lower.includes('beyanname') || lower.includes('kdv') || lower.includes('muhsgk') || lower.includes('e-defter') || lower.includes('edefter') || lower.includes('berat') || lower.includes('mükellef') || lower.includes('mukellef') || lower.includes('ba-bs') || lower.includes('babs') || lower.includes('geçici vergi') || lower.includes('gecici vergi') || lower.includes('fatura toplama') || lower.includes('evrak toplama')) {
+    const isEvrakToplama = lower.includes('evrak toplama') || lower.includes('fatura toplama') || lower.includes('evrak iste') || lower.includes('ba-bs') || lower.includes('babs') || lower.includes('10-15') || (lower.includes('mükellef') && (lower.includes('fatura') || lower.includes('ekstre')));
+    const isSgkBerat = (lower.includes('sgk') || lower.includes('berat') || lower.includes('e-defter') || lower.includes('edefter') || lower.includes('ay sonu')) && !lower.includes('kdv') && !lower.includes('muhsgk');
+    const isTaxDue = !isEvrakToplama && !isSgkBerat;
     
-    if (isTaxDue) {
-      const taxDate = new Date(baseDate.getFullYear(), baseDate.getMonth(), 26, 23, 59, 0);
-      if (baseDate.getDate() > 26) {
-        taxDate.setMonth(taxDate.getMonth() + 1);
-      }
+    // 3. Tersine Evrak Toplama Rutini (Ayın 10-15'i)
+    if (isEvrakToplama) {
+      const targetMonth = baseDate.getDate() > 15 ? (baseDate.getMonth() + 1) % 12 : baseDate.getMonth();
+      const targetYear = baseDate.getDate() > 15 && baseDate.getMonth() === 11 ? baseDate.getFullYear() + 1 : baseDate.getFullYear();
+      const evrakDate = new Date(targetYear, targetMonth, 10, 9, 30, 0);
 
       return {
-        baslik: 'KDV & MUHSGK Beyanname Onayı',
-        zaman: 'Ayın 26\'sı (Son Onay)',
-        tarih_iso: taxDate.toISOString(),
+        baslik: 'Mükellef Evrak Toplama & Ba-Bs',
+        zaman: 'Ayın 10-15\'i (Toplu Duyuru)',
+        tarih_iso: evrakDate.toISOString(),
         action_items: [
-          { task: 'Mükellef KDV ve MUHSGK beyannamelerini GİB sistemine yükle', is_completed: false },
-          { task: 'Tahakkuk fişlerini ve tahakkuk eden vergi tutarlarını mükelleflere ilet', is_completed: false },
-          { task: 'Ay sonu SGK prim bildirgeleri ve e-Defter berat onayını kontrol et', is_completed: false }
+          { task: 'Mükelleflere WhatsApp üzerinden toplu fatura ve ekstre isteme duyurusu gönder', is_completed: false },
+          { task: 'Alış/satış faturaları ve POS raporlarını toplayıp sisteme aktar', is_completed: false },
+          { task: 'Ba-Bs formları için 5.000 TL üzeri fatura mutabakatlarını sağla', is_completed: false },
+          { task: 'Eksik evrak bildiren mükelleflere teyit hatırlatması yap', is_completed: false }
         ],
         ikon: '📊',
         renk: '#DCFCE7',
-        anomali_notu: 'KDV ve Muhtasar Prim Hizmet Beyannameleri her ayın 26. günü saat 23:59\'a kadar onaylanmalıdır.',
-        sesli_fisilti: 'KDV ve MUHSGK beyanname onay alarmı ayın 26\'sına kuruldu.'
+        anomali_notu: 'Mükellef fatura ve banka dökümleri ayın ilk 10-15 gününde toplanarak Luca/Zirve sistemine işlenmelidir.',
+        sesli_fisilti: 'Ayın 10-15\'i için mükelleflere toplu evrak isteme duyurusu planlandı.'
       };
     }
 
-    return {
-      baslik: 'Mükellef Evrak & Defter Beratı',
-      zaman: 'Ay İçi Muhasebe Rutini',
-      tarih_iso: baseDate.toISOString(),
-      action_items: [
-        { task: 'Mükelleflerden alış/satış faturaları ve banka ekstrelerini topla', is_completed: false },
-        { task: 'Muhasebe fiş kayıtlarını ve BA/BS mutabakatlarını tamamla', is_completed: false },
-        { task: 'e-Defter beratlarını GİB e-Defter portalına yükle ve imzala', is_completed: false }
-      ],
-      ikon: '📊',
-      renk: '#DCFCE7',
-      anomali_notu: 'Mükellef fatura ve banka dökümleri ayın ilk 15 gününde tamamlanıp kayıtlara işlenmelidir.',
-      sesli_fisilti: 'Mükellef evrak toplama ve e-Defter berat adımları listelendi.'
-    };
+    // 2. Ay Sonu SGK & e-Defter Berat Kilidi
+    if (isSgkBerat) {
+      const monthToUse = baseDate.getMonth();
+      const yearToUse = baseDate.getFullYear();
+      const taxDeadlines = getTaxCalendarDeadlines(yearToUse, monthToUse);
+      const sgkDate = new Date(taxDeadlines.sgkDeadlineIso);
+      sgkDate.setHours(23, 59, 0, 0);
+
+      return {
+        baslik: 'SGK Primleri & e-Defter Beratı',
+        zaman: `Ay Sonu (${taxDeadlines.sgkDeadlineIso})`,
+        tarih_iso: sgkDate.toISOString(),
+        action_items: [
+          { task: 'SGK prim tahakkuklarını ve ödeme dekontlarını mükelleflere ilet', is_completed: false },
+          { task: 'e-Defter beratlarını GİB e-Defter portalına yükle ve zaman damgalı imzala', is_completed: false },
+          { task: 'Banka ve kasa hesap mutabakatlarını kapat', is_completed: false }
+        ],
+        ikon: '📊',
+        renk: '#DCFCE7',
+        anomali_notu: 'SGK prim ödemeleri ve e-Defter berat yüklemeleri ayın son gününe kadar tamamlanmalıdır.',
+        sesli_fisilti: 'Ay sonu SGK prim ve e-Defter berat yükleme görevi oluşturuldu.'
+      };
+    }
+
+    // 1. Ayın 26'sı KDV & MUHSGK Kilidi
+    if (isTaxDue) {
+      const monthToUse = baseDate.getDate() > 26 ? (baseDate.getMonth() + 1) % 12 : baseDate.getMonth();
+      const yearToUse = baseDate.getDate() > 26 && baseDate.getMonth() === 11 ? baseDate.getFullYear() + 1 : baseDate.getFullYear();
+      const taxDeadlines = getTaxCalendarDeadlines(yearToUse, monthToUse);
+
+      const taxDate = new Date(taxDeadlines.kdvDeadlineIso);
+      taxDate.setHours(23, 59, 0, 0);
+
+      const rolledNotice = taxDeadlines.isKdvRolled ? ' (Hafta sonuna denk geldiği için ilk iş gününe ötelendi)' : '';
+
+      return {
+        baslik: 'KDV & MUHSGK Beyanname Onayı',
+        zaman: `Ayın ${taxDeadlines.isKdvRolled ? 'Pazartesi Günü' : '26\'sı'} (${taxDeadlines.kdvDeadlineIso})`,
+        tarih_iso: taxDate.toISOString(),
+        action_items: [
+          { task: 'Mükelleflerin Z raporları, POS ekstreleri ve alış/satış faturalarını Luca/Zirve sistemine işle', is_completed: false },
+          { task: 'KDV-1 ve KDV-2 matrah mutabakatını tamamla', is_completed: false },
+          { task: 'MUHSGK prim ve muhtasar kesintilerini kontrol et, e-Beyanname onayına gönder', is_completed: false },
+          { task: 'Tahakkuk fişlerini mükelleflere PDF/WhatsApp olarak ilet', is_completed: false }
+        ],
+        ikon: '📊',
+        renk: '#DCFCE7',
+        anomali_notu: `KDV ve Muhtasar Prim Hizmet Beyannameleri her ayın 26. günü saat 23:59'a kadar onaylanmalıdır.${rolledNotice}`,
+        sesli_fisilti: 'KDV ve MUHSGK beyanname onay alarmı ayın 26\'sına kuruldu.'
+      };
+    }
   }
 
   // 3. HAKİM (JUDGE): Hüküm / Gerekçeli Karar (30 Gün) & Müzekkere/Bilirkişi Tekidi
   if (lower.includes('hakim') || lower.includes('hâkim') || lower.includes('gerekçeli karar') || lower.includes('gerekceli karar') || lower.includes('hüküm') || lower.includes('hukum') || lower.includes('müzekkere') || lower.includes('bilirkişi')) {
-    const judgeDate = new Date(baseDate);
-    judgeDate.setDate(judgeDate.getDate() + 30);
+    const rawJudgeDate = new Date(baseDate);
+    rawJudgeDate.setDate(rawJudgeDate.getDate() + 30);
+    const { finalDate: judgeDate, isRolled } = rollToNextBusinessDay(rawJudgeDate);
 
     return {
       baslik: 'Gerekçeli Karar & Müzekkere Takibi',
-      zaman: '30 Gün İçinde (HMK 294)',
+      zaman: isRolled ? '30 Gün (Pazartesiye Ötelendi)' : '30 Gün İçinde (HMK 294)',
       tarih_iso: judgeDate.toISOString(),
       action_items: [
         { task: 'HMK 294 uyarınca 30 gün içinde gerekçeli kararı UYAP üzerinden yaz ve imzala', is_completed: false },
@@ -260,35 +374,42 @@ export function parseLegalNote(input: string, baseDate: Date): NotiviaSimpleNote
       ],
       ikon: '🏛️',
       renk: '#FEF3C7',
-      anomali_notu: 'HMK gereğince hükmün tefhiminden itibaren 30 gün içinde gerekçeli kararın yazılması yasal zorunluluktur.',
+      anomali_notu: `HMK gereğince hükmün tefhiminden itibaren 30 gün içinde gerekçeli kararın yazılması yasal zorunluluktur.${isRolled ? ' (Son gün hafta sonuna denk geldiği için Pazartesiye ötelenmiştir.)' : ''}`,
       sesli_fisilti: 'Gerekçeli karar yazımı için 30 günlük yasal süre sayacı başlatıldı.'
     };
   }
 
-  // 4. AVUKAT (LAWYER): UYAP Elektronik Tebligat (5 Gün + Yasal Süre) & Duruşma
-  if (lower.includes('uyap') && (lower.includes('tebligat') || lower.includes('tebliğ') || lower.includes('teblig'))) {
-    // Tebligat Kanunu 7/a: 5. günün sonunda tebliğ sayılır + 14 gün yasal süre = 19 gün
-    const tebligDate = new Date(baseDate);
-    tebligDate.setDate(tebligDate.getDate() + 19);
+  // 4. HUKUK VE ADALET MOTORU (LAW & JUSTICE SUITE): UETS 7/a Elektronik Tebligat Hesabı
+  if (
+    lower.includes('uets') ||
+    (lower.includes('uyap') && (lower.includes('tebligat') || lower.includes('tebliğ') || lower.includes('teblig') || lower.includes('geldi') || lower.includes('karar'))) ||
+    (lower.includes('tebligat') && (lower.includes('geldi') || lower.includes('elektronik') || lower.includes('uets')))
+  ) {
+    // Tebligat Kanunu 7/a + 14 gün yasal süre ve hafta sonu HMK md. 93 kontrolü
+    const uetsResult = calculateUetsDeadline(baseDate.toISOString(), 14);
+    const finalDate = new Date(uetsResult.yasalSonGun);
+    finalDate.setHours(23, 59, 0, 0);
 
     return {
-      baslik: 'UYAP E-Tebligat & İtiraz Süresi',
-      zaman: '5 Gün + 14 Gün Yasal Süre',
-      tarih_iso: tebligDate.toISOString(),
+      baslik: 'UETS Elektronik Tebligat & İstinaf',
+      zaman: `Son Gün: ${uetsResult.yasalSonGun} (Kalan: ${uetsResult.kalanGun} gün)`,
+      tarih_iso: finalDate.toISOString(),
       action_items: [
-        { task: 'Tebligat Kanunu 7/a gereği 5. günün sonundaki kesin tebliğ tarihini not et', is_completed: false },
-        { task: 'Dava/Cevap/İstinaf dilekçesi ve delil listesini UYAP Avukat Portalından hazırla', is_completed: false },
-        { task: 'e-İmza ile son gün mesai bitimine kadar dilekçeyi mahkemesine sun', is_completed: false }
+        { task: 'Tebligat mazbatası ve ekli gerekçeli kararı UYAP\'tan indir', is_completed: false },
+        { task: 'Müvekkile yasal süre ve istinaf masraf/harç bilgilendirmesi yap', is_completed: false },
+        { task: 'İstinaf/İtiraz layihası taslağını hazırla ve süre tutum (tutuklu işlerde) kontrolü sağla', is_completed: false },
+        { task: 'Son günden 24 saat önce e-İmza ile UYAP Avukat Portal üzerinden sisteme gönder', is_completed: false }
       ],
       ikon: '⚖️',
       renk: '#E0E7FF',
-      anomali_notu: 'Elektronik tebligatlarda tebligat, muhatabın elektronik adresine ulaştığı tarihi izleyen 5. günün sonunda yapılmış sayılır.',
-      sesli_fisilti: 'UYAP 7/a 5 günlük tebliğ kuralı ve yasal itiraz süresi takvimlendi.'
+      anomali_notu: uetsResult.anomaliUyarisi,
+      sesli_fisilti: 'UETS 7/a 5 günlük tebliğ süresi ve 14 günlük istinaf takvimi oluşturuldu.'
     };
   }
 
-  // Duruşma Tespiti
-  if (lower.includes('duruşma') || lower.includes('durusma') || lower.includes('mahkeme')) {
+  // 5. DURUŞMA VE MAZERET BARİYERİ
+  if (lower.includes('duruşma') || lower.includes('durusma') || lower.includes('mahkeme') || lower.includes('mazeret') || lower.includes('haciz')) {
+    const isConflict = lower.includes('çakışma') || lower.includes('cakisma') || lower.includes('aynı saat') || lower.includes('ayni saat') || lower.includes('mazeret') || lower.includes('iki mahkeme');
     const courtMatch = input.match(/([a-zA-ZÇĞİÖŞÜçğıöşü0-9\.\s]+(?:Sulh|Asliye|Ağır Ceza|İş|Aile|Ticaret|İcra|Tüketici|Fikri|İdare|Vergi)\s*(?:Hukuk|Ceza|Mahkemesi|Mahkeme)?)/i);
     const esasMatch = input.match(/(\d{4}\s*\/\s*\d+)\s*(?:E\.?|esas)?/i);
 
@@ -300,7 +421,7 @@ export function parseLegalNote(input: string, baseDate: Date): NotiviaSimpleNote
     } else if (esasMatch) {
       baslik = `Duruşma - ${esasMatch[1].replace(/\s+/g, '')} E.`;
     } else {
-      const shortClean = input.replace(/duruşması|durusmasi|duruşma|durusma|var|hatırlat/gi, '').trim();
+      const shortClean = input.replace(/duruşması|durusmasi|duruşma|durusma|var|hatırlat|mazeret|haciz/gi, '').trim();
       baslik = shortClean ? `${shortClean.slice(0, 20)} Duruşması` : 'Mahkeme Duruşması';
     }
 
@@ -311,17 +432,19 @@ export function parseLegalNote(input: string, baseDate: Date): NotiviaSimpleNote
 
     return {
       baslik,
-      zaman: 'Duruşma Günü (30 Dk Önce Alarm)',
+      zaman: 'Duruşma Günü (45 Dk Önce Alarm)',
       tarih_iso: baseDate.toISOString(),
       action_items: [
-        { task: 'Duruşmadan 30 dk önce adliyede hazır bulun ve cübbe/dosya kontrolü yap', is_completed: false },
+        { task: 'Duruşmadan 45 dk önce adliyede hazır bulun ve cübbe/dosya kontrolü yap', is_completed: false },
         { task: 'Çakışan duruşma riski varsa UYAP üzerinden mazeret dilekçesi sun', is_completed: false },
         { task: 'Yetki belgesi, vekaletname harcı ve duruşma tutanağı tanzimi', is_completed: false }
       ],
       ikon: '⚖️',
       renk: '#E0E7FF',
-      anomali_notu: 'Duruşma saatinden en az 30 dakika önce salon önünde hazır bulunulmalı, çakışmalarda mazeret bildirilmelidir.',
-      sesli_fisilti: 'Duruşma öncesi 30 dakikalık adliye alarmı ve mazeret kontrolü kuruldu.'
+      anomali_notu: isConflict
+        ? '⚠️ Duruşma Çakışması! Diğer mahkemeye UYAP üzerinden mazeret dilekçesi gönderilmelidir.'
+        : 'Duruşma saatinden en az 45 dakika önce adliyede hazır bulunulmalı, çakışma durumunda UYAP üzerinden mazeret dilekçesi sunulmalıdır.',
+      sesli_fisilti: 'Duruşma için 45 dakika öncesine adliye intikal alarmı ve mazeret kontrolü kuruldu.'
     };
   }
 
@@ -899,6 +1022,7 @@ export function parseHealthcareClinicalNote(input: string, baseDate: Date): Noti
     lower.includes('epikriz') || lower.includes('taburcu') || lower.includes('taburculuk') ||
     lower.includes('hemşire') || lower.includes('hemsire') || lower.includes('dekübitus') || lower.includes('dekubitus') ||
     lower.includes('pozisyon değişim') || lower.includes('pozisyon degisim') || lower.includes('sbar') || lower.includes('order') || lower.includes('hbys') ||
+    lower.includes('5 doğru') || lower.includes('5 dogru') ||
     lower.includes('eczacı') || lower.includes('eczaci') || lower.includes('eczane') || lower.includes('soğuk zincir') || lower.includes('soguk zincir') ||
     lower.includes('its') || lower.includes('karekod bildirim') || lower.includes('medula') || lower.includes('miad') ||
     lower.includes('diş hekimi') || lower.includes('dis hekimi') || lower.includes('implant') || lower.includes('protez') ||
@@ -909,28 +1033,206 @@ export function parseHealthcareClinicalNote(input: string, baseDate: Date): Noti
     lower.includes('yeşil reçete') || lower.includes('yesil recete') || lower.includes('nöbet devir') ||
     lower.includes('nobet devir') || lower.includes('hasta devri') || lower.includes('adli vaka') || lower.includes('adli rapor') ||
     lower.includes('mayi') || lower.includes('damar yolu') || lower.includes('pansuman') || lower.includes('servis nöbet') ||
-    lower.includes('cerrahi vaka') || lower.includes('ameliyathane') || (lower.includes('ameliyat') && (lower.includes('hazır') || lower.includes('onam') || lower.includes('premedikasyon')));
+    lower.includes('cerrahi vaka') || lower.includes('ameliyathane') || (lower.includes('ameliyat') && (lower.includes('hazır') || lower.includes('onam') || lower.includes('premedikasyon') || lower.includes('plan')));
 
   if (!isClinical) return null;
 
-  // 1. DİŞ HEKİMİ (DENTIST): İmplant, Dikiş Alma, Protez & Otoklav Sterilizasyon
-  if (lower.includes('diş') || lower.includes('dis') || lower.includes('implant') || lower.includes('protez') || lower.includes('otoklav') || lower.includes('sterilizasyon')) {
-    const isSterilization = lower.includes('otoklav') || lower.includes('sterilizasyon') || lower.includes('biyolojik spor') || lower.includes('indikatör');
+  // 1. DOKTOR (DOCTOR): Acil Konsültasyon (30 Dk SLA), Ameliyat/Pre-Op (T-8 Saat NPO, Cross-match, Onam), Taburculuk (e-Reçete, Epikriz, 10 Gün Sonra Kontrol)
+  if (lower.includes('acil konsültasyon') || lower.includes('acil konsultasyon') || lower.includes('stat kons') || lower.includes('konsültasyon istendi') || lower.includes('konsultasyon istendi')) {
+    const consultTime = new Date(baseDate);
+    consultTime.setMinutes(consultTime.getMinutes() + 30);
+
+    return {
+      baslik: 'Acil Konsültasyon (30 Dk SLA)',
+      zaman: '30 Dk İçinde (Kritik SLA)',
+      tarih_iso: consultTime.toISOString(),
+      action_items: [
+        { task: '30 dakika içinde hastayı bizzat değerlendir ve konsültasyon notunu HBYS\'ye işle', is_completed: false },
+        { task: 'İsteyen birim hekimi ile sözlü iletişim kur ve tedavi revizyonunu planla', is_completed: false },
+        { task: 'Gerekli ek tetkik ve acil görüntüleme istemlerini onayla', is_completed: false }
+      ],
+      ikon: '🩺',
+      renk: '#E0F2FE',
+      anomali_notu: 'Acil konsültasyonlar Sağlık Bakanlığı Kalite Standartları gereğince 30 dakika içinde yanıtlanmalıdır.',
+      sesli_fisilti: 'Acil konsültasyon için 30 dakikalık kritik SLA sayacı başlatıldı.'
+    };
+  }
+
+  if (lower.includes('pre-op') || lower.includes('preop') || lower.includes('npo') || lower.includes('ameliyat') || lower.includes('cerrahi')) {
+    const npoDate = new Date(baseDate);
+    npoDate.setHours(npoDate.getHours() - 8);
+
+    return {
+      baslik: 'Pre-Op Cerrahi Hazırlık',
+      zaman: 'Ameliyattan 8 Saat Önce (NPO)',
+      tarih_iso: npoDate.toISOString(),
+      action_items: [
+        { task: 'T-8 saat: Ameliyat saatinden 8 saat önce mutlak açlık (NPO) başlatma', is_completed: false },
+        { task: 'EKG, kan grubu ve Kan Merkezi cross-match teyidi', is_completed: false },
+        { task: 'Aydınlatılmış hasta ve anestezi onam formunun imzalatılması', is_completed: false },
+        { task: 'Cerrahi alan işaretleme ve premedikasyon kontrolü', is_completed: false }
+      ],
+      ikon: '🩺',
+      renk: '#E0F2FE',
+      anomali_notu: 'Anestezi güvenliği için ameliyat saatinden en az 8 saat önce tüm oral alım (su dahil) kesilmelidir.',
+      sesli_fisilti: 'Ameliyat öncesi 8 saatlik NPO açlık, cross-match ve anestezi onam adımları kuruldu.'
+    };
+  }
+
+  if (lower.includes('taburcu') || lower.includes('taburculuk') || lower.includes('epikriz')) {
+    const controlDate = new Date(baseDate);
+    controlDate.setDate(controlDate.getDate() + 10);
+
+    return {
+      baslik: 'Hasta Taburculuk & Epikriz',
+      zaman: 'Taburculuk Saati (10 Gün Sonra Kontrol)',
+      tarih_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'Detaylı klinik epikriz raporunu HBYS üzerinde tamamla ve e-İmzala', is_completed: false },
+        { task: 'SGK Medula e-Reçetesini düzenleyip hastaya/yakınına ilet', is_completed: false },
+        { task: 'Taburculuktan 10 gün sonrasına poliklinik kontrol randevusu oluştur', is_completed: false },
+        { task: 'Çıkış patoloji, laboratuvar ve radyoloji tetkik onaylarını kapat', is_completed: false }
+      ],
+      ikon: '🩺',
+      renk: '#E0F2FE',
+      anomali_notu: 'Tüm açık tetkikler, e-Reçete ve HBYS epikriz raporu onaylanmadan hasta taburculuk işlemi sistemden kapatılamaz.',
+      sesli_fisilti: 'Taburculuk epikrizi, e-Reçete ve 10 gün sonraki kontrol randevusu planlandı.'
+    };
+  }
+
+  if (lower.includes('konsültasyon') || lower.includes('konsultasyon')) {
+    const consultTime = new Date(baseDate);
+    consultTime.setHours(consultTime.getHours() + 24);
+
+    return {
+      baslik: 'Rutin Konsültasyon Değerlendirmesi',
+      zaman: '24 Saat İçinde (Rutin)',
+      tarih_iso: consultTime.toISOString(),
+      action_items: [
+        { task: '24 saat içinde klinik değerlendirme ve önerileri HBYS sistemine işle', is_completed: false },
+        { task: 'İsteyen birim hekimi ile sözlü iletişim kur ve tedavi revizyonunu planla', is_completed: false },
+        { task: 'Gerekli ek tetkik veya görüntüleme istemlerini gerçekleştir', is_completed: false }
+      ],
+      ikon: '🩺',
+      renk: '#E0F2FE',
+      anomali_notu: 'Rutin konsültasyon yanıt süresi en fazla 24 saattir.',
+      sesli_fisilti: 'Rutin konsültasyon değerlendirme adımları oluşturuldu.'
+    };
+  }
+
+  // 2. HEMŞİRE (NURSE): Order/5 Doğru Kuralı, 2 Saatlik Dekübitus Pozisyon Alarmı, 45 Dk Önce SBAR Teslim Föyü
+  if (lower.includes('dekübitus') || lower.includes('dekubitus') || lower.includes('pozisyon') || lower.includes('immobil')) {
+    const posDate = new Date(baseDate);
+    posDate.setHours(posDate.getHours() + 2); // 2 saat sonra
+
+    return {
+      baslik: 'Dekübitus Pozisyon Değişimi',
+      zaman: '2 Saatte Bir (Periyodik)',
+      tarih_iso: posDate.toISOString(),
+      action_items: [
+        { task: 'Hastanın vücut pozisyonunu değiştir (Sol lateral / Sağ lateral / Supine)', is_completed: false },
+        { task: 'Bası yarası riskli bölgeleri (Sakrum, topuklar, skapula) kontrol et ve bariyer krem uygula', is_completed: false },
+        { task: 'Pozisyon saatini ve Braden skalası bası skoru derecesini hemşire gözlem formuna işle', is_completed: false }
+      ],
+      ikon: '💉',
+      renk: '#CCFBF1',
+      anomali_notu: 'Yatağa bağımlı ve immobil hastalarda bası yarasını önlemek için en geç 2 saatte bir düzenli pozisyon değişimi zorunludur.',
+      sesli_fisilti: 'İmmobil hasta için 2 saatlik periyodik dekübitus pozisyon alarmı kuruldu.'
+    };
+  }
+
+  if (lower.includes('nöbet devir') || lower.includes('nobet devir') || lower.includes('hasta devri') || lower.includes('sbar') || lower.includes('narkotik')) {
+    const handoffDate = new Date(baseDate);
+    handoffDate.setMinutes(handoffDate.getMinutes() - 45);
+
+    return {
+      baslik: 'SBAR Nöbet Devir-Teslim Föyü',
+      zaman: 'Nöbet Bitimine 45 Dk Kala',
+      tarih_iso: handoffDate.toISOString(),
+      action_items: [
+        { task: 'SBAR (Situation, Background, Assessment, Recommendation) hasta teslim föyünü hazırla', is_completed: false },
+        { task: 'Yeşil/kırmızı reçeteli narkotik ilaç dolabı fiziki sayımını yap ve çift imza ile teslim et', is_completed: false },
+        { task: 'Kritik laboratuvar sonuçlarını, vital trendleri ve açık orderları devralan ekibe aktar', is_completed: false }
+      ],
+      ikon: '💉',
+      renk: '#CCFBF1',
+      anomali_notu: 'Nöbet devrinde hasta güvenliği için SBAR standardı ve narkotik dolabı çift imza protokolü zorunludur.',
+      sesli_fisilti: 'Nöbet devir saatinden 45 dakika öncesine SBAR hasta teslim föyü hazırlığı alarmı kuruldu.'
+    };
+  }
+
+  if (lower.includes('order') || lower.includes('ilaç saati') || lower.includes('ilac saati') || lower.includes('5 doğru') || lower.includes('5 dogru') || lower.includes('tedavi')) {
+    return {
+      baslik: 'Klinik Order & İlaç Uygulaması',
+      zaman: 'Order Saati (5 Doğru Kuralı)',
+      tarih_iso: baseDate.toISOString(),
+      action_items: [
+        { task: '5 Doğru Kuralı Denetimi: Doğru hasta, doğru ilaç, doğru doz, doğru yol, doğru zaman kontrolü', is_completed: false },
+        { task: 'Uygulanan tedaviyi anında HBYS hemşire order ve gözlem defterine kaydet', is_completed: false },
+        { task: 'Hastanın vital bulgularını ve alerji öyküsünü doğrula', is_completed: false }
+      ],
+      ikon: '💉',
+      renk: '#CCFBF1',
+      anomali_notu: 'İlaç uygulamalarında 5 Doğru Kuralı ve order teyidi zorunlu emniyet basamağıdır.',
+      sesli_fisilti: '5 Doğru Kuralı denetimi ile order uygulama görevi oluşturuldu.'
+    };
+  }
+
+  // 3. ECZACI (PHARMACIST): 2-8°C Dolapları Sabah 09:00 / Akşam 18:00 Isı Logu, Ayın İlk Haftası Medula, Ay Sonu Miad Sayımı
+  if (lower.includes('eczac') || lower.includes('eczane') || lower.includes('soğuk zincir') || lower.includes('soguk zincir') || lower.includes('its') || lower.includes('medula') || lower.includes('miad') || lower.includes('aşı') || lower.includes('asi')) {
+    const isColdChain = lower.includes('soğuk zincir') || lower.includes('soguk zincir') || lower.includes('ısı') || lower.includes('isi') || lower.includes('buzdolabı') || lower.includes('2-8') || lower.includes('aşı');
+    
+    if (isColdChain) {
+      return {
+        baslik: 'Eczane Soğuk Zincir (2-8°C) Logu',
+        zaman: 'Sabah 09:00 & Akşam 18:00',
+        tarih_iso: baseDate.toISOString(),
+        action_items: [
+          { task: 'Sabah 09:00: Dijital termometre sıcaklık (2-8°C) ve nem değerini log defterine kaydet', is_completed: false },
+          { task: 'Akşam 18:00: Dijital termometre sıcaklık ve nem değerini log defterine kaydet', is_completed: false },
+          { task: 'Aşı ve biyolojik ürünlerin İTS karekod durumlarını doğrula', is_completed: false }
+        ],
+        ikon: '💊',
+        renk: '#FEE2E2',
+        anomali_notu: '2-8°C aralığı dışındaki sıcaklık sapmalarında soğuk zincir bozulmuş sayılarak ürünler derhal karantinaya alınmalıdır.',
+        sesli_fisilti: '2-8°C dolapları için sabah 09:00 ve akşam 18:00 ısı log kontrolü kuruldu.'
+      };
+    }
+
+    return {
+      baslik: 'Medula Reçete & Miad Kontrolü',
+      zaman: 'Ayın İlk Haftası / Ay Sonu',
+      tarih_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'Ayın ilk haftası: Medula reçete döküm özeti çıktısını al ve SGK teslim evraklarını hazırla', is_completed: false },
+        { task: 'Ay sonu: Miadı yaklaşan (3 ay kalan) ürünlerin fiziki sayımını yap ve depo iadesini başlat', is_completed: false },
+        { task: 'Renkli reçete sistemi (Uyuşturucu/Psikotrop) aylık bildirim mutabakatını tamamla', is_completed: false }
+      ],
+      ikon: '💊',
+      renk: '#FEE2E2',
+      anomali_notu: 'Medula reçete faturaları her ayın ilk haftasında SGK\'ya teslim edilmeli, miadı yaklaşan ürünler zamanında iade edilmelidir.',
+      sesli_fisilti: 'Ayın ilk haftası Medula reçete döküm teslimi ve ay sonu miad kontrol adımları oluşturuldu.'
+    };
+  }
+
+  // 4. DİŞ HEKİMİ (DENTIST): İmplant/Cerrahi 7. Gün Dikiş Alma & Otoklav Haftalık Biyolojik Spor / Günlük İndikatör
+  if (lower.includes('diş') || lower.includes('dis') || lower.includes('implant') || lower.includes('protez') || lower.includes('otoklav') || lower.includes('sterilizasyon') || lower.includes('dikiş') || lower.includes('dikis')) {
+    const isSterilization = lower.includes('otoklav') || lower.includes('sterilizasyon') || lower.includes('biyolojik spor') || lower.includes('indikatör') || lower.includes('indikator');
     
     if (isSterilization) {
       return {
-        baslik: 'Otoklav & Sterilizasyon Kontrolü',
-        zaman: 'Haftalık Rutin Kontrol',
+        baslik: 'Otoklav Spor Testi & Sterilizasyon',
+        zaman: 'Haftalık Spor Testi / Günlük İndikatör',
         tarih_iso: baseDate.toISOString(),
         action_items: [
-          { task: 'Haftalık biyolojik spor test tüpünü otoklav döngüsüne yerleştir ve inkübe et', is_completed: false },
-          { task: 'Rulo paketlerin kimyasal indikatör renk dönüşümünü doğrula', is_completed: false },
+          { task: 'Haftalık biyolojik spor test tüpünü otoklav döngüsüne yerleştir ve inkübatörde üreme kontrolü yap', is_completed: false },
+          { task: 'Günlük rulo paketleme indikatör şeritlerinin renk dönüşümünü onayla', is_completed: false },
           { task: 'Cihaz basınç/sıcaklık log çıktısını sterilizasyon takip defterine yapıştır', is_completed: false }
         ],
         ikon: '🦷',
         renk: '#EDE9FE',
-        anomali_notu: 'Biyolojik spor testi üreme gösterirse otoklav derhal kullanımdan çekilmeli ve bakım çağrılmalıdır.',
-        sesli_fisilti: 'Otoklav biyolojik spor testi ve paketleme indikatör kontrolü takvimlendi.'
+        anomali_notu: 'Otoklav biyolojik spor testinde üreme görülürse cihaz derhal kullanımdan çekilmeli ve tüm paketler yeniden steril edilmelidir.',
+        sesli_fisilti: 'Otoklav haftalık biyolojik spor testi ve günlük indikatör onay görevi oluşturuldu.'
       };
     }
 
@@ -938,176 +1240,28 @@ export function parseHealthcareClinicalNote(input: string, baseDate: Date): Noti
     stichDate.setDate(stichDate.getDate() + 7);
 
     return {
-      baslik: 'Dental Cerrahi & Protez Takibi',
-      zaman: '7 Gün Sonra (Dikiş Alma)',
+      baslik: 'Dental İmplant & Dikiş Alma',
+      zaman: '7 Gün Sonra (Dikiş & İyileşme)',
       tarih_iso: stichDate.toISOString(),
       action_items: [
-        { task: 'Cerrahi operasyon sonrası 7. günde dikiş alma ve yara yeri muayenesi', is_completed: false },
+        { task: 'Operasyonun 7. gününde dikiş alma ve yumuşak doku iyileşme kontrolü', is_completed: false },
         { task: 'Protez ölçü modelini laboratuvara gönder ve prova randevusu planla', is_completed: false },
-        { task: 'Post-op antibiyotik, klorheksidin gargara ve analjezik kullanımını kontrol et', is_completed: false }
+        { task: 'Post-op klorheksidin gargara ve ağız hijyen talimatlarını hastaya teyit et', is_completed: false }
       ],
       ikon: '🦷',
       renk: '#EDE9FE',
-      anomali_notu: 'İmplant cerrahisi sonrası ilk 7 gün kemik iyileşmesi ve enfeksiyon kontrolü açısından kritiktir.',
-      sesli_fisilti: '7 gün sonraki dikiş alma randevusu ve laboratuvar prova zinciri oluşturuldu.'
+      anomali_notu: 'İmplant cerrahisi sonrası ilk 7 gün kemik ve yumuşak doku primer iyileşmesi açısından kritiktir.',
+      sesli_fisilti: 'İmplant operasyonu sonrası 7. güne dikiş alma ve doku kontrol randevusu planlandı.'
     };
   }
 
-  // 2. ECZACI (PHARMACIST): Soğuk Zincir, İTS Karekod, Medula & Miad Takibi
-  if (lower.includes('eczac') || lower.includes('eczane') || lower.includes('soğuk zincir') || lower.includes('soguk zincir') || lower.includes('its') || lower.includes('medula') || lower.includes('miad')) {
-    const isColdChain = lower.includes('soğuk zincir') || lower.includes('soguk zincir') || lower.includes('ısı') || lower.includes('isi') || lower.includes('buzdolabı');
-    
-    if (isColdChain) {
-      return {
-        baslik: 'Eczane Soğuk Zincir (2-8°C) Takibi',
-        zaman: 'Sabah & Akşam Ölçümü',
-        tarih_iso: baseDate.toISOString(),
-        action_items: [
-          { task: 'Sabah dijital termometre sıcaklık (2-8°C) ve nem değerini kaydet', is_completed: false },
-          { task: 'Akşam dijital termometre sıcaklık ve nem değerini kaydet', is_completed: false },
-          { task: 'Aşı ve biyolojik ürünlerin İTS karekod durumlarını doğrula', is_completed: false }
-        ],
-        ikon: '💊',
-        renk: '#FEE2E2',
-        anomali_notu: '2-8°C aralığı dışındaki sıcaklık sapmalarında soğuk zincir bozulmuş sayılarak ürünler karantinaya alınmalıdır.',
-        sesli_fisilti: 'Eczane sabah/akşam soğuk zincir ve İTS karekod kayıt görevi hazırlandı.'
-      };
-    }
-
-    return {
-      baslik: 'Medula Reçete & Miad Kontrolü',
-      zaman: 'Ayın İlk Haftası / Rutin',
-      tarih_iso: baseDate.toISOString(),
-      action_items: [
-        { task: 'Medula döküm özeti çıktısını al ve SGK teslim evraklarını hazırla', is_completed: false },
-        { task: 'Son kullanma tarihi (Miad) 3 ay kalan ilaçların tespiti ve depo iadesi', is_completed: false },
-        { task: 'Renkli reçete (Uyuşturucu/Psikotrop) sistem mutabakatını tamamla', is_completed: false }
-      ],
-      ikon: '💊',
-      renk: '#FEE2E2',
-      anomali_notu: 'Medula reçete faturaları her ayın yasal teslim gününe kadar SGK Sağlık Sosyal Güvenlik Merkezine teslim edilmelidir.',
-      sesli_fisilti: 'Medula reçete döküm ve miad yaklaşan ilaç iade listesi oluşturuldu.'
-    };
-  }
-
-  // 3. DOKTOR (DOCTOR): Acil/Rutin Konsültasyon, Epikriz, Taburculuk & Pre-Op
-  if (lower.includes('konsültasyon') || lower.includes('konsultasyon') || lower.includes('epikriz') || lower.includes('taburcu') || lower.includes('taburculuk') || lower.includes('hekim') || lower.includes('doktor')) {
-    const isEmergency = lower.includes('acil konsültasyon') || lower.includes('acil konsultasyon') || lower.includes('stat kons');
-    
-    if (lower.includes('konsültasyon') || lower.includes('konsultasyon')) {
-      const consultTime = new Date(baseDate);
-      if (isEmergency) {
-        consultTime.setMinutes(consultTime.getMinutes() + 30);
-      } else {
-        consultTime.setHours(consultTime.getHours() + 24);
-      }
-
-      return {
-        baslik: isEmergency ? 'Acil Konsültasyon Yanıtı' : 'Rutin Konsültasyon Değerlendirmesi',
-        zaman: isEmergency ? '30 Dk İçinde (Acil)' : '24 Saat İçinde (Rutin)',
-        tarih_iso: consultTime.toISOString(),
-        action_items: [
-          { task: isEmergency ? '30 dakika içinde hastayı bizzat değerlendir ve konsültasyon notu düş' : '24 saat içinde klinik değerlendirme ve önerileri HBYS sistemine işle', is_completed: false },
-          { task: 'İsteyen birim hekimi ile sözlü iletişim kur ve tedavi revizyonunu planla', is_completed: false },
-          { task: 'Gerekli ek tetkik veya görüntüleme istemlerini gerçekleştir', is_completed: false }
-        ],
-        ikon: '🩺',
-        renk: '#E0F2FE',
-        anomali_notu: isEmergency ? 'Acil konsültasyonlar Sağlık Bakanlığı Kalite Standartları gereğince 30 dakika içinde yanıtlanmalıdır.' : 'Rutin konsültasyon yanıt süresi en fazla 24 saattir.',
-        sesli_fisilti: isEmergency ? 'Acil konsültasyon için 30 dakikalık geri sayım başlatıldı.' : 'Rutin konsültasyon değerlendirme adımları oluşturuldu.'
-      };
-    }
-
-    if (lower.includes('taburcu') || lower.includes('epikriz')) {
-      return {
-        baslik: 'Hasta Taburculuk & Epikriz Kapatma',
-        zaman: 'Taburculuk Saati',
-        tarih_iso: baseDate.toISOString(),
-        action_items: [
-          { task: 'Detaylı klinik epikriz raporunu HBYS üzerinde tamamla ve e-imzala', is_completed: false },
-          { task: 'Çıkış patoloji, laboratuvar ve radyoloji tetkik onaylarını kapat', is_completed: false },
-          { task: 'Taburculuk reçetesini ve evde bakım/kontrol önerilerini hastaya tebliğ et', is_completed: false }
-        ],
-        ikon: '🩺',
-        renk: '#E0F2FE',
-        anomali_notu: 'Tüm açık tetkikler ve HBYS epikriz raporu onaylanmadan hasta taburculuk işlemi sistemden kapatılamaz.',
-        sesli_fisilti: 'Taburculuk epikrizi ve tetkik kapama kontrol listesi hazırlandı.'
-      };
-    }
-  }
-
-  // 4. HEMŞİRE (NURSE): Dekübitus Pozisyon Değişimi, 5 Doğru Kuralı & SBAR Devir
-  if (lower.includes('dekübitus') || lower.includes('dekubitus') || lower.includes('pozisyon') || lower.includes('hemsire') || lower.includes('hemşire')) {
-    const posDate = new Date(baseDate);
-    posDate.setHours(posDate.getHours() + 2); // 2 saat sonra
-
-    return {
-      baslik: 'Dekübitus Pozisyon Değişimi & Cilt Bakımı',
-      zaman: '2 Saatte Bir Rutin',
-      tarih_iso: posDate.toISOString(),
-      action_items: [
-        { task: 'Hastanın vücut pozisyonunu değiştir (Sol/Sağ lateral veya Supine)', is_completed: false },
-        { task: 'Bası yarası riskli bölgeleri (Sakrum, topuklar) kontrol et ve nemlendir', is_completed: false },
-        { task: 'Pozisyon değişimini ve Braden skalası skorunu hemşire gözlem formuna işle', is_completed: false }
-      ],
-      ikon: '💉',
-      renk: '#CCFBF1',
-      anomali_notu: 'Yatağa bağımlı hastalarda bası yarasını önlemek için en geç 2 saatte bir düzenli pozisyon değişimi zorunludur.',
-      sesli_fisilti: '2 saatlik dekübitus pozisyon değişimi ve cilt takip sayacı kuruldu.'
-    };
-  }
-
-  // 5. Cerrahi & Pre-Op Protokolü
-  if (lower.includes('pre-op') || lower.includes('preop') || lower.includes('npo') || lower.includes('ameliyat') || lower.includes('cerrahi')) {
-    const npoDate = new Date(baseDate);
-    npoDate.setHours(npoDate.getHours() - 8);
-
-    return {
-      baslik: 'Pre-Op Hazırlık & Cerrahi Protokol',
-      zaman: 'Ameliyattan 8 Saat Önce (NPO)',
-      tarih_iso: npoDate.toISOString(),
-      action_items: [
-        { task: 'Ameliyat saatinden 8 saat önce mutlak açlık (NPO) başlatma', is_completed: false },
-        { task: 'Aydınlatılmış hasta onam belgesi kontrolü', is_completed: false },
-        { task: 'Pre-op anestezi konsültasyon notu', is_completed: false },
-        { task: 'Kan hazırlığı (Cross-match teyidi)', is_completed: false },
-        { task: 'Ameliyat bölgesi işaretleme ve premedikasyon', is_completed: false }
-      ],
-      ikon: '🩺',
-      renk: '#E0F2FE',
-      anomali_notu: 'Anestezi güvenliği için ameliyat saatinden en az 8 saat önce tüm oral alım (su dahil) kesilmelidir.',
-      sesli_fisilti: 'Pre-op cerrahi kontrol listesi ve 8 saatlik mutlak açlık uyarısı planlandı.'
-    };
-  }
-
-  // 6. Nöbet Devir-Teslim & Narkotik Sayımı (SBAR)
-  if (lower.includes('nöbet devir') || lower.includes('nobet devir') || lower.includes('hasta devri') || lower.includes('narkotik') || lower.includes('sbar')) {
-    const handoffDate = new Date(baseDate);
-    handoffDate.setMinutes(handoffDate.getMinutes() - 45);
-
-    return {
-      baslik: 'Klinik Nöbet Devir-Teslim (SBAR)',
-      zaman: 'Nöbet Bitimine 45 Dk Kala',
-      tarih_iso: handoffDate.toISOString(),
-      action_items: [
-        { task: 'Yeşil/kırmızı reçeteli narkotik ilaç dolabı sayımı ve çift imza', is_completed: false },
-        { task: 'Kritik yatakların sözlü/yazılı devri (SBAR)', is_completed: false },
-        { task: 'Eksik order ve teslim defteri imzaları', is_completed: false }
-      ],
-      ikon: '💉',
-      renk: '#CCFBF1',
-      anomali_notu: 'Narkotik kasa sayımı iki yetkili sağlık personeli tarafından fiziksel sayılıp çift imzayla teslim edilmelidir.',
-      sesli_fisilti: 'Nöbet bitimine 45 dakika kala SBAR devir ve narkotik sayım protokolü başlatılacak.'
-    };
-  }
-
-  // 7. Standart Klinik Tedavi & Order
+  // Standart fallback
   return {
     baslik: 'Klinik Order & Tedavi Takibi',
-    zaman: 'Order Zamanı',
+    zaman: 'Order Saati',
     tarih_iso: baseDate.toISOString(),
     action_items: [
-      { task: 'Doğru hasta - doğru ilaç - doğru doz - doğru yol kontrolü (5 Doğru Kuralı)', is_completed: false },
+      { task: '5 Doğru Kuralı Denetimi: Doğru hasta, doğru ilaç, doğru doz, doğru yol, doğru zaman', is_completed: false },
       { task: 'İlaç uygulama kayıtlarının HBYS/order defterine işlenmesi', is_completed: false },
       { task: 'Hastanın vital bulgularını ve alerji öyküsünü doğrula', is_completed: false }
     ],
@@ -2584,6 +2738,11 @@ export function extractSimpleNoteFromText(
     if (activeDomain === 'HUKUK') {
       const legalResult = parseLegalNote(cleanInput, baseDate);
       if (legalResult) return enrichWithPredictiveGraph(legalResult, cleanInput);
+    } else if (activeDomain === 'FINANS' || activeDomain === 'MALIYE') {
+      const finResult = parseLegalNote(cleanInput, baseDate);
+      if (finResult) return enrichWithPredictiveGraph(finResult, cleanInput);
+      const tradeResult = parseTradesmanLocalShopNote(cleanInput, baseDate);
+      if (tradeResult) return enrichWithPredictiveGraph(tradeResult, cleanInput);
     } else if (activeDomain === 'OGRENCI') {
       const domainRuleResult = dispatchDomainRule('OGRENCI', cleanInput, zaman, tarih_iso);
       if (domainRuleResult) return enrichWithPredictiveGraph(domainRuleResult, cleanInput);
@@ -2606,6 +2765,8 @@ export function extractSimpleNoteFromText(
       const corpResult = parseCorporateOfficePersonalCareNote(cleanInput, baseDate);
       if (corpResult) return enrichWithPredictiveGraph(corpResult, cleanInput);
     } else if (activeDomain === 'SAGLIK' || activeDomain === 'EMEKLİ' || (activeDomain as string) === 'EMEKLILIK') {
+      const domainRuleResult = dispatchDomainRule('SAGLIK', cleanInput, zaman, tarih_iso);
+      if (domainRuleResult) return enrichWithPredictiveGraph(domainRuleResult, cleanInput);
       const clinicalResult = parseHealthcareClinicalNote(cleanInput, baseDate);
       if (clinicalResult) return enrichWithPredictiveGraph(clinicalResult, cleanInput);
       const multiMedResult = parseMultiMedicationNote(cleanInput, baseDate);

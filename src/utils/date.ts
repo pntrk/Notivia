@@ -286,3 +286,95 @@ export function calculateOffsetIso(targetIso: string | null | undefined, offsetD
   }
 }
 
+// Hafta sonu kontrolü ve ilk iş gününe öteleme (HMK md. 93)
+export function rollToNextBusinessDay(date: Date): { finalDate: Date; isRolled: boolean } {
+  const result = new Date(date.getTime());
+  const day = result.getDay();
+
+  if (day === 6) { // Cumartesi -> Pazartesi
+    result.setDate(result.getDate() + 2);
+    return { finalDate: result, isRolled: true };
+  } else if (day === 0) { // Pazar -> Pazartesi
+    result.setDate(result.getDate() + 1);
+    return { finalDate: result, isRolled: true };
+  }
+  return { finalDate: result, isRolled: false };
+}
+
+// Tebligat Kanunu 7/a uyarınca UETS tebliğ ve kesin süre hesabı
+export interface UetsCalculationResult {
+  uetsUlasmaTarihi: string;       // Sisteme düştüğü tarih
+  tebligSayilmaTarihi: string;     // 5 gün sonra tebliğ sayıldığı an
+  sureBaslangicTarihi: string;     // Yasal sürenin fiilen işlemeye başladığı gün
+  yasalSonGun: string;            // Hafta sonu kaydırılmış nihai son işlem tarihi
+  kalanGun: number;
+  anomaliUyarisi: string;
+}
+
+export function calculateUetsDeadline(
+  arrivalDateIso: string,
+  legalDurationDays: number = 14 // Örn: İstinaf 14 gün, itiraz 7 gün
+): UetsCalculationResult {
+  const arrival = new Date(arrivalDateIso);
+
+  // 1. Tebligat Kanunu 7/a: Ulaştığı tarihi izleyen 5. günün sonu
+  const tebligSayilma = new Date(arrival.getTime());
+  tebligSayilma.setDate(tebligSayilma.getDate() + 5);
+  tebligSayilma.setHours(23, 59, 59, 999);
+
+  // 2. Süre tebliğ sayılmayı izleyen gün başlar
+  const sureBaslangic = new Date(tebligSayilma.getTime());
+  sureBaslangic.setDate(sureBaslangic.getDate() + 1);
+  sureBaslangic.setHours(0, 0, 0, 0);
+
+  // 3. Yasal süreyi ekle
+  const rawDeadline = new Date(sureBaslangic.getTime());
+  rawDeadline.setDate(rawDeadline.getDate() + (legalDurationDays - 1));
+  rawDeadline.setHours(23, 59, 0, 0);
+
+  // 4. Hafta sonu çakışma kontrolü
+  const { finalDate: finalDeadline, isRolled } = rollToNextBusinessDay(rawDeadline);
+
+  const today = new Date();
+  const diffMs = finalDeadline.getTime() - today.getTime();
+  const kalanGun = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const formatDate = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+  let anomali = `Tebligat Kanunu 7/a gereği 5 günlük bekleme süresi işletilmiştir. Süre ${formatDate(sureBaslangic)} tarihinde başlar.`;
+  if (isRolled) {
+    anomali += ' Son gün hafta sonuna denk geldiği için HMK Md. 93 uyarınca ilk iş günü Pazartesi 23:59\'a uzatılmıştır.';
+  }
+
+  return {
+    uetsUlasmaTarihi: formatDate(arrival),
+    tebligSayilmaTarihi: formatDate(tebligSayilma),
+    sureBaslangicTarihi: formatDate(sureBaslangic),
+    yasalSonGun: formatDate(finalDeadline),
+    kalanGun,
+    anomaliUyarisi: anomali
+  };
+}
+
+// Aylık SMMM Vergi Takvimi Üretici (Ayın 26'sı ve Ay Sonu)
+export function getTaxCalendarDeadlines(year: number, monthZeroBased: number) {
+  // Ayın 26'sı (KDV-1, KDV-2, MUHSGK)
+  const kdvDate = new Date(year, monthZeroBased, 26, 23, 59, 0);
+  const { finalDate: finalKdv, isRolled: isKdvRolled } = rollToNextBusinessDay(kdvDate);
+
+  // Ayın son günü (SGK Primleri & e-Defter Beratı)
+  const lastDayOfMonth = new Date(year, monthZeroBased + 1, 0, 23, 59, 0);
+  const { finalDate: finalSgk, isRolled: isSgkRolled } = rollToNextBusinessDay(lastDayOfMonth);
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+  return {
+    kdvDeadlineIso: fmt(finalKdv),
+    isKdvRolled,
+    sgkDeadlineIso: fmt(finalSgk),
+    isSgkRolled
+  };
+}
+

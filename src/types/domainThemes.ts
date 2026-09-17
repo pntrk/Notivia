@@ -79,38 +79,41 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
     btnPrimaryBg: 'bg-indigo-600 hover:bg-indigo-700',
     btnPrimaryText: 'text-white',
     actions: [
-      { id: 'uyap', label: 'UYAP Taslağı', icon: '⚖️', actionType: 'COPY_TEMPLATE' },
-      { id: 'client_msg', label: 'Müvekkile Bildir', icon: '💬', actionType: 'WHATSAPP' }
+      { id: 'uets_calc', label: 'UETS 7/a Süre Hesabı', icon: '⚖️', actionType: 'COPY_TEMPLATE' },
+      { id: 'mazeret_draft', label: 'Mazeret Dilekçesi', icon: '📄', actionType: 'COPY_TEMPLATE' },
+      { id: 'court_nav', label: 'Adliye / Duruşma', icon: '🏛️', actionType: 'NAVIGATE' }
     ]
   },
 
   FINANS: {
     domain: 'FINANS',
-    displayName: 'Mali Müşavir & Finans',
+    displayName: 'Mali Müşavir & SMMM',
     bgCard: 'bg-emerald-50/70 border-emerald-200',
     borderAccent: 'border-l-emerald-600',
     badgeBg: 'bg-emerald-100',
     badgeText: 'text-emerald-900',
-    btnPrimaryBg: 'bg-emerald-700 hover:bg-emerald-800',
+    btnPrimaryBg: 'bg-emerald-600 hover:bg-emerald-700',
     btnPrimaryText: 'text-white',
     actions: [
-      { id: 'kdv_alert', label: "26'sı KDV/MUHSGK Takvimi", icon: '📊', actionType: 'TIMER' },
-      { id: 'sgk_defter', label: 'SGK & Berat Kontrolü', icon: '📁', actionType: 'COPY_TEMPLATE' }
+      { id: 'kdv_counter', label: "26'sı KDV Sayacı", icon: '📊', actionType: 'TIMER' },
+      { id: 'sgk_end', label: 'Ay Sonu SGK & Berat', icon: '📑', actionType: 'TIMER' },
+      { id: 'request_docs', label: 'Evrak İsteme Şablonu', icon: '💬', actionType: 'WHATSAPP' }
     ]
   },
 
   SAGLIK: {
     domain: 'SAGLIK',
-    displayName: 'Klinik & Sağlık',
-    bgCard: 'bg-cyan-50/70 border-cyan-200',
-    borderAccent: 'border-l-cyan-600',
-    badgeBg: 'bg-cyan-100',
-    badgeText: 'text-cyan-800',
-    btnPrimaryBg: 'bg-cyan-700 hover:bg-cyan-800',
+    displayName: 'Sağlık, Klinik & Tıp',
+    bgCard: 'bg-teal-50/70 border-teal-200',
+    borderAccent: 'border-l-teal-600',
+    badgeBg: 'bg-teal-100',
+    badgeText: 'text-teal-900',
+    btnPrimaryBg: 'bg-teal-600 hover:bg-teal-700',
     btnPrimaryText: 'text-white',
     actions: [
-      { id: 'sbar', label: 'SBAR Teslim Notu', icon: '📋', actionType: 'COPY_TEMPLATE' },
-      { id: 'timer_check', label: 'Dekübitus Sayacı', icon: '⏱️', actionType: 'TIMER' }
+      { id: 'urgent_consult', label: '30 Dk Acil Konsültasyon', icon: '🚨', actionType: 'TIMER' },
+      { id: 'sbar_handover', label: 'SBAR Nöbet Devri', icon: '📋', actionType: 'COPY_TEMPLATE' },
+      { id: 'cold_chain', label: '2-8°C Soğuk Zincir', icon: '❄️', actionType: 'LOTO_CHECK' }
     ]
   },
 
