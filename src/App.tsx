@@ -1056,7 +1056,7 @@ export default function App() {
 
     setStatusText(actionItems.length > 0 ? `${actionItems.length} görev eklendi ✓` : 'Not eklendi ✓');
 
-    // Manuel / klavye girişleri doğrudan olduğu gibi kaydedilir
+    // Manuel / klavye girişleri doğrudan olduğu gibi kaydedilir (hiçbir yapay zeka veya senaryo müdahalesi yapılmaz)
     await addNote({
       baslik: noteTitle,
       zaman: null,
@@ -1067,7 +1067,8 @@ export default function App() {
       action_items: actionItems,
       eksik_bilgi: false,
       anomali_notu: null,
-      sesli_fisilti: actionItems.length > 0 ? `${actionItems.length} maddelik görev listesi kaydedildi.` : 'Notunuz kaydedildi.'
+      sesli_fisilti: actionItems.length > 0 ? `${actionItems.length} maddelik görev listesi kaydedildi.` : 'Notunuz kaydedildi.',
+      isManualEntry: true,
     });
 
     setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2000);
@@ -1257,36 +1258,39 @@ export default function App() {
       aralik_gun?: number;
       bir_sonraki_tarih_iso?: string;
     } | null;
+    isManualEntry?: boolean;
   }) => {
-    // Check reactive triggers against existing cards
-    const triggeredCards = checkReactiveTriggers(noteData.baslik + ' ' + (noteData.zaman || ''), cards);
-    if (triggeredCards.length > 0) {
-      const relatedNames = triggeredCards.map((c) => c.baslik).join(', ');
-      noteData.baglantili_hatirlatma = `Hazır buradayken: ${relatedNames}`;
-    }
+    if (!noteData.isManualEntry) {
+      // Check reactive triggers against existing cards
+      const triggeredCards = checkReactiveTriggers(noteData.baslik + ' ' + (noteData.zaman || ''), cards);
+      if (triggeredCards.length > 0) {
+        const relatedNames = triggeredCards.map((c) => c.baslik).join(', ');
+        noteData.baglantili_hatirlatma = `Hazır buradayken: ${relatedNames}`;
+      }
 
-    // Episodic Memory (Geçmiş Örüntüleri ve Bakiye Mahsuplaşması) kontrolü
-    const episodicResult = checkEpisodicMemory(noteData, cards);
-    if (episodicResult.newCardUpdates) {
-      noteData = { ...noteData, ...episodicResult.newCardUpdates };
-    }
+      // Episodic Memory (Geçmiş Örüntüleri ve Bakiye Mahsuplaşması) kontrolü
+      const episodicResult = checkEpisodicMemory(noteData, cards);
+      if (episodicResult.newCardUpdates) {
+        noteData = { ...noteData, ...episodicResult.newCardUpdates };
+      }
 
-    if (episodicResult.pastCardUpdates.length > 0) {
-      // Geçmiş kartları bellekte güncelle
-      setCards(prevCards => {
-        const nextCards = [...prevCards];
-        for (const update of episodicResult.pastCardUpdates) {
-          const idx = nextCards.findIndex(c => c.id === update.id);
-          if (idx !== -1) {
-            nextCards[idx] = { ...nextCards[idx], ...update.changes };
+      if (episodicResult.pastCardUpdates.length > 0) {
+        // Geçmiş kartları bellekte güncelle
+        setCards(prevCards => {
+          const nextCards = [...prevCards];
+          for (const update of episodicResult.pastCardUpdates) {
+            const idx = nextCards.findIndex(c => c.id === update.id);
+            if (idx !== -1) {
+              nextCards[idx] = { ...nextCards[idx], ...update.changes };
+            }
           }
-        }
-        return nextCards;
-      });
+          return nextCards;
+        });
 
-      // Firebase / LocalStorage yansıt
-      for (const update of episodicResult.pastCardUpdates) {
-        updateNoteTitle(update.id, update.changes.baslik || '', null, update.changes.ikon || '📌');
+        // Firebase / LocalStorage yansıt
+        for (const update of episodicResult.pastCardUpdates) {
+          updateNoteTitle(update.id, update.changes.baslik || '', null, update.changes.ikon || '📌');
+        }
       }
     }
 
@@ -2101,6 +2105,7 @@ export default function App() {
       if (token) {
         setGoogleAccessToken(token);
         console.log("Mevcut Google Token başarıyla alındı:", token);
+        await syncFromDrive();
       }
       setStatusText('Google hesabı bağlandı ✓');
       setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
@@ -3437,6 +3442,9 @@ export default function App() {
         onRemindTodayTasks={handleRemindTodayTasks}
         workDomain={workDomain}
         onSelectWorkDomain={handleSelectWorkDomain}
+        onSyncDrive={syncFromDrive}
+        isSyncingDrive={isSyncingDrive}
+        driveSyncTime={driveSyncTime}
       />
     </div>
   );

@@ -67,12 +67,15 @@ export const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('https://www.googleapis.com/auth/drive.file');
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-// Token management (in-memory + sessionStorage as requested)
+// Token management (in-memory + localStorage + sessionStorage for persistent Google Drive sync)
 const TOKEN_KEY = 'notivia_g_token';
 let cachedAccessToken: string | null = null;
 export let googleAccessToken: string | null = null;
 try {
-  cachedAccessToken = sessionStorage.getItem(TOKEN_KEY) || null;
+  cachedAccessToken =
+    (typeof localStorage !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null) ||
+    (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(TOKEN_KEY) : null) ||
+    null;
   googleAccessToken = cachedAccessToken;
   if (typeof window !== 'undefined') {
     (window as any).googleAccessToken = googleAccessToken;
@@ -89,9 +92,11 @@ export function setGoogleAccessToken(token: string | null) {
   }
   try {
     if (token) {
+      localStorage.setItem(TOKEN_KEY, token);
       sessionStorage.setItem(TOKEN_KEY, token);
-      console.log("Mevcut Google Token:", token);
+      console.log("Mevcut Google Token kaydedildi:", token);
     } else {
+      localStorage.removeItem(TOKEN_KEY);
       sessionStorage.removeItem(TOKEN_KEY);
     }
   } catch {
@@ -103,7 +108,10 @@ export function getGoogleAccessToken(): string | null {
   if (googleAccessToken) return googleAccessToken;
   if (cachedAccessToken) return cachedAccessToken;
   try {
-    const stored = sessionStorage.getItem(TOKEN_KEY) || null;
+    const stored =
+      (typeof localStorage !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null) ||
+      (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(TOKEN_KEY) : null) ||
+      null;
     if (stored) {
       googleAccessToken = stored;
       cachedAccessToken = stored;

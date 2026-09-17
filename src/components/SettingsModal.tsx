@@ -22,6 +22,9 @@ interface SettingsModalProps {
   onRemindTodayTasks?: () => void;
   workDomain?: ProfessionDomain;
   onSelectWorkDomain?: (domain: ProfessionDomain) => void;
+  onSyncDrive?: () => void;
+  isSyncingDrive?: boolean;
+  driveSyncTime?: string | null;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -41,6 +44,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onRemindTodayTasks,
   workDomain = 'GENEL',
   onSelectWorkDomain,
+  onSyncDrive,
+  isSyncingDrive,
+  driveSyncTime,
 }) => {
   if (!isOpen) return null;
 
@@ -96,62 +102,99 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* Ana Ayar Listesi (Modern Uncluttered Grouped Card) */}
         <div className="space-y-3.5 sm:space-y-4">
-          {/* 1. Profil & Google Giriş Bölümü */}
+          {/* 1. Profil & Google Giriş & Drive Senkronizasyon Bölümü */}
           <div className={`p-3.5 rounded-xl border transition-colors ${
             isDark ? 'bg-stone-850/80 border-stone-800' : 'bg-stone-50/70 border-stone-200/80'
           }`}>
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col gap-3">
               {activeUser ? (
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <img
-                      src={
-                        activeUser.photoURL ||
-                        `https://api.dicebear.com/7.x/identicon/svg?seed=${activeUser.uid}`
-                      }
-                      alt="User Avatar"
-                      className="w-10 h-10 rounded-full object-cover border border-stone-300 dark:border-stone-700 shrink-0"
-                    />
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <p className="font-semibold text-xs truncate leading-snug">
-                          {activeUser.displayName || 'Kullanıcı'}
+                <>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <img
+                        src={
+                          activeUser.photoURL ||
+                          `https://api.dicebear.com/7.x/identicon/svg?seed=${activeUser.uid}`
+                        }
+                        alt="User Avatar"
+                        className="w-10 h-10 rounded-full object-cover border border-stone-300 dark:border-stone-700 shrink-0"
+                      />
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-semibold text-xs truncate leading-snug">
+                            {activeUser.displayName || 'Kullanıcı'}
+                          </p>
+                          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Aktif Google Hesabı" />
+                        </div>
+                        <p className="text-[11px] text-stone-500 dark:text-stone-400 truncate">
+                          {activeUser.email || 'Google Hesabı'}
                         </p>
-                        <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 shrink-0" title="Aktif Google Hesabı" />
                       </div>
-                      <p className="text-[11px] text-stone-500 dark:text-stone-400 truncate">
-                        {activeUser.email || 'Google Hesabı'}
-                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onLogin();
+                        }}
+                        title="Google oturumunu ve Drive erişim yetkisini yenile"
+                        className="px-3 py-2 sm:py-1.5 text-xs font-medium rounded-lg bg-stone-200 dark:bg-stone-750 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 transition-colors cursor-pointer flex items-center gap-1.5 min-h-[36px] sm:min-h-0 active:scale-95"
+                      >
+                        <span>🔄</span>
+                        <span>{language === 'tr' ? 'Yetkiyi Yenile' : 'Re-auth'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSignOut();
+                          onClose();
+                        }}
+                        className="px-3 py-2 sm:py-1.5 text-xs font-medium rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-colors cursor-pointer flex items-center gap-1.5 min-h-[36px] sm:min-h-0 active:scale-95"
+                      >
+                        <span>🚪</span>
+                        <span>{t.signOut}</span>
+                      </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onLogin();
-                        onClose();
-                      }}
-                      title="Google oturumunu ve Drive erişim yetkisini yenile"
-                      className="px-3 py-2 sm:py-1.5 text-xs font-medium rounded-lg bg-stone-200 dark:bg-stone-750 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 transition-colors cursor-pointer flex items-center gap-1.5 min-h-[36px] sm:min-h-0 active:scale-95"
-                    >
-                      <span>🔄</span>
-                      <span>{language === 'tr' ? 'Yenile' : 'Refresh'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onSignOut();
-                        onClose();
-                      }}
-                      className="px-3 py-2 sm:py-1.5 text-xs font-medium rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-colors cursor-pointer flex items-center gap-1.5 min-h-[36px] sm:min-h-0 active:scale-95"
-                    >
-                      <span>🚪</span>
-                      <span>{t.signOut}</span>
-                    </button>
+
+                  {/* Google Drive Senkronizasyon Durumu ve Manuel Tetikleme */}
+                  <div className="pt-2.5 mt-1 border-t border-stone-200/80 dark:border-stone-800 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm shrink-0">💾</span>
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">
+                          {language === 'tr' ? 'Google Drive Yedekleme' : 'Google Drive Backup'}
+                        </p>
+                        <p className="text-[10px] text-stone-500 dark:text-stone-400 truncate">
+                          {driveSyncTime
+                            ? (language === 'tr' ? `Son eşitleme: ${driveSyncTime}` : `Last synced: ${driveSyncTime}`)
+                            : (language === 'tr' ? 'Eşitlenmeyi bekliyor' : 'Awaiting sync')}
+                        </p>
+                      </div>
+                    </div>
+                    {onSyncDrive && (
+                      <button
+                        type="button"
+                        onClick={onSyncDrive}
+                        disabled={isSyncingDrive}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 active:scale-95 ${
+                          isSyncingDrive
+                            ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 animate-pulse'
+                            : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs'
+                        }`}
+                      >
+                        <span>{isSyncingDrive ? '⏳' : '⚡'}</span>
+                        <span>
+                          {isSyncingDrive
+                            ? (language === 'tr' ? 'Yükleniyor...' : 'Syncing...')
+                            : (language === 'tr' ? "Drive'ı Eşitle" : 'Sync Drive')}
+                        </span>
+                      </button>
+                    )}
                   </div>
-                </div>
+                </>
               ) : (
-                <>
+                <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="w-9 h-9 rounded-full bg-stone-200 dark:bg-stone-800 flex items-center justify-center text-sm shrink-0">
                       👤
@@ -193,7 +236,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </svg>
                     <span>{t.signInWithGoogle}</span>
                   </button>
-                </>
+                </div>
               )}
             </div>
           </div>

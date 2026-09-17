@@ -15,7 +15,8 @@ import {
   Repeat,
   AlertCircle,
 } from 'lucide-react';
-import type { SimpleCardItem } from '../App.tsx';
+import type { Language } from '../utils/i18n';
+import type { SimpleCardItem } from '../App';
 import {
   exportToDeviceCalendar,
   getGoogleCalendarWebUrl,
@@ -24,9 +25,9 @@ import {
   showSystemNotification,
   scheduleLocalDeviceReminder,
   cancelScheduledReminder,
-} from '../utils/deviceCalendar.ts';
-import { alarmSound } from '../services/alarmSound.ts';
-import { createCalendarEvent, updateCalendarEventTitle } from '../firebase.ts';
+} from '../utils/deviceCalendar';
+import { alarmSound } from '../services/alarmSound';
+import { createCalendarEvent, updateCalendarEventTitle } from '../firebase';
 
 interface CardReminderEditorProps {
   note: SimpleCardItem;
@@ -39,7 +40,7 @@ interface CardReminderEditorProps {
     enableNotification?: boolean,
     periyodik?: { tip: string; aralik_gun?: number } | null
   ) => Promise<void> | void;
-  language?: 'tr' | 'en';
+  language?: Language;
 }
 
 function toLocalDatetimeString(date: Date): string {
@@ -52,7 +53,7 @@ function toLocalDatetimeString(date: Date): string {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
-function formatTurkishFriendlyDate(date: Date, lang: 'tr' | 'en' = 'tr'): string {
+function formatTurkishFriendlyDate(date: Date, lang: string = 'tr'): string {
   const monthsTr = [
     'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
     'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
@@ -64,7 +65,7 @@ function formatTurkishFriendlyDate(date: Date, lang: 'tr' | 'en' = 'tr'): string
   const pad = (n: number) => String(n).padStart(2, '0');
 
   const day = date.getDate();
-  const month = lang === 'tr' ? monthsTr[date.getMonth()] : monthsEn[date.getMonth()];
+  const month = lang === 'en' ? monthsEn[date.getMonth()] : monthsTr[date.getMonth()];
   const hours = pad(date.getHours());
   const minutes = pad(date.getMinutes());
 
@@ -83,10 +84,10 @@ function formatTurkishFriendlyDate(date: Date, lang: 'tr' | 'en' = 'tr'): string
     date.getFullYear() === tomorrow.getFullYear();
 
   if (isToday) {
-    return lang === 'tr' ? `Bugün ${hours}:${minutes}` : `Today at ${hours}:${minutes}`;
+    return lang === 'en' ? `Today at ${hours}:${minutes}` : `Bugün ${hours}:${minutes}`;
   }
   if (isTomorrow) {
-    return lang === 'tr' ? `Yarın ${hours}:${minutes}` : `Tomorrow at ${hours}:${minutes}`;
+    return lang === 'en' ? `Tomorrow at ${hours}:${minutes}` : `Yarın ${hours}:${minutes}`;
   }
 
   return `${day} ${month}, ${hours}:${minutes}`;
