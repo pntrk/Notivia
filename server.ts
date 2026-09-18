@@ -1,9 +1,13 @@
+// server.ts
 import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { parseWithGemini, parseSimpleWithGemini, parseWithAIAndImage } from './src/server/geminiParser.ts';
+import { parseSimpleWithGemini, parseWithAIAndImage } from './src/server/geminiParser.ts';
 import { dispatchWithGemini } from './src/server/dispatcherAgent.ts';
+import { splitCompoundUtterance, evaluateConfidence } from './src/services/engine/PersonalCognitiveOrchestrator.ts';
+import { sanitizeSpokenText } from './src/utils/speechSanitizer.ts';
+import { detectDomainFromJargon } from './src/utils/jargonRadar.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,135 +17,190 @@ const PORT = 3000;
 
 app.use(express.json({ limit: '15mb' }));
 
-// Health endpoint
 app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
-    engine: 'Notivia Cognitive Parser',
+    engine: 'Notivia Cognitive Parser v2.5',
     has_api_key: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY'),
   });
 });
 
-// Simple 5-field parsing endpoint matching exact user prompt (with image support)
+// Çoklu Cümle Destekli Ayrıştırma Endpoint'i
 app.post('/api/parse-simple', async (req, res) => {
   try {
-    const { input, text, current_datetime, base64Image, image, past_notes, gecmis_notlar, history, userDomain, preferredDomain, domain } = req.body;
-    const cleanInput = String(input || text || '').trim();
+    const { input, text, current_datetime, base64Image, image, past_notes, userDomain, preferredDomain, domain } = req.body;
+    const rawInput = String(input || text || '').trim();
+    const cleanInput = sanitizeSpokenText(rawInput) || rawInput;
     const now = String(current_datetime || new Date().toISOString());
     const media = base64Image || image || null;
-    const past = Array.isArray(past_notes) ? past_notes : Array.isArray(gecmis_notlar) ? gecmis_notlar : Array.isArray(history) ? history : [];
-    const activeDomain = userDomain || preferredDomain || domain || undefined;
+    const past = Array.isArray(past_notes) ? past_notes : [];
+    const requestedDomain = userDomain || preferredDomain || domain || 'GENEL';
 
     if (!cleanInput && !media) {
-      return res.status(400).json({
-        success: false,
-        error: 'Kullanıcı girdisi veya görsel boş olamaz.',
+      return res.status(400).json({ success: false, error: 'Girdi veya görsel boş olamaz.' });
+    }
+
+    // 0 MS JARGON RADARI ÇALIŞTIRILIYOR
+    const radar = detectDomainFromJargon(cleanInput, requestedDomain);
+    const activeDomain = (radar.confidence >= 0.4 && radar.detectedDomain !== 'GENEL')
+      ? radar.detectedDomain
+      : requestedDomain;
+
+    // Görsel varsa tekil analiz et
+    if (media) {
+      const singleResult = await parseWithAIAndImage(cleanInput, media, now, past, activeDomain);
+      if (!singleResult.tarih_iso && radar.implicitHour !== undefined) {
+        const d = new Date(now);
+        d.setHours(radar.implicitHour, radar.implicitMinute || 0, 0, 0);
+        singleResult.tarih_iso = d.toISOString();
+      }
+
+      const enhancedData = {
+        ...singleResult,
+        ikon: singleResult.ikon || radar.suggestedIcon,
+        renk: singleResult.renk || radar.suggestedColor,
+      };
+
+      return res.json({
+        success: true,
+        is_compound: false,
+        data: enhancedData,
+        items: [enhancedData],
+        radarMeta: radar,
       });
     }
 
-    const simple = await parseWithAIAndImage(cleanInput, media, now, past, activeDomain);
+    // Bileşik cümle parçalayıcıyı çalıştır
+    const segments = splitCompoundUtterance(cleanInput);
+
+    if (segments.length <= 1) {
+      const single = await parseWithAIAndImage(cleanInput, null, now, past, activeDomain);
+
+      // Eğer radarda örtük saat kancası varsa ve LLM saat bulamadıysa radardan besle
+      if (!single.tarih_iso && radar.implicitHour !== undefined) {
+        const d = new Date(now);
+        d.setHours(radar.implicitHour, radar.implicitMinute || 0, 0, 0);
+        single.tarih_iso = d.toISOString();
+      }
+
+      const enhancedData = {
+        ...single,
+        ikon: single.ikon || radar.suggestedIcon,
+        renk: single.renk || radar.suggestedColor,
+      };
+
+      return res.json({
+        success: true,
+        is_compound: false,
+        data: enhancedData,
+        items: [enhancedData],
+        radarMeta: radar,
+      });
+    }
+
+    // Birden fazla eylem varsa paralel çöz
+    const parsedItems = await Promise.all(
+      segments.map(async (seg) => {
+        const segRadar = detectDomainFromJargon(seg, activeDomain);
+        const segDomain = (segRadar.confidence >= 0.4 && segRadar.detectedDomain !== 'GENEL')
+          ? segRadar.detectedDomain
+          : activeDomain;
+
+        const item = await parseWithAIAndImage(seg, null, now, past, segDomain);
+
+        if (!item.tarih_iso && segRadar.implicitHour !== undefined) {
+          const d = new Date(now);
+          d.setHours(segRadar.implicitHour, segRadar.implicitMinute || 0, 0, 0);
+          item.tarih_iso = d.toISOString();
+        }
+
+        const confidence = evaluateConfidence(item as any, seg);
+        return {
+          ...item,
+          ikon: item.ikon || segRadar.suggestedIcon,
+          renk: item.renk || segRadar.suggestedColor,
+          confidence,
+          radarMeta: segRadar,
+        };
+      })
+    );
+
     return res.json({
       success: true,
-      data: simple,
+      is_compound: true,
+      count: parsedItems.length,
+      data: parsedItems[0],
+      items: parsedItems,
+      radarMeta: radar,
     });
   } catch (error: any) {
-    console.error('[Notivia Simple Parse Error]:', error);
-    return res.status(500).json({
-      success: false,
-      error: error?.message || 'Ayrıştırma hatası.',
-    });
+    console.error('[Notivia Parse Error]:', error);
+    return res.status(500).json({ success: false, error: error?.message || 'Ayrıştırma hatası.' });
   }
 });
 
-// Autonomous Dispatcher Agent Endpoint (Function Calling: get_calendar_events, create_note_or_event, draft_message)
+// Otonom Ajan Yönlendirici (Çoklu Ajan Destekli)
 app.post('/api/dispatch', async (req, res) => {
   try {
     const { input, current_datetime, userDomain, preferredDomain, domain } = req.body;
-    const cleanInput = String(input || '').trim();
+    const rawInput = String(input || '').trim();
+    const cleanInput = sanitizeSpokenText(rawInput) || rawInput;
     const now = String(current_datetime || new Date().toISOString());
-    const activeDomain = userDomain || preferredDomain || domain || undefined;
+    const requestedDomain = userDomain || preferredDomain || domain || 'GENEL';
 
     if (!cleanInput) {
-      return res.status(400).json({
-        success: false,
-        error: 'Girdi metni boş olamaz.',
+      return res.status(400).json({ success: false, error: 'Girdi boş olamaz.' });
+    }
+
+    // 0 MS JARGON RADARI ÇALIŞTIRILIYOR
+    const radar = detectDomainFromJargon(cleanInput, requestedDomain);
+    const activeDomain = (radar.confidence >= 0.4 && radar.detectedDomain !== 'GENEL')
+      ? radar.detectedDomain
+      : requestedDomain;
+
+    const segments = splitCompoundUtterance(cleanInput);
+
+    // Tekil ise doğrudan ajana gönder
+    if (segments.length <= 1) {
+      const singleResult = await dispatchWithGemini(cleanInput, now, activeDomain);
+      return res.json({
+        success: true,
+        is_compound: false,
+        data: singleResult,
+        items: [singleResult],
+        radarMeta: radar,
       });
     }
 
-    const result = await dispatchWithGemini(cleanInput, now, activeDomain);
+    // Çoklu niyet varsa her segmente ayrı karar ver
+    const dispatchedList = await Promise.all(
+      segments.map(async (seg) => {
+        const segRadar = detectDomainFromJargon(seg, activeDomain);
+        const segDomain = (segRadar.confidence >= 0.4 && segRadar.detectedDomain !== 'GENEL')
+          ? segRadar.detectedDomain
+          : activeDomain;
+        const resObj = await dispatchWithGemini(seg, now, segDomain);
+        return {
+          ...resObj,
+          radarMeta: segRadar,
+        };
+      })
+    );
+
     return res.json({
       success: true,
-      data: result,
+      is_compound: true,
+      count: dispatchedList.length,
+      data: dispatchedList[0],
+      items: dispatchedList,
+      radarMeta: radar,
     });
   } catch (error: any) {
     console.error('[Notivia Dispatcher Error]:', error);
-    return res.status(500).json({
-      success: false,
-      error: error?.message || 'Yönlendirme hatası.',
-    });
+    return res.status(500).json({ success: false, error: error?.message || 'Yönlendirme hatası.' });
   }
 });
 
-// Cognitive Parsing Endpoint
-app.post('/api/parse', async (req, res) => {
-  const startTime = Date.now();
-  try {
-    const { input, current_datetime, past_notes, gecmis_notlar, history, userDomain, preferredDomain, domain } = req.body;
-    const cleanInput = String(input || '').trim();
-    const currentDt = String(current_datetime || new Date().toISOString());
-    const past = Array.isArray(past_notes) ? past_notes : Array.isArray(gecmis_notlar) ? gecmis_notlar : Array.isArray(history) ? history : [];
-    const activeDomain = userDomain || preferredDomain || domain || undefined;
-
-    if (!cleanInput) {
-      return res.status(400).json({
-        success: false,
-        error: 'Kullanıcı girdisi boş olamaz.',
-      });
-    }
-
-    const simple = await parseSimpleWithGemini(cleanInput, currentDt, past, activeDomain);
-    const { data, source } = await parseWithGemini(cleanInput, currentDt, past, activeDomain);
-    const processingTime = Date.now() - startTime;
-
-    return res.json({
-      success: true,
-      simple,
-      data: {
-        id: `notivia-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        created_at: new Date().toISOString(),
-        raw_input: cleanInput,
-        reference_datetime: currentDt,
-        ...data,
-        summary: simple.baslik || data.summary,
-        detailed_note: simple.zaman || data.detailed_note,
-        teshis_notu: simple.teshis_notu || data.teshis_notu || null,
-        anomali_notu: simple.anomali_notu || data.anomali_notu || null,
-        calendar_event: {
-          ...data.calendar_event,
-          start_datetime: simple.tarih_iso || data.calendar_event.start_datetime,
-        },
-        ui_meta: {
-          ...data.ui_meta,
-          icon: simple.ikon || data.ui_meta.icon,
-          color_hex: simple.renk || data.ui_meta.color_hex,
-        },
-        engine_meta: {
-          model: source.startsWith('gemini') ? source : 'Cognitive Inference Engine',
-          processing_time_ms: processingTime,
-          source,
-        },
-      },
-    });
-  } catch (error: any) {
-    console.error('[Notivia Server Error]:', error);
-    return res.status(500).json({
-      success: false,
-      error: error?.message || 'Ayrıştırma işlemi sırasında sunucu hatası oluştu.',
-    });
-  }
-});
-
-// Serve Vite production build if dist exists
 const distPath = path.join(__dirname, 'dist');
 app.use(express.static(distPath));
 
@@ -150,5 +209,5 @@ app.get('*', (_req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[Notivia] Core Engine server running on http://0.0.0.0:${PORT}`);
+  console.log(`[Notivia] Core Engine v2.5 running on http://0.0.0.0:${PORT}`);
 });

@@ -32,6 +32,7 @@ import type { ActionItem } from './types/notivia.ts';
 import { scheduleMedicationAlarms } from './utils/medicationScheduler.ts';
 import {
   exportToDeviceCalendar,
+  openDirectDeviceCalendar,
   getGoogleCalendarWebUrl,
   scheduleLocalDeviceReminder,
   requestDeviceNotificationPermission,
@@ -69,8 +70,17 @@ import { CardReminderEditor } from './components/CardReminderEditor.tsx';
 import { EditNoteModal } from './components/EditNoteModal.tsx';
 import { DOMAIN_REGISTRY, WORK_DOMAIN_OPTIONS, detectDomainFromNote, type ProfessionDomain } from './types/domainThemes.ts';
 import { translations, type Language } from './utils/i18n.ts';
-import { checkLocalWeather, type WeatherCondition } from './utils/weather.ts';
+import { checkLocalWeather, checkWeatherTaskCompatibility, type WeatherCondition } from './utils/weather.ts';
+import { detectCalendarConflict } from './utils/calendar.ts';
+import { evaluatePipelineTrigger } from './utils/actionPipeline.ts';
+import { clusterErrandsByLocation } from './utils/errandClustering.ts';
+import { splitMultiActionMemo, isMultiActionMemo } from './utils/multiActionExtractor.ts';
+import { calculateDailyCognitiveLoad, estimateCognitiveLoad } from './utils/cognitiveLoadEstimator.ts';
+import { evaluateTaskEscalation } from './utils/adaptiveEscalation.ts';
+import { resolveInstitutionalReference } from './utils/institutionalCalendar.ts';
 import { parseDailyLifeTime, type ParsedTimeResult } from './utils/date.ts';
+import { sanitizeSpokenText, sanitizeCardTitle } from './utils/speechSanitizer.ts';
+import { detectDomainFromJargon } from './utils/jargonRadar.ts';
 export { parseDailyLifeTime, type ParsedTimeResult };
 
 export interface SimpleCardItem {
@@ -326,6 +336,12 @@ export default function App() {
   const [isSelectMode, setIsSelectMode] = useState<boolean>(false);
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
 
+  // Kart üzerinde uzun basma (Long Press) ile çoklu seçim moduna geçiş
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const isLongPressFiredRef = useRef<boolean>(false);
+  const longPressFiredTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Geri alma state'i
   const [undoToast, setUndoToast] = useState<{
     item: SimpleCardItem;
@@ -432,6 +448,9 @@ export default function App() {
   // Kart üzerinden hatırlatıcı, takvim ve bildirim düzenleme paneli açık olan kart ID'si
   const [activeReminderEditCardId, setActiveReminderEditCardId] = useState<string | null>(null);
 
+  // Cihaz takvimine otomatik senkronizasyon animasyonu için kart ID'si
+  const [syncingCalendarCardId, setSyncingCalendarCardId] = useState<string | null>(null);
+
   // Kart detaylı düzenleme modalı için seçili kart
   const [editingNote, setEditingNote] = useState<SimpleCardItem | null>(null);
 
@@ -472,8 +491,10 @@ export default function App() {
       localStorage.setItem('notivia_theme', theme);
       if (theme === 'dark') {
         document.documentElement.classList.add('dark');
+        document.body.classList.add('dark');
       } else {
         document.documentElement.classList.remove('dark');
+        document.body.classList.remove('dark');
       }
     } catch {
       // ignore
@@ -649,7 +670,7 @@ export default function App() {
 
   const recognitionRef = useRef<any>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
-  const manualTextInputRef = useRef<HTMLInputElement | null>(null);
+  const manualTextInputRef = useRef<HTMLTextAreaElement | null>(null);
   const pendingCapturedImageRef = useRef<string | null>(null);
   const onSpeechCompletedRef = useRef<((spoken: string) => Promise<void>) | null>(null);
   const processWithAIRef = useRef<((text?: string, base64Image?: string | null, isSpoken?: boolean) => Promise<void>) | null>(null);
@@ -897,7 +918,8 @@ export default function App() {
             if (onSpeechCompletedRef.current) {
               await onSpeechCompletedRef.current(currentTranscript.trim());
             } else if (processWithAIRef.current) {
-              await processWithAIRef.current(currentTranscript.trim(), null, true);
+              const sanitized = sanitizeSpokenText(currentTranscript.trim());
+              await processWithAIRef.current(sanitized || currentTranscript.trim(), null, true);
             }
           } else if (pendingCapturedImageRef.current) {
             const imageToSend = pendingCapturedImageRef.current;
@@ -1394,6 +1416,30 @@ export default function App() {
           updateNoteTitle(update.id, update.changes.baslik || '', null, update.changes.ikon || '📌');
         }
       }
+
+      // Takvim çakışma ve alternatif zaman kontrolü
+      if (noteData.tarih_iso) {
+        const conflictRes = detectCalendarConflict(noteData.tarih_iso, cards);
+        if (conflictRes.hasConflict) {
+          noteData.conflictWith = conflictRes.conflictingEventTitle;
+          noteData.conflictWarning = conflictRes.warningNote;
+          if (!noteData.anomali_notu) {
+            noteData.anomali_notu = conflictRes.warningNote;
+          }
+        }
+      }
+
+      // Hava durumu ile görev uyumu kontrolü
+      if (weather && noteData.baslik) {
+        const weatherCheck = checkWeatherTaskCompatibility(noteData.baslik, weather);
+        if (!weatherCheck.isCompatible && weatherCheck.warning) {
+          if (noteData.anomali_notu) {
+            noteData.anomali_notu = `${noteData.anomali_notu} | ${weatherCheck.warning}`;
+          } else {
+            noteData.anomali_notu = weatherCheck.warning;
+          }
+        }
+      }
     }
 
     // Takvime yaz ve çakışma bilgisini al
@@ -1594,6 +1640,18 @@ export default function App() {
     if (nextCompleted) {
       await localNotifications.cancelAlarm(cardId);
       await cancelAllFermentationAlarms(cardId);
+
+      // ⚡ ÖN KOŞUL VE ZİNCİRLEME GÖREV MOTORU (Action Pipeline Trigger)
+      const pipelineRes = evaluatePipelineTrigger(targetCard.baslik);
+      if (pipelineRes.hasFollowUp && pipelineRes.followUpNote) {
+        setTimeout(async () => {
+          await addNote(pipelineRes.followUpNote!);
+          if (pipelineRes.whisperText) {
+            setStatusText(pipelineRes.whisperText);
+            speakFeedback(pipelineRes.whisperText);
+          }
+        }, 500);
+      }
     }
   };
 
@@ -1678,6 +1736,78 @@ export default function App() {
 
     setStatusText(`${count} not başarıyla silindi ✓`);
     setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
+  };
+
+  // Kart üzerinde uzun basma (Long Press) başlatıcı
+  const startLongPress = (cardId: string, clientX: number, clientY: number, target: EventTarget | null) => {
+    // Zaten çoklu seçim modundaysa uzun basmaya gerek yok
+    if (isSelectMode) return;
+
+    // Tıklanabilir/etkileşimli çocuk elemanlar (buton, input, textarea, contentEditable) üzerindeyken long-press tetikleme
+    if (target instanceof HTMLElement && target.closest('button, input, textarea, a, [contenteditable="true"]')) {
+      return;
+    }
+
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+    }
+
+    touchStartPosRef.current = { x: clientX, y: clientY };
+    isLongPressFiredRef.current = false;
+
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressFiredRef.current = true;
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try {
+          navigator.vibrate(40);
+        } catch {
+          // ignore
+        }
+      }
+      setIsSelectMode(true);
+      setSelectedCardIds((prev) => (prev.includes(cardId) ? prev : [...prev, cardId]));
+
+      // Tıklama event'inin hemen ardından seçimi tersine çevirmemesi için kilit
+      if (longPressFiredTimeoutRef.current) clearTimeout(longPressFiredTimeoutRef.current);
+      longPressFiredTimeoutRef.current = setTimeout(() => {
+        isLongPressFiredRef.current = false;
+      }, 500);
+    }, 450);
+  };
+
+  // Kart üzerinde uzun basmayı iptal etme (parmak kaldırıldığında veya kaydırıldığında)
+  const cancelLongPress = (clientX?: number, clientY?: number, checkDistance = false) => {
+    if (checkDistance && touchStartPosRef.current && clientX !== undefined && clientY !== undefined) {
+      const deltaX = Math.abs(clientX - touchStartPosRef.current.x);
+      const deltaY = Math.abs(clientY - touchStartPosRef.current.y);
+      // Parmak 10 pikselden fazla kaydırıldıysa (örneğin sayfa kaydırma / scroll) long press'i iptal et
+      if (deltaX < 10 && deltaY < 10) {
+        return;
+      }
+    }
+
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  // Kart tıklandığında çoklu seçim modundaysa seçimi aç/kapat
+  const handleCardClick = (cardId: string, e: React.MouseEvent) => {
+    if (isLongPressFiredRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
+    if (isSelectMode) {
+      if (e.target instanceof HTMLElement && e.target.closest('button, input, textarea, a, [contenteditable="true"]')) {
+        return;
+      }
+      setSelectedCardIds((prev) =>
+        prev.includes(cardId) ? prev.filter((id) => id !== cardId) : [...prev, cardId]
+      );
+    }
   };
 
   // Notu Paylaşma Özelliği (Web Share API ve Kopyalama Desteği)
@@ -1867,6 +1997,105 @@ export default function App() {
     setTimeout(() => setStatusText(t.speakOrWrite), 2500);
   };
 
+  // Kartı Doğrudan Cihaz Takvimine (Google Takvim / Apple Takvim) Otomatik ve Dosyasız Aktarma
+  const autoSyncCardToDeviceCalendar = async (item: SimpleCardItem) => {
+    if (!item.tarih_iso) return;
+    setSyncingCalendarCardId(item.id);
+
+    try {
+      // 1. Google ile oturum açıksa Google Takvim API ile doğrudan arka planda senkronize et
+      const token = getGoogleAccessToken();
+      if (token) {
+        setStatusText(language === 'tr' ? 'Google Takvime otomatik aktarılıyor...' : 'Syncing directly to Google Calendar...');
+        const result = await createCalendarEvent({
+          baslik: item.baslik,
+          tarih_iso: item.tarih_iso,
+          ikon: item.ikon,
+          hazirlik_zamani: item.hazirlik_zamani,
+        });
+
+        if (result.eventId) {
+          const updatedCards = cards.map((c) =>
+            c.id === item.id ? { ...c, calendarEventId: result.eventId } : c
+          );
+          setCards(updatedCards);
+          const local = getLocalNotes();
+          const locItem = local.find((n) => n.id === item.id);
+          if (locItem) {
+            locItem.calendarEventId = result.eventId;
+            saveLocalNotes(local);
+            syncNoteToCloud(locItem);
+          }
+          playNotificationChime();
+          setStatusText(
+            language === 'tr'
+              ? '✓ Cihaz takviminize otomatik aktarıldı!'
+              : '✓ Added directly to your device calendar!'
+          );
+          setTimeout(() => setStatusText(t.speakOrWrite), 3000);
+          return;
+        }
+      }
+
+      // 2. Google token yoksa veya API yanıt vermediyse:
+      // Cihazın yerel takvim uygulamasını (Google Takvim, Apple Takvim, Samsung Takvim)
+      // dosya indirmeden DOĞRUDAN aç!
+      let rruleStr: string | undefined = undefined;
+      if (item.periyodik) {
+        if (item.periyodik.tip === 'gunluk') rruleStr = 'FREQ=DAILY';
+        else if (item.periyodik.tip === 'haftalik') rruleStr = 'FREQ=WEEKLY';
+        else if (item.periyodik.tip === 'aylik') rruleStr = 'FREQ=MONTHLY';
+        else if (item.periyodik.tip === 'yillik') rruleStr = 'FREQ=YEARLY';
+        else if (item.periyodik.tip === 'aylik_son_hafta') rruleStr = 'FREQ=MONTHLY;BYSETPOS=-1;BYDAY=MO,TU,WE,TH,FR';
+      }
+
+      openDirectDeviceCalendar({
+        title: `${item.ikon || '📌'} ${item.baslik}`,
+        startDate: new Date(item.tarih_iso),
+        description: `Notivia: ${item.baslik}${item.anomali_notu ? '\n' + item.anomali_notu : ''}`,
+        rrule: rruleStr,
+      });
+
+      // Cihaz yerel hatırlatıcı alarmını da kur
+      scheduleLocalDeviceReminder(
+        item.id,
+        item.baslik,
+        item.tarih_iso,
+        item.ikon,
+        item.periyodik
+      );
+      requestDeviceNotificationPermission().catch(() => {});
+
+      // Kartı takvimle eşleşmiş olarak işaretle
+      const newCalId = item.calendarEventId || `device_cal_${Date.now()}`;
+      const updatedCards = cards.map((c) =>
+        c.id === item.id ? { ...c, calendarEventId: newCalId } : c
+      );
+      setCards(updatedCards);
+      const local = getLocalNotes();
+      const locItem = local.find((n) => n.id === item.id);
+      if (locItem) {
+        locItem.calendarEventId = newCalId;
+        saveLocalNotes(local);
+        syncNoteToCloud(locItem);
+      }
+
+      playNotificationChime();
+      setStatusText(
+        language === 'tr'
+          ? '✓ Cihaz takvimi açıldı ve etkinlik aktarıldı!'
+          : '✓ Device calendar opened and event transferred!'
+      );
+      setTimeout(() => setStatusText(t.speakOrWrite), 3000);
+    } catch (err) {
+      console.error('Takvim aktarım hatası:', err);
+      setStatusText(language === 'tr' ? 'Takvim aktarılırken bir sorun oluştu' : 'Failed to transfer to calendar');
+      setTimeout(() => setStatusText(t.speakOrWrite), 3000);
+    } finally {
+      setSyncingCalendarCardId(null);
+    }
+  };
+
   // View full image in modal
   const viewFullImage = async (mediaId: string) => {
     const base64 = await getLocalMedia(mediaId);
@@ -1898,6 +2127,12 @@ export default function App() {
     isSpoken: boolean = false
   ) {
     const currentNow = new Date().toISOString();
+
+    // 1. Sıfır Gecikmeli Jargon Taraması
+    const radar = detectDomainFromJargon(textInput, workDomain);
+    const targetDomain = radar.detectedDomain;
+
+    console.log(`[Jargon Radar] Girdi: "${textInput}" -> Alan: ${targetDomain} (Güven: %${Math.round(radar.confidence * 100)})`);
     console.log("1. Girdi gönderiliyor:", textInput, "Zaman:", currentNow);
 
     let mediaId: string | null = null;
@@ -1926,6 +2161,36 @@ export default function App() {
       }
     }
 
+    // ⚡ ÇOKLU EYLEM AYRIŞTIRICI (Multi-Action Memo Extractor)
+    // Eğer girdi birden fazla bağımsız görev/toplantı kararı içeriyorsa bağımsız kartlar üret
+    if (textInput && !base64Image && isMultiActionMemo(textInput)) {
+      const chunks = splitMultiActionMemo(textInput);
+      if (chunks.length > 1) {
+        console.log(`[Multi-Action Extractor] Girdi ${chunks.length} bağımsız eyleme ayrıştırıldı:`, chunks);
+        for (const chunk of chunks) {
+          const parsedChunk = extractSimpleNoteFromText(chunk, currentNow, cards, targetDomain);
+          await addNote({
+            baslik: sanitizeCardTitle(parsedChunk.baslik) || parsedChunk.baslik,
+            zaman: parsedChunk.zaman,
+            tarih_iso: parsedChunk.tarih_iso,
+            action_items: parsedChunk.action_items,
+            ikon: parsedChunk.ikon,
+            renk: parsedChunk.renk,
+            anomali_notu: parsedChunk.anomali_notu,
+            periyodik: parsedChunk.periyodik,
+            tetikleyici: parsedChunk.tetikleyici,
+          });
+        }
+        const whisper = `${chunks.length} ayrı görev ve ajanda kartı oluşturuldu.`;
+        setStatusText(whisper);
+        if (isSpoken) {
+          speakFeedback(whisper);
+        }
+        resetMicUI();
+        return;
+      }
+    }
+
     // Sunucu tarafı Otonom Ajan Yönlendiricisini (Autonomous Dispatcher) çağır
     if (textInput && !base64Image) {
       try {
@@ -1935,8 +2200,8 @@ export default function App() {
           body: JSON.stringify({
             input: textInput,
             current_datetime: currentNow,
-            userDomain: workDomain,
-            preferredDomain: workDomain,
+            userDomain: targetDomain,
+            preferredDomain: targetDomain,
           }),
         });
 
@@ -2009,7 +2274,7 @@ export default function App() {
               const questionToAsk = args.soru || (isMissingTime ? 'Hangi gün ve saatte planlayalım?' : null);
 
               const createdNote = {
-                baslik: args.baslik,
+                baslik: sanitizeCardTitle(args.baslik) || args.baslik,
                 zaman: isMissingTime ? null : args.zaman,
                 tarih_iso: isMissingTime ? null : args.tarih_iso,
                 hazirlik_zamani: args.hazirlik_zamani,
@@ -2066,8 +2331,8 @@ export default function App() {
           input: textInput,
           base64Image,
           current_datetime: currentNow,
-          userDomain: workDomain,
-          preferredDomain: workDomain,
+          userDomain: targetDomain,
+          preferredDomain: targetDomain,
           past_notes: cards.slice(0, 15).map((c) => ({
             baslik: c.baslik,
             zaman: c.zaman,
@@ -2085,6 +2350,7 @@ export default function App() {
 
           const createdNote = {
             ...sJson.data,
+            baslik: sanitizeCardTitle(sJson.data.baslik) || sJson.data.baslik,
             zaman: isMissingTime ? null : sJson.data.zaman,
             tarih_iso: isMissingTime ? null : sJson.data.tarih_iso,
             eksik_bilgi: isMissingTime,
@@ -2115,7 +2381,7 @@ export default function App() {
 
     if (!parsedByServer) {
       // Çevrimdışı / Hızlı Kural Motoru (Türkçe Doğal Dil Ayrıştırıcı)
-      const fallback = extractSimpleNoteFromText(textInput, currentNow, cards.slice(0, 15), workDomain);
+      const fallback = extractSimpleNoteFromText(textInput, currentNow, cards.slice(0, 15), targetDomain);
       console.log("2. Bilişsel Kural Motoru Devrede:", fallback);
       console.log("3. Ayrıştırılmış Veri:", fallback);
       const isMissingTime = fallback.eksik_bilgi || (!fallback.zaman && !fallback.tarih_iso && (fallback.baslik?.toLowerCase().includes('randevu') || fallback.baslik?.toLowerCase().includes('görüşme') || fallback.baslik?.toLowerCase().includes('buluşma') || fallback.baslik?.toLowerCase().includes('toplantı')));
@@ -2123,6 +2389,7 @@ export default function App() {
 
       const createdNote = {
         ...fallback,
+        baslik: sanitizeCardTitle(fallback.baslik) || fallback.baslik,
         zaman: isMissingTime ? null : fallback.zaman,
         tarih_iso: isMissingTime ? null : fallback.tarih_iso,
         eksik_bilgi: isMissingTime,
@@ -2158,12 +2425,26 @@ export default function App() {
     pendingCapturedImageRef.current = null; // Sıfırla
     setPendingImage(null);
 
+    // ⚡ Deterministik Regex Ön Temizleyici (Speech Sanitizer)
+    // Model çağrılmadan önce "ııı", "şey", "yani", "hocam bir de" gibi dolgu sözcükler ve anlamsız sesler elenerek saf eylem cümlesi çıkarılır.
+    const sanitizedText = sanitizeSpokenText(spokenText);
+    console.log('[SpeechSanitizer] Ham ses:', spokenText, '-> Saf eylem cümlesi:', sanitizedText);
+
+    // Yalnızca dolgu sesler veya mırıldanmalardan ibaretse ve görsel yoksa kullanıcıyı nazikçe uyar
+    if (!sanitizedText && !imageToSend) {
+      setStatusText('Net bir eylem algılanamadı. Lütfen tekrar söyleyin.');
+      resetMicUI();
+      return;
+    }
+
+    const textToProcess = sanitizedText || spokenText.trim();
+
     if (imageToSend) {
       setStatusText('Görsel ve ses teşhis ediliyor...');
     } else {
-      setStatusText('Anlıyorum...');
+      setStatusText(textToProcess ? `"${textToProcess}" işleniyor...` : 'Anlıyorum...');
     }
-    await processWithAI(spokenText, imageToSend, true);
+    await processWithAI(textToProcess, imageToSend, true);
   };
 
   onSpeechCompletedRef.current = onSpeechCompleted;
@@ -2275,6 +2556,11 @@ export default function App() {
   const activeUser = currentUser || simulatedUser;
   const isCloudSync = !!activeUser;
 
+  // ⚡ Mekânsal Güzergâh ve Bilişsel Yük Analizi
+  const errandClusters = React.useMemo(() => clusterErrandsByLocation(cards), [cards]);
+  const activeUncompletedCards = React.useMemo(() => cards.filter((c) => !isCompletedCard(c)), [cards]);
+  const dailyLoad = React.useMemo(() => calculateDailyCognitiveLoad(activeUncompletedCards), [activeUncompletedCards]);
+
   const filteredCards = cards.filter((item) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
@@ -2290,7 +2576,7 @@ export default function App() {
 
   return (
     <div className={`min-h-screen flex items-center justify-center antialiased select-none transition-colors duration-200 ${
-      theme === 'dark' ? 'bg-stone-950 text-stone-100' : 'bg-stone-100 text-stone-800'
+      theme === 'dark' ? 'dark bg-stone-950 text-stone-100' : 'bg-stone-100 text-stone-800'
     }`}>
       {/* Masaüstünde telefon gibi ortalanan, mobilde tam ekran olan kapsayıcı */}
       <main className={`w-full max-w-md h-[100dvh] flex flex-col justify-between relative shadow-sm overflow-hidden sm:border transition-colors duration-200 ${
@@ -2311,27 +2597,6 @@ export default function App() {
           </div>
 
           <div id="auth-container" className="flex items-center gap-2">
-            {/* Çoklu Seçim Modu Butonu */}
-            <button
-              type="button"
-              onClick={() => {
-                setIsSelectMode((prev) => !prev);
-                setSelectedCardIds([]);
-              }}
-              title={isSelectMode ? t.exitMultiSelectTitle : t.multiSelectTitle}
-              className={`p-1.5 rounded-full transition-colors ${
-                isSelectMode 
-                  ? 'text-stone-900 bg-amber-200' 
-                  : theme === 'dark'
-                  ? 'text-stone-400 hover:text-stone-200 hover:bg-stone-800'
-                  : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-              </svg>
-            </button>
-
             {/* Arama Toggle */}
             <button
               type="button"
@@ -2351,21 +2616,6 @@ export default function App() {
               </svg>
             </button>
 
-            {/* Hızlı Metin Girişi Toggle */}
-            <button
-              type="button"
-              onClick={handleToggleTextInput}
-              title={t.keyboardToggleTitle}
-              className={`p-1.5 rounded-full transition-colors ${
-                showTextInput
-                  ? theme === 'dark' ? 'text-white bg-stone-800' : 'text-stone-900 bg-stone-200'
-                  : theme === 'dark' ? 'text-stone-400 hover:text-stone-200 hover:bg-stone-800' : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </button>
 
             {/* Ayarlar ve Profil Butonu (Focus-mode & User Request) */}
             <button
@@ -2412,40 +2662,6 @@ export default function App() {
             </button>
           </div>
         </header>
-
-        {/* Metin Girişi (Klavye Modu / Görev Listesi) */}
-        {showTextInput && (
-          <form onSubmit={handleManualTextSubmit} className="p-3 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 animate-in fade-in duration-150">
-            <textarea
-              id="manual-text-input"
-              value={textInput}
-              onChange={(e) => setTextInput(e.target.value)}
-              placeholder={`Maddeleri alt alta yazın veya yapıştırın (Enter ile yeni satır ekleyebilirsiniz):
-- Süt al
-- Faturayı öde
-- Raporu gönder`}
-              rows={3}
-              className="w-full text-xs p-2.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl outline-none resize-none text-stone-900 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-500 focus:ring-1 focus:ring-stone-400"
-              autoFocus
-              onKeyDown={(e) => {
-                // Enter serbestçe alt satıra geçsin, Ctrl+Enter veya Cmd+Enter ile hızlı gönderilsin
-                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                  e.preventDefault();
-                  handleManualTextSubmit(e);
-                }
-              }}
-            />
-            <div className="flex justify-end gap-2 mt-2">
-              <button
-                type="submit"
-                disabled={!textInput.trim()}
-                className="px-3 py-1.5 bg-stone-900 dark:bg-white text-white dark:text-stone-900 rounded-lg text-xs font-semibold disabled:opacity-40 cursor-pointer"
-              >
-                Görev Listesi Oluştur
-              </button>
-            </div>
-          </form>
-        )}
 
         {/* Kart Listesi Alanı */}
         <section
@@ -2519,6 +2735,40 @@ export default function App() {
             </div>
           )}
 
+          {/* ⚡ Bilişsel Yük ve Odak Bildirimi */}
+          {dailyLoad.isOverloaded && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium bg-amber-500/10 text-amber-900 dark:text-amber-200 border border-amber-500/20 mb-2.5 animate-in fade-in">
+              <span className="text-base shrink-0">🧠</span>
+              <span className="flex-1 leading-snug">{dailyLoad.warningNote}</span>
+            </div>
+          )}
+
+          {/* ⚡ Mekânsal Güzergâh Kümeleme (Errand Clusters) */}
+          {errandClusters.length > 0 && !searchQuery && (
+            <div className="space-y-1.5 mb-2.5">
+              {errandClusters.map((cluster) => (
+                <div
+                  key={cluster.clusterId}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border shadow-2xs transition-all"
+                  style={{ backgroundColor: cluster.color, borderColor: 'rgba(0,0,0,0.06)' }}
+                >
+                  <span className="text-base shrink-0">{cluster.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <span className="font-bold text-stone-900 mr-1.5">
+                      {cluster.clusterTitle} Güzergâhı:
+                    </span>
+                    <span className="text-[11px] text-stone-700 truncate">
+                      {cluster.taskTitles.join(' + ')}
+                    </span>
+                  </div>
+                  <span className="text-[10px] bg-black/10 px-2 py-0.5 rounded-full font-semibold text-stone-800 shrink-0">
+                    {cluster.taskIds.length} İş Tek Seferde
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
           {filteredCards.length === 0 ? (
             <div className="text-center text-xs text-stone-400 mt-10">
               {searchQuery ? t.noSearchResults : t.emptyNotesDesc}
@@ -2537,6 +2787,36 @@ export default function App() {
               return (
                 <div
                   key={item.id}
+                  onTouchStart={(e) => {
+                    const touch = e.touches[0];
+                    if (touch) {
+                      startLongPress(item.id, touch.clientX, touch.clientY, e.target);
+                    }
+                  }}
+                  onTouchMove={(e) => {
+                    const touch = e.touches[0];
+                    if (touch) {
+                      cancelLongPress(touch.clientX, touch.clientY, true);
+                    }
+                  }}
+                  onTouchEnd={() => cancelLongPress()}
+                  onTouchCancel={() => cancelLongPress()}
+                  onMouseDown={(e) => {
+                    if (e.button === 0) {
+                      startLongPress(item.id, e.clientX, e.clientY, e.target);
+                    }
+                  }}
+                  onMouseMove={(e) => {
+                    cancelLongPress(e.clientX, e.clientY, true);
+                  }}
+                  onMouseUp={() => cancelLongPress()}
+                  onMouseLeave={() => cancelLongPress()}
+                  onContextMenu={(e) => {
+                    if (isLongPressFiredRef.current || isSelectMode) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onClick={(e) => handleCardClick(item.id, e)}
                   className={`card p-3 sm:p-4 rounded-2xl flex flex-col gap-2 sm:gap-2.5 transition-all duration-300 hover:shadow-md ${
                     item.isRemoving ? 'scale-95 opacity-0' : 'scale-100'
                   } ${
@@ -2547,10 +2827,13 @@ export default function App() {
                       : isExpired 
                       ? 'opacity-95 border-dashed border-amber-300/80 shadow-xs' 
                       : 'opacity-100 border-solid border-black/8 dark:border-white/10 shadow-xs'
-                  } ${isSelected ? 'ring-2 ring-stone-800 dark:ring-stone-200' : ''}`}
+                  } ${isSelected ? 'ring-2 ring-stone-800 dark:ring-stone-200' : ''} ${
+                    isSelectMode ? 'cursor-pointer select-none active:scale-[0.99]' : ''
+                  }`}
                   style={{
                     backgroundColor: cardBgColor,
                     borderWidth: '1px',
+                    WebkitTouchCallout: 'none',
                   }}
                 >
                   {/* Üst Kısım: Başlık, İkon ve Hızlı İşlem Araç Çubuğu */}
@@ -2606,7 +2889,7 @@ export default function App() {
                       {/* Kart Başlığı ve Zaman Damgası */}
                       <div className="min-w-0 flex-1">
                         <h2
-                          contentEditable={!isCompleted}
+                          contentEditable={!isCompleted && !isSelectMode}
                           suppressContentEditableWarning={true}
                           spellCheck={false}
                           className={`font-semibold text-sm sm:text-base leading-snug tracking-tight outline-hidden break-words hyphens-auto ${
@@ -2649,7 +2932,7 @@ export default function App() {
                     </div>
 
                     {/* Kart Aksiyonları Araç Çubuğu (Mobilde Rahat Dokunulabilir) */}
-                    <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 bg-white/80 dark:bg-black/30 backdrop-blur-xs p-0.5 sm:p-1 rounded-xl border border-black/5 dark:border-white/10 shadow-2xs self-start">
+                    <div className="flex items-center gap-1 shrink-0 bg-white/90 dark:bg-black/40 backdrop-blur-xs p-1 rounded-xl border border-black/5 dark:border-white/10 shadow-2xs self-start">
                       {/* Kartı Düzenle Butonu (Kalem) */}
                       <button
                         type="button"
@@ -2657,7 +2940,7 @@ export default function App() {
                           e.stopPropagation();
                           setEditingNote(item);
                         }}
-                        className="w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-white/80 active:scale-95 transition-all cursor-pointer"
+                        className="w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-white active:scale-92 transition-all cursor-pointer"
                         title={language === 'tr' ? 'Kartı Düzenle' : 'Edit Card'}
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2672,12 +2955,12 @@ export default function App() {
                           e.stopPropagation();
                           setActiveReminderEditCardId(activeReminderEditCardId === item.id ? null : item.id);
                         }}
-                        className={`w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
+                        className={`w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-92 ${
                           activeReminderEditCardId === item.id
                             ? 'bg-amber-500 text-white shadow-xs'
                             : item.tarih_iso
-                            ? 'text-amber-800 bg-amber-100/90 hover:bg-amber-200 border border-amber-300/80 shadow-2xs'
-                            : 'text-stone-600 hover:text-stone-900 hover:bg-white/80'
+                            ? 'text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 shadow-2xs'
+                            : 'text-stone-600 hover:text-stone-900 hover:bg-white'
                         }`}
                         title={language === 'tr' ? 'Hatırlatıcı & Takvim' : 'Reminder & Calendar'}
                       >
@@ -2693,7 +2976,7 @@ export default function App() {
                           e.stopPropagation();
                           shareNote(item);
                         }}
-                        className="w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-white/80 active:scale-95 transition-all cursor-pointer"
+                        className="w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-white active:scale-92 transition-all cursor-pointer"
                         title={t.shareOrCopy}
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2708,7 +2991,7 @@ export default function App() {
                           e.stopPropagation();
                           directDeleteNote(item.id);
                         }}
-                        className="w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center text-stone-500 hover:text-red-600 hover:bg-red-50/80 active:scale-95 transition-all cursor-pointer"
+                        className="w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg flex items-center justify-center text-stone-500 hover:text-red-600 hover:bg-red-50 active:scale-92 transition-all cursor-pointer"
                         title={t.deleteNoteTitle}
                       >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2723,10 +3006,10 @@ export default function App() {
                           e.stopPropagation();
                           toggleCardCompleted(item.id);
                         }}
-                        className={`w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-lg border flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
+                        className={`w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg border flex items-center justify-center transition-all cursor-pointer active:scale-92 ${
                           isCompleted
                             ? 'bg-stone-800 border-stone-800 text-white shadow-xs'
-                            : 'border-stone-300 bg-white/70 text-stone-600 hover:text-stone-900 hover:border-stone-400'
+                            : 'border-stone-300 bg-white/80 text-stone-600 hover:text-stone-900 hover:border-stone-400'
                         }`}
                         title={isCompleted ? t.reopenTitle : t.completeTitle}
                       >
@@ -2813,16 +3096,6 @@ export default function App() {
                               </span>
                             )}
 
-                            {/* Takvim Entegrasyonu İkonu */}
-                            {(item.calendarEventId || item.calendar_event_id) && (
-                              <span
-                                className="w-5.5 h-5.5 rounded-md bg-white/80 text-stone-700 border border-stone-200 flex items-center justify-center shadow-2xs"
-                                title={t.inCalendarBadge}
-                              >
-                                <span className="text-[10px]">📅</span>
-                              </span>
-                            )}
-
                             {/* Periyodik / Rutin İkonu */}
                             {item.periyodik && (
                               <span
@@ -2863,34 +3136,32 @@ export default function App() {
                               return null;
                             })()}
 
-                            {/* Cihaz Takvimine Aktar (.ics) */}
+                            {/* Cihaz Takvimine Otomatik Aktar (Doğrudan ve Dosyasız) */}
                             {item.tarih_iso && (
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  let rruleStr = undefined;
-                                  if (item.periyodik) {
-                                    if (item.periyodik.tip === 'gunluk') rruleStr = 'FREQ=DAILY';
-                                    else if (item.periyodik.tip === 'haftalik') rruleStr = 'FREQ=WEEKLY';
-                                    else if (item.periyodik.tip === 'aylik') rruleStr = 'FREQ=MONTHLY';
-                                    else if (item.periyodik.tip === 'yillik') rruleStr = 'FREQ=YEARLY';
-                                    else if (item.periyodik.tip === 'aylik_son_hafta') rruleStr = 'FREQ=MONTHLY;BYSETPOS=-1;BYDAY=MO,TU,WE,TH,FR'; 
-                                  }
-                                  exportToDeviceCalendar({
-                                    title: `${item.ikon || '📌'} ${item.baslik}`,
-                                    startDate: new Date(item.tarih_iso!),
-                                    description: `Notivia: ${item.baslik}`,
-                                    rrule: rruleStr
-                                  });
-                                  playNotificationChime();
-                                  setStatusText(language === 'tr' ? 'Cihaz takvimine (.ics) aktarıldı' : 'Exported to device calendar (.ics)');
-                                  setTimeout(() => setStatusText(t.speakOrWrite), 2500);
+                                  autoSyncCardToDeviceCalendar(item);
                                 }}
-                                className="w-5.5 h-5.5 rounded-md bg-white/80 hover:bg-white text-stone-700 border border-stone-200/90 flex items-center justify-center shadow-2xs cursor-pointer active:scale-95 transition-all"
-                                title={t.exportDeviceCalendar}
+                                className={`w-5.5 h-5.5 rounded-md flex items-center justify-center shadow-2xs cursor-pointer active:scale-95 transition-all ${
+                                  item.calendarEventId || item.calendar_event_id
+                                    ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-900 border border-emerald-500/30'
+                                    : 'bg-white/80 hover:bg-white text-stone-700 border border-stone-200/90'
+                                }`}
+                                title={
+                                  item.calendarEventId || item.calendar_event_id
+                                    ? (language === 'tr' ? 'Cihaz Takviminde Senkronize ✓ (Açmak veya güncellemek için dokunun)' : 'Synced with Device Calendar ✓ (Tap to open or update)')
+                                    : (language === 'tr' ? 'Cihaz Takvimine Otomatik Aktar (Google / Apple Takvim)' : 'Auto Add to Device Calendar (Google / Apple Calendar)')
+                                }
                               >
-                                <span className="text-[10px]">📲</span>
+                                {syncingCalendarCardId === item.id ? (
+                                  <span className="text-[10px] animate-spin">⏳</span>
+                                ) : item.calendarEventId || item.calendar_event_id ? (
+                                  <span className="text-[10px]">📅</span>
+                                ) : (
+                                  <span className="text-[10px]">📲</span>
+                                )}
                               </button>
                             )}
                           </div>
@@ -2986,15 +3257,6 @@ export default function App() {
                       );
                     })()}
                   </div>
-
-                  {/* Kart İçi Hatırlatıcı, Cihaz Takvimi ve Bildirim Düzenleme Paneli */}
-                  <CardReminderEditor
-                    note={item}
-                    isOpen={activeReminderEditCardId === item.id}
-                    onClose={() => setActiveReminderEditCardId(null)}
-                    onSaveReminder={updateNoteReminder}
-                    language={language}
-                  />
                 </div>
               );
             })
@@ -3062,34 +3324,67 @@ export default function App() {
             </div>
           )}
 
-          {/* Metin Giriş Formu (Açılır/Kapanır) */}
-          <form
-            id="text-input-form"
-            onSubmit={handleManualTextSubmit}
-            className={`w-full mb-3 flex items-center gap-2 p-1.5 pl-3 rounded-2xl border shadow-sm transition-all duration-200 ${
-              theme === 'dark'
-                ? 'bg-stone-800 border-stone-700 text-stone-100'
-                : 'bg-stone-50 border-stone-200 text-stone-800'
-            } ${
-              showTextInput ? 'opacity-100 scale-100' : 'hidden opacity-0 scale-95 pointer-events-none'
-            }`}
-          >
-            <input
-              id="manual-text-input"
-              ref={manualTextInputRef}
-              type="text"
-              value={textInput}
-              onChange={(e) => setTextInput(e.target.value)}
-              placeholder={t.manualInputPlaceholder}
-              className="flex-1 bg-transparent text-sm outline-hidden py-1"
-            />
-            <button
-              type="submit"
-              className="px-3 py-1.5 bg-stone-900 dark:bg-white text-white dark:text-stone-900 text-xs font-semibold rounded-xl active:scale-95 transition-all shrink-0 cursor-pointer"
+          {/* Tek ve Bütünleşik Metin/Görev Giriş Formu (Alt Bölümde Toplu ve Rahat Kullanım) */}
+          {showTextInput && (
+            <form
+              id="text-input-form"
+              onSubmit={handleManualTextSubmit}
+              className={`w-full mb-3 p-3 rounded-2xl border shadow-md transition-all duration-200 animate-in fade-in slide-in-from-bottom-2 ${
+                theme === 'dark'
+                  ? 'bg-stone-900/95 border-stone-700 text-stone-100'
+                  : 'bg-white border-stone-200 text-stone-900'
+              }`}
             >
-              {t.addButton}
-            </button>
-          </form>
+              <textarea
+                id="manual-text-input"
+                ref={manualTextInputRef}
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                placeholder={
+                  language === 'tr'
+                    ? 'Notunuzu yazın veya maddeleri alt alta ekleyin...\n(Shift+Enter ile alt satır, Enter veya Ekle butonu ile kaydet)'
+                    : 'Write your note or list items line by line...\n(Shift+Enter for new line, Enter or Add to save)'
+                }
+                rows={2}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleManualTextSubmit(e);
+                  }
+                }}
+                className="w-full bg-transparent text-sm outline-none resize-none placeholder-stone-400 dark:placeholder-stone-500 leading-relaxed min-h-[48px] max-h-[120px]"
+              />
+              <div className="flex items-center justify-between pt-2 border-t border-stone-100 dark:border-stone-800/80 mt-1">
+                <span className="text-[11px] text-stone-400 dark:text-stone-500">
+                  {textInput.includes('\n') 
+                    ? (language === 'tr' ? '📋 Görev Listesi olarak kaydedilecek' : '📋 Will save as Task List') 
+                    : (language === 'tr' ? '💡 Çoklu madde için satır başı yapın' : '💡 Use new lines for checklist')}
+                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowTextInput(false);
+                      setTextInput('');
+                    }}
+                    className="px-2.5 py-1 text-xs text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer"
+                  >
+                    {language === 'tr' ? 'Kapat' : 'Close'}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!textInput.trim() && !pendingImage}
+                    className="px-3.5 py-1.5 bg-stone-900 dark:bg-white text-white dark:text-stone-900 text-xs font-semibold rounded-xl active:scale-95 disabled:opacity-40 transition-all shrink-0 cursor-pointer shadow-xs"
+                  >
+                    {textInput.includes('\n')
+                      ? (language === 'tr' ? 'Listeyi Kaydet' : 'Save List')
+                      : t.addButton}
+                  </button>
+                </div>
+              </div>
+            </form>
+          )}
 
           {/* Sesli Asistan Durum ve Dalga Göstergesi */}
           {isListening ? (
@@ -3319,7 +3614,7 @@ export default function App() {
       {draftedMessage && (
         <div
           id="draft-message-modal"
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+          className={`fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 ${theme === 'dark' ? 'dark' : ''}`}
         >
           <div className="w-full max-w-md bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-start justify-between">
@@ -3386,7 +3681,7 @@ export default function App() {
       {calendarQueryResults && (
         <div
           id="calendar-query-modal"
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4"
+          className={`fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 ${theme === 'dark' ? 'dark' : ''}`}
         >
           <div className="w-full max-w-md bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-start justify-between">
@@ -3539,7 +3834,24 @@ export default function App() {
         note={editingNote}
         onSave={handleSaveEditedNote}
         language={language}
+        theme={theme}
       />
+
+      {/* Hatırlatıcı & Cihaz Takvimi Modalı */}
+      {(() => {
+        const activeReminderNote = cards.find((c) => c.id === activeReminderEditCardId);
+        if (!activeReminderNote) return null;
+        return (
+          <CardReminderEditor
+            note={activeReminderNote}
+            isOpen={!!activeReminderNote}
+            onClose={() => setActiveReminderEditCardId(null)}
+            onSaveReminder={updateNoteReminder}
+            language={language}
+            theme={theme}
+          />
+        );
+      })()}
 
       {/* Ayarlar ve Profil Modalı */}
       <SettingsModal

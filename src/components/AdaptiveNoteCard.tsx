@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { DOMAIN_REGISTRY, ActionButtonConfig, ProfessionDomain } from '../types/adaptiveTheme';
+import { detectDomainFromJargon } from '../utils/jargonRadar';
 import { detectDomainFromText } from '../utils/detectDomain';
 
 export interface AdaptiveCardProps {
@@ -25,10 +26,15 @@ export const AdaptiveNoteCard: React.FC<AdaptiveCardProps> = ({
   onActionClick,
   onToggleTask
 }) => {
-  // Metinden veya başlıktan mesleği anlık tespit et
+  // Metinden veya başlıktan sektörel jargonu 0 ms deterministik tara
+  const fullText = `${baslik} ${hamMetin}`;
+  const radarResult = useMemo(() => detectDomainFromJargon(fullText), [fullText]);
   const activeDomain = useMemo<ProfessionDomain>(() => {
-    return detectDomainFromText(`${baslik} ${hamMetin}`);
-  }, [baslik, hamMetin]);
+    if (radarResult.confidence >= 0.4 && radarResult.detectedDomain !== 'GENEL') {
+      return radarResult.detectedDomain;
+    }
+    return detectDomainFromText(fullText);
+  }, [radarResult, fullText]);
 
   const theme = DOMAIN_REGISTRY[activeDomain] || DOMAIN_REGISTRY.GENEL;
 
@@ -40,7 +46,7 @@ export const AdaptiveNoteCard: React.FC<AdaptiveCardProps> = ({
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <span className="text-2xl p-1.5 rounded-xl bg-white/80 shadow-xs select-none">
-            {ikon || '📌'}
+            {ikon || radarResult.suggestedIcon || '📌'}
           </span>
           <div>
             <h3 className="text-sm font-bold text-stone-900 leading-snug">
@@ -54,12 +60,22 @@ export const AdaptiveNoteCard: React.FC<AdaptiveCardProps> = ({
           </div>
         </div>
 
-        {/* Dinamik Alan Rozeti */}
-        <span
-          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors duration-200 ${theme.badgeBg} ${theme.badgeText}`}
-        >
-          {theme.displayName}
-        </span>
+        {/* Dinamik Alan Rozeti ve Jargon Etiketi */}
+        <div className="flex flex-col items-end gap-1">
+          <span
+            className={`text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors duration-200 ${theme.badgeBg} ${theme.badgeText}`}
+          >
+            {theme.displayName}
+          </span>
+          {radarResult.confidence >= 0.4 && radarResult.matchedKeywords.length > 0 && (
+            <span
+              className="text-[9px] font-medium text-stone-600 bg-white/80 px-1.5 py-0.5 rounded border border-stone-200/70 select-none"
+              title={radarResult.reason}
+            >
+              #{radarResult.matchedKeywords[0]}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Varsa Kritik Güvenlik / Yasal Süre Uyarısı */}

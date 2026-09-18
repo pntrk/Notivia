@@ -3,9 +3,11 @@ export type ProfessionDomain =
   | 'CALISMIYORUM'
   | 'HUKUK'
   | 'FINANS'
+  | 'MALIYE'
   | 'SAGLIK'
   | 'EGITIM'
   | 'TEKNIK'
+  | 'MUHENDISLIK'
   | 'SAVUNMA'
   | 'LOJISTIK'
   | 'TICARET'
@@ -101,6 +103,22 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
     ]
   },
 
+  MALIYE: {
+    domain: 'MALIYE',
+    displayName: 'Mali Müşavir & SMMM',
+    bgCard: 'bg-emerald-50/70 border-emerald-200',
+    borderAccent: 'border-l-emerald-600',
+    badgeBg: 'bg-emerald-100',
+    badgeText: 'text-emerald-900',
+    btnPrimaryBg: 'bg-emerald-600 hover:bg-emerald-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'kdv_counter', label: "26'sı KDV Sayacı", icon: '📊', actionType: 'TIMER' },
+      { id: 'sgk_end', label: 'Ay Sonu SGK & Berat', icon: '📑', actionType: 'TIMER' },
+      { id: 'request_docs', label: 'Evrak İsteme Şablonu', icon: '💬', actionType: 'WHATSAPP' }
+    ]
+  },
+
   SAGLIK: {
     domain: 'SAGLIK',
     displayName: 'Sağlık, Klinik & Tıp',
@@ -136,6 +154,21 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
 
   TEKNIK: {
     domain: 'TEKNIK',
+    displayName: 'Mühendislik & Teknik',
+    bgCard: 'bg-amber-50/70 border-amber-200',
+    borderAccent: 'border-l-amber-500',
+    badgeBg: 'bg-amber-100',
+    badgeText: 'text-amber-900',
+    btnPrimaryBg: 'bg-amber-600 hover:bg-amber-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'loto', label: 'LOTO Teyit Et', icon: '🔒', actionType: 'LOTO_CHECK' },
+      { id: 'client_quote', label: 'Müşteri Onayı İste', icon: '📞', actionType: 'WHATSAPP' }
+    ]
+  },
+
+  MUHENDISLIK: {
+    domain: 'MUHENDISLIK',
     displayName: 'Mühendislik & Teknik',
     bgCard: 'bg-amber-50/70 border-amber-200',
     borderAccent: 'border-l-amber-500',

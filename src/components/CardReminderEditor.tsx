@@ -1,33 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Calendar,
   Clock,
   Bell,
   BellRing,
-  Download,
   ExternalLink,
   Check,
   X,
   Trash2,
-  Sparkles,
   Volume2,
   CalendarCheck,
   Repeat,
-  AlertCircle,
 } from 'lucide-react';
 import type { Language } from '../utils/i18n';
 import type { SimpleCardItem } from '../App';
 import {
-  exportToDeviceCalendar,
+  openDirectDeviceCalendar,
   getGoogleCalendarWebUrl,
   requestDeviceNotificationPermission,
   playNotificationChime,
   showSystemNotification,
-  scheduleLocalDeviceReminder,
   cancelScheduledReminder,
 } from '../utils/deviceCalendar';
 import { alarmSound } from '../services/alarmSound';
-import { createCalendarEvent, updateCalendarEventTitle } from '../firebase';
+import { createCalendarEvent } from '../firebase';
 
 interface CardReminderEditorProps {
   note: SimpleCardItem;
@@ -41,6 +37,7 @@ interface CardReminderEditorProps {
     periyodik?: { tip: string; aralik_gun?: number } | null
   ) => Promise<void> | void;
   language?: Language;
+  theme?: 'light' | 'dark';
 }
 
 function toLocalDatetimeString(date: Date): string {
@@ -84,10 +81,10 @@ function formatTurkishFriendlyDate(date: Date, lang: string = 'tr'): string {
     date.getFullYear() === tomorrow.getFullYear();
 
   if (isToday) {
-    return lang === 'en' ? `Today at ${hours}:${minutes}` : `Bugün ${hours}:${minutes}`;
+    return lang === 'en' ? `Today ${hours}:${minutes}` : `Bugün ${hours}:${minutes}`;
   }
   if (isTomorrow) {
-    return lang === 'en' ? `Tomorrow at ${hours}:${minutes}` : `Yarın ${hours}:${minutes}`;
+    return lang === 'en' ? `Tomorrow ${hours}:${minutes}` : `Yarın ${hours}:${minutes}`;
   }
 
   return `${day} ${month}, ${hours}:${minutes}`;
@@ -99,6 +96,7 @@ export const CardReminderEditor: React.FC<CardReminderEditorProps> = ({
   onClose,
   onSaveReminder,
   language = 'tr',
+  theme = 'light',
 }) => {
   if (!isOpen) return null;
 
@@ -115,54 +113,28 @@ export const CardReminderEditor: React.FC<CardReminderEditorProps> = ({
   const [periodicType, setPeriodicType] = useState<string>(note.periyodik?.tip || 'none');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'info' | 'error'; text: string } | null>(null);
   const [isSyncingCalendar, setIsSyncingCalendar] = useState<boolean>(false);
-  const [permissionStatus, setPermissionStatus] = useState<string>(() => {
-    return typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default';
-  });
 
-  // Hızlı Zaman Şablonları
-  const applyPreset = (offsetHours: number, fixedHour?: number, fixedMinute: number = 0, addDays: number = 0) => {
-    const target = new Date();
-    if (addDays > 0) {
-      target.setDate(target.getDate() + addDays);
-    }
-    if (fixedHour !== undefined) {
-      target.setHours(fixedHour, fixedMinute, 0, 0);
-    } else {
-      target.setTime(target.getTime() + offsetHours * 60 * 60 * 1000);
-    }
-
-    setDatetimeInput(toLocalDatetimeString(target));
-    setCustomLabel(formatTurkishFriendlyDate(target, language));
-    setFeedback({
-      type: 'info',
-      text: language === 'tr' ? `Seçildi: ${formatTurkishFriendlyDate(target, language)}` : `Selected: ${formatTurkishFriendlyDate(target, language)}`,
-    });
-  };
-
-  // Cihaz bildirim iznini iste ve aktif et
-  const handleToggleNotification = async () => {
-    if (!notifyEnabled) {
+  // Cihaz bildirim durumunu değiştir
+  const handleToggleNotification = async (enable: boolean) => {
+    if (enable) {
       const granted = await requestDeviceNotificationPermission();
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        setPermissionStatus(Notification.permission);
-      }
       setNotifyEnabled(true);
       if (granted) {
         setFeedback({
           type: 'success',
-          text: language === 'tr' ? '✓ Cihaz bildirim izni onaylandı ve aktif edildi' : '✓ Notification permission granted and active',
+          text: language === 'tr' ? '✓ Cihaz bildirim izni devrede' : '✓ Notification permission active',
         });
       } else {
         setFeedback({
           type: 'info',
-          text: language === 'tr' ? 'Sesli alarm ve uygulama içi bildirimler hazırlandı' : 'Sound chime and in-app notifications ready',
+          text: language === 'tr' ? 'Uygulama içi sesli alarm hazır' : 'In-app sound chime active',
         });
       }
     } else {
       setNotifyEnabled(false);
       setFeedback({
         type: 'info',
-        text: language === 'tr' ? 'Cihaz bildirimi kapatıldı' : 'Device notification turned off',
+        text: language === 'tr' ? 'Bildirim ve alarm sessize alındı' : 'Notification silenced',
       });
     }
   };
@@ -173,15 +145,15 @@ export const CardReminderEditor: React.FC<CardReminderEditorProps> = ({
       alarmSound.startAlarm();
       setTimeout(() => {
         alarmSound.stopAlarm();
-      }, 2400);
+      }, 2000);
     } else {
       playNotificationChime();
     }
 
     const title = `${note.ikon || (note.isAlarm ? '⏰' : '📌')} ${note.baslik}`;
     const body = language === 'tr'
-      ? `Bildirim testi başarılı! ${customLabel || 'Belirlenen zamanda'} cihazınızda çalacaktır.`
-      : `Test notification succeeded! Will alert at ${customLabel || 'scheduled time'}.`;
+      ? `Zil testi başarılı! Belirlenen zamanda cihazınızda çalacaktır.`
+      : `Test chime played! Will alert at scheduled time.`;
 
     await showSystemNotification({
       title,
@@ -192,11 +164,11 @@ export const CardReminderEditor: React.FC<CardReminderEditorProps> = ({
 
     setFeedback({
       type: 'success',
-      text: language === 'tr' ? '🔔 Test zili çaldı ve bildirim yollandı!' : '🔔 Chime played and test notification dispatched!',
+      text: language === 'tr' ? '🔔 Test zili başarıyla çaldı!' : '🔔 Chime played successfully!',
     });
   };
 
-  // Cihaz Takvimine (.ics) Aktarma
+  // Cihaz Takvimine Doğrudan Aktarma
   const handleExportToDeviceCalendar = () => {
     const date = new Date(datetimeInput);
     if (isNaN(date.getTime())) {
@@ -213,7 +185,7 @@ export const CardReminderEditor: React.FC<CardReminderEditorProps> = ({
     else if (periodicType === 'aylik') rruleStr = 'FREQ=MONTHLY';
     else if (periodicType === 'aylik_son_hafta') rruleStr = 'FREQ=MONTHLY;BYSETPOS=-1;BYDAY=MO,TU,WE,TH,FR';
 
-    exportToDeviceCalendar({
+    openDirectDeviceCalendar({
       title: `${note.ikon || '📌'} ${note.baslik}`,
       startDate: date,
       description: `Notivia Bilişsel Yaşam Asistanı: ${note.baslik}\n${note.anomali_notu || ''}`,
@@ -223,24 +195,11 @@ export const CardReminderEditor: React.FC<CardReminderEditorProps> = ({
     playNotificationChime();
     setFeedback({
       type: 'success',
-      text: language === 'tr' ? '📲 Cihaz takvimi dosyası (.ics) indirildi ve takvime hazırlandı!' : '📲 Device calendar (.ics) downloaded!',
+      text: language === 'tr' ? '✓ Cihaz takvimi açıldı, etkinlik hazırlandı!' : '✓ Device calendar opened with event!',
     });
   };
 
-  // Google Takvim Web Sayfasını Açma
-  const handleOpenGoogleCalendarWeb = () => {
-    const date = new Date(datetimeInput);
-    if (isNaN(date.getTime())) return;
-
-    const url = getGoogleCalendarWebUrl({
-      title: `${note.ikon || '📌'} ${note.baslik}`,
-      startDate: date,
-      description: `Notivia: ${note.baslik}\n${note.anomali_notu || ''}`,
-    });
-    window.open(url, '_blank');
-  };
-
-  // Doğrudan Google Takvime Senkronize Etme (Google Auth ile giriş yapılmışsa)
+  // Google Takvime Senkronize Etme
   const handleSyncToGoogleCalendar = async () => {
     const date = new Date(datetimeInput);
     if (isNaN(date.getTime())) return;
@@ -256,19 +215,24 @@ export const CardReminderEditor: React.FC<CardReminderEditorProps> = ({
       if (result.eventId) {
         setFeedback({
           type: 'success',
-          text: language === 'tr' ? '✓ Google Takviminize başarıyla kaydedildi!' : '✓ Synced with your Google Calendar!',
+          text: language === 'tr' ? '✓ Google Takvime kaydedildi!' : '✓ Synced with Google Calendar!',
         });
         playNotificationChime();
       } else {
-        // Token yoksa web arayüzüne yönlendir
-        handleOpenGoogleCalendarWeb();
-        setFeedback({
-          type: 'info',
-          text: language === 'tr' ? 'Google Takvim web arayüzü yeni sekmede açıldı' : 'Google Calendar opened in new tab',
+        const url = getGoogleCalendarWebUrl({
+          title: `${note.ikon || '📌'} ${note.baslik}`,
+          startDate: date,
+          description: `Notivia: ${note.baslik}\n${note.anomali_notu || ''}`,
         });
+        window.open(url, '_blank');
       }
     } catch {
-      handleOpenGoogleCalendarWeb();
+      const url = getGoogleCalendarWebUrl({
+        title: `${note.ikon || '📌'} ${note.baslik}`,
+        startDate: date,
+        description: `Notivia: ${note.baslik}\n${note.anomali_notu || ''}`,
+      });
+      window.open(url, '_blank');
     } finally {
       setIsSyncingCalendar(false);
     }
@@ -280,7 +244,7 @@ export const CardReminderEditor: React.FC<CardReminderEditorProps> = ({
     if (isNaN(parsedDate.getTime())) {
       setFeedback({
         type: 'error',
-        text: language === 'tr' ? 'Lütfen geçerli bir tarih ve saat seçin.' : 'Please select a valid date and time.',
+        text: language === 'tr' ? 'Lütfen geçerli bir tarih ve saat seçin.' : 'Please select a valid date.',
       });
       return;
     }
@@ -307,264 +271,264 @@ export const CardReminderEditor: React.FC<CardReminderEditorProps> = ({
 
   return (
     <div
-      onClick={(e) => e.stopPropagation()}
-      className="mt-3 pt-3 border-t border-black/10 dark:border-white/10 text-stone-900 dark:text-stone-100 text-xs animate-in fade-in zoom-in-95 duration-200"
+      id="reminder-modal-backdrop"
+      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 ${theme === 'dark' ? 'dark' : ''}`}
+      onClick={onClose}
     >
-      {/* Başlık ve Kapat Butonu */}
-      <div className="flex items-center justify-between pb-2 mb-2 border-b border-black/5 dark:border-white/5">
-        <div className="flex items-center gap-1.5 font-bold text-stone-800 dark:text-stone-100">
-          <CalendarCheck className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-          <span>{language === 'tr' ? 'Hatırlatıcı & Cihaz Takvimini Düzenle' : 'Edit Reminder & Device Calendar'}</span>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-6 h-6 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-          title={language === 'tr' ? 'Kapat' : 'Close'}
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
-      </div>
+      <div
+        id="reminder-modal-sheet"
+        className="w-full sm:max-w-md bg-white dark:bg-stone-900 rounded-t-3xl sm:rounded-2xl border-t sm:border border-stone-200 dark:border-stone-800 shadow-2xl overflow-hidden flex flex-col max-h-[92dvh] animate-in slide-in-from-bottom-4 duration-250 text-stone-900 dark:text-stone-100"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Mobil Tutamaç */}
+        <div className="w-12 h-1.5 rounded-full bg-stone-300 dark:bg-stone-700 mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
 
-      {/* Geri Bildirim Mesajı */}
-      {feedback && (
-        <div
-          className={`mb-2.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium flex items-center gap-1.5 animate-in fade-in duration-150 ${
-            feedback.type === 'success'
-              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-800'
-              : feedback.type === 'error'
-              ? 'bg-red-50 text-red-800 border border-red-200 dark:bg-red-950/40 dark:text-red-200 dark:border-red-800'
-              : 'bg-sky-50 text-sky-800 border border-sky-200 dark:bg-sky-950/40 dark:text-sky-200 dark:border-sky-800'
-          }`}
-        >
-          <span>{feedback.type === 'success' ? '✓' : feedback.type === 'error' ? '⚠️' : 'ℹ️'}</span>
-          <span>{feedback.text}</span>
-        </div>
-      )}
-
-      {/* 1. Tarih ve Saat Seçimi */}
-      <div className="space-y-2 mb-3">
-        <div className="flex items-center justify-between">
-          <label className="text-[11px] font-semibold text-stone-700 dark:text-stone-300 flex items-center gap-1">
-            <Clock className="w-3.5 h-3.5 text-stone-500" />
-            <span>{language === 'tr' ? 'Kesin Tarih & Saat:' : 'Exact Date & Time:'}</span>
-          </label>
-          <span className="text-[10px] text-stone-500 font-mono">
-            {formatTurkishFriendlyDate(new Date(datetimeInput), language)}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {/* Native Datetime Local Input */}
-          <input
-            type="datetime-local"
-            value={datetimeInput}
-            onChange={(e) => {
-              const val = e.target.value;
-              setDatetimeInput(val);
-              if (val) {
-                const d = new Date(val);
-                if (!isNaN(d.getTime())) {
-                  setCustomLabel(formatTurkishFriendlyDate(d, language));
-                }
-              }
-            }}
-            className="w-full text-xs font-mono font-medium px-2.5 py-1.5 rounded-xl bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-600 text-stone-900 dark:text-stone-100 shadow-xs focus:ring-2 focus:ring-amber-500/40 outline-none"
-          />
-
-          {/* İsteğe bağlı Özel Zaman Etiketi */}
-          <input
-            type="text"
-            value={customLabel}
-            onChange={(e) => setCustomLabel(e.target.value)}
-            placeholder={language === 'tr' ? 'Örn: Yarın 14:00' : 'e.g. Tomorrow 2 PM'}
-            className="w-full text-xs px-2.5 py-1.5 rounded-xl bg-white dark:bg-stone-800 border border-stone-300 dark:border-stone-600 text-stone-900 dark:text-stone-100 shadow-xs focus:ring-2 focus:ring-amber-500/40 outline-none"
-          />
-        </div>
-
-        {/* Hızlı Şablon Butonları (Tek Dokunuşla) */}
-        <div className="flex items-center gap-1 flex-wrap pt-1">
-          <span className="text-[10px] font-semibold text-stone-500 mr-1 flex items-center gap-0.5">
-            <Sparkles className="w-2.5 h-2.5 text-amber-500" />
-            <span>{language === 'tr' ? 'Hızlı:' : 'Quick:'}</span>
-          </span>
-          <button
-            type="button"
-            onClick={() => applyPreset(1)}
-            className="px-2 py-0.5 rounded-lg bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15 text-[10px] font-medium transition-colors cursor-pointer"
-          >
-            +1 Saat
-          </button>
-          <button
-            type="button"
-            onClick={() => applyPreset(0, 19, 30, 0)}
-            className="px-2 py-0.5 rounded-lg bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15 text-[10px] font-medium transition-colors cursor-pointer"
-          >
-            {language === 'tr' ? 'Bu Akşam 19:30' : 'Tonight 19:30'}
-          </button>
-          <button
-            type="button"
-            onClick={() => applyPreset(0, 9, 0, 1)}
-            className="px-2 py-0.5 rounded-lg bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15 text-[10px] font-medium transition-colors cursor-pointer"
-          >
-            {language === 'tr' ? 'Yarın 09:00' : 'Tomorrow 9 AM'}
-          </button>
-          <button
-            type="button"
-            onClick={() => applyPreset(0, 14, 0, 1)}
-            className="px-2 py-0.5 rounded-lg bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15 text-[10px] font-medium transition-colors cursor-pointer"
-          >
-            {language === 'tr' ? 'Yarın 14:00' : 'Tomorrow 2 PM'}
-          </button>
-          <button
-            type="button"
-            onClick={() => applyPreset(0, 10, 0, 3)}
-            className="px-2 py-0.5 rounded-lg bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15 text-[10px] font-medium transition-colors cursor-pointer"
-          >
-            {language === 'tr' ? '3 Gün Sonra' : 'In 3 Days'}
-          </button>
-        </div>
-      </div>
-
-      {/* 2. Cihaz Bildirimi (Push & Sound Alarm) Ayarı */}
-      <div className="p-2.5 rounded-xl bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/20 mb-3 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="p-1 rounded-md bg-amber-500/20 text-amber-900 dark:text-amber-200">
-              {notifyEnabled ? <BellRing className="w-3.5 h-3.5 text-amber-700 dark:text-amber-300 animate-pulse" /> : <Bell className="w-3.5 h-3.5 text-stone-500" />}
-            </span>
-            <div>
-              <p className="text-[11px] font-bold text-stone-900 dark:text-stone-100">
-                {language === 'tr' ? 'Cihazıma Bildirim & Alarm Gönder' : 'Device Notification & Sound Alarm'}
-              </p>
-              <p className="text-[10px] text-stone-600 dark:text-stone-300">
-                {notifyEnabled
-                  ? (language === 'tr' ? 'Zamanı geldiğinde cihazında sesli bildirim çalar' : 'Chimes and alerts on your device on time')
-                  : (language === 'tr' ? 'Bildirim kapalı' : 'Notifications disabled')}
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-stone-150 dark:border-stone-800 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 flex items-center justify-center text-lg shrink-0 border border-amber-200/60 dark:border-amber-800/60 shadow-2xs">
+              {note.ikon || '⏰'}
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-sm font-bold truncate leading-snug">{note.baslik}</h2>
+              <p className="text-[11px] text-stone-500 dark:text-stone-400 flex items-center gap-1 truncate">
+                <CalendarCheck className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                <span>{language === 'tr' ? 'Hatırlatıcı & Takvim Ayarı' : 'Reminder & Calendar'}</span>
               </p>
             </div>
           </div>
-
           <button
             type="button"
-            onClick={handleToggleNotification}
-            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-              notifyEnabled ? 'bg-amber-600' : 'bg-stone-300 dark:bg-stone-600'
+            onClick={onClose}
+            className="w-8 h-8 rounded-xl flex items-center justify-center text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer shrink-0"
+            title={language === 'tr' ? 'Kapat' : 'Close'}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Geri Bildirim Toast */}
+        {feedback && (
+          <div
+            className={`mx-4 mt-3 px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-2 animate-in fade-in duration-150 ${
+              feedback.type === 'success'
+                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-800'
+                : feedback.type === 'error'
+                ? 'bg-red-50 text-red-800 border border-red-200 dark:bg-red-950/40 dark:text-red-200 dark:border-red-800'
+                : 'bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-800'
             }`}
           >
-            <span
-              className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                notifyEnabled ? 'translate-x-4' : 'translate-x-0'
-              }`}
-            />
-          </button>
-        </div>
-
-        {/* Bildirimi Şimdi Test Et Butonu */}
-        <div className="flex items-center justify-between pt-1 border-t border-amber-500/15">
-          <span className="text-[10px] text-stone-500 dark:text-stone-400">
-            {language === 'tr' ? 'Cihazının zilini test etmek için:' : 'To test device chime:'}
-          </span>
-          <button
-            type="button"
-            onClick={handleTestChimeAndNotification}
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white/80 hover:bg-white dark:bg-stone-800 dark:hover:bg-stone-700 text-[10px] font-semibold text-stone-800 dark:text-stone-200 border border-stone-200 dark:border-stone-700 shadow-2xs transition-colors cursor-pointer"
-          >
-            <Volume2 className="w-3 h-3 text-amber-600" />
-            <span>{language === 'tr' ? 'Sesi Test Et 🔔' : 'Test Sound 🔔'}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 3. Cihaz Takvimine Entegrasyon (Apple, Google, Samsung, Windows) */}
-      <div className="p-2.5 rounded-xl bg-sky-500/10 dark:bg-sky-500/15 border border-sky-500/20 mb-3 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 font-bold text-[11px] text-sky-950 dark:text-sky-200">
-            <Calendar className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-            <span>{language === 'tr' ? 'Cihaz Takvimine Entegre Et:' : 'Integrate with Device Calendar:'}</span>
+            <span>{feedback.type === 'success' ? '✓' : feedback.type === 'error' ? '⚠️' : 'ℹ️'}</span>
+            <span className="flex-1">{feedback.text}</span>
           </div>
-          {(note.calendarEventId || note.calendar_event_id) && (
-            <span className="text-[9px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200 px-1.5 py-0.5 rounded">
-              ✓ {language === 'tr' ? 'Takvimde Kayıtlı' : 'In Calendar'}
-            </span>
-          )}
+        )}
+
+        {/* Form Alanı (Kaydırılabilir) */}
+        <div className="p-4 space-y-4 overflow-y-auto flex-1 overscroll-contain">
+          {/* Tarih & Saat Seçici */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-stone-600 dark:text-stone-300 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-stone-400" />
+              <span>{language === 'tr' ? 'Tarih & Saat Belirle' : 'Exact Date & Time'}</span>
+            </label>
+            <div className="space-y-2">
+              <input
+                type="datetime-local"
+                value={datetimeInput}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setDatetimeInput(val);
+                  if (val) {
+                    const d = new Date(val);
+                    if (!isNaN(d.getTime())) {
+                      setCustomLabel(formatTurkishFriendlyDate(d, language));
+                    }
+                  }
+                }}
+                className="w-full text-xs font-mono font-medium px-3 py-2.5 rounded-xl bg-stone-50 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 outline-none focus:ring-1 focus:ring-amber-500"
+              />
+              <input
+                type="text"
+                value={customLabel}
+                onChange={(e) => setCustomLabel(e.target.value)}
+                placeholder={language === 'tr' ? 'Etiket (Örn: Yarın 14:00)' : 'Label (e.g. Tomorrow 2 PM)'}
+                className="w-full text-xs px-3 py-2 rounded-xl bg-stone-50 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700 text-stone-900 dark:text-stone-100 outline-none focus:ring-1 focus:ring-amber-500"
+              />
+            </div>
+          </div>
+
+          {/* 3. Cihaz Takvimine Doğrudan Aktarma (1-Tap Direkt Entegrasyon) */}
+          <div className="p-3.5 rounded-2xl bg-sky-50 dark:bg-sky-950/30 border border-sky-200/80 dark:border-sky-800/60 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-7 h-7 rounded-lg bg-sky-600 text-white flex items-center justify-center text-sm shadow-2xs shrink-0">
+                  📅
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-xs font-bold text-sky-950 dark:text-sky-200 truncate">
+                    {language === 'tr' ? 'Cihaz Takvimi (Google / Apple)' : 'Device Calendar (Google / Apple)'}
+                  </h3>
+                  <p className="text-[10px] text-sky-700 dark:text-sky-400 truncate">
+                    {language === 'tr' ? 'Dosya indirmeden doğrudan ajandana aktar' : 'Add directly without downloading files'}
+                  </p>
+                </div>
+              </div>
+              {(note.calendarEventId || note.calendar_event_id) && (
+                <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 px-2 py-0.5 rounded-full shrink-0">
+                  ✓ {language === 'tr' ? 'Kayıtlı' : 'Synced'}
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={handleExportToDeviceCalendar}
+                className="w-full py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-97 text-white font-semibold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>{language === 'tr' ? 'Cihaz Takvimine Ekle' : 'Add to Device Calendar'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSyncToGoogleCalendar}
+                disabled={isSyncingCalendar}
+                className="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-stone-800 hover:bg-sky-50 dark:hover:bg-stone-700 active:scale-97 text-stone-800 dark:text-stone-200 border border-sky-200 dark:border-sky-800 font-semibold text-xs shadow-2xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-sky-600" />
+                <span>{isSyncingCalendar ? '...' : (language === 'tr' ? 'Google Takvim (Web)' : 'Google Calendar')}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 4. Sesli Alarm & Bildirim (Kafa Yormayan İkili Segment) */}
+          <div className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/25 border border-amber-200/70 dark:border-amber-800/50 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center text-sm shadow-2xs">
+                  {notifyEnabled ? '🔔' : '🔕'}
+                </span>
+                <div>
+                  <h3 className="text-xs font-bold text-amber-950 dark:text-amber-200">
+                    {language === 'tr' ? 'Sesli Alarm ve Bildirim' : 'Alarm & Notification'}
+                  </h3>
+                  <p className="text-[10px] text-amber-800 dark:text-amber-400">
+                    {notifyEnabled
+                      ? (language === 'tr' ? 'Zamanı geldiğinde cihazında sesli çalar' : 'Chimes and alerts on time')
+                      : (language === 'tr' ? 'Sessiz hatırlatıcı' : 'Silent reminder')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Ses Testi */}
+              <button
+                type="button"
+                onClick={handleTestChimeAndNotification}
+                className="px-2.5 py-1 text-[10px] font-semibold rounded-lg bg-white dark:bg-stone-800 hover:bg-amber-100 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-800 transition-colors cursor-pointer flex items-center gap-1"
+                title={language === 'tr' ? 'Sesi test et' : 'Test chime'}
+              >
+                <Volume2 className="w-3 h-3 text-amber-600" />
+                <span>Test 🔔</span>
+              </button>
+            </div>
+
+            {/* İkili Görsel Buton Grubu */}
+            <div className="flex items-center gap-1.5 bg-white/80 dark:bg-stone-800/80 p-1 rounded-xl border border-amber-200/50 dark:border-amber-800/40">
+              <button
+                type="button"
+                onClick={() => handleToggleNotification(true)}
+                className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-97 ${
+                  notifyEnabled
+                    ? 'bg-amber-500 text-white shadow-xs'
+                    : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+                }`}
+              >
+                <BellRing className="w-3.5 h-3.5" />
+                <span>{language === 'tr' ? 'Açık (Sesli Alarm)' : 'Active (Alarm)'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleNotification(false)}
+                className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-97 ${
+                  !notifyEnabled
+                    ? 'bg-stone-300 dark:bg-stone-700 text-stone-900 dark:text-white shadow-xs'
+                    : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+                }`}
+              >
+                <Bell className="w-3.5 h-3.5 opacity-50" />
+                <span>{language === 'tr' ? 'Kapalı (Sessiz)' : 'Off (Silent)'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 5. Tekrarlama / Döngü Çipleri */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-stone-600 dark:text-stone-300 flex items-center gap-1.5">
+              <Repeat className="w-3.5 h-3.5 text-stone-400" />
+              <span>{language === 'tr' ? 'Tekrarlama Döngüsü' : 'Recurrence'}</span>
+            </label>
+            <div className="grid grid-cols-4 gap-1.5">
+              {[
+                { id: 'none', labelTr: 'Tek', labelEn: 'Once', icon: '🚫' },
+                { id: 'gunluk', labelTr: 'Her Gün', labelEn: 'Daily', icon: '🔄' },
+                { id: 'haftalik', labelTr: 'Haftalık', labelEn: 'Weekly', icon: '📆' },
+                { id: 'aylik', labelTr: 'Aylık', labelEn: 'Monthly', icon: '🗓️' },
+              ].map((rec) => {
+                const active = periodicType === rec.id;
+                return (
+                  <button
+                    key={rec.id}
+                    type="button"
+                    onClick={() => setPeriodicType(rec.id)}
+                    className={`p-2 rounded-xl border text-center transition-all cursor-pointer active:scale-95 flex flex-col items-center gap-0.5 ${
+                      active
+                        ? 'border-stone-900 bg-stone-900 text-white dark:border-white dark:bg-white dark:text-stone-900 font-bold shadow-xs'
+                        : 'border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800/60 text-stone-600 dark:text-stone-400 hover:border-stone-300'
+                    }`}
+                  >
+                    <span className="text-sm">{rec.icon}</span>
+                    <span className="text-[10px] leading-tight">
+                      {language === 'tr' ? rec.labelTr : rec.labelEn}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-          {/* Cihaz Takvimine (.ics) Aktar */}
-          <button
-            type="button"
-            onClick={handleExportToDeviceCalendar}
-            className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-stone-800 hover:bg-sky-50 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-100 border border-sky-200 dark:border-sky-800 font-semibold text-[11px] shadow-2xs transition-all cursor-pointer active:scale-98"
-            title={language === 'tr' ? 'iOS (Apple), Android ve Outlook takvimine eklemek için .ics dosyası indirir' : 'Downloads .ics for Apple/Android/Outlook calendar'}
-          >
-            <Download className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-            <span>{language === 'tr' ? 'Cihaz Takvimine Aktar (.ics)' : 'Export to Device Calendar (.ics)'}</span>
-          </button>
-
-          {/* Google Takvim Web Sayfasını Aç */}
-          <button
-            type="button"
-            onClick={handleSyncToGoogleCalendar}
-            disabled={isSyncingCalendar}
-            className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-stone-800 hover:bg-sky-50 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-100 border border-sky-200 dark:border-sky-800 font-semibold text-[11px] shadow-2xs transition-all cursor-pointer active:scale-98"
-          >
-            <ExternalLink className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-            <span>{isSyncingCalendar ? '...' : (language === 'tr' ? "Google Takvim'e Ekle" : 'Add to Google Calendar')}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 4. Periyodik Tekrar Seçeneği */}
-      <div className="mb-3 flex items-center justify-between text-[11px]">
-        <label className="font-semibold text-stone-600 dark:text-stone-300 flex items-center gap-1">
-          <Repeat className="w-3 h-3 text-stone-500" />
-          <span>{language === 'tr' ? 'Tekrarlama / Döngü:' : 'Recurrence:'}</span>
-        </label>
-        <select
-          value={periodicType}
-          onChange={(e) => setPeriodicType(e.target.value)}
-          className="text-xs bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 border border-stone-300 dark:border-stone-600 rounded-lg px-2 py-1 outline-none shadow-2xs"
-        >
-          <option value="none">{language === 'tr' ? 'Tek Seferlik' : 'One-time'}</option>
-          <option value="gunluk">{language === 'tr' ? 'Her Gün' : 'Daily'}</option>
-          <option value="haftalik">{language === 'tr' ? 'Her Hafta' : 'Weekly'}</option>
-          <option value="aylik">{language === 'tr' ? 'Her Ay' : 'Monthly'}</option>
-          <option value="aylik_son_hafta">{language === 'tr' ? 'Her Ayın Son Haftası' : 'Last Week of Month'}</option>
-        </select>
-      </div>
-
-      {/* 5. İşlem Butonları (Kaydet / Hatırlatıcıyı Kaldır / Kapat) */}
-      <div className="flex items-center justify-between pt-2 border-t border-black/10 dark:border-white/10 gap-2">
-        <div>
+        {/* Alt Butonlar */}
+        <div className="flex items-center gap-2 p-3 sm:px-4 sm:py-3.5 border-t border-stone-150 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-900/70 shrink-0">
           {(note.tarih_iso || note.zaman) && (
             <button
               type="button"
               onClick={handleClearReminder}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 text-[11px] font-medium transition-colors cursor-pointer"
+              className="px-3 py-2.5 rounded-xl text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer flex items-center gap-1"
+              title={language === 'tr' ? 'Hatırlatıcıyı Kaldır' : 'Remove'}
             >
-              <Trash2 className="w-3 h-3" />
-              <span>{language === 'tr' ? 'Hatırlatıcıyı Kaldır' : 'Remove Reminder'}</span>
+              <Trash2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{language === 'tr' ? 'Kaldır' : 'Remove'}</span>
             </button>
           )}
-        </div>
 
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-3 py-1.5 rounded-lg bg-black/5 hover:bg-black/10 dark:bg-white/10 dark:hover:bg-white/15 text-stone-700 dark:text-stone-300 font-medium text-[11px] transition-colors cursor-pointer"
-          >
-            {language === 'tr' ? 'Vazgeç' : 'Cancel'}
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-white font-semibold text-[11px] shadow-xs transition-transform active:scale-95 cursor-pointer"
-          >
-            <Check className="w-3.5 h-3.5" />
-            <span>{language === 'tr' ? 'Kaydet & Bildirimi Kur' : 'Save & Set Reminder'}</span>
-          </button>
+          <div className="flex-1 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-xl text-xs font-semibold text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer"
+            >
+              {language === 'tr' ? 'Vazgeç' : 'Cancel'}
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-stone-900 hover:bg-stone-800 dark:bg-white dark:hover:bg-stone-100 text-white dark:text-stone-900 shadow-xs active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Check className="w-4 h-4 stroke-[2.5]" />
+              <span>{language === 'tr' ? 'Kaydet' : 'Save'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

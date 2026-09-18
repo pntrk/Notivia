@@ -95,3 +95,72 @@ export function downloadIcsFile(note: NotiviaParsedNote) {
     console.error('Failed to download ICS file:', err);
   }
 }
+
+export interface ConflictCheckResult {
+  hasConflict: boolean;
+  conflictingEventTitle?: string;
+  conflictingEventTime?: string;
+  suggestedAlternativeIso?: string;
+  suggestedAlternativeTimeStr?: string;
+  warningNote?: string;
+}
+
+/**
+ * Mevcut kartlar ve takvim etkinlikleri ile yeni etkinlik arasında saat çakışması tespit eder
+ */
+export function detectCalendarConflict(
+  newEventIso: string | null | undefined,
+  existingEvents: Array<{ id?: string; baslik?: string; summary?: string; tarih_iso?: string | null; start_datetime?: string | null; zaman?: string | null }>,
+  durationMinutes: number = 45
+): ConflictCheckResult {
+  if (!newEventIso) {
+    return { hasConflict: false };
+  }
+
+  const targetTime = new Date(newEventIso).getTime();
+  if (isNaN(targetTime)) {
+    return { hasConflict: false };
+  }
+
+  const durationMs = durationMinutes * 60 * 1000;
+  const newEventEnd = targetTime + durationMs;
+
+  for (const item of existingEvents) {
+    const itemIso = item.tarih_iso || item.start_datetime;
+    if (!itemIso) continue;
+
+    const itemStart = new Date(itemIso).getTime();
+    if (isNaN(itemStart)) continue;
+
+    const itemEnd = itemStart + durationMs;
+
+    // Zaman aralığı çakışma formülü: (StartA < EndB) && (EndA > StartB)
+    // 15 dakikadan az aralık olan durumları çakışma veya aşırı sıkışıklık say
+    const isOverlapping = targetTime < itemEnd && newEventEnd > itemStart;
+
+    if (isOverlapping) {
+      const itemDate = new Date(itemStart);
+      const hours = String(itemDate.getHours()).padStart(2, '0');
+      const minutes = String(itemDate.getMinutes()).padStart(2, '0');
+      const timeStr = `${hours}:${minutes}`;
+      const title = item.baslik || item.summary || 'Mevcut Etkinlik';
+
+      // Alternatif zaman önerisi: Çakışan etkinliğin bitişinden 30 dakika sonrası
+      const altDate = new Date(itemEnd + 30 * 60 * 1000);
+      const altHours = String(altDate.getHours()).padStart(2, '0');
+      const altMinutes = String(altDate.getMinutes()).padStart(2, '0');
+      const altTimeStr = `${altHours}:${altMinutes}`;
+
+      return {
+        hasConflict: true,
+        conflictingEventTitle: title,
+        conflictingEventTime: timeStr,
+        suggestedAlternativeIso: altDate.toISOString(),
+        suggestedAlternativeTimeStr: altTimeStr,
+        warningNote: `⚠️ Çakışma Uyarısı: ${timeStr} saatinde "${title}" bulunuyor. İkilem oluşmaması için ${altTimeStr} saatine kaydırmanız önerilir.`,
+      };
+    }
+  }
+
+  return { hasConflict: false };
+}

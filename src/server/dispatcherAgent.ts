@@ -1,6 +1,8 @@
 import { GoogleGenAI, Type, type FunctionDeclaration } from '@google/genai';
 import { extractSimpleNoteFromText } from '../utils/simpleNote.ts';
 import { matchShortScenario } from '../utils/scenarioDatabase.ts';
+import { sanitizeSpokenText, sanitizeCardTitle } from '../utils/speechSanitizer.ts';
+import { detectDomainFromJargon } from '../utils/jargonRadar.ts';
 
 // 1. Otonom Ajan Araç Tanımları (Function Declarations - Exact Formal Schema)
 export const getCalendarEventsDeclaration: FunctionDeclaration = {
@@ -177,10 +179,22 @@ TEMEL ÇALIŞMA KURALLARI VE BİLİŞSEL ALANLAR:
   * Randevu: "Salı 14:30 diş hekimi" -> Sadece randevu kartı + 30 dk önce yola çıkış, 'action_items': [].
 
 1. BİLİŞSEL ALT GÖREV TÜRETİMİ (LEB DEMEDEN LEBLEBİYİ ANLAMA):
-- Seyahat / Tatil: Pasaport/vize geçerliliği, harç pulu, hat dolaşımı (roaming), ev su vanası ve priz kontrolü.
-- Araç Bakım / Muayene: MTV/ceza borcu kontrolü, ilk yardım çantası/yangın tüpü, ruhsat kontrolü.
+- Seyahat / Tatil / Uçak / YHT: Pasaport/vize geçerliliği, T-24 saatte online check-in, T-3 saatte evden çıkış / trafik payı, T-90 dakikada bagaj/güvenlik, ev su vanası ve priz kontrolü.
+- Araç Bakım / Muayene / MTV: MTV/ceza borcu kontrolü, 3 gün önce sigorta teklif karşılaştırma, ilk yardım çantası/yangın tüpü, ruhsat kontrolü.
+- Bebek & Aşı Takvimi: 1 gün önce parasetamol şurup ve dijital ateşölçer kontrolü, kolay çıkarılır pamuklu giysi, 48 saat ateş takibi.
+- Evcil Hayvan & Parazit: 2-3 aylık periyodik iç-dış parazit takvimi, aşı karnesi ve taşıma kutusu kontrolü.
+- Ev Filtre & Tesisat (Arıtma, Kombi, Klima): Su arıtma filtre değişimi (6 ay), kombi petek/hava tahliyesi, müdahaleden 48 saat sonrasına kontrol adımı (bar basıncı testi).
+- Abonelik & Deneme Sürümü: 3 gün öncesine otomatik kart çekimini önlemek için abonelik iptal / provizyon kontrolü alarmı.
+- Zirai İlaçlama & Budama: 24 saat yağmursuzluk/rüzgarsızlık meteorolojik kontrolü, sabah erken serinlik (07:30), kış sonu budama ve aşı macunu.
+- Sporcu Recovery & Beslenme: Ağır bacak/göğüs/sırt antrenmanından 48 saat sonra kas toparlanma (recovery), günlük 3.5L su ve 5g kreatin dozu.
 - Kurul / Toplantı: Gündem maddeleri, önceki karar tutanakları, ıslak imzalı hazirun listesi.
-- Donanım & Tesisat (Kombi, Balata, Akü): Müdahaleden 48 saat sonrasına kontrol adımı koy (örn: Kombi su basıldıysa "48 saat sonra bar basıncı kontrolü - Kaçak testi").
+- TEFBİS & Okul Aile Birliği: 3 gün içinde TEFBİS gelir-gider makbuz kaydı, OAB aylık veli tablosu.
+- Bina Sınav Komisyonu (LGS/YKS): T-2 saatte komisyon toplantısı, emniyet kuryesinden mühürlü evrak teslimi ve sınav sonu mühürleme.
+- ASM Gebe-Bebek İzlemi & 112 Acil: AHBS izlem aralığı, negatif performans uyarısı, 112 nöbet devrinde kırmızı reçete narkotik ampul sayımı.
+- Arabuluculuk (3+1 Hafta) & İcra Kıymet Takdiri: 3 haftalık yasal süre, ilk oturum daveti, UYAP arabuluculuk portalı son tutanak, 2 yıllık kıymet takdiri süresi.
+- YMM KDV İadesi & Bağımsız Denetim: Karşıt inceleme tutanakları, İVD tasdik raporu, KGK çalışma kağıtları ve finansal dipnot mutabakatı.
+- ÇKS & TARSİM & TÜRKVET: ÇKS dosya yenileme, TARSİM dolu/don poliçesi, yeni doğan TÜRKVET küpeleme ve koruyucu aşı takvimi.
+- İSG & Yapı Denetim: İBYS noter onaylı defter kaydı, ramak kala tutanağı, şantiye demir donatı kabul vizesi ve beton döküm izni.
 
 2. LİSTE, MARKET VE ÇOKLU GÖREV AYRIŞTIRMA:
 - Arka arkaya ürün veya görev sayıldığında ("et süt yumurta al", "raporu at sonra Ahmet'i ara"):
@@ -220,7 +234,8 @@ export function dispatchDeterministic(
   currentDatetime: string,
   userDomain?: string
 ): DispatchResponse {
-  const lower = input.toLowerCase().trim();
+  const sanitizedInput = sanitizeSpokenText(input) || input.trim();
+  const lower = sanitizedInput.toLowerCase().trim();
   const baseDate = currentDatetime ? new Date(currentDatetime) : new Date();
 
   // 1. KANAL: İLETİŞİM & TASLAK HAZIRLAYICI (draft_message)
@@ -356,10 +371,11 @@ export function dispatchDeterministic(
   }
 
   // 3. KANAL: BİLİŞSEL EYLEM & NOT OLUŞTURUCU (create_note_or_event)
-  const simpleNote = extractSimpleNoteFromText(input, currentDatetime, undefined, userDomain);
+  const radar = detectDomainFromJargon(sanitizedInput, (userDomain as any) || 'GENEL');
+  const simpleNote = extractSimpleNoteFromText(sanitizedInput, currentDatetime, undefined, userDomain);
 
-  // Başlık maksimum 4 kelime kuralı
-  let baslik = simpleNote.baslik;
+  // Başlık maksimum 4 kelime kuralı ve dolgu sözcüklerden arındırma
+  let baslik = sanitizeCardTitle(simpleNote.baslik);
   const words = baslik.split(/\s+/);
   if (words.length > 4) {
     baslik = words.slice(0, 4).join(' ');
@@ -368,6 +384,11 @@ export function dispatchDeterministic(
   // İsmin halleri finansal kontrol: "-den/-dan" alacak (🟢), "-e/-a" borç/ödeme (🔴)
   let icon = simpleNote.ikon;
   let color = simpleNote.renk;
+  if (radar.confidence >= 0.4) {
+    if (!icon || icon === '📌') icon = radar.suggestedIcon;
+    if (!color || color === '#FEF3C7') color = radar.suggestedColor;
+  }
+
   if (lower.includes('alacak') || lower.includes('alacağım') || input.match(/\b[A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?:'?[dten]an|'?[dten]en)\b/)) {
     icon = '🟢';
     color = '#DCFCE7';
@@ -376,19 +397,42 @@ export function dispatchDeterministic(
     color = '#FEE2E2';
   }
 
-  const isClarificationNeeded = !!(simpleNote.eksik_bilgi || (!simpleNote.zaman && !simpleNote.tarih_iso && (lower.includes('randevu') || lower.includes('görüşme') || lower.includes('buluşma') || lower.includes('toplantı'))));
+  // Örtük saat ataması (Jargon radarında implicit time hook varsa ve kullanıcı spesifik saat vermediyse)
+  let zamanText = simpleNote.zaman;
+  let tarihIso = simpleNote.tarih_iso;
+  if (radar.confidence >= 0.4 && radar.implicitHour !== undefined && radar.implicitMinute !== undefined) {
+    const hasExplicitHour = zamanText && /\b\d{1,2}:\d{2}\b/.test(zamanText);
+    if (!hasExplicitHour) {
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const timeStr = `${pad(radar.implicitHour)}:${pad(radar.implicitMinute)}`;
+      if (zamanText === 'Bugün' || !zamanText) {
+        zamanText = `Bugün ${timeStr}`;
+      } else if (zamanText === 'Yarın') {
+        zamanText = `Yarın ${timeStr}`;
+      } else {
+        zamanText = `${zamanText || 'Bugün'} ${timeStr}`;
+      }
+      if (tarihIso) {
+        const d = new Date(tarihIso);
+        d.setHours(radar.implicitHour, radar.implicitMinute, 0, 0);
+        tarihIso = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      }
+    }
+  }
+
+  const isClarificationNeeded = !radar.implicitHour && !!(simpleNote.eksik_bilgi || (!simpleNote.zaman && !simpleNote.tarih_iso && (lower.includes('randevu') || lower.includes('görüşme') || lower.includes('buluşma') || lower.includes('toplantı'))));
   const soruText = simpleNote.netlestirme_sorusu || simpleNote.soru || (isClarificationNeeded ? 'Hangi gün ve saatte planlayalım?' : null);
-  const zamanText = isClarificationNeeded ? 'Zaman Belirtilmedi' : (simpleNote.zaman || 'Bugün');
+  zamanText = isClarificationNeeded ? 'Zaman Belirtilmedi' : (zamanText || 'Bugün');
   const voiceWhisper = isClarificationNeeded && soruText
     ? soruText
-    : `${baslik} ${simpleNote.zaman ? simpleNote.zaman + ' için ' : ''}kuruldu.`;
+    : `${baslik} ${zamanText ? zamanText + ' için ' : ''}kuruldu.`;
 
   return {
     tool: 'create_note_or_event',
     arguments: {
       baslik,
       zaman: zamanText,
-      tarih_iso: isClarificationNeeded ? null : (simpleNote.tarih_iso || null),
+      tarih_iso: isClarificationNeeded ? null : (tarihIso || null),
       eksik_bilgi: isClarificationNeeded,
       netlestirme_sorusu: isClarificationNeeded ? soruText : null,
       soru: isClarificationNeeded ? soruText : null,
@@ -417,7 +461,8 @@ export async function dispatchWithGemini(
   currentDatetime: string,
   userDomain?: string
 ): Promise<DispatchResponse> {
-  const cleanInput = (input || '').trim();
+  const sanitized = sanitizeSpokenText(input);
+  const cleanInput = (sanitized || input || '').trim();
   let lower = cleanInput.toLowerCase();
 
   // Kelime bazlı göreceli süreleri dakikaya dönüştür
@@ -523,6 +568,10 @@ export async function dispatchWithGemini(
         args.metin = args.message_body || args.metin || '';
       } else if (toolName === 'get_calendar_events') {
         args.sorgu_tipi = args.period_label || args.sorgu_tipi || 'bugun';
+      } else if (toolName === 'create_note_or_event') {
+        if (args.baslik) {
+          args.baslik = sanitizeCardTitle(args.baslik);
+        }
       }
 
       return {

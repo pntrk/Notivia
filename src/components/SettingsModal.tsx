@@ -58,7 +58,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   return (
     <div
       id="settings-backdrop"
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 ${isDark ? 'dark' : ''}`}
       onClick={onClose}
     >
       <div
@@ -307,7 +307,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           }`}>
             {/* Görünüm (Tema) Satırı */}
             <div className="flex items-center justify-between p-3.5">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${
                   isDark ? 'bg-stone-800 text-amber-400' : 'bg-stone-100 text-amber-600'
                 }`}>
@@ -315,28 +315,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
                 <div>
                   <p className="font-semibold text-xs leading-tight">{t.appearanceSection}</p>
-                  <p className="text-[11px] text-stone-500 dark:text-stone-400">
-                    {isDark ? t.themeDark : t.themeLight}
-                  </p>
                 </div>
               </div>
-              <div className="min-w-[44px] min-h-[44px] flex items-center justify-center">
+              <div className="flex items-center gap-1 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl border border-stone-200/50 dark:border-stone-750">
                 <button
                   type="button"
-                  onClick={onToggleTheme}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                    isDark ? 'bg-amber-500' : 'bg-stone-300 dark:bg-stone-700'
+                  onClick={() => { if (isDark) onToggleTheme(); }}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1 min-h-[36px] sm:min-h-0 active:scale-95 ${
+                    !isDark
+                      ? 'bg-white text-stone-900 shadow-xs'
+                      : 'text-stone-500 hover:text-stone-200'
                   }`}
-                  role="switch"
-                  aria-checked={isDark}
-                  aria-label={isDark ? t.themeLight : t.themeDark}
                 >
-                  <span
-                    aria-hidden="true"
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                      isDark ? 'translate-x-5' : 'translate-x-0'
-                    }`}
-                  />
+                  <span>☀️</span>
+                  <span>{language === 'tr' ? 'Açık' : 'Light'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { if (!isDark) onToggleTheme(); }}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1 min-h-[36px] sm:min-h-0 active:scale-95 ${
+                    isDark
+                      ? 'bg-stone-700 text-white shadow-xs'
+                      : 'text-stone-500 hover:text-stone-800'
+                  }`}
+                >
+                  <span>🌙</span>
+                  <span>{language === 'tr' ? 'Koyu' : 'Dark'}</span>
                 </button>
               </div>
             </div>
@@ -344,7 +348,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* Bildirimler & Alarmlar Satırı */}
             <div className="p-3.5 space-y-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${
                     notificationsEnabled
                       ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
@@ -354,29 +358,32 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                   <div>
                     <p className="font-semibold text-xs leading-tight">{t.notificationsSection}</p>
-                    <p className="text-[11px] text-stone-500 dark:text-stone-400">
-                      {notificationsEnabled ? t.notificationsEnabled : t.notificationsDisabled}
-                    </p>
                   </div>
                 </div>
-                <div className="min-w-[44px] min-h-[44px] flex items-center justify-center">
+                <div className="flex items-center gap-1 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl border border-stone-200/50 dark:border-stone-750">
                   <button
                     type="button"
-                    id="notification-toggle-switch"
-                    onClick={onToggleNotifications}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                      notificationsEnabled ? 'bg-emerald-500' : 'bg-stone-300 dark:bg-stone-700'
+                    onClick={() => { if (!notificationsEnabled) onToggleNotifications(); }}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1 min-h-[36px] sm:min-h-0 active:scale-95 ${
+                      notificationsEnabled
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
                     }`}
-                    role="switch"
-                    aria-checked={notificationsEnabled}
-                    aria-label={notificationsEnabled ? t.disableNotifications : t.enableNotifications}
                   >
-                    <span
-                      aria-hidden="true"
-                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                        notificationsEnabled ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
+                    <span>🔔</span>
+                    <span>{language === 'tr' ? 'Açık' : 'On'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { if (notificationsEnabled) onToggleNotifications(); }}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1 min-h-[36px] sm:min-h-0 active:scale-95 ${
+                      !notificationsEnabled
+                        ? 'bg-stone-300 dark:bg-stone-700 text-stone-900 dark:text-white shadow-xs'
+                        : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+                    }`}
+                  >
+                    <span>🔕</span>
+                    <span>{language === 'tr' ? 'Kapalı' : 'Off'}</span>
                   </button>
                 </div>
               </div>

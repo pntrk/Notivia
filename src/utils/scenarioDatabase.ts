@@ -1408,6 +1408,243 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
       'PTT tebligat takip numarasıyla teslim gününü sistemden takip et',
       'Tebliğ şerhli nüshayı noterden teslim alıp dava dosyasına ekle'
     ]
+  },
+
+  // 27. BİYOLOJİK VE AİLE YAŞAMI MOTORU (FAMILY & HOUSEHOLD ENGINE)
+  {
+    id: 'bebek_asi_takvimi',
+    category: 'saglik',
+    domain: 'CALISMIYORUM',
+    keywords: ['bebek aşı', 'çocuk aşı', 'aylık aşı', 'karma aşı', 'kpa aşısı', 'verem aşısı', 'aşı randevusu', 'bebek 2 aylık', 'bebek 4 aylık', 'bebek 6 aylık', 'kkk aşısı', 'aşı takvimi'],
+    baslik: 'Bebek & Çocuk Aşı Takvimi',
+    ikon: '👶',
+    renk: '#FDF2F8',
+    varsayilanZaman: 'Aşı Günü 09:30',
+    hazirlikZamani: '1 Gün Önce 18:00',
+    hazirlikSaatOncesi: 15,
+    akilliFisilti: '👶 Aşı sonrası hafif ateş ihtimaline karşı çocuk doktorunun önerdiği ateş düşürücü şurup ve dijital ateşölçer hazır bulundurulmalıdır.',
+    oncedenYapilacaklar: [
+      'Aşı kartı ve T.C. kimlik kartını bebek çantasına koy',
+      'Ateş düşürücü parasetamol şurup ve dijital ateşölçer kontrolü yap',
+      'Aşı sonrası giydirmek üzere kolay çıkarılabilir pamuklu giysi hazırla',
+      'Aşıdan sonra 24-48 saat ateş ve aşı yeri hassasiyeti takibi yap'
+    ]
+  },
+  {
+    id: 'evcil_hayvan_parazit_asi',
+    category: 'ev_teknik',
+    domain: 'CALISMIYORUM',
+    keywords: ['kedi aşı', 'köpek aşı', 'iç parazit', 'dış parazit', 'kuduz aşısı', 'veteriner aşı', 'parazit damlası', 'veteriner kontrol', 'veterinere gideceğiz', 'hayvan aşısı'],
+    baslik: 'Evcil Hayvan Aşı & Parazit',
+    ikon: '🐾',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Veteriner Randevusu 11:00',
+    hazirlikZamani: '1 Gün Önce 19:00',
+    hazirlikSaatOncesi: 16,
+    akilliFisilti: '🐾 İç-dış parazit uygulamaları 2-3 ayda bir periyodik tekrarlanmalıdır; aşı karnesi mutlaka yanınızda olmalıdır.',
+    oncedenYapilacaklar: [
+      'Veteriner aşı karnesini ve hayvan pasaportunu hazırla',
+      'Taşıma çantasını (box/boxer) ve emniyet kemeri bağlantısını kontrol et',
+      'Uygulama sonrası 24 saat su temasını engelle (Dış parazit damlası)',
+      '3 ay sonrası için bir sonraki periyodik parazit alarmını kur'
+    ]
+  },
+  {
+    id: 'ev_su_aritma_filtre',
+    category: 'ev_teknik',
+    domain: 'CALISMIYORUM',
+    keywords: ['su arıtma', 'arıtma filtre', 'su arıtma filtre', 'filtre değişecek', 'arıtma filtresi', 'sediment filtre', 'membran filtre'],
+    baslik: 'Su Arıtma Filtre Değişimi',
+    ikon: '💧',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Hafta Sonu 14:00',
+    hazirlikZamani: 'Değişim Öncesi',
+    akilliFisilti: '💧 Sediment ve karbon filtreler 6 ayda bir değiştirilmezse membran tıkanır ve su kalitesi düşer.',
+    oncedenYapilacaklar: [
+      'Cihazın ana su giriş vanasını ve elektrik adaptörünü kapat',
+      'Sediment, aktif karbon ve blok karbon ön filtrelerini yenile',
+      'Filtre haznesi contalarını vazelinleyip kaçak testi yap',
+      'İlk 10 litre suyu durulama amacıyla döküp tankı doldur'
+    ]
+  },
+  {
+    id: 'kombi_petek_yillik_bakim',
+    category: 'ev_teknik',
+    domain: 'CALISMIYORUM',
+    keywords: ['kombi bakım', 'kombi periyodik', 'petek temizliği', 'kombi yıllık', 'kombi basınç', 'petekler ısınmıyor'],
+    baslik: 'Kombi & Petek Yıllık Bakımı',
+    ikon: '🔥',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Hafta Sonu 11:30',
+    hazirlikZamani: 'Servis Öncesi',
+    akilliFisilti: '🔥 Kombi su basıncı 1.5 bar olmalı, genleşme tankı havası ve petek hava pürjörleri kış öncesi kontrol edilmelidir.',
+    oncedenYapilacaklar: [
+      'Kombi su basıncını 1.5 bar seviyesine getir (Doldurma musluğu)',
+      'Yetkili servis tarafından brülör, fan ve genleşme tankı bakımı yaptır',
+      'Peteklerin üst hava pürjör vanalarından havayı tahliye et',
+      'Müdahaleden 48 saat sonra basınç göstergesinde düşme/kaçak testi yap'
+    ]
+  },
+
+  // 28. MALİYE, VERGİ VE ABONELİK AKILLI BELLEĞİ (FINANCE & RECURRING BILLS ENGINE)
+  {
+    id: 'abonelik_deneme_iptal_korumasi',
+    category: 'finans',
+    domain: 'FINANS',
+    keywords: ['deneme sürümü', 'ücretsiz deneme', 'netflix deneme', 'spotify deneme', 'abonelik iptal', 'karttan çekilmeden', 'ücretsiz 30 gün', 'trial iptal', 'abonelik yenileme', 'chatgpt plus iptal'],
+    baslik: 'Abonelik & Deneme İptal Uyarısı',
+    ikon: '⏱️',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Yenilemeden 3 Gün Önce',
+    hazirlikZamani: '3 Gün Önce 10:00',
+    hazirlikSaatOncesi: 72,
+    akilliFisilti: '⏱️ Deneme süresi bitmeden 3 gün önce bildirim kuruldu; otomatik kart çekimini önlemek için abonelik ayarlarını denetleyin.',
+    oncedenYapilacaklar: [
+      'App Store, Google Play veya ilgili web paneli abonelik menüsünü aç',
+      'Hizmetin devam edip etmeyeceğini değerlendir',
+      'Devam edilmeyecekse "Aboneliği İptal Et" butonuna basıp teyit al',
+      'İlgili sanal kart limitini veya provizyon onayını kapat'
+    ]
+  },
+  {
+    id: 'mtv_sigorta_kasko_yenileme',
+    category: 'finans',
+    domain: 'FINANS',
+    keywords: ['mtv ödeme', 'motorlu taşıtlar vergisi', 'trafik sigortası yenileme', 'kasko yenileme', 'kasko bitti', 'sigorta bitti', 'mtv 1. taksit', 'mtv 2. taksit', 'mtv öde'],
+    baslik: 'MTV & Sigorta / Kasko Yenileme',
+    ikon: '💳',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Vade Tarihi 17:00',
+    hazirlikZamani: 'Vadeden 3 Gün Önce',
+    hazirlikSaatOncesi: 72,
+    akilliFisilti: '💳 MTV Ocak ve Temmuz aylarında 2 taksittir; sigortasız araçlar trafiğe çıkamaz ve muayeneden geçemez.',
+    oncedenYapilacaklar: [
+      'İnteraktif Vergi Dairesi (İVD) üzerinden araç plakasıyla vergi borcu sorgula',
+      'Trafik sigortası ve kasko için en az 3 farklı şirketten teklif karşılaştır',
+      'Hasarsızlık indirim basamağının (1-8. basamak) doğru aktarıldığını teyit et',
+      'Ödeme dekontunu ve yeni poliçeyi e-Devlet üzerinden kontrol et'
+    ]
+  },
+
+  // 29. ZİRAİ, TARIM VE BAHÇE MOTORU (AGRICULTURE & SMART GARDENING ENGINE)
+  {
+    id: 'zirai_ilaclama_hava_sarti',
+    category: 'ev_teknik',
+    domain: 'ZIRAAT',
+    keywords: ['ilaçlama', 'mantar ilacı', 'böcek ilacı', 'bordo bulamacı', 'zeytin ilaçlama', 'ağaç ilaçlama', 'tarla ilaçlama', 'pestisit', 'fungisit', 'zirai ilaç'],
+    baslik: 'Zirai İlaçlama & Koşul Takibi',
+    ikon: '🌿',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Sabah Serinliği 07:30',
+    hazirlikZamani: 'İlaçlama Günü 06:30',
+    akilliFisilti: '🌿 İlaçlama sonrası ilk 24 saat yağmur yağarsa ilaç yıkanır; rüzgarsız sabah erken saatte uygulanmalıdır.',
+    tetikleyici: {
+      tip: 'durum',
+      sart: 'yagmursuz_ruzgarsiz',
+      etiket: 'Hava Koşulu: Rüzgarsız & Yağışsız'
+    },
+    oncedenYapilacaklar: [
+      'Meteoroloji 48 saatlik yağış ve rüzgar (10 km/s altı) tahminini denetle',
+      'Maske, koruyucu tulum, gözlük ve kimyasal eldiven ekipmanını kuşan',
+      'Dozajı ziraat mühendisi reçetesine ve su pH dengesine göre ayarla',
+      'İlaçlama sonrası çevre arıcılara haber ver ve hasat bekleme süresine (PHI) riayet et'
+    ]
+  },
+  {
+    id: 'zirai_budama_gubreleme',
+    category: 'ev_teknik',
+    domain: 'ZIRAAT',
+    keywords: ['ağaç budama', 'zeytin budama', 'asma budama', 'gübre atma', 'taban gübresi', 'yaprak gübresi', 'azot gübre', 'budama zamanı', 'ağaçları buda'],
+    baslik: 'Mevsimlik Budama & Gübreleme',
+    ikon: '🌾',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Sabah 08:30',
+    hazirlikZamani: '1 Gün Önce 18:00',
+    akilliFisilti: '🌾 Ağaçlar uyanmadan kış sonu budama yapılmalı ve kalın kesik yüzeylere aşı macunu sürülmelidir.',
+    oncedenYapilacaklar: [
+      'Budama makası ve testereleri çamaşır suyuyla dezenfekte et',
+      'Kuru, hastalıklı ve içe bakan obur dalları dipten kes',
+      'Kalın kesim yaralarına mantar önleyici aşı macunu / bordo bulamacı sür',
+      'Toprak analizine uygun taban/azot gübresini taç izdüşümüne göm'
+    ]
+  },
+
+  // 30. SPOR, ANTRENMAN VE BESLENME RUTİNLERİ (ATHLETIC & FITNESS ENGINE)
+  {
+    id: 'spor_overload_recovery',
+    category: 'saglik',
+    domain: 'GENEL',
+    keywords: ['bacak çalıştım', 'ağır antrenman', 'göğüs antrenmanı', 'sırt çalıştım', 'leg day', 'kas ağrısı', 'overload', 'ağır idman', 'squat yaptık', 'deadlift yaptık', 'ağır spor'],
+    baslik: 'Kas Toparlanma & Dinlenme (Recovery)',
+    ikon: '🏋️',
+    renk: '#F3E8FF',
+    varsayilanZaman: 'Ertesi Gün Dinlenme',
+    hazirlikZamani: 'Antrenmandan 24 Saat Sonra',
+    akilliFisilti: '🏋️ Çalıştırılan ana kas grubu 48 saat dinlenmelidir; ertesi gün bol su, protein ve hafif esneme önerilir.',
+    oncedenYapilacaklar: [
+      'Hedef kas grubunu 48 saat boyunca ağır dirence maruz bırakma',
+      'Günlük minimum 3-3.5 litre su ve 1.6g/kg protein alımını sağla',
+      'Kas lifi toparlanması için 15-20 dakika foam roller ve hafif esneme yap',
+      'En az 7.5-8 saat kesintisiz derin uyku uyu'
+    ]
+  },
+  {
+    id: 'spor_supplement_su_dongusu',
+    category: 'saglik',
+    domain: 'GENEL',
+    keywords: ['kreatin', 'protein tozu', 'pre workout', 'pre-workout', 'bcaa', 'antrenman suyu', 'supplement takvimi', 'kreatin yükleme'],
+    baslik: 'Sporcu Beslenme & Su Rutini',
+    ikon: '💧',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Antrenman Öncesi & Sonrası',
+    hazirlikZamani: 'İdmandan 30 Dk Önce',
+    akilliFisilti: '💧 Kreatin kullanımında böbrek sağlığı için günde en az 3.5 litre su tüketilmeli, pre-workout aç karnına alınmalıdır.',
+    oncedenYapilacaklar: [
+      'Antrenmandan 30-45 dk önce pre-workout / hafif karbonhidrat tüket',
+      'Antrenman esnası ve sonrasında elektrolit dengesini koru',
+      'Antrenman bitiminde 5g kreatin ve whey protein dozunu al',
+      'Günlük su hedefini (3.5 Litre) tamamla'
+    ]
+  },
+
+  // 31. ÇOKLU ADIMLI SEYAHAT & BİLET REZERVASYON MOTORU (TRIP & TRANSIT SUITE)
+  {
+    id: 'seyahat_ucak_zincirleme',
+    category: 'arac_ulasim',
+    domain: 'HAVACILIK',
+    keywords: ['uçağım var', 'uçuşum var', 'uçak bileti', 'uçağa bineceğim', 'havalimanına gideceğim', 'uçuş saati', 'uçağım saat', 'uçak yolculuğu'],
+    baslik: 'Uçuş Seyahat Zinciri',
+    ikon: '✈️',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Uçuş Saati',
+    hazirlikZamani: 'Uçuştan 24 Saat Önce',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '✈️ T-24 saatte online check-in, T-3 saatte evden çıkış, T-90 dakikada bagaj/güvenlik adımları planlandı.',
+    oncedenYapilacaklar: [
+      'T-24 Saat: Online check-in yap, biniş kartını telefona ve cüzdana kaydet',
+      'T-3.5 Saat: Evden çıkış (Havalimanı yolu trafik payı ve otopark)',
+      'T-90 Dakika: Bagaj teslimi, kimlik/pasaport kontrolü ve x-ray güvenlik geçişi',
+      'T-45 Dakika: Biniş kapısında (Gate) hazır bulun, kapı kapanışını kaçırma'
+    ]
+  },
+  {
+    id: 'seyahat_yht_otobus_zincirleme',
+    category: 'arac_ulasim',
+    domain: 'LOJISTIK',
+    keywords: ['yht bileti', 'hızlı tren', 'otobüs bileti', 'gara gideceğim', 'otogara gideceğim', 'tren kalkıyor', 'otobüs kalkıyor', 'yht saat', 'otobüs saat'],
+    baslik: 'YHT / Tren & Otobüs Seyahati',
+    ikon: '🚆',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Kalkış Saati',
+    hazirlikZamani: 'Kalkıştan 2 Saat Önce',
+    hazirlikSaatOncesi: 2,
+    akilliFisilti: '🚆 YHT tren kapıları kalkıştan 5 dakika önce kilitlenir; garda en az 30 dakika önce olunmalıdır.',
+    oncedenYapilacaklar: [
+      'PNR kodu, vagon ve koltuk numarasını telefona kaydet',
+      'Fotoğraflı T.C. Kimlik kartını kolay erişilebilir cebe koy',
+      'Kalkıştan 45 dk önce gar/otogar x-ray kontrolünden geçip peronu bul',
+      'Kulaklık, şarj aleti ve seyahat suyunu el çantasına al'
+    ]
   }
 ];
 

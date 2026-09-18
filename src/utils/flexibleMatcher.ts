@@ -1,4 +1,5 @@
 // src/utils/flexibleMatcher.ts
+import { isAdministrativeContext } from './administrativeShield.ts';
 
 export interface DomainConcept {
   id: string;
@@ -36,6 +37,9 @@ export const FERMENTATION_DOMAINS: DomainConcept[] = [
 ];
 
 export function detectFlexibleDomain(rawText: string): string | null {
+  if (!rawText || typeof rawText !== 'string') return null;
+  if (isAdministrativeContext(rawText)) return null;
+
   const text = rawText.toLowerCase().trim();
 
   for (const domain of FERMENTATION_DOMAINS) {

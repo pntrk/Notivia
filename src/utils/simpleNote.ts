@@ -18,6 +18,54 @@ import {
   type FermentationPhase,
   type FermentationRecipe
 } from './fermentationScheduler.ts';
+import {
+  isAdministrativeContext,
+  ADMINISTRATIVE_SHIELD
+} from './administrativeShield.ts';
+import {
+  parseSchoolAdminIntent,
+  type SchoolAdminTask
+} from '../services/educationAdminEngine.ts';
+import {
+  parseAdvancedProfessionIntent,
+  type AdvancedProfessionTask
+} from '../services/advancedProfessionEngine.ts';
+import { resolveInstitutionalReference } from './institutionalCalendar.ts';
+import { estimateCognitiveLoad } from './cognitiveLoadEstimator.ts';
+export { resolveInstitutionalReference } from './institutionalCalendar.ts';
+export { estimateCognitiveLoad } from './cognitiveLoadEstimator.ts';
+
+export {
+  parseSchoolAdminIntent,
+  type SchoolAdminTask
+} from '../services/educationAdminEngine.ts';
+export { splitCompoundUtterance } from '../services/engine/sentenceSplitter.ts';
+export {
+  resolveContextualTime,
+  type UserRhythmConfig
+} from '../services/engine/temporalAnchor.ts';
+export {
+  evaluateConfidence,
+  type EngineResult,
+  type ParsedActionPayload,
+  type NotiviaIntentType,
+  type NotiviaOperationalCategory,
+  type NotiviaCognitiveResult,
+  calculateBufferTiming,
+  resolveCycleInterval,
+  NOTIVIA_COGNITIVE_SYSTEM_PROMPT
+} from '../services/engine/orchestrator.ts';
+export {
+  PersonalCognitiveOrchestrator,
+  DEFAULT_RHYTHM,
+  type CognitiveCategory,
+  type ActionItem,
+  type OrchestratedItem
+} from '../services/engine/PersonalCognitiveOrchestrator.ts';
+export {
+  isAdministrativeContext,
+  ADMINISTRATIVE_SHIELD
+} from './administrativeShield.ts';
 export {
   findFermentationRecipe,
   buildFermentationCard,
@@ -3023,16 +3071,19 @@ export function detectDailyLifeCoreOrSingleAlarm(cleanInput: string, baseDate: D
   // 3. GÜNLÜK YAŞAM ÇEKİRDEĞİ 3: ALIŞVERİŞ (Basit Kontrol Listesi)
   // Örn: "Eve gelirken ekmek ve maden suyu al", "Marketten süt yumurta al"
   // Kural: Yalnızca istenen ürünleri içeren temiz bir kontrol listesi.
+  // Kesin Yasaklı / İdari Kalkan: İdari, resmi, okul/kurum kelimeleri varsa alışveriş sayma!
   // -------------------------------------------------------------
   const isShopping = 
-    (lower.includes('eve gelirken') && lower.includes('al')) ||
-    (lower.includes('gelirken') && lower.includes('al')) ||
-    (lower.includes('markete gidince') && lower.includes('al')) ||
-    (lower.includes('marketten') && lower.includes('al')) ||
-    (lower.includes('bakkaldan') && lower.includes('al')) ||
-    (lower.includes('alınacaklar') || lower.includes('alinacaklar')) ||
-    (lower.includes('alınacak') && lower.includes('liste')) ||
-    ((lower.includes('ekmek') || lower.includes('süt') || lower.includes('yumurta') || lower.includes('maden suyu')) && lower.includes('al'));
+    !isAdministrativeContext(cleanInput) && (
+      (lower.includes('eve gelirken') && lower.includes('al')) ||
+      (lower.includes('gelirken') && lower.includes('al')) ||
+      (lower.includes('markete gidince') && lower.includes('al')) ||
+      (lower.includes('marketten') && lower.includes('al')) ||
+      (lower.includes('bakkaldan') && lower.includes('al')) ||
+      (lower.includes('alınacaklar') || lower.includes('alinacaklar')) ||
+      (lower.includes('alınacak') && lower.includes('liste')) ||
+      ((lower.includes('ekmek') || lower.includes('süt') || lower.includes('yumurta') || lower.includes('maden suyu')) && lower.includes('al'))
+    );
 
   if (isShopping) {
     // Liste maddelerini çıkar
@@ -3169,6 +3220,41 @@ export function extractSimpleNoteFromText(
   const lower = cleanInput.toLowerCase();
   const baseDate = refDatetime ? new Date(refDatetime) : new Date();
 
+  // 0.00 ÖNCELİK: EĞİTİM, MEB VE OKUL YÖNETİMİ PROTOKOLÜ (SCHOOL ADMIN ENGINE)
+  // Kullanıcı Türk Millî Eğitim sistemi, okul idaresi, öğretmenlik veya resmi bürokrasi ile ilgili terim
+  // kullandığında (DYS, MEBBİS, e-Okul, Destek Eğitim Odası, BEP, RAM, ŞÖK, Zümre, Nöbet, Ek Ders, Puantaj,
+  // Disiplin, Desimal Kodu, Üst Yazı, Kaymakamlık Oluru): Kesinlikle alışveriş veya genel liste oluşturulmaz!
+  const schoolAdminResult = parseSchoolAdminIntent(cleanInput, baseDate);
+  if (schoolAdminResult) {
+    return enrichWithPredictiveGraph({
+      baslik: schoolAdminResult.baslik,
+      zaman: schoolAdminResult.zaman_etiketi,
+      tarih_iso: schoolAdminResult.tarih_iso,
+      action_items: schoolAdminResult.action_items,
+      ikon: schoolAdminResult.ikon,
+      renk: schoolAdminResult.renk,
+      anomali_notu: schoolAdminResult.mevzuat_notu,
+      sesli_fisilti: schoolAdminResult.sesli_geribildirim
+    }, cleanInput);
+  }
+
+  // 0.01 ÖNCELİK: DERİNLEŞTİRİLMİŞ MESLEKİ & KURUMSAL SENARYO MOTORU (ADVANCED PROFESSION ENGINE)
+  // (TEFBİS, LGS/YKS Komisyonu, ASM Gebe-Bebek İzlem, 112 Nöbet/Narkotik, Arabuluculuk 3+1 Hafta,
+  // İcra Kıymet Takdiri, YMM KDV İadesi/Karşıt İnceleme, Bağımsız Denetim KGK, ÇKS/TARSİM, TÜRKVET/Aşı, İSG İBYS, Yapı Denetim Demir Vizesi)
+  const advProfResult = parseAdvancedProfessionIntent(cleanInput, baseDate);
+  if (advProfResult) {
+    return enrichWithPredictiveGraph({
+      baslik: advProfResult.baslik,
+      zaman: advProfResult.zaman_etiketi,
+      tarih_iso: advProfResult.tarih_iso,
+      action_items: advProfResult.action_items,
+      ikon: advProfResult.ikon,
+      renk: advProfResult.renk,
+      anomali_notu: advProfResult.mevzuat_notu,
+      sesli_fisilti: advProfResult.sesli_geribildirim
+    }, cleanInput);
+  }
+
   // ⚡ TEMEL İLKE: KULLANICIYA YAPAY İŞ ÇIKARMA (MİKRO GÖREV KURALI)
   // Tekil alarmlar, süreli sayaçlar ve 5 temel günlük yaşam çekirdeği doğrudan tespit edilir.
   const microCore = detectDailyLifeCoreOrSingleAlarm(cleanInput, baseDate);
@@ -3176,8 +3262,22 @@ export function extractSimpleNoteFromText(
     return microCore;
   }
 
+  // ⚡ RESMİ & AKADEMİK KURUM TAKVİMİ KONTROLÜ (MEB Ara Tatil, Adli Tatil, Vergi Günü)
+  const instRef = resolveInstitutionalReference(cleanInput, baseDate);
+  let instZaman: string | null = null;
+  let instIso: string | null = null;
+  let instNote: string | undefined = undefined;
+
+  if (instRef.matched) {
+    instZaman = instRef.displayTimeText || instRef.label;
+    instIso = instRef.resolvedIso || null;
+    instNote = instRef.officialNote;
+  }
+
   const temporal = parseTurkishTemporal(cleanInput, baseDate);
-  const { zaman, tarih_iso, isRecurringDay, recurringDayName, hour, minute } = temporal;
+  const { zaman: parsedZaman, tarih_iso: parsedIso, isRecurringDay, recurringDayName, hour, minute } = temporal;
+  const zaman = instZaman || parsedZaman;
+  const tarih_iso = instIso || parsedIso;
   const pad = (n: number) => String(n).padStart(2, '0');
 
   // A0. DÖNGÜSEL / PERİYODİK TEKRARLAMA TESPİTİ
@@ -3369,7 +3469,8 @@ export function extractSimpleNoteFromText(
   }
 
   // 0. ÖNCELİK: LİSTE, MARKET VE ENVANTER / ÇOK SATIRLI GÖREV LİSTESİ AYRIŞTIRMA KURALI
-  if (lower.includes('alınacak') || lower.includes('market') || lower.includes('liste') || lower.includes('bakkal') || lower.includes('pazar') || cleanInput.includes('\n')) {
+  // Kesin Yasaklı / İdari Kalkan: İdari, resmi, okul/kurum kelimeleri varsa alışveriş/liste motorunu baypas et
+  if (!isAdministrativeContext(cleanInput) && (lower.includes('alınacak') || lower.includes('market') || lower.includes('liste') || lower.includes('bakkal') || lower.includes('pazar') || cleanInput.includes('\n'))) {
     // Çok satırlı genel görev listesi ise
     if (cleanInput.includes('\n') || (cleanInput.includes('-') && cleanInput.split('-').length >= 3)) {
       const parsedItems = parseTextToChecklist(cleanInput);

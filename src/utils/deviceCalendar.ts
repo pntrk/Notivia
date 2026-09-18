@@ -110,11 +110,53 @@ export function getGoogleCalendarWebUrl(event: CalendarEventData): string {
 }
 
 /**
+ * Cihazın yerel takvimine (Google Takvim, Apple Takvim, Samsung Takvim) 
+ * dosya indirme zahmetine sokmadan DOĞRUDAN ve OTOMATİK aktarır.
+ * iOS'ta yerel Apple Takvim "Ekle" sayfasını, Android ve masaüstünde ise
+ * doğrudan takvim uygulamasını / intentini açar.
+ */
+export function openDirectDeviceCalendar(event: CalendarEventData): void {
+  if (typeof window === 'undefined') return;
+
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if (isIOS) {
+    // iOS Safari / WebKit:
+    // data:text/calendar formatı navigation ile tetiklendiğinde
+    // iOS sistemi "Etkinliği Takvime Ekle" sheet'ini (Apple Calendar) doğrudan kullanıcıya sunar.
+    // Kullanıcı tek tıkla "Ekle" der ve takvime kaydedilir. Dosya indirilmez.
+    const ics = generateIcsContent(event);
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    
+    // Doğrudan iOS sistem takvim uygulamasını tetiklemek için:
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 15000);
+    return;
+  }
+
+  // Android ve Masaüstü (Chrome, Edge, Firefox, Samsung Internet):
+  // Google Calendar / Cihaz Takvim Web Intent'i doğrudan açılır.
+  // Android cihazda doğrudan Google Takvim / Samsung Takvim uygulaması açılır ve etkinlik hazır gelir.
+  const webUrl = getGoogleCalendarWebUrl(event);
+  const win = window.open(webUrl, '_blank');
+  if (!win || win.closed || typeof win.closed === 'undefined') {
+    window.location.href = webUrl;
+  }
+}
+
+/**
  * Kullanıcı cihazının yerel takvimine ekleme aksiyonunu çalıştırır.
+ * Öncelikli olarak dosya indirmeden cihaz takvimine doğrudan aktarır.
  */
 export function exportToDeviceCalendar(event: CalendarEventData): void {
-  const ics = generateIcsContent(event);
-  downloadIcsFile(event.title, ics);
+  openDirectDeviceCalendar(event);
 }
 
 // Tarayıcı Bildirimi & Sesli Alarm Yönetimi

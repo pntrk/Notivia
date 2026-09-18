@@ -9,8 +9,9 @@ import {
   Tag,
   Palette,
   Bell,
+  BellOff,
   Sparkles,
-  Layers,
+  ListTodo,
 } from 'lucide-react';
 import type { SimpleCardItem } from '../App.tsx';
 
@@ -20,6 +21,7 @@ interface EditNoteModalProps {
   note: SimpleCardItem | null;
   onSave: (updatedNote: SimpleCardItem) => Promise<void> | void;
   language?: 'tr' | 'en';
+  theme?: 'light' | 'dark';
 }
 
 const PASTEL_COLORS = [
@@ -46,6 +48,7 @@ export function EditNoteModal({
   note,
   onSave,
   language = 'tr',
+  theme = 'light',
 }: EditNoteModalProps) {
   const [baslik, setBaslik] = useState('');
   const [zaman, setZaman] = useState('');
@@ -56,6 +59,7 @@ export function EditNoteModal({
   const [actionItems, setActionItems] = useState<{ task: string; is_completed: boolean }[]>([]);
   const [newSubtaskInput, setNewSubtaskInput] = useState('');
   const [deviceNotificationEnabled, setDeviceNotificationEnabled] = useState(true);
+  const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
 
   useEffect(() => {
     if (note) {
@@ -70,10 +74,49 @@ export function EditNoteModal({
       );
       setDeviceNotificationEnabled(note.deviceNotificationEnabled !== false);
       setNewSubtaskInput('');
+      setShowCustomDatePicker(!!note.tarih_iso);
     }
   }, [note, isOpen]);
 
   if (!isOpen || !note) return null;
+
+  const setTodayEvening = () => {
+    const d = new Date();
+    d.setHours(19, 30, 0, 0);
+    if (d.getTime() < Date.now()) {
+      d.setDate(d.getDate() + 1);
+    }
+    const iso = d.toISOString().substring(0, 16);
+    setTarihIso(iso);
+    setZaman(language === 'tr' ? 'Bu Akşam 19:30' : 'Tonight 19:30');
+    setShowCustomDatePicker(false);
+  };
+
+  const setTomorrowMorning = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(9, 0, 0, 0);
+    const iso = d.toISOString().substring(0, 16);
+    setTarihIso(iso);
+    setZaman(language === 'tr' ? 'Yarın 09:00' : 'Tomorrow 09:00');
+    setShowCustomDatePicker(false);
+  };
+
+  const setInTwoDays = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 2);
+    d.setHours(10, 0, 0, 0);
+    const iso = d.toISOString().substring(0, 16);
+    setTarihIso(iso);
+    setZaman(language === 'tr' ? '2 Gün Sonra' : 'In 2 days');
+    setShowCustomDatePicker(false);
+  };
+
+  const clearDateTime = () => {
+    setTarihIso('');
+    setZaman('');
+    setShowCustomDatePicker(false);
+  };
 
   const handleAddSubtask = () => {
     if (!newSubtaskInput.trim()) return;
@@ -133,23 +176,33 @@ export function EditNoteModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200 ${theme === 'dark' ? 'dark' : ''}`}>
       <div
-        className="relative w-full max-w-lg bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-full sm:max-w-lg bg-white dark:bg-stone-900 border-t sm:border border-stone-200 dark:border-stone-800 rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh]"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* Mobil Tutamaç Çubuğu */}
+        <div className="w-10 h-1 rounded-full bg-stone-300 dark:bg-stone-700 mx-auto mt-2.5 mb-1 sm:hidden shrink-0" />
+
         {/* Üst Başlık & Kapatma */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/50 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-xl select-none">{ikon}</span>
-            <h3 className="font-bold text-stone-900 dark:text-stone-100 text-base">
-              {language === 'tr' ? 'Not Kartını Düzenle' : 'Edit Note Card'}
-            </h3>
+        <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/50 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="w-9 h-9 rounded-xl flex items-center justify-center text-xl bg-white dark:bg-stone-800 border border-stone-200/80 dark:border-stone-700 shadow-2xs shrink-0 select-none">
+              {ikon}
+            </span>
+            <div className="min-w-0">
+              <h3 className="font-bold text-stone-900 dark:text-stone-100 text-sm sm:text-base leading-tight truncate">
+                {baslik.trim() || (language === 'tr' ? 'Kartı Düzenle' : 'Edit Card')}
+              </h3>
+              <p className="text-[11px] text-stone-400 dark:text-stone-500 truncate">
+                {zaman || (language === 'tr' ? 'Hızlı ve pratik ayarlar' : 'Quick settings')}
+              </p>
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer"
+            className="w-9 h-9 flex items-center justify-center rounded-xl text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 active:scale-95 transition-all cursor-pointer shrink-0"
             aria-label="Kapat"
           >
             <X className="w-5 h-5" />
@@ -157,62 +210,53 @@ export function EditNoteModal({
         </div>
 
         {/* Form Alanı */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
           {/* Başlık Girişi */}
           <div>
-            <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1.5">
-              {language === 'tr' ? 'Kart Başlığı / Eylem' : 'Card Title / Action'} <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              value={baslik}
-              onChange={(e) => setBaslik(e.target.value)}
-              placeholder={language === 'tr' ? 'Not veya görev başlığı...' : 'Note or task title...'}
-              className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-stone-400 dark:focus:ring-stone-500 transition-all font-medium"
-            />
+            <div className="relative">
+              <input
+                type="text"
+                required
+                value={baslik}
+                onChange={(e) => setBaslik(e.target.value)}
+                placeholder={language === 'tr' ? 'Not veya görev başlığı...' : 'Note or task title...'}
+                className="w-full text-base sm:text-sm font-semibold px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 outline-none focus:ring-2 focus:ring-stone-400 dark:focus:ring-stone-500 transition-all placeholder:font-normal placeholder:text-stone-400"
+              />
+            </div>
           </div>
 
-          {/* İkon Seçici */}
-          <div>
-            <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1.5 flex items-center gap-1.5">
-              <Tag className="w-3.5 h-3.5 text-stone-400" />
-              <span>{language === 'tr' ? 'Simge / İkon' : 'Icon / Emoji'}</span>
-            </label>
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 pt-0.5 scrollbar-thin">
+          {/* İkon & Renk Hızlı Seçim Barı */}
+          <div className="p-3 rounded-2xl bg-stone-50 dark:bg-stone-800/40 border border-stone-150 dark:border-stone-800 space-y-2.5">
+            {/* Emojiler - Yatay Hızlı Kaydırma */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
               {EMOJI_OPTIONS.map((emoji) => (
                 <button
                   key={emoji}
                   type="button"
                   onClick={() => setIkon(emoji)}
-                  className={`w-8 h-8 shrink-0 rounded-lg text-lg flex items-center justify-center transition-all cursor-pointer ${
+                  className={`w-9 h-9 shrink-0 rounded-xl text-lg flex items-center justify-center transition-all cursor-pointer ${
                     ikon === emoji
-                      ? 'bg-stone-900 text-white dark:bg-white scale-110 shadow-sm'
-                      : 'hover:bg-stone-100 dark:hover:bg-stone-800'
+                      ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-900 scale-105 shadow-xs font-bold'
+                      : 'hover:bg-stone-200/60 dark:hover:bg-stone-700/60 opacity-80 hover:opacity-100'
                   }`}
                 >
                   {emoji}
                 </button>
               ))}
             </div>
-          </div>
 
-          {/* Kart Pastel Rengi */}
-          <div>
-            <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1.5 flex items-center gap-1.5">
-              <Palette className="w-3.5 h-3.5 text-stone-400" />
-              <span>{language === 'tr' ? 'Kart Rengi' : 'Card Color'}</span>
-            </label>
-            <div className="flex items-center gap-2 flex-wrap">
+            {/* Pastel Renkler */}
+            <div className="flex items-center gap-2 pt-1 border-t border-stone-200/60 dark:border-stone-700/60 overflow-x-auto pb-0.5">
+              <Palette className="w-3.5 h-3.5 text-stone-400 shrink-0 mr-1" />
               {PASTEL_COLORS.map((col) => (
                 <button
                   key={col.hex}
                   type="button"
                   onClick={() => setRenk(col.hex)}
-                  className={`w-7 h-7 rounded-full border border-black/10 transition-all flex items-center justify-center cursor-pointer ${
+                  className={`w-7 h-7 rounded-full border border-black/10 transition-transform flex items-center justify-center shrink-0 cursor-pointer ${
                     renk.toLowerCase() === col.hex.toLowerCase()
-                      ? 'ring-2 ring-stone-900 dark:ring-white scale-110 shadow-sm'
-                      : 'hover:scale-105'
+                      ? 'ring-2 ring-stone-900 dark:ring-white scale-110 shadow-xs'
+                      : 'hover:scale-105 active:scale-95'
                   }`}
                   style={{ backgroundColor: col.hex }}
                   title={col.name}
@@ -225,81 +269,140 @@ export function EditNoteModal({
             </div>
           </div>
 
-          {/* Tarih ve Zaman / Hatırlatıcı */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-            <div>
-              <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1 flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5 text-stone-400" />
-                <span>{language === 'tr' ? 'Hatırlatıcı Tarih & Saat' : 'Reminder Date & Time'}</span>
-              </label>
-              <input
-                type="datetime-local"
-                value={tarihIso}
-                onChange={(e) => setTarihIso(e.target.value)}
-                className="w-full text-xs px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 outline-none focus:ring-1 focus:ring-stone-400"
-              />
+          {/* Zaman ve Hatırlatıcı Hızlı Seçenekleri */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-stone-600 dark:text-stone-300 flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-stone-400" />
+                <span>{language === 'tr' ? 'Zaman & Alarm' : 'Time & Reminder'}</span>
+              </span>
+
+              {/* Alarm Açık/Kapalı Hızlı Rozet */}
+              <button
+                type="button"
+                onClick={() => setDeviceNotificationEnabled(!deviceNotificationEnabled)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
+                  deviceNotificationEnabled
+                    ? 'bg-amber-500/15 text-amber-900 dark:text-amber-200 border border-amber-500/30'
+                    : 'bg-stone-100 dark:bg-stone-800 text-stone-400 border border-stone-200 dark:border-stone-700'
+                }`}
+                title={deviceNotificationEnabled ? 'Alarm açık' : 'Alarm kapalı'}
+              >
+                {deviceNotificationEnabled ? (
+                  <Bell className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                ) : (
+                  <BellOff className="w-3 h-3 text-stone-400" />
+                )}
+                <span>{deviceNotificationEnabled ? 'Alarm' : 'Sessiz'}</span>
+              </button>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-stone-400" />
-                <span>{language === 'tr' ? 'Zaman Etiketi' : 'Time Label'}</span>
-              </label>
-              <input
-                type="text"
-                value={zaman}
-                onChange={(e) => setZaman(e.target.value)}
-                placeholder={language === 'tr' ? 'Örn: Yarın 14:00, 3 Gün Sonra' : 'e.g. Tomorrow 14:00'}
-                className="w-full text-xs px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 outline-none focus:ring-1 focus:ring-stone-400"
-              />
+            {/* Pratik Zaman Çipleri */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={setTodayEvening}
+                className="px-2.5 py-1.5 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 text-xs font-medium hover:bg-stone-200 dark:hover:bg-stone-700 active:scale-95 transition-all cursor-pointer flex items-center gap-1"
+              >
+                <span>🌅</span>
+                <span>{language === 'tr' ? 'Bu Akşam (19:30)' : 'Tonight (19:30)'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={setTomorrowMorning}
+                className="px-2.5 py-1.5 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 text-xs font-medium hover:bg-stone-200 dark:hover:bg-stone-700 active:scale-95 transition-all cursor-pointer flex items-center gap-1"
+              >
+                <span>☀️</span>
+                <span>{language === 'tr' ? 'Yarın (09:00)' : 'Tomorrow (09:00)'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={setInTwoDays}
+                className="px-2.5 py-1.5 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 text-xs font-medium hover:bg-stone-200 dark:hover:bg-stone-700 active:scale-95 transition-all cursor-pointer flex items-center gap-1"
+              >
+                <span>📅</span>
+                <span>{language === 'tr' ? '2 Gün Sonra' : 'In 2 Days'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowCustomDatePicker(!showCustomDatePicker)}
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1 ${
+                  showCustomDatePicker
+                    ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900'
+                    : 'bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700'
+                }`}
+              >
+                <span>🕒</span>
+                <span>{language === 'tr' ? 'Saat Seç' : 'Custom'}</span>
+              </button>
+
+              {(tarihIso || zaman) && (
+                <button
+                  type="button"
+                  onClick={clearDateTime}
+                  className="px-2.5 py-1.5 rounded-xl bg-red-500/10 text-red-600 dark:text-red-400 text-xs font-medium hover:bg-red-500/20 active:scale-95 transition-all cursor-pointer flex items-center gap-1"
+                  title="Zamanı Kaldır"
+                >
+                  <X className="w-3 h-3" />
+                  <span>{language === 'tr' ? 'Kaldır' : 'Clear'}</span>
+                </button>
+              )}
             </div>
+
+            {/* Manuel Tarih/Saat Seçici */}
+            {showCustomDatePicker && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1.5 animate-in fade-in duration-150">
+                <input
+                  type="datetime-local"
+                  value={tarihIso}
+                  onChange={(e) => {
+                    setTarihIso(e.target.value);
+                    if (e.target.value) {
+                      setZaman(new Date(e.target.value).toLocaleString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }));
+                    }
+                  }}
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 outline-none focus:ring-1 focus:ring-stone-400"
+                />
+                <input
+                  type="text"
+                  value={zaman}
+                  onChange={(e) => setZaman(e.target.value)}
+                  placeholder={language === 'tr' ? 'Etiket (Örn: Yarın 14:00)' : 'Label (e.g. Tomorrow 14:00)'}
+                  className="w-full text-xs px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 outline-none focus:ring-1 focus:ring-stone-400"
+                />
+              </div>
+            )}
           </div>
 
-          {/* Bildirim Aç/Kapat */}
-          {tarihIso && (
-            <div className="flex items-center justify-between p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-950 dark:text-amber-200">
-              <div className="flex items-center gap-2">
-                <Bell className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                <span className="font-medium">
-                  {language === 'tr' ? 'Zamanı geldiğinde cihazda sesli alarm çal' : 'Play audio alarm when time comes'}
-                </span>
-              </div>
-              <input
-                type="checkbox"
-                checked={deviceNotificationEnabled}
-                onChange={(e) => setDeviceNotificationEnabled(e.target.checked)}
-                className="w-4 h-4 accent-amber-600 rounded cursor-pointer"
-              />
-            </div>
-          )}
-
-          {/* Tiklenebilir Alt Görevler (action_items) */}
-          <div className="pt-2 border-t border-stone-200 dark:border-stone-800">
+          {/* Alt Görevler / Kontrol Listesi */}
+          <div className="pt-2 border-t border-stone-150 dark:border-stone-800">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-stone-400" />
-                <span>{language === 'tr' ? 'Tiklenebilir Alt Görevler / Maddeler' : 'Subtasks / Checklist'}</span>
-                <span className="text-[10px] font-normal text-stone-400">({actionItems.length})</span>
-              </label>
+              <span className="text-xs font-semibold text-stone-600 dark:text-stone-300 flex items-center gap-1.5">
+                <ListTodo className="w-3.5 h-3.5 text-stone-400" />
+                <span>{language === 'tr' ? 'Görev Maddeleri' : 'Subtasks'}</span>
+                <span className="text-[11px] font-normal text-stone-400">({actionItems.length})</span>
+              </span>
             </div>
 
-            {/* Mevcut Maddeler */}
+            {/* Maddeler */}
             {actionItems.length > 0 && (
-              <div className="space-y-1.5 mb-3 max-h-48 overflow-y-auto pr-1">
+              <div className="space-y-1.5 mb-2.5 max-h-40 overflow-y-auto pr-0.5">
                 {actionItems.map((item, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center gap-2 p-1.5 rounded-lg bg-stone-50 dark:bg-stone-800/60 border border-stone-200 dark:border-stone-700/80 group"
+                    className="flex items-center gap-2 p-1.5 rounded-xl bg-stone-50 dark:bg-stone-800/60 border border-stone-200/80 dark:border-stone-700/80"
                   >
                     <button
                       type="button"
                       onClick={() => handleToggleSubtask(idx)}
-                      className={`w-4 h-4 rounded flex items-center justify-center text-[10px] shrink-0 cursor-pointer border transition-colors ${
+                      className={`w-5 h-5 rounded-lg flex items-center justify-center text-[11px] shrink-0 cursor-pointer border transition-colors ${
                         item.is_completed
-                          ? 'bg-stone-800 border-stone-800 text-white dark:bg-stone-200 dark:text-stone-900'
+                          ? 'bg-stone-800 border-stone-800 text-white dark:bg-stone-200 dark:text-stone-900 font-bold'
                           : 'border-stone-300 dark:border-stone-600 text-transparent hover:border-stone-400'
                       }`}
-                      title={item.is_completed ? 'Tamamlanmadı yap' : 'Tamamla'}
                     >
                       ✓
                     </button>
@@ -316,8 +419,8 @@ export function EditNoteModal({
                     <button
                       type="button"
                       onClick={() => handleRemoveSubtask(idx)}
-                      className="text-stone-400 hover:text-red-500 p-1 rounded opacity-60 group-hover:opacity-100 transition-all cursor-pointer"
-                      title="Maddeyi Sil"
+                      className="text-stone-400 hover:text-red-500 p-1 rounded-lg transition-colors cursor-pointer shrink-0"
+                      title="Sil"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -326,8 +429,8 @@ export function EditNoteModal({
               </div>
             )}
 
-            {/* Yeni Madde Ekleme Kutusu */}
-            <div className="flex items-center gap-2">
+            {/* Yeni Madde Ekle */}
+            <div className="flex items-center gap-1.5">
               <input
                 type="text"
                 value={newSubtaskInput}
@@ -338,14 +441,14 @@ export function EditNoteModal({
                     handleAddSubtask();
                   }
                 }}
-                placeholder={language === 'tr' ? '+ Yeni görev veya alt madde yazın...' : '+ Add new subtask...'}
+                placeholder={language === 'tr' ? '+ Madde ekle...' : '+ Add item...'}
                 className="flex-1 text-xs px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 outline-none focus:ring-1 focus:ring-stone-400"
               />
               <button
                 type="button"
                 onClick={handleAddSubtask}
                 disabled={!newSubtaskInput.trim()}
-                className="px-3 py-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-xs font-semibold rounded-xl hover:opacity-90 disabled:opacity-40 transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                className="px-3 py-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 text-xs font-semibold rounded-xl hover:opacity-90 disabled:opacity-30 transition-all cursor-pointer flex items-center gap-1 shrink-0 active:scale-95"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>{language === 'tr' ? 'Ekle' : 'Add'}</span>
@@ -353,38 +456,36 @@ export function EditNoteModal({
             </div>
           </div>
 
-          {/* Anomali / Operasyonel Not */}
-          <div>
-            <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300 mb-1 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              <span>{language === 'tr' ? 'Teknik Uyarı / Anomali Notu' : 'Operational Note / Warning'}</span>
-            </label>
-            <textarea
-              value={anomaliNotu}
-              onChange={(e) => setAnomaliNotu(e.target.value)}
-              rows={2}
-              placeholder={language === 'tr' ? 'Opsiyonel teknik not, risk veya botanik/tıbbi tüyo...' : 'Optional notes, warnings...'}
-              className="w-full text-xs p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 outline-none resize-none focus:ring-1 focus:ring-stone-400"
-            />
+          {/* Özel Not / Hatırlatıcı Açıklaması */}
+          <div className="pt-1">
+            <div className="relative">
+              <textarea
+                value={anomaliNotu}
+                onChange={(e) => setAnomaliNotu(e.target.value)}
+                rows={2}
+                placeholder={language === 'tr' ? '💡 Eklemek istediğiniz kısa not veya detay...' : '💡 Short note or detail...'}
+                className="w-full text-xs p-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 outline-none resize-none focus:ring-1 focus:ring-stone-400"
+              />
+            </div>
           </div>
         </form>
 
         {/* Alt Butonlar */}
-        <div className="flex items-center justify-end gap-2.5 px-5 py-3.5 border-t border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/50 shrink-0">
+        <div className="flex items-center gap-2 p-3 sm:px-5 sm:py-3.5 border-t border-stone-100 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-900/70 shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-semibold text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer"
+            className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl text-xs font-semibold text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer text-center"
           >
-            {language === 'tr' ? 'İptal' : 'Cancel'}
+            {language === 'tr' ? 'Vazgeç' : 'Cancel'}
           </button>
           <button
             type="button"
             onClick={handleSubmit}
-            className="px-4 py-2 rounded-xl text-xs font-semibold bg-stone-900 hover:bg-stone-800 dark:bg-white dark:hover:bg-stone-100 text-white dark:text-stone-900 shadow-sm active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+            className="flex-2 sm:flex-none px-5 py-2.5 rounded-xl text-xs font-semibold bg-stone-900 hover:bg-stone-800 dark:bg-white dark:hover:bg-stone-100 text-white dark:text-stone-900 shadow-xs active:scale-95 transition-all cursor-pointer flex items-center justify-center gap-1.5"
           >
             <Check className="w-4 h-4 stroke-[2.5]" />
-            <span>{language === 'tr' ? 'Değişiklikleri Kaydet' : 'Save Changes'}</span>
+            <span>{language === 'tr' ? 'Kaydet' : 'Save'}</span>
           </button>
         </div>
       </div>

@@ -5,9 +5,11 @@ import {
   FERMENTATION_REGISTRY
 } from '../types/fermentation.ts';
 import { detectFlexibleDomain } from './flexibleMatcher.ts';
+import { isAdministrativeContext } from './administrativeShield.ts';
 
 export * from '../types/fermentation.ts';
 export * from './flexibleMatcher.ts';
+export * from './administrativeShield.ts';
 
 /**
  * Kullanıcı girdisini Fermantasyon / Ev Yapımı Ürün Reçeteleri ile eşleştirir.
@@ -15,6 +17,8 @@ export * from './flexibleMatcher.ts';
  */
 export function findFermentationRecipe(input: string): FermentationRecipe | null {
   if (!input || typeof input !== 'string') return null;
+  if (isAdministrativeContext(input)) return null;
+
   const trimmed = input.trim();
   const lower = trimmed.toLowerCase();
 

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { detectDomainFromText } from '../utils/detectDomain';
+import { detectDomainFromJargon } from '../utils/jargonRadar';
 import { DOMAIN_REGISTRY } from '../types/adaptiveTheme';
 
 export const DynamicInputBar: React.FC<{
@@ -9,8 +9,9 @@ export const DynamicInputBar: React.FC<{
 }> = ({ onSend, isListening, onToggleMic }) => {
   const [inputText, setInputText] = useState('');
 
-  // Yazılan veya konuşulan metinden anlık tema çıkarımı
-  const currentDomain = useMemo(() => detectDomainFromText(inputText), [inputText]);
+  // 0 ms deterministik Jargon Radar taraması
+  const radar = useMemo(() => detectDomainFromJargon(inputText), [inputText]);
+  const currentDomain = radar.confidence >= 0.4 ? radar.detectedDomain : 'GENEL';
   const theme = DOMAIN_REGISTRY[currentDomain] || DOMAIN_REGISTRY.GENEL;
 
   return (
@@ -49,6 +50,17 @@ export const DynamicInputBar: React.FC<{
         className="flex-1 bg-transparent border-none text-xs text-stone-900 placeholder:text-stone-400 focus:outline-none px-2"
       />
 
+      {/* Canlı Jargon Radar Göstergesi */}
+      {radar.confidence >= 0.4 && radar.matchedKeywords.length > 0 && (
+        <span
+          className={`hidden sm:flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap transition-all ${theme.badgeBg} ${theme.badgeText}`}
+          title={radar.reason}
+        >
+          <span>{radar.suggestedIcon}</span>
+          <span>{radar.matchedKeywords[0]}</span>
+        </span>
+      )}
+
       {/* Hızlı Gönder Butonu */}
       {inputText.trim().length > 0 && (
         <button
@@ -65,3 +77,4 @@ export const DynamicInputBar: React.FC<{
     </div>
   );
 };
+

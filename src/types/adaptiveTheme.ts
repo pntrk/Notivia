@@ -1,4 +1,5 @@
 import { ProfessionDomain } from './domainThemes.ts';
+import { detectDomainFromJargon } from '../utils/jargonRadar.ts';
 export type { ProfessionDomain };
 export * from './domainThemes.ts';
 
@@ -7,9 +8,11 @@ export const DOMAIN_KEYWORDS: Record<ProfessionDomain, RegExp> = {
   CALISMIYORUM: /(taahhüt|abonelik|gss|işkur|su arıtma|kombi bakımı|derin dondurucu|ecza dolabı|kira|aidat|iş başvurusu|mülakat|cv güncelle|özgeçmiş|emekli|günlük rutin)/i,
   HUKUK: /(uyap|duruşma|istinaf|tebligat|müvekkil|hâkim|hakim|savcı|icra|haciz|ihtarname|mahkeme)/i,
   FINANS: /(kdv|muhsgk|beyanname|sgk prim|e-defter|berat|mali müşavir|smmm|muhasebe|fatura mutabakat|finans)/i,
+  MALIYE: /(smmm|kdv|muhsgk|muhtasar|geçici vergi|e-defter|edefter|berat|sgk|mizan|stopaj|vergi dairesi|luca|zirve)/i,
   SAGLIK: /(hasta|pansuman|serum|epikriz|konsültasyon|enjeksiyon|tansiyon|dekübitus|sbar|ilaç|damaryolu|doktor|hemşire|eczane|diş)/i,
   EGITIM: /(okul|öğretmen|ogretmen|müdür|mudur|kbs|ek ders|dys|devamsızlık|devamsizlik|taşımalı|tasimali|zümre|zumre|e-okul|eokul|tatbikat|disiplin|veli)/i,
   TEKNIK: /(arıza|şalter|loto|voltaj|manometre|parça|salıncak|tork|fren|amortisör|klima|vrf|motor|beton|deploy|mühendis)/i,
+  MUHENDISLIK: /(beton dökümü|kırım testi|küp numune|loto|kompanzasyon|trafo|pano|hidrostatik test|prod deploy|staging|hotfix|semver|pull request|db migration)/i,
   SAVUNMA: /(gözaltı|şüpheli|nezarethane|fezleke|tutanak|asayiş|devriye|adli rapor|arama kararı|içtima|scba|polis|asker|emniyet|itfaiye)/i,
   LOJISTIK: /(takograf|dorse|sevk|irsaliye|rampa|kantar|şoför|yükleme|tır|kamyon|mola|lojistik)/i,
   TICARET: /(satış teklif|teklif sıcak takip|kasa avans|z raporu|pos gün sonu|veresiye|toptancı sipariş|esnaf|kasiyer)/i,
@@ -21,13 +24,21 @@ export const DOMAIN_KEYWORDS: Record<ProfessionDomain, RegExp> = {
   GENEL: /.*/
 };
 
-export function detectDomainFromText(text: string): ProfessionDomain {
-  if (!text || text.trim().length === 0) return 'GENEL';
+export function detectDomainFromText(text: string, fallback: ProfessionDomain = 'GENEL'): ProfessionDomain {
+  if (!text || text.trim().length === 0) return fallback;
 
+  // 1. Öncelikli 0ms Jargon Radar kontrolü (exclusive + supporting puanlama)
+  const radar = detectDomainFromJargon(text, fallback);
+  if (radar.confidence >= 0.4 && radar.detectedDomain !== 'GENEL') {
+    return radar.detectedDomain;
+  }
+
+  // 2. Yedek regex taraması
   for (const [domain, regex] of Object.entries(DOMAIN_KEYWORDS)) {
     if (domain !== 'GENEL' && regex.test(text)) {
       return domain as ProfessionDomain;
     }
   }
-  return 'GENEL';
+
+  return radar.detectedDomain || fallback;
 }

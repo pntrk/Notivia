@@ -6,6 +6,7 @@ import { defineConfig, type Plugin } from 'vite';
 import dotenv from 'dotenv';
 import { parseWithGemini, parseWithAIAndImage } from './src/server/geminiParser.ts';
 import { dispatchWithGemini } from './src/server/dispatcherAgent.ts';
+import { splitCompoundUtterance, evaluateConfidence } from './src/services/engine/PersonalCognitiveOrchestrator.ts';
 
 dotenv.config();
 
@@ -19,7 +20,7 @@ function notiviaApiPlugin(): Plugin {
           res.end(
             JSON.stringify({
               status: 'ok',
-              engine: 'Notivia Cognitive Parser',
+              engine: 'Notivia Cognitive Parser v2.5',
               has_api_key: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'MY_GEMINI_API_KEY'),
             })
           );
@@ -34,19 +35,39 @@ function notiviaApiPlugin(): Plugin {
           req.on('end', async () => {
             try {
               const body = JSON.parse(bodyStr || '{}');
-              const input = String(body.input || body.text || '').trim();
-              const currentDatetime = String(body.current_datetime || new Date().toISOString());
+              const { input, current_datetime, userDomain, preferredDomain, domain } = body;
+              const cleanInput = String(input || body.text || '').trim();
+              const now = String(current_datetime || new Date().toISOString());
+              const activeDomain = userDomain || preferredDomain || domain || undefined;
 
-              if (!input) {
+              if (!cleanInput) {
                 res.statusCode = 400;
                 res.setHeader('Content-Type', 'application/json');
                 res.end(JSON.stringify({ success: false, error: 'Girdi metni boş olamaz.' }));
                 return;
               }
 
-              const result = await dispatchWithGemini(input, currentDatetime);
+              const segments = splitCompoundUtterance(cleanInput);
+
+              if (segments.length <= 1) {
+                const singleResult = await dispatchWithGemini(cleanInput, now, activeDomain);
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: true, is_compound: false, data: singleResult, items: [singleResult] }));
+                return;
+              }
+
+              const dispatchedList = await Promise.all(
+                segments.map((seg) => dispatchWithGemini(seg, now, activeDomain))
+              );
+
               res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ success: true, data: result }));
+              res.end(JSON.stringify({
+                success: true,
+                is_compound: true,
+                count: dispatchedList.length,
+                data: dispatchedList[0],
+                items: dispatchedList,
+              }));
             } catch (err: any) {
               console.error('[Vite Plugin API /api/dispatch error]:', err);
               res.statusCode = 500;
@@ -70,21 +91,52 @@ function notiviaApiPlugin(): Plugin {
           req.on('end', async () => {
             try {
               const body = JSON.parse(bodyStr || '{}');
-              const input = String(body.input || body.text || '').trim();
-              const currentDatetime = String(body.current_datetime || new Date().toISOString());
-              const base64Image = body.base64Image || body.image || null;
-              const pastNotes = body.past_notes || body.gecmis_notlar || body.history || [];
+              const { input, text, current_datetime, base64Image, image, past_notes, gecmis_notlar, history, userDomain, preferredDomain, domain } = body;
+              const cleanInput = String(input || text || '').trim();
+              const now = String(current_datetime || new Date().toISOString());
+              const media = base64Image || image || null;
+              const past = Array.isArray(past_notes) ? past_notes : Array.isArray(gecmis_notlar) ? gecmis_notlar : Array.isArray(history) ? history : [];
+              const activeDomain = userDomain || preferredDomain || domain || undefined;
 
-              if (!input && !base64Image) {
+              if (!cleanInput && !media) {
                 res.statusCode = 400;
                 res.setHeader('Content-Type', 'application/json');
                 res.end(JSON.stringify({ success: false, error: 'Kullanıcı girdisi veya görsel boş olamaz.' }));
                 return;
               }
 
-              const simple = await parseWithAIAndImage(input, base64Image, currentDatetime, pastNotes);
+              if (media) {
+                const singleResult = await parseWithAIAndImage(cleanInput, media, now, past, activeDomain);
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: true, is_compound: false, data: singleResult, items: [singleResult] }));
+                return;
+              }
+
+              const segments = splitCompoundUtterance(cleanInput);
+
+              if (segments.length <= 1) {
+                const single = await parseWithAIAndImage(cleanInput, null, now, past, activeDomain);
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: true, is_compound: false, data: single, items: [single] }));
+                return;
+              }
+
+              const parsedItems = await Promise.all(
+                segments.map(async (seg) => {
+                  const item = await parseWithAIAndImage(seg, null, now, past, activeDomain);
+                  const confidence = evaluateConfidence(item as any, seg);
+                  return { ...item, confidence };
+                })
+              );
+
               res.setHeader('Content-Type', 'application/json');
-              res.end(JSON.stringify({ success: true, data: simple }));
+              res.end(JSON.stringify({
+                success: true,
+                is_compound: true,
+                count: parsedItems.length,
+                data: parsedItems[0],
+                items: parsedItems,
+              }));
             } catch (err: any) {
               console.error('[Vite Plugin API /api/parse-simple error]:', err);
               res.statusCode = 500;
