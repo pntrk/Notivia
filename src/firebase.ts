@@ -1,6 +1,8 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import {
   getAuth,
+  setPersistence,
+  browserLocalPersistence,
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
@@ -17,6 +19,9 @@ import {
   deleteDoc,
   updateDoc,
   doc,
+  setDoc,
+  getDocs,
+  writeBatch,
   onSnapshot,
   query,
   orderBy,
@@ -60,7 +65,55 @@ if (getApps().length === 0) {
 }
 
 export const auth: Auth = getAuth(app);
+
+// Kullanıcı oturumunun tarayıcı kapatılsa, sekme yenilense veya PWA yeniden açılsa dahi
+// kalıcı olarak açık kalması için browserLocalPersistence zorunlu kılınır.
+try {
+  setPersistence(auth, browserLocalPersistence).catch((err) => {
+    console.warn('Firebase persistence setting warning:', err);
+  });
+} catch (e) {
+  console.warn('setPersistence catch:', e);
+}
+
 export const db: Firestore = getFirestore(app, (firebaseConfig as any).firestoreDatabaseId);
+
+// Anlık Kullanıcı Profil Önbelleği (Kullanıcının her açılışta 0ms içinde tanınması için)
+const CACHED_USER_KEY = 'notivia_cached_user';
+
+export interface CachedUserInfo {
+  uid: string;
+  email?: string | null;
+  displayName?: string | null;
+  photoURL?: string | null;
+}
+
+export function getCachedUser(): CachedUserInfo | null {
+  try {
+    const raw = typeof localStorage !== 'undefined' ? localStorage.getItem(CACHED_USER_KEY) : null;
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setCachedUser(user: User | null) {
+  try {
+    if (user) {
+      const data: CachedUserInfo = {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        photoURL: user.photoURL,
+      };
+      localStorage.setItem(CACHED_USER_KEY, JSON.stringify(data));
+    } else {
+      localStorage.removeItem(CACHED_USER_KEY);
+    }
+  } catch {
+    // ignore
+  }
+}
 
 // Google Auth Provider with Google Drive scope for user backup & sync
 export const googleProvider = new GoogleAuthProvider();
@@ -122,8 +175,9 @@ export function getGoogleAccessToken(): string | null {
   }
 }
 
-// Automatically clear token when user signs out
+// Automatically update cached user & token when auth state changes
 onAuthStateChanged(auth, (user) => {
+  setCachedUser(user);
   if (!user) {
     setGoogleAccessToken(null);
   }
@@ -299,9 +353,116 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   return errInfo;
 }
 
+// --- Firestore Bulut Senkronizasyon Motoru ---
+
+/**
+ * Firestore nesnelerinde 'undefined' değer bulunmasını engelleyip temizler
+ */
+export function cleanDataForFirestore(obj: any): any {
+  if (obj === null || obj === undefined) return null;
+  if (Array.isArray(obj)) {
+    return obj.map((item) => cleanDataForFirestore(item));
+  }
+  if (typeof obj === 'object') {
+    const cleaned: Record<string, any> = {};
+    for (const [key, val] of Object.entries(obj)) {
+      if (val === undefined) {
+        continue;
+      }
+      cleaned[key] = cleanDataForFirestore(val);
+    }
+    return cleaned;
+  }
+  return obj;
+}
+
+/**
+ * Tekil bir notu Firestore'a anında kaydeder veya günceller
+ */
+export async function saveUserNoteToFirestore(userId: string, note: any): Promise<void> {
+  if (!userId || !note || !note.id) return;
+  try {
+    const noteRef = doc(db, 'users', userId, 'notes', note.id);
+    const cleaned = cleanDataForFirestore({
+      ...note,
+      updatedAt: serverTimestamp(),
+    });
+    await setDoc(noteRef, cleaned, { merge: true });
+  } catch (err) {
+    console.warn('Firestore not kaydetme uyarısı:', err);
+  }
+}
+
+/**
+ * Tekil bir notu Firestore'dan anında siler
+ */
+export async function deleteUserNoteFromFirestore(userId: string, noteId: string): Promise<void> {
+  if (!userId || !noteId) return;
+  try {
+    const noteRef = doc(db, 'users', userId, 'notes', noteId);
+    await deleteDoc(noteRef);
+  } catch (err) {
+    console.warn('Firestore not silme uyarısı:', err);
+  }
+}
+
+/**
+ * Birden fazla notu toplu olarak Firestore'a yazar (Batch)
+ */
+export async function batchSyncNotesToFirestore(userId: string, notes: any[]): Promise<void> {
+  if (!userId || !Array.isArray(notes) || notes.length === 0) return;
+  try {
+    const chunks: any[][] = [];
+    for (let i = 0; i < notes.length; i += 300) {
+      chunks.push(notes.slice(i, i + 300));
+    }
+    for (const chunk of chunks) {
+      const batch = writeBatch(db);
+      for (const note of chunk) {
+        if (!note.id) continue;
+        const noteRef = doc(db, 'users', userId, 'notes', note.id);
+        batch.set(noteRef, cleanDataForFirestore({ ...note, updatedAt: serverTimestamp() }), { merge: true });
+      }
+      await batch.commit();
+    }
+    console.log(`Firestore'a ${notes.length} adet not senkronize edildi ✓`);
+  } catch (err) {
+    console.warn('Firestore toplu senkronizasyon uyarısı:', err);
+  }
+}
+
+/**
+ * Kullanıcının Firestore'daki notlarını gerçek zamanlı (Real-time onSnapshot) dinler.
+ * Bir sekmede veya cihazda yapılan değişiklikler ekran yenilenmeksizin diğer tüm yerlerde anında güncellenir.
+ */
+export function subscribeToUserNotes(
+  userId: string,
+  onNotes: (notes: any[]) => void,
+  onError?: (err: any) => void
+): () => void {
+  if (!userId) {
+    return () => {};
+  }
+  const notesCol = collection(db, 'users', userId, 'notes');
+  return onSnapshot(
+    notesCol,
+    (snapshot) => {
+      const items: any[] = [];
+      snapshot.forEach((docSnap) => {
+        items.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      onNotes(items);
+    },
+    (err) => {
+      console.warn('Firestore gerçek zamanlı dinleme uyarısı:', err);
+      onError?.(err);
+    }
+  );
+}
+
 // Initial connection test
 export async function testConnection() {
-  // Firestore is not used for data storage; app uses local-first and Google Drive backup
+  // Local-first, Firestore real-time and Google Drive backup
 }
 
 export interface FirebaseConfig {
@@ -343,6 +504,9 @@ export {
   addDoc,
   deleteDoc,
   doc,
+  setDoc,
+  getDocs,
+  writeBatch,
   onSnapshot,
   query,
   orderBy,

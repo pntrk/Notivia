@@ -17,6 +17,12 @@ import {
   deleteCalendarEvent,
   updateCalendarEventTitle,
   checkCalendarConflicts,
+  saveUserNoteToFirestore,
+  deleteUserNoteFromFirestore,
+  batchSyncNotesToFirestore,
+  subscribeToUserNotes,
+  getCachedUser,
+  setCachedUser,
   type User,
 } from './firebase.ts';
 import { extractSimpleNoteFromText, findFermentationRecipe } from './utils/simpleNote.ts';
@@ -120,6 +126,31 @@ export function isCompletedCard(card: SimpleCardItem): boolean {
 
 const LOCAL_STORAGE_KEY = 'notivia_local_notes';
 const SIMULATED_USER_KEY = 'notivia_simulated_user';
+
+export const getLocalNotes = (): SimpleCardItem[] => {
+  try {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(LOCAL_STORAGE_KEY) : null;
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+};
+
+export const saveLocalNotes = (notes: SimpleCardItem[]) => {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(notes));
+    }
+  } catch {
+    // ignore
+  }
+};
 
 // 1. Türkçe Doğal Sesli Fısıltı & Soru Sorma Motoru (TTS)
 export function speakQuestion(text: string, onFinished?: () => void) {
@@ -268,7 +299,8 @@ function CardMediaThumbnail({ mediaId, onClick }: { mediaId: string; onClick: ()
 }
 
 export default function App() {
-  const [cards, setCards] = useState<SimpleCardItem[]>([]);
+  // Anında (0ms) yerel hafızadan kartları yükle - ekran asla boş veya gecikmeli açılmaz
+  const [cards, setCards] = useState<SimpleCardItem[]>(() => getLocalNotes());
 
   // useAlarmWatcher: Kartlar içindeki zamanlı alarmları saniyelik kontrol eder ve çalar
   const { activeAlarm, dismissAlarm } = useAlarmWatcher(cards, (id) => {
@@ -276,7 +308,10 @@ export default function App() {
       prev.map((c) => (c.id === id ? { ...c, isAlarmActive: false } : c))
     );
   });
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  // Giriş yapmış kullanıcıyı önbellekten 0ms içinde yakala - tekrar giriş sormaz
+  const [currentUser, setCurrentUser] = useState<User | any>(() => {
+    return auth.currentUser || (getCachedUser() as any) || null;
+  });
   const [simulatedUser, setSimulatedUser] = useState<any>(null);
   const [statusText, setStatusText] = useState<string>('Söyle, çek ya da yaz');
   const [isListening, setIsListening] = useState<boolean>(false);
@@ -619,27 +654,18 @@ export default function App() {
   const onSpeechCompletedRef = useRef<((spoken: string) => Promise<void>) | null>(null);
   const processWithAIRef = useRef<((text?: string, base64Image?: string | null, isSpoken?: boolean) => Promise<void>) | null>(null);
 
-  // Load initial notes (local mode)
-  const getLocalNotes = (): SimpleCardItem[] => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed;
-        }
-      }
-    } catch {
-      // ignore
+  // Firestore bulut senkronizasyon köprüsü
+  const syncNoteToCloud = (note: SimpleCardItem) => {
+    const uid = currentUser?.uid;
+    if (uid) {
+      saveUserNoteToFirestore(uid, note);
     }
-    return [];
   };
 
-  const saveLocalNotes = (notes: SimpleCardItem[]) => {
-    try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(notes));
-    } catch {
-      // ignore
+  const syncDeleteToCloud = (noteId: string) => {
+    const uid = currentUser?.uid;
+    if (uid) {
+      deleteUserNoteFromFirestore(uid, noteId);
     }
   };
 
@@ -666,7 +692,6 @@ export default function App() {
     const token = getGoogleAccessToken();
     if (!token) return;
     setIsSyncingDrive(true);
-    setStatusText("Drive'dan notlar yükleniyor...");
     try {
       const driveResult = await loadNotesFromGoogleDrive();
       if (driveResult.success && driveResult.notes) {
@@ -675,36 +700,28 @@ export default function App() {
         if (driveResult.notes.length > 0) {
           // Drive'daki notlar ile lokali birleştir (ID eşleşmelerine göre)
           const mergedMap = new Map<string, SimpleCardItem>();
-          // Önce drive verisini ekle
           driveResult.notes.forEach((n) => mergedMap.set(n.id, n));
-          // Sonra lokaldeki yeni olanları koru
           local.forEach((n) => mergedMap.set(n.id, n));
           const mergedList = Array.from(mergedMap.values());
           setCards(mergedList);
           saveLocalNotes(mergedList);
-          // Drive'ı güncel son haliyle besle
+          if (currentUser?.uid) {
+            batchSyncNotesToFirestore(currentUser.uid, mergedList);
+          }
           await saveNotesToGoogleDrive(mergedList);
         } else if (local.length > 0) {
-          // Drive'da henüz dosya yok ama yerelde notlar varsa, ilk yedeklemeyi yap
           await saveNotesToGoogleDrive(local);
-          setCards(local);
-        } else {
-          setCards([]);
         }
         setDriveSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-        setStatusText("Google Drive ile eşitlendi ✓");
-        setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
       }
     } catch (err) {
       console.warn("Drive sync hatası:", err);
-      setStatusText("Drive senkronizasyonunda sorun oluştu");
-      setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
     } finally {
       setIsSyncingDrive(false);
     }
   };
 
-  // Firebase Auth (Sadece Google Giriş Protokolü) & Google Drive Senkronizasyonu
+  // Firebase Auth (Sürekli Kalıcı Oturum) & Gerçek Zamanlı Bulut Senkronizasyonu
   useEffect(() => {
     try {
       const storedSim = localStorage.getItem(SIMULATED_USER_KEY);
@@ -720,12 +737,13 @@ export default function App() {
 
     // Mobil cihazlardan redirect ile dönüldüyse sonucu yakala
     getRedirectResult(auth).then(async (result) => {
-      if (result) {
+      if (result && result.user) {
+        setCachedUser(result.user);
+        setCurrentUser(result.user);
         const credential = GoogleAuthProvider.credentialFromResult(result);
         const token = credential?.accessToken || null;
         if (token) {
           setGoogleAccessToken(token);
-          console.log("Mevcut Google Token başarıyla alındı (Redirect):", token);
           await syncFromDrive();
         }
         setStatusText('Google hesabı bağlandı ✓');
@@ -742,13 +760,13 @@ export default function App() {
       const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
         if (!isMounted) return;
         setCurrentUser(user);
+        setCachedUser(user);
 
         if (user) {
-          // Google hesabı bağlandı. Notlar Firestore'a ASLA kaydedilmez.
-          // Doğrudan kullanıcının Google Drive'ındaki dosyadan yüklenir ve yedeklenir.
-          await syncFromDrive();
-        } else {
-          setCards(getLocalNotes());
+          // Arka planda Drive yedeklemesi kontrol et
+          if (getGoogleAccessToken()) {
+            syncFromDrive();
+          }
         }
       });
 
@@ -757,9 +775,93 @@ export default function App() {
         unsubscribeAuth();
       };
     } catch {
-      setCards(getLocalNotes());
+      // ignore
     }
   }, []);
+
+  // Gerçek Zamanlı Firestore Senkronizasyon Dinleyicisi (Real-time Cloud Sync)
+  // Kullanıcı ister telefondan ister masaüstünden yazsın, sayfa yenilemeye gerek kalmadan anında eşitlenir.
+  useEffect(() => {
+    const uid = currentUser?.uid;
+    if (!uid) return;
+
+    const unsubscribe = subscribeToUserNotes(
+      uid,
+      async (remoteNotes) => {
+        if (!remoteNotes) return;
+        const local = getLocalNotes();
+
+        if (remoteNotes.length > 0) {
+          const mergedMap = new Map<string, SimpleCardItem>();
+          remoteNotes.forEach((rn) => mergedMap.set(rn.id, rn as SimpleCardItem));
+
+          // Yerelde olup henüz buluta aktarılmamış not varsa koru ve Firestore'a gönder
+          let hasLocalOnly = false;
+          local.forEach((loc) => {
+            if (!mergedMap.has(loc.id)) {
+              mergedMap.set(loc.id, loc);
+              saveUserNoteToFirestore(uid, loc);
+              hasLocalOnly = true;
+            }
+          });
+
+          const mergedList = Array.from(mergedMap.values());
+          setCards(mergedList);
+          saveLocalNotes(mergedList);
+          if (hasLocalOnly) {
+            triggerDriveBackup(mergedList);
+          }
+        } else if (local.length > 0) {
+          // Bulutta henüz not yok ama yerelde notlar varsa (ilk giriş), tümünü Firestore'a aktar
+          await batchSyncNotesToFirestore(uid, local);
+        }
+      },
+      (err) => {
+        console.warn('Firestore realtime sync listener error:', err);
+      }
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [currentUser?.uid]);
+
+  // Çoklu Sekme ve Ağ Durumu Senkronizasyonu (Window Storage & Online Listener)
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === LOCAL_STORAGE_KEY) {
+        setCards(getLocalNotes());
+      }
+    };
+    const handleOnline = () => {
+      setCards(getLocalNotes());
+      if (currentUser?.uid) {
+        const local = getLocalNotes();
+        batchSyncNotesToFirestore(currentUser.uid, local);
+      }
+      if (getGoogleAccessToken()) {
+        syncFromDrive();
+      }
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        setCards(getLocalNotes());
+        if (getGoogleAccessToken()) {
+          syncFromDrive();
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('online', handleOnline);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('online', handleOnline);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [currentUser?.uid]);
 
   // Web Speech API Voice Recognition setup
   useEffect(() => {
@@ -1396,6 +1498,7 @@ export default function App() {
     const local = getLocalNotes().filter((c) => c.id !== tempId);
     local.unshift(newCard);
     saveLocalNotes(local);
+    syncNoteToCloud(newCard);
 
     // Google Drive'a sessizce yedekle
     triggerDriveBackup(local);
@@ -1420,6 +1523,7 @@ export default function App() {
     if (locItem) {
       locItem.action_items = updatedTasks;
       saveLocalNotes(local);
+      syncNoteToCloud(locItem);
       triggerDriveBackup(local);
     }
   };
@@ -1446,6 +1550,7 @@ export default function App() {
       const currentTasks = locItem.action_items || [];
       locItem.action_items = [...currentTasks, { task: trimmed, is_completed: false }];
       saveLocalNotes(local);
+      syncNoteToCloud(locItem);
       triggerDriveBackup(local);
     }
   };
@@ -1482,6 +1587,7 @@ export default function App() {
       locItem.tamamlandi = nextCompleted;
       if (updatedTasks) locItem.action_items = updatedTasks;
       saveLocalNotes(local);
+      syncNoteToCloud(locItem);
       triggerDriveBackup(local);
     }
 
@@ -1508,6 +1614,7 @@ export default function App() {
     }
     const local = getLocalNotes().filter((n) => n.id !== card.id);
     saveLocalNotes(local);
+    syncDeleteToCloud(card.id);
     triggerDriveBackup(local);
   };
 
@@ -1644,6 +1751,7 @@ export default function App() {
       target.baslik = cleanTitle;
       target.ikon = icon;
       saveLocalNotes(local);
+      syncNoteToCloud(target);
       triggerDriveBackup(local);
     }
     
@@ -1680,6 +1788,7 @@ export default function App() {
     if (idx !== -1) {
       local[idx] = { ...local[idx], ...updatedNote };
       saveLocalNotes(local);
+      syncNoteToCloud(local[idx]);
       triggerDriveBackup(local);
     }
 
@@ -1715,6 +1824,7 @@ export default function App() {
         target.netlestirme_sorusu = null;
       }
       saveLocalNotes(local);
+      syncNoteToCloud(target);
       triggerDriveBackup(local);
     }
 
@@ -2100,6 +2210,10 @@ export default function App() {
     try {
       // Modern mobil ve masaüstü tarayıcılarda kullanıcı tıklamasıyla tetiklenen popup en kararlı yöntemdir.
       const result = await signInWithPopup(auth, googleProvider);
+      if (result?.user) {
+        setCachedUser(result.user);
+        setCurrentUser(result.user);
+      }
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const token = credential?.accessToken || null;
       if (token) {
@@ -2143,6 +2257,7 @@ export default function App() {
     } catch (err) {
       console.warn("SignOut bildirimi:", err);
     }
+    setCachedUser(null);
     setGoogleAccessToken(null);
     setCurrentUser(null);
     setSimulatedUser(null);
