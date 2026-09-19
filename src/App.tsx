@@ -2984,7 +2984,7 @@ export default function App() {
                     onClick={(e) => handleCardClick(item.id, e)}
                     className={`card w-full max-w-full overflow-hidden flex flex-col transition-all duration-300 hover:shadow-md ${
                       viewMode === 'grid'
-                        ? 'p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl gap-1.5 sm:gap-2'
+                        ? 'p-2 sm:p-3 rounded-xl sm:rounded-2xl gap-1.5'
                         : 'p-3.5 sm:p-4 rounded-2xl gap-2 sm:gap-2.5'
                     } ${
                       item.isRemoving ? 'scale-95 opacity-0' : 'scale-100'
@@ -3006,9 +3006,9 @@ export default function App() {
                     }}
                   >
                     {/* Üst Kısım: Başlık, İkon ve Hızlı İşlem Araç Çubuğu (Mobil Optimize Edilmiş Düzen) */}
-                    <div className={viewMode === 'grid' ? 'flex flex-col items-start gap-1.5 w-full' : 'flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-2.5 w-full'}>
+                    <div className={viewMode === 'grid' ? 'flex flex-col items-start gap-1 w-full' : 'flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-2.5 w-full'}>
                       {/* Başlık, İkon ve Mobilde Hızlı Tamamlama Butonu */}
-                      <div className="flex items-start gap-2 min-w-0 flex-1 w-full">
+                      <div className="flex items-start gap-1.5 sm:gap-2 min-w-0 flex-1 w-full">
                         {/* Çoklu Seçim Modunda Seçim Kutucuğu */}
                         {isSelectMode && (
                           <button
@@ -3021,7 +3021,9 @@ export default function App() {
                                   : [...prev, item.id]
                               );
                             }}
-                            className={`w-5 h-5 rounded-lg border flex items-center justify-center text-xs shrink-0 cursor-pointer transition-colors mt-0.5 ${
+                            className={`rounded-md border flex items-center justify-center shrink-0 cursor-pointer transition-colors mt-0.5 ${
+                              viewMode === 'grid' ? 'w-4.5 h-4.5 text-[10px]' : 'w-5 h-5 text-xs'
+                            } ${
                               isSelected
                                 ? 'bg-stone-900 border-stone-900 text-white'
                                 : 'border-stone-400 bg-white/70 hover:bg-white text-transparent'
@@ -3040,8 +3042,8 @@ export default function App() {
                               onClick={() => viewFullImage(item.mediaId!)}
                             />
                           ) : (
-                            <div className={`${viewMode === 'grid' ? 'w-8 h-8 sm:w-9 sm:h-9 rounded-lg' : 'w-9 h-9 sm:w-10 sm:h-10 rounded-xl'} flex items-center justify-center bg-white/85 dark:bg-black/25 border border-black/5 shadow-2xs select-none shrink-0 ${isCompleted ? 'grayscale opacity-60' : ''}`}>
-                              <span className={viewMode === 'grid' ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl'}>
+                            <div className={`${viewMode === 'grid' ? 'w-7 h-7 sm:w-8 sm:h-8 rounded-lg' : 'w-9 h-9 sm:w-10 sm:h-10 rounded-xl'} flex items-center justify-center bg-white/85 dark:bg-black/25 border border-black/5 shadow-2xs select-none shrink-0 ${isCompleted ? 'grayscale opacity-60' : ''}`}>
+                              <span className={viewMode === 'grid' ? 'text-base sm:text-lg' : 'text-xl sm:text-2xl'}>
                                 {item.ikon || '📌'}
                               </span>
                             </div>
@@ -3063,7 +3065,7 @@ export default function App() {
                             suppressContentEditableWarning={true}
                             spellCheck={false}
                             className={`font-semibold leading-snug tracking-tight outline-hidden break-words hyphens-auto w-full ${
-                              viewMode === 'grid' ? 'text-xs sm:text-sm' : 'text-[15px] sm:text-base'
+                              viewMode === 'grid' ? 'text-xs sm:text-sm line-clamp-2 sm:line-clamp-none' : 'text-[15px] sm:text-base'
                             } ${
                               isCompleted
                                 ? 'text-stone-500 line-through decoration-stone-500/70'
@@ -3096,7 +3098,7 @@ export default function App() {
                           </h2>
 
                           {item.createdAt && (
-                            <span className="text-[9px] sm:text-[10px] text-stone-400 dark:text-stone-500 font-mono tracking-tight select-none mt-0.5 block">
+                            <span className="text-[8.5px] sm:text-[9.5px] text-stone-400 dark:text-stone-500 font-mono tracking-tight select-none mt-0.5 block truncate">
                               {formatCreatedTime(item.createdAt, language)}
                             </span>
                           )}
@@ -3109,7 +3111,7 @@ export default function App() {
                             e.stopPropagation();
                             toggleCardCompleted(item.id);
                           }}
-                          className={`${viewMode === 'grid' ? 'w-6.5 h-6.5' : 'sm:hidden w-8 h-8'} rounded-xl border flex items-center justify-center shrink-0 transition-all cursor-pointer active:scale-90 ${
+                          className={`${viewMode === 'grid' ? 'w-6 h-6 rounded-lg' : 'sm:hidden w-8 h-8 rounded-xl'} border flex items-center justify-center shrink-0 transition-all cursor-pointer active:scale-90 ${
                             isCompleted
                               ? 'bg-stone-800 border-stone-800 text-white shadow-xs'
                               : 'border-stone-300 bg-white/95 text-stone-700 hover:text-stone-900 shadow-2xs'
@@ -3121,10 +3123,10 @@ export default function App() {
                       </div>
 
                       {/* Kart Aksiyonları Araç Çubuğu */}
-                      <div className={`flex items-center gap-1 shrink-0 bg-white/95 dark:bg-black/40 backdrop-blur-xs rounded-xl border border-black/5 dark:border-white/10 shadow-2xs ${
+                      <div className={`flex items-center shrink-0 bg-white/95 dark:bg-black/40 backdrop-blur-xs rounded-lg sm:rounded-xl border border-black/5 dark:border-white/10 shadow-2xs ${
                         viewMode === 'grid'
-                          ? 'w-full justify-between p-0.5'
-                          : 'justify-end sm:justify-start p-1 self-end sm:self-start'
+                          ? 'w-full justify-around p-0.5'
+                          : 'gap-1 justify-end sm:justify-start p-1 self-end sm:self-start'
                       }`}>
                         {/* Kartı Düzenle Butonu (Kalem) */}
                         <button
@@ -3133,7 +3135,7 @@ export default function App() {
                             e.stopPropagation();
                             setEditingNote(item);
                           }}
-                          className={`${viewMode === 'grid' ? 'w-6 h-6 sm:w-6.5 sm:h-6.5' : 'w-7.5 h-7.5'} rounded-lg flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-white active:scale-92 transition-all cursor-pointer`}
+                          className={`${viewMode === 'grid' ? 'w-6 h-6' : 'w-7.5 h-7.5'} rounded-md sm:rounded-lg flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-white active:scale-90 transition-all cursor-pointer`}
                           title={language === 'tr' ? 'Kartı Düzenle' : 'Edit Card'}
                         >
                           <svg className={viewMode === 'grid' ? 'w-3 h-3' : 'w-3.5 h-3.5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3148,7 +3150,7 @@ export default function App() {
                             e.stopPropagation();
                             setActiveReminderEditCardId(activeReminderEditCardId === item.id ? null : item.id);
                           }}
-                          className={`${viewMode === 'grid' ? 'w-6 h-6 sm:w-6.5 sm:h-6.5' : 'w-7.5 h-7.5'} rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-92 ${
+                          className={`${viewMode === 'grid' ? 'w-6 h-6' : 'w-7.5 h-7.5'} rounded-md sm:rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-90 ${
                             activeReminderEditCardId === item.id
                               ? 'bg-amber-500 text-white shadow-xs'
                               : item.tarih_iso
@@ -3169,7 +3171,7 @@ export default function App() {
                             e.stopPropagation();
                             shareNote(item);
                           }}
-                          className={`${viewMode === 'grid' ? 'w-6 h-6 sm:w-6.5 sm:h-6.5' : 'w-7.5 h-7.5'} rounded-lg flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-white active:scale-92 transition-all cursor-pointer`}
+                          className={`${viewMode === 'grid' ? 'w-6 h-6' : 'w-7.5 h-7.5'} rounded-md sm:rounded-lg flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-white active:scale-90 transition-all cursor-pointer`}
                           title={t.shareOrCopy}
                         >
                           <svg className={viewMode === 'grid' ? 'w-3 h-3' : 'w-3.5 h-3.5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3184,7 +3186,7 @@ export default function App() {
                             e.stopPropagation();
                             directDeleteNote(item.id);
                           }}
-                          className={`${viewMode === 'grid' ? 'w-6 h-6 sm:w-6.5 sm:h-6.5' : 'w-7.5 h-7.5'} rounded-lg flex items-center justify-center text-stone-500 hover:text-red-600 hover:bg-red-50 active:scale-92 transition-all cursor-pointer`}
+                          className={`${viewMode === 'grid' ? 'w-6 h-6' : 'w-7.5 h-7.5'} rounded-md sm:rounded-lg flex items-center justify-center text-stone-500 hover:text-red-600 hover:bg-red-50 active:scale-90 transition-all cursor-pointer`}
                           title={t.deleteNoteTitle}
                         >
                           <svg className={viewMode === 'grid' ? 'w-3 h-3' : 'w-3.5 h-3.5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3214,31 +3216,31 @@ export default function App() {
                     </div>
 
                   {/* Kart Gövdesi: Rozetler, Uyarılar ve Alt Görevler (Kartın Tam Genişliğini Kullanır) */}
-                  <div className="w-full space-y-2">
+                  <div className={`w-full ${viewMode === 'grid' ? 'space-y-1.5' : 'space-y-2'}`}>
                     {/* Kompakt Görsel İkon Çubuğu ve Meta Etiketler */}
-                    <div className="flex items-center gap-1.5 flex-wrap w-full">
+                    <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap w-full">
                       {isWeatherTriggered && (
-                        <span className="text-[10px] font-bold text-red-700 bg-red-100/90 border border-red-300/80 px-2 py-0.5 rounded-md shadow-2xs flex items-center gap-1 shrink-0 animate-pulse">
+                        <span className="text-[9px] sm:text-[10px] font-bold text-red-700 bg-red-100/90 border border-red-300/80 px-1.5 sm:px-2 py-0.5 rounded-md shadow-2xs flex items-center gap-1 shrink-0 animate-pulse">
                           <span>⚡</span>
-                          <span>{item.tetikleyici?.sart === 'yagmur' ? 'Yağmur Başladı' : 'Hava 0°C Altı'}</span>
+                          <span className="truncate">{item.tetikleyici?.sart === 'yagmur' ? 'Yağmur' : '0°C Altı'}</span>
                         </span>
                       )}
 
                       {isExpired ? (
-                        <span className="text-[10px] bg-stone-900/10 text-stone-700 px-2 py-0.5 rounded-md font-medium shrink-0 flex items-center gap-1 border border-black/5" title="Süresi doldu">
+                        <span className="text-[9px] sm:text-[10px] bg-stone-900/10 text-stone-700 px-1.5 sm:px-2 py-0.5 rounded-md font-medium shrink-0 flex items-center gap-1 border border-black/5" title="Süresi doldu">
                           <span>⌛</span>
-                          <span>{item.zaman || t.incompleteStatus}</span>
+                          <span className="truncate">{item.zaman || t.incompleteStatus}</span>
                         </span>
                       ) : (
                         <>
                           {/* Zaman / Hatırlatıcı İkonik Kapsülü */}
                           {item.tetikleyici?.etiket ? (
                             <span
-                              className="text-[10px] bg-white/90 text-stone-800 font-semibold px-2 py-0.5 rounded-md shrink-0 flex items-center gap-1 shadow-2xs border border-stone-900/10"
+                              className="text-[9px] sm:text-[10px] bg-white/90 text-stone-800 font-semibold px-1.5 sm:px-2 py-0.5 rounded-md shrink-0 flex items-center gap-1 shadow-2xs border border-stone-900/10"
                               title={item.tetikleyici.sart ? `${t.conditionLabel}: ${item.tetikleyici.sart}` : undefined}
                             >
                               <span>📍</span>
-                              <span>{item.tetikleyici.etiket}</span>
+                              <span className="truncate">{item.tetikleyici.etiket}</span>
                             </span>
                           ) : item.zaman ? (
                             <button
@@ -3247,13 +3249,15 @@ export default function App() {
                                 e.stopPropagation();
                                 setActiveReminderEditCardId(activeReminderEditCardId === item.id ? null : item.id);
                               }}
-                              className="text-[11px] text-stone-800 hover:text-amber-950 font-medium flex items-center gap-1.5 bg-white/90 hover:bg-white px-2.5 py-1 rounded-md border border-stone-200/90 shadow-2xs hover:border-amber-400 transition-all cursor-pointer group shrink-0"
+                              className={`text-stone-800 hover:text-amber-950 font-medium flex items-center gap-1 bg-white/90 hover:bg-white rounded-md border border-stone-200/90 shadow-2xs hover:border-amber-400 transition-all cursor-pointer group shrink-0 ${
+                                viewMode === 'grid' ? 'text-[10px] px-1.5 py-0.5' : 'text-[11px] px-2.5 py-1'
+                              }`}
                               title={language === 'tr' ? 'Hatırlatıcı tarih/saat, takvim ve bildirimleri düzenle' : 'Edit reminder time, calendar & notification'}
                             >
-                              <svg className="w-3.5 h-3.5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
-                              <span className="font-medium">{item.zaman}</span>
+                              <span className="font-medium truncate max-w-[90px] sm:max-w-none">{item.zaman}</span>
                               <svg className="w-2.5 h-2.5 text-stone-400 group-hover:text-amber-700 shrink-0 ml-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                               </svg>
@@ -3265,10 +3269,10 @@ export default function App() {
                                 e.stopPropagation();
                                 setActiveReminderEditCardId(activeReminderEditCardId === item.id ? null : item.id);
                               }}
-                              className="text-[10px] text-stone-500 hover:text-stone-800 font-medium flex items-center gap-1 bg-white/60 hover:bg-white px-2 py-0.5 rounded-md border border-dashed border-stone-300 hover:border-stone-400 transition-all cursor-pointer shrink-0"
+                              className="text-[9px] sm:text-[10px] text-stone-500 hover:text-stone-800 font-medium flex items-center gap-0.5 bg-white/60 hover:bg-white px-1.5 py-0.5 rounded-md border border-dashed border-stone-300 hover:border-stone-400 transition-all cursor-pointer shrink-0"
                               title={language === 'tr' ? 'Hatırlatıcı ekle' : 'Add reminder'}
                             >
-                              <svg className="w-3 h-3 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <svg className="w-2.5 h-2.5 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
                               <span>+</span>
@@ -3276,7 +3280,7 @@ export default function App() {
                           )}
 
                           {/* İkonik Mini Rozetler Grubu */}
-                          <div className="flex items-center gap-1 shrink-0 flex-wrap">
+                          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 flex-wrap">
                             {/* Cihaz Alarmı / Bildirimi İkonu */}
                             {item.tarih_iso && item.deviceNotificationEnabled !== false && (
                               <span
@@ -3284,17 +3288,17 @@ export default function App() {
                                   e.stopPropagation();
                                   setActiveReminderEditCardId(activeReminderEditCardId === item.id ? null : item.id);
                                 }}
-                                className="w-5.5 h-5.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-900 border border-amber-500/30 flex items-center justify-center cursor-pointer shadow-2xs transition-colors"
+                                className="w-5 h-5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-900 border border-amber-500/30 flex items-center justify-center cursor-pointer shadow-2xs transition-colors"
                                 title={language === 'tr' ? 'Cihaz sesli alarmı devrede. Düzenlemek için tıkla' : 'Device audio alert active'}
                               >
-                                <span className="text-[10px]">🔔</span>
+                                <span className="text-[9px]">🔔</span>
                               </span>
                             )}
 
                             {/* Periyodik / Rutin İkonu */}
                             {item.periyodik && (
                               <span
-                                className="h-5.5 px-1.5 rounded-md bg-emerald-500/15 text-emerald-800 border border-emerald-500/30 flex items-center gap-0.5 text-[10px] font-medium shadow-2xs"
+                                className="h-5 px-1 rounded-md bg-emerald-500/15 text-emerald-800 border border-emerald-500/30 flex items-center gap-0.5 text-[9px] font-medium shadow-2xs"
                                 title={item.periyodik.tip === 'aylik_son_hafta' ? (language === 'tr' ? 'Ay Sonu Tekrarlı' : 'End of Month') : t.periodicBadge}
                               >
                                 <span>🔄</span>
@@ -3304,11 +3308,11 @@ export default function App() {
                             {/* Hazırlık Zamanı İkonu */}
                             {item.hazirlik_zamani && (
                               <span
-                                className="h-5.5 px-1.5 rounded-md bg-white/80 text-amber-900 border border-amber-300/40 flex items-center gap-0.5 text-[10px] font-medium shadow-2xs"
+                                className="h-5 px-1 rounded-md bg-white/80 text-amber-900 border border-amber-300/40 flex items-center gap-0.5 text-[9px] font-medium shadow-2xs"
                                 title={`${t.prepLeadTime}: ${item.hazirlik_zamani}`}
                               >
                                 <span>⏳</span>
-                                <span className="text-[9px]">{item.hazirlik_zamani}</span>
+                                <span className="text-[8.5px]">{item.hazirlik_zamani}</span>
                               </span>
                             )}
 
@@ -3321,7 +3325,7 @@ export default function App() {
                                 const domainIcon = domainOpt?.icon || '🏷️';
                                 return (
                                   <span
-                                    className={`h-5.5 px-1.5 rounded-md text-[9px] font-medium shrink-0 flex items-center gap-0.5 shadow-2xs border ${dTheme?.badgeBg || 'bg-stone-100'} ${dTheme?.badgeText || 'text-stone-800'} border-black/10`}
+                                    className={`h-5 px-1 rounded-md text-[8.5px] font-medium shrink-0 flex items-center gap-0.5 shadow-2xs border ${dTheme?.badgeBg || 'bg-stone-100'} ${dTheme?.badgeText || 'text-stone-800'} border-black/10`}
                                     title={`Bilişsel Alan: ${dTheme?.displayName || cardDomain}`}
                                   >
                                     <span>{domainIcon}</span>
@@ -3339,23 +3343,23 @@ export default function App() {
                                   e.stopPropagation();
                                   autoSyncCardToDeviceCalendar(item);
                                 }}
-                                className={`w-5.5 h-5.5 rounded-md flex items-center justify-center shadow-2xs cursor-pointer active:scale-95 transition-all ${
+                                className={`w-5 h-5 rounded-md flex items-center justify-center shadow-2xs cursor-pointer active:scale-95 transition-all ${
                                   item.calendarEventId || item.calendar_event_id
                                     ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-900 border border-emerald-500/30'
                                     : 'bg-white/80 hover:bg-white text-stone-700 border border-stone-200/90'
                                 }`}
                                 title={
                                   item.calendarEventId || item.calendar_event_id
-                                    ? (language === 'tr' ? 'Cihaz Takviminde Senkronize ✓ (Açmak veya güncellemek için dokunun)' : 'Synced with Device Calendar ✓ (Tap to open or update)')
-                                    : (language === 'tr' ? 'Cihaz Takvimine Otomatik Aktar (Google / Apple Takvim)' : 'Auto Add to Device Calendar (Google / Apple Calendar)')
+                                    ? (language === 'tr' ? 'Cihaz Takviminde Senkronize ✓' : 'Synced with Calendar ✓')
+                                    : (language === 'tr' ? 'Takvime Aktar' : 'Add to Calendar')
                                 }
                               >
                                 {syncingCalendarCardId === item.id ? (
-                                  <span className="text-[10px] animate-spin">⏳</span>
+                                  <span className="text-[9px] animate-spin">⏳</span>
                                 ) : item.calendarEventId || item.calendar_event_id ? (
-                                  <span className="text-[10px]">📅</span>
+                                  <span className="text-[9px]">📅</span>
                                 ) : (
-                                  <span className="text-[10px]">📲</span>
+                                  <span className="text-[9px]">📲</span>
                                 )}
                               </button>
                             )}
@@ -3366,15 +3370,19 @@ export default function App() {
 
                     {/* Çakışma Uyarısı */}
                     {(item.conflictWith || item.conflictWarning) && (
-                      <div className="flex items-center gap-1.5 text-xs text-amber-900 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-lg break-words">
+                      <div className={`flex items-center gap-1 text-amber-900 bg-amber-500/15 border border-amber-500/30 rounded-lg break-words ${
+                        viewMode === 'grid' ? 'text-[10px] p-1.5' : 'text-xs px-2.5 py-1'
+                      }`}>
                         <span className="shrink-0">⚠️</span>
-                        <span className="leading-snug">'{item.conflictWith || item.conflictWarning}' {t.conflictsWith}</span>
+                        <span className="leading-tight">'{item.conflictWith || item.conflictWarning}' {t.conflictsWith}</span>
                       </div>
                     )}
 
                     {/* Netleştirme Sorusu / Eksik Bilgi Uyarısı */}
                     {(item.eksik_bilgi || item.netlestirme_sorusu || item.soru) && (
-                      <div className="flex items-start gap-1.5 bg-sky-500/10 text-sky-950 border border-sky-500/20 px-2.5 py-1.5 rounded-lg text-xs leading-snug break-words">
+                      <div className={`flex items-start gap-1 bg-sky-500/10 text-sky-950 border border-sky-500/20 rounded-lg leading-tight break-words ${
+                        viewMode === 'grid' ? 'text-[10px] p-1.5' : 'text-xs px-2.5 py-1.5'
+                      }`}>
                         <span className="shrink-0 mt-0.5">❓</span>
                         <span className="font-medium">{item.netlestirme_sorusu || item.soru || 'Zaman bilgisi eksik'}</span>
                       </div>
@@ -3382,7 +3390,9 @@ export default function App() {
 
                     {/* Anomali veya Bilişsel Zeka Notu */}
                     {item.anomali_notu && (
-                      <div className="flex items-start gap-1.5 bg-amber-500/10 text-amber-950 border border-amber-500/20 px-2.5 py-1.5 rounded-lg text-xs leading-relaxed break-words">
+                      <div className={`flex items-start gap-1 bg-amber-500/10 text-amber-950 border border-amber-500/20 rounded-lg leading-tight break-words ${
+                        viewMode === 'grid' ? 'text-[10px] p-1.5' : 'text-xs px-2.5 py-1.5'
+                      }`}>
                         <span className="shrink-0 text-xs mt-0.5">💡</span>
                         <p className="font-normal">{item.anomali_notu}</p>
                       </div>
@@ -3390,13 +3400,15 @@ export default function App() {
 
                     {/* 1. Çıkarılan Metrik ve Parametre Rozetleri (Extracted Entity Metrics) */}
                     {item.extracted_metrics && item.extracted_metrics.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-0.5">
+                      <div className="flex flex-wrap gap-1 mt-0.5">
                         {item.extracted_metrics.map((m, mIdx) => (
                           <div
                             key={mIdx}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-stone-900/10 dark:bg-white/10 text-stone-900 dark:text-stone-100 text-[11px] font-medium border border-black/5 dark:border-white/10"
+                            className={`inline-flex items-center gap-1 rounded-md bg-stone-900/10 dark:bg-white/10 text-stone-900 dark:text-stone-100 font-medium border border-black/5 dark:border-white/10 ${
+                              viewMode === 'grid' ? 'text-[9px] px-1.5 py-0.5' : 'text-[11px] px-2 py-0.5'
+                            }`}
                           >
-                            <span className="opacity-70 text-[10px] uppercase tracking-wider">{m.label}:</span>
+                            <span className="opacity-70 text-[8.5px] uppercase tracking-wider">{m.label}:</span>
                             <span className="font-bold">{m.value} {m.unit}</span>
                           </div>
                         ))}
@@ -3405,19 +3417,19 @@ export default function App() {
 
                     {/* 2. Kilometre Taşı İlerleme Zinciri (Sequential Milestone Chain) */}
                     {item.milestone_chain && item.milestone_chain.steps.length > 0 && (
-                      <div className="mt-1 p-2 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5">
-                        <div className="flex items-center justify-between text-[11px] font-bold text-stone-800 dark:text-stone-200 mb-1.5">
-                          <span className="flex items-center gap-1">
+                      <div className="mt-1 p-1.5 sm:p-2 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5">
+                        <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-stone-800 dark:text-stone-200 mb-1">
+                          <span className="flex items-center gap-1 truncate">
                             <span>⛓️</span>
-                            <span>{item.milestone_chain.chainName}</span>
+                            <span className="truncate">{item.milestone_chain.chainName}</span>
                           </span>
-                          <span className="text-[10px] text-stone-500 font-mono">
-                            Adım {item.milestone_chain.currentStepIndex + 1}/{item.milestone_chain.steps.length}
+                          <span className="text-[9px] text-stone-500 font-mono shrink-0 ml-1">
+                            {item.milestone_chain.currentStepIndex + 1}/{item.milestone_chain.steps.length}
                           </span>
                         </div>
 
                         {/* Yatay Adım Çizgisi */}
-                        <div className="space-y-1.5">
+                        <div className="space-y-1">
                           {item.milestone_chain.steps.map((step, sIdx) => (
                             <div
                               key={sIdx}
@@ -3425,10 +3437,10 @@ export default function App() {
                                 e.stopPropagation();
                                 toggleMilestoneStep(item.id, sIdx);
                               }}
-                              className="flex items-center gap-2 text-xs py-1 px-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer transition-colors"
+                              className="flex items-center gap-1.5 text-xs py-0.5 px-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer transition-colors"
                             >
                               <span
-                                className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 transition-colors ${
+                                className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8.5px] font-bold shrink-0 transition-colors ${
                                   step.isCompleted
                                     ? 'bg-emerald-600 text-white shadow-2xs'
                                     : sIdx === item.milestone_chain?.currentStepIndex
@@ -3439,7 +3451,7 @@ export default function App() {
                                 {step.isCompleted ? '✓' : sIdx + 1}
                               </span>
                               <span
-                                className={`flex-1 text-[11px] select-none ${
+                                className={`flex-1 text-[10px] sm:text-[11px] select-none truncate ${
                                   step.isCompleted
                                     ? 'line-through text-stone-400 dark:text-stone-500'
                                     : sIdx === item.milestone_chain?.currentStepIndex
@@ -3449,11 +3461,6 @@ export default function App() {
                               >
                                 {step.title}
                               </span>
-                              {step.targetText && (
-                                <span className="text-[10px] text-stone-500 font-mono shrink-0">
-                                  {step.targetText}
-                                </span>
-                              )}
                             </div>
                           ))}
                         </div>
@@ -3462,15 +3469,12 @@ export default function App() {
 
                     {/* 3. Proaktif Sıradaki Eylem Önerisi (Next-Action Suggestion) */}
                     {item.next_action && (
-                      <div className="mt-1 p-2 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/15 border border-indigo-500/20 text-indigo-950 dark:text-indigo-100 flex items-center justify-between gap-2 text-xs">
+                      <div className="mt-1 p-1.5 sm:p-2 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/15 border border-indigo-500/20 text-indigo-950 dark:text-indigo-100 flex items-center justify-between gap-1.5 text-xs">
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1 font-semibold text-[11px] text-indigo-700 dark:text-indigo-300">
-                            <span>⚡ Sıradaki Öneri:</span>
+                          <div className="flex items-center gap-1 font-semibold text-[10px] sm:text-[11px] text-indigo-700 dark:text-indigo-300">
+                            <span>⚡</span>
                             <span className="truncate">{item.next_action.title}</span>
                           </div>
-                          <p className="text-[10px] text-indigo-900/70 dark:text-indigo-200/70 truncate mt-0.5">
-                            {item.next_action.description}
-                          </p>
                         </div>
                         <button
                           type="button"
@@ -3478,7 +3482,7 @@ export default function App() {
                             e.stopPropagation();
                             handleAdoptNextAction(item.next_action!);
                           }}
-                          className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-[11px] rounded-lg shadow-2xs cursor-pointer active:scale-95 transition-all shrink-0"
+                          className="px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-[9px] sm:text-[10px] rounded-md shadow-2xs cursor-pointer active:scale-95 transition-all shrink-0"
                           title="Bu öneriyi yeni görev olarak ekle"
                         >
                           + Ekle
@@ -3493,28 +3497,28 @@ export default function App() {
                       const percent = Math.round((completedCount / totalCount) * 100);
 
                       return (
-                        <div className="mt-1 pt-1.5 border-t border-black/5 dark:border-white/5">
+                        <div className="mt-1 pt-1 border-t border-black/5 dark:border-white/5">
                           <details className="group" open>
-                            <summary className="flex items-center justify-between cursor-pointer list-none select-none py-1">
+                            <summary className="flex items-center justify-between cursor-pointer list-none select-none py-0.5">
                               {/* İlerleme Çubuğu ve İkonik İndikatör */}
-                              <div className="flex items-center gap-2 flex-1 mr-3">
-                                <span className="text-[11px] font-semibold text-stone-700 dark:text-stone-300 flex items-center gap-1 shrink-0">
+                              <div className="flex items-center gap-1.5 flex-1 mr-2 min-w-0">
+                                <span className="text-[10px] font-semibold text-stone-700 dark:text-stone-300 flex items-center gap-0.5 shrink-0">
                                   <span>📋</span>
                                   <span>{completedCount}/{totalCount}</span>
                                 </span>
                                 {/* Görsel Mini Progress Bar */}
-                                <div className="flex-1 max-w-[130px] h-1.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+                                <div className="flex-1 max-w-[45px] sm:max-w-[70px] h-1.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden shrink-0">
                                   <div
                                     className="h-full bg-stone-800 dark:bg-stone-200 rounded-full transition-all duration-300"
                                     style={{ width: `${percent}%` }}
                                   />
                                 </div>
-                                <span className="text-[10px] font-mono text-stone-500">%{percent}</span>
+                                <span className="text-[9px] font-mono text-stone-500 shrink-0">%{percent}</span>
                               </div>
-                              <span className="text-[10px] text-stone-400 group-open:rotate-180 transition-transform">▼</span>
+                              <span className="text-[9px] text-stone-400 group-open:rotate-180 transition-transform">▼</span>
                             </summary>
 
-                            <div className="mt-1.5 space-y-1 bg-white/50 dark:bg-black/20 p-2 rounded-xl border border-black/5 dark:border-white/5">
+                            <div className="mt-1 space-y-0.5 sm:space-y-1 bg-white/50 dark:bg-black/20 p-1.5 rounded-lg border border-black/5 dark:border-white/5">
                               {item.action_items.map((task, tIdx) => (
                                 <div
                                   key={tIdx}
@@ -3522,10 +3526,10 @@ export default function App() {
                                     e.stopPropagation();
                                     toggleActionItem(item.id, tIdx);
                                   }}
-                                  className="flex items-start gap-2.5 cursor-pointer py-1.5 px-2 rounded-lg hover:bg-white/70 dark:hover:bg-white/10 transition-colors group/task"
+                                  className="flex items-start gap-1.5 cursor-pointer py-1 px-1.5 rounded-md hover:bg-white/70 dark:hover:bg-white/10 transition-colors group/task"
                                 >
                                   {/* Özel Tiklenebilir Şekil */}
-                                  <span className={`w-4.5 h-4.5 rounded-md border flex items-center justify-center text-[11px] font-bold transition-colors shrink-0 mt-0.5 ${
+                                  <span className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded border flex items-center justify-center text-[9px] sm:text-[10px] font-bold transition-colors shrink-0 mt-0.5 ${
                                     task.is_completed 
                                       ? 'bg-stone-800 border-stone-800 text-white shadow-2xs' 
                                       : 'border-stone-500 bg-white group-hover/task:border-stone-800 shadow-2xs'
@@ -3533,10 +3537,10 @@ export default function App() {
                                     {task.is_completed ? '✓' : ''}
                                   </span>
                                   <span
-                                    className={`text-xs sm:text-[13px] leading-relaxed select-none break-words flex-1 min-w-0 transition-all ${
+                                    className={`text-[11px] sm:text-xs leading-tight select-none break-words flex-1 min-w-0 transition-all ${
                                       task.is_completed
                                         ? 'line-through text-stone-400 dark:text-stone-500 opacity-60'
-                                        : 'text-stone-950 dark:text-white font-semibold'
+                                        : 'text-stone-950 dark:text-white font-medium'
                                     }`}
                                     style={{ color: task.is_completed ? undefined : '#09090b' }}
                                   >
