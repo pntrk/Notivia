@@ -1065,7 +1065,8 @@ export async function parseWithAIAndImage(
   base64Image: string | null = null,
   referenceNow?: string,
   pastNotes?: any[],
-  userDomain?: string
+  userDomain?: string,
+  language: string = 'tr'
 ): Promise<NotiviaSimpleNote> {
   const now = referenceNow || new Date().toISOString();
   const historyContext = pastNotes && pastNotes.length > 0
@@ -1074,6 +1075,10 @@ export async function parseWithAIAndImage(
 
   const domainContext = userDomain && userDomain !== 'GENEL'
     ? `\nKULLANICININ ÇALIŞMA / UZMANLIK ALANI: ${userDomain}\nBu alandaki terminolojiyi ve mesleki gereksinimleri öncelikle gözet.`
+    : '';
+
+  const langContext = language === 'en'
+    ? `\nCRITICAL LANGUAGE INSTRUCTION: The user's active language is ENGLISH ('en'). You MUST output all titles ('baslik'), human-readable times ('zaman', e.g. 'Today 7:30 PM', 'Tomorrow 9:00 AM', 'In 14 Days'), subtasks in 'action_items' ('task'), verbal whisper confirmation ('sesli_fisilti'), question for clarification ('netlestirme_sorusu' / 'soru'), and anomaly notes ('anomali_notu') strictly in fluent, natural ENGLISH.`
     : '';
 
   const promptText = `Sen "Notivia" bilişsel yaşam asistanının Evrensel Niyet Çözümleme ve Eylem Grafiği (Cognitive Action Graph) motorusun.
@@ -1122,7 +1127,7 @@ Kullanıcıyı bürokratik cezalardan, hak kayıplarından veya hayati aksaklık
 6. FÜZYON & GÖRSEL OKUMA (Multimodal):
 - Görseldeki sayaç, bar göstergesi, marka, son ödeme tarihi veya ikaz ışıklarını oku, ses/yazı ile birleştirerek teşhis koy.
 
-Referans Zaman (CURRENT_DATETIME): ${now}.${domainContext}${historyContext}
+Referans Zaman (CURRENT_DATETIME): ${now}.${domainContext}${historyContext}${langContext}
 Kullanıcı Girdisi / Ses Notu: "${text || 'Görseldeki durumu teşhis et ve yapılması gereken işlemi belirle.'}".
 
 JSON ÇIKTI ŞEMASI (Yalnızca aşağıdaki şemaya uyan ham JSON üret, markdown blokları veya fazladan karşılama metni ekleme):

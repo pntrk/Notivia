@@ -232,7 +232,8 @@ ZAMAN REFERANSI:
 export function dispatchDeterministic(
   input: string,
   currentDatetime: string,
-  userDomain?: string
+  userDomain?: string,
+  language: string = 'tr'
 ): DispatchResponse {
   const sanitizedInput = sanitizeSpokenText(input) || input.trim();
   const lower = sanitizedInput.toLowerCase().trim();
@@ -241,11 +242,12 @@ export function dispatchDeterministic(
   // 0. KANAL: SADE / MOTORSUZ MOD (Kullanıcı motor seçimi yapmadıysa doğrudan söylenen ham haliyle not kaydı)
   if (userDomain === 'SADE') {
     const rawNote = input.trim();
+    const whisper = language === 'en' ? 'Note saved.' : 'Notunuz kaydedildi.';
     return {
       tool: 'create_note_or_event',
       arguments: {
         baslik: rawNote,
-        zaman: 'Kayıt Edildi',
+        zaman: language === 'en' ? 'Recorded' : 'Kayıt Edildi',
         tarih_iso: null,
         eksik_bilgi: false,
         netlestirme_sorusu: '',
@@ -254,9 +256,9 @@ export function dispatchDeterministic(
         anomali_notu: null,
         ikon: '📝',
         renk: '#F8FAFC',
-        sesli_fisilti: 'Notunuz kaydedildi.',
+        sesli_fisilti: whisper,
       },
-      sesli_fisilti: 'Notunuz kaydedildi.',
+      sesli_fisilti: whisper,
       source: 'raw-simple-mode',
     };
   }
@@ -482,10 +484,11 @@ export function dispatchDeterministic(
 export async function dispatchWithGemini(
   input: string,
   currentDatetime: string,
-  userDomain?: string
+  userDomain?: string,
+  language: string = 'tr'
 ): Promise<DispatchResponse> {
   if (userDomain === 'SADE') {
-    return dispatchDeterministic(input, currentDatetime, 'SADE');
+    return dispatchDeterministic(input, currentDatetime, 'SADE', language);
   }
 
   const sanitized = sanitizeSpokenText(input);
@@ -518,12 +521,12 @@ export async function dispatchWithGemini(
     (lower.includes('diş') && lower.includes('randevu'));
 
   if (shortScenario || isDirectCalendar || isDirectMessage || isMicroTaskFast) {
-    return dispatchDeterministic(cleanInput, currentDatetime, userDomain);
+    return dispatchDeterministic(cleanInput, currentDatetime, userDomain, language);
   }
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
-    return dispatchDeterministic(cleanInput, currentDatetime, userDomain);
+    return dispatchDeterministic(cleanInput, currentDatetime, userDomain, language);
   }
 
   try {
@@ -536,7 +539,11 @@ export async function dispatchWithGemini(
       },
     });
 
-    const userPrompt = `Kullanıcı Girdisi: "${input}"\nCURRENT_DATETIME: ${currentDatetime}${userDomain && userDomain !== 'GENEL' ? `\nKULLANICININ ÇALIŞMA / UZMANLIK ALANI ODAĞI: ${userDomain}` : ''}`;
+    const langInstruction = language === 'en'
+      ? `\nCRITICAL LANGUAGE INSTRUCTION: The user interface and speaking/writing language is ENGLISH ('en'). You MUST output all function call arguments ('baslik', 'zaman', 'action_items', 'sesli_fisilti', 'netlestirme_sorusu', 'anomali_notu', 'message_body') in fluent, natural ENGLISH.`
+      : '';
+
+    const userPrompt = `Kullanıcı Girdisi: "${input}"\nCURRENT_DATETIME: ${currentDatetime}${userDomain && userDomain !== 'GENEL' ? `\nKULLANICININ ÇALIŞMA / UZMANLIK ALANI ODAĞI: ${userDomain}` : ''}${langInstruction}`;
 
     let functionCalls: any[] | undefined;
     let usedModel = 'gemini-2.5-flash';
@@ -610,9 +617,9 @@ export async function dispatchWithGemini(
     }
 
     // Fallback if no function call emitted
-    return dispatchDeterministic(input, currentDatetime, userDomain);
+    return dispatchDeterministic(input, currentDatetime, userDomain, language);
   } catch (err) {
     console.warn('[Gemini Dispatcher Fallback]:', err);
-    return dispatchDeterministic(input, currentDatetime, userDomain);
+    return dispatchDeterministic(input, currentDatetime, userDomain, language);
   }
 }

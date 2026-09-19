@@ -28,13 +28,14 @@ app.get('/api/health', (_req, res) => {
 // Çoklu Cümle Destekli Ayrıştırma Endpoint'i
 app.post('/api/parse-simple', async (req, res) => {
   try {
-    const { input, text, current_datetime, base64Image, image, past_notes, userDomain, preferredDomain, domain } = req.body;
+    const { input, text, current_datetime, base64Image, image, past_notes, userDomain, preferredDomain, domain, language } = req.body;
     const rawInput = String(input || text || '').trim();
     const cleanInput = sanitizeSpokenText(rawInput) || rawInput;
     const now = String(current_datetime || new Date().toISOString());
     const media = base64Image || image || null;
     const past = Array.isArray(past_notes) ? past_notes : [];
     const requestedDomain = userDomain || preferredDomain || domain || 'GENEL';
+    const lang = language === 'en' ? 'en' : 'tr';
 
     if (!cleanInput && !media) {
       return res.status(400).json({ success: false, error: 'Girdi veya görsel boş olamaz.' });
@@ -48,7 +49,7 @@ app.post('/api/parse-simple', async (req, res) => {
 
     // Görsel varsa tekil analiz et
     if (media) {
-      const singleResult = await parseWithAIAndImage(cleanInput, media, now, past, activeDomain);
+      const singleResult = await parseWithAIAndImage(cleanInput, media, now, past, activeDomain, lang);
       if (!singleResult.tarih_iso && radar.implicitHour !== undefined) {
         const d = new Date(now);
         d.setHours(radar.implicitHour, radar.implicitMinute || 0, 0, 0);
@@ -74,7 +75,7 @@ app.post('/api/parse-simple', async (req, res) => {
     const segments = splitCompoundUtterance(cleanInput);
 
     if (segments.length <= 1) {
-      const single = await parseWithAIAndImage(cleanInput, null, now, past, activeDomain);
+      const single = await parseWithAIAndImage(cleanInput, null, now, past, activeDomain, lang);
 
       // Eğer radarda örtük saat kancası varsa ve LLM saat bulamadıysa radardan besle
       if (!single.tarih_iso && radar.implicitHour !== undefined) {
@@ -106,7 +107,7 @@ app.post('/api/parse-simple', async (req, res) => {
           ? segRadar.detectedDomain
           : activeDomain;
 
-        const item = await parseWithAIAndImage(seg, null, now, past, segDomain);
+        const item = await parseWithAIAndImage(seg, null, now, past, segDomain, lang);
 
         if (!item.tarih_iso && segRadar.implicitHour !== undefined) {
           const d = new Date(now);
@@ -142,11 +143,12 @@ app.post('/api/parse-simple', async (req, res) => {
 // Otonom Ajan Yönlendirici (Çoklu Ajan Destekli)
 app.post('/api/dispatch', async (req, res) => {
   try {
-    const { input, current_datetime, userDomain, preferredDomain, domain } = req.body;
+    const { input, current_datetime, userDomain, preferredDomain, domain, language } = req.body;
     const rawInput = String(input || '').trim();
     const cleanInput = sanitizeSpokenText(rawInput) || rawInput;
     const now = String(current_datetime || new Date().toISOString());
     const requestedDomain = userDomain || preferredDomain || domain || 'GENEL';
+    const lang = language === 'en' ? 'en' : 'tr';
 
     if (!cleanInput) {
       return res.status(400).json({ success: false, error: 'Girdi boş olamaz.' });
@@ -162,7 +164,7 @@ app.post('/api/dispatch', async (req, res) => {
 
     // Tekil ise doğrudan ajana gönder
     if (segments.length <= 1) {
-      const singleResult = await dispatchWithGemini(cleanInput, now, activeDomain);
+      const singleResult = await dispatchWithGemini(cleanInput, now, activeDomain, lang);
       return res.json({
         success: true,
         is_compound: false,
@@ -179,7 +181,7 @@ app.post('/api/dispatch', async (req, res) => {
         const segDomain = (segRadar.confidence >= 0.4 && segRadar.detectedDomain !== 'GENEL')
           ? segRadar.detectedDomain
           : activeDomain;
-        const resObj = await dispatchWithGemini(seg, now, segDomain);
+        const resObj = await dispatchWithGemini(seg, now, segDomain, lang);
         return {
           ...resObj,
           radarMeta: segRadar,

@@ -3,7 +3,6 @@ import type { Language } from '../utils/i18n';
 import { translations } from '../utils/i18n';
 import type { ProfessionDomain } from '../types/domainThemes.ts';
 import { WORK_DOMAIN_OPTIONS } from '../types/domainThemes.ts';
-import { PWAInstallButton } from './PWAInstallButton';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -83,7 +82,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
             <div className="min-w-0">
               <h2 className="text-base font-bold tracking-tight truncate">{t.settingsHeader}</h2>
-              <p className="text-[11px] text-stone-500 dark:text-stone-400 truncate">Notivia Tercihleri ve Profil</p>
             </div>
           </div>
           <button
@@ -393,9 +391,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </button>
               </div>
             </div>
-
-            {/* Uygulamayı Cihaza Yükle (PWA) Satırı */}
-            <PWAInstallButton inSettings={true} />
           </div>
         </div>
 

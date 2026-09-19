@@ -171,8 +171,8 @@ export const saveLocalNotes = (notes: SimpleCardItem[]) => {
   }
 };
 
-// 1. Türkçe Doğal Sesli Fısıltı & Soru Sorma Motoru (TTS)
-export function speakQuestion(text: string, onFinished?: () => void) {
+// 1. Türkçe & İngilizce Doğal Sesli Fısıltı & Soru Sorma Motoru (TTS)
+export function speakQuestion(text: string, lang: Language = 'tr', onFinished?: () => void) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
     onFinished?.();
     return;
@@ -180,14 +180,14 @@ export function speakQuestion(text: string, onFinished?: () => void) {
 
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'tr-TR';
+  utterance.lang = lang === 'en' ? 'en-US' : 'tr-TR';
   utterance.rate = 1.0;
   utterance.pitch = 1.0;
 
   const voices = window.speechSynthesis.getVoices();
-  const trVoice = voices.find((v) => v.lang.startsWith('tr'));
-  if (trVoice) {
-    utterance.voice = trVoice;
+  const targetVoice = voices.find((v) => v.lang.startsWith(lang === 'en' ? 'en' : 'tr'));
+  if (targetVoice) {
+    utterance.voice = targetVoice;
   }
 
   utterance.onend = () => {
@@ -201,11 +201,11 @@ export function speakQuestion(text: string, onFinished?: () => void) {
   window.speechSynthesis.speak(utterance);
 }
 
-function speakFeedback(phrase: string, onFinished?: () => void) {
-  speakQuestion(phrase, onFinished);
+function speakFeedback(phrase: string, lang: Language = 'tr', onFinished?: () => void) {
+  speakQuestion(phrase, lang, onFinished);
 }
 
-// 2. Nota Göre 3-4 Kelimelik Kısa Doğrulama Metni Üretici
+// 2. Nota Göre Kısa Doğrulama Metni Üretici
 function generateWhisperText(note: {
   baslik: string;
   zaman?: string | null;
@@ -214,10 +214,23 @@ function generateWhisperText(note: {
   teshis_notu?: string | null;
   anomali_notu?: string | null;
   sesli_fisilti?: string | null;
-}): string {
+}, lang: Language = 'tr'): string {
   if (note.sesli_fisilti) {
     return note.sesli_fisilti;
   }
+  if (lang === 'en') {
+    if (note.teshis_notu) {
+      return `${note.teshis_notu}. ${note.baslik} scheduled.`;
+    }
+    if (note.calendarEventId && note.zaman) {
+      return `${note.baslik}, scheduled for ${note.zaman}.`;
+    }
+    if (note.tetikleyici?.etiket) {
+      return `${note.baslik}, saved for ${note.tetikleyici.etiket}.`;
+    }
+    return `${note.baslik} saved.`;
+  }
+
   if (note.teshis_notu) {
     return `${note.teshis_notu}. ${note.baslik} planlandı.`;
   }
@@ -968,7 +981,7 @@ export default function App() {
     if (SpeechRecognition) {
       try {
         const recognition = new SpeechRecognition();
-        recognition.lang = 'tr-TR';
+        recognition.lang = language === 'en' ? 'en-US' : 'tr-TR';
         
         // Mobil cihazlarda çift kelime (Ahmet Ahmet) ve stabilite sorunlarını çözmek için 
         // continuous ve interimResults false yapılarak cihazın native VAD'ine (Voice Activity Detection) bırakılır.
@@ -1000,7 +1013,7 @@ export default function App() {
           } else if (pendingCapturedImageRef.current) {
             const imageToSend = pendingCapturedImageRef.current;
             pendingCapturedImageRef.current = null;
-            setStatusText('Görsel teşhis ediliyor...');
+            setStatusText(language === 'en' ? 'Analyzing image...' : 'Görsel teşhis ediliyor...');
             resetMicUI();
             if (processWithAIRef.current) {
               await processWithAIRef.current('', imageToSend, false);
@@ -1014,9 +1027,9 @@ export default function App() {
           currentTranscript = '';
           playMicListeningChime();
           if (pendingCapturedImageRef.current) {
-            setStatusText('Görsel hazır. Dinleniyor...');
+            setStatusText(language === 'en' ? 'Image ready. Listening...' : 'Görsel hazır. Dinleniyor...');
           } else {
-            setStatusText('Dinleniyor...');
+            setStatusText(language === 'en' ? 'Listening...' : 'Dinleniyor...');
           }
         };
 
@@ -1028,7 +1041,11 @@ export default function App() {
             currentTranscript += event.results[i][0].transcript + ' ';
           }
 
-          setStatusText(`Dinleniyor (${event.results.length} parça)...`);
+          setStatusText(
+            language === 'en' 
+              ? `Listening (${event.results.length} segment)...` 
+              : `Dinleniyor (${event.results.length} parça)...`
+          );
 
           // 3.5 saniye boyunca tek bir kelime dahi gelmezse listeyi tamamla ve AI'a gönder
           silenceTimer = setTimeout(() => {
@@ -1043,7 +1060,7 @@ export default function App() {
           // Eğer hata no-speech ise ve elimizde metin varsa göndermeyi deneyebiliriz.
           if (e?.error !== 'no-speech' && e?.error !== 'aborted') {
              if (pendingCapturedImageRef.current) {
-               setStatusText('Görsel hazır. "Teşhis Et"e dokunabilir veya konuşabilirsin.');
+               setStatusText(language === 'en' ? 'Image ready. Tap "Diagnose" or speak.' : 'Görsel hazır. "Teşhis Et"e dokunabilir veya konuşabilirsin.');
              } else {
                resetMicUI();
              }
@@ -1059,7 +1076,7 @@ export default function App() {
              submitTranscript();
           } else if (!isSubmitted) {
              if (pendingCapturedImageRef.current) {
-               setStatusText('Görsel hazır. İster sesle anlat, ister doğrudan tıkla.');
+               setStatusText(language === 'en' ? 'Image ready. Describe with voice or tap directly.' : 'Görsel hazır. İster sesle anlat, ister doğrudan tıkla.');
              } else {
                resetMicUI();
              }
@@ -1071,7 +1088,7 @@ export default function App() {
         console.warn('Konuşma tanıma başlatılamadı:', err);
       }
     }
-  }, []);
+  }, [language]);
 
   const resetMicUI = () => {
     setIsListening(false);
@@ -1165,7 +1182,7 @@ export default function App() {
     closeManualModal();
     setManualTitle('');
     setManualDatetime('');
-    setStatusText('Not eklendi');
+    setStatusText(language === 'en' ? 'Note added ✓' : 'Not eklendi ✓');
 
     // Doğrudan sisteme ekleme (AI atlanır)
     await addNote({
@@ -1176,7 +1193,7 @@ export default function App() {
       renk,
     });
 
-    setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
+    setTimeout(() => setStatusText(t.speakOrWrite), 2500);
   };
 
   // Klavye / Manuel Metin Girişi: Senaryolara tabi tutulmadan olduğu gibi kaydedilir
@@ -1210,7 +1227,7 @@ export default function App() {
     const cleanLine = (l: string) =>
       l.replace(/^[-*•]\s*|^\[[ xX]?\]\s*|^\d+[\.\)]\s*/, '').trim();
 
-    let noteTitle = text || 'Görsel Notu';
+    let noteTitle = text || (language === 'en' ? 'Photo Note' : 'Görsel Notu');
     let actionItems: { task: string; is_completed: boolean }[] = [];
     let ikon = '📌';
     let renk = '#FEF3C7';
@@ -1224,14 +1241,22 @@ export default function App() {
 
       // Başlığı belirle: İlk satır kısa ve başlık gibiyse veya genel "Görev Listesi"
       const firstLineClean = cleanLine(rawLines[0]);
-      if (rawLines[0].endsWith(':') || firstLineClean.toLowerCase().includes('liste') || firstLineClean.toLowerCase().includes('görev') || firstLineClean.toLowerCase().includes('market')) {
+      if (
+        rawLines[0].endsWith(':') ||
+        firstLineClean.toLowerCase().includes('liste') ||
+        firstLineClean.toLowerCase().includes('görev') ||
+        firstLineClean.toLowerCase().includes('market') ||
+        firstLineClean.toLowerCase().includes('list') ||
+        firstLineClean.toLowerCase().includes('task') ||
+        firstLineClean.toLowerCase().includes('todo')
+      ) {
         noteTitle = firstLineClean.replace(/:$/, '');
         actionItems = rawLines.slice(1).map((line) => ({
           task: cleanLine(line),
           is_completed: false,
         })).filter((item) => item.task.length > 0);
       } else {
-        noteTitle = 'Görev Listesi';
+        noteTitle = language === 'en' ? 'Task List' : 'Görev Listesi';
       }
 
       ikon = '📋';
@@ -1254,7 +1279,11 @@ export default function App() {
       renk = '#E0F2FE';
     }
 
-    setStatusText(actionItems.length > 0 ? `${actionItems.length} görev eklendi ✓` : 'Not eklendi ✓');
+    setStatusText(
+      actionItems.length > 0
+        ? (language === 'en' ? `${actionItems.length} tasks added ✓` : `${actionItems.length} görev eklendi ✓`)
+        : (language === 'en' ? 'Note added ✓' : 'Not eklendi ✓')
+    );
 
     // Manuel / klavye girişleri doğrudan olduğu gibi kaydedilir (hiçbir yapay zeka veya senaryo müdahalesi yapılmaz)
     await addNote({
@@ -1267,11 +1296,14 @@ export default function App() {
       action_items: actionItems,
       eksik_bilgi: false,
       anomali_notu: null,
-      sesli_fisilti: actionItems.length > 0 ? `${actionItems.length} maddelik görev listesi kaydedildi.` : 'Notunuz kaydedildi.',
+      sesli_fisilti:
+        actionItems.length > 0
+          ? (language === 'en' ? `${actionItems.length} task items saved.` : `${actionItems.length} maddelik görev listesi kaydedildi.`)
+          : (language === 'en' ? 'Your note has been saved.' : 'Notunuz kaydedildi.'),
       isManualEntry: true,
     });
 
-    setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2000);
+    setTimeout(() => setStatusText(t.speakOrWrite), 2000);
   };
 
   const handleMicClick = () => {
@@ -1280,7 +1312,7 @@ export default function App() {
 
     if (!SpeechRecognition || !recognitionRef.current) {
       setShowTextInput(true);
-      setStatusText('Klavye moduna geçildi');
+      setStatusText(language === 'en' ? 'Switched to keyboard mode' : 'Klavye moduna geçildi');
       return;
     }
 
@@ -1300,7 +1332,7 @@ export default function App() {
           setTimeout(() => recognitionRef.current?.start(), 150);
         } catch {
           setShowTextInput(true);
-          setStatusText('Klavye moduna geçildi');
+          setStatusText(language === 'en' ? 'Switched to keyboard mode' : 'Klavye moduna geçildi');
         }
       }
     }
@@ -2503,8 +2535,8 @@ export default function App() {
     // Bilişsel motorlarla entegre olmadan yalnızca söylenen/yazılan ham metni kaydeder.
     if (workDomain === 'SADE') {
       const createdNote = {
-        baslik: textInput?.trim() || (base64Image ? 'Görsel Notu' : 'Yeni Not'),
-        zaman: 'Kayıt Edildi',
+        baslik: textInput?.trim() || (base64Image ? (language === 'en' ? 'Photo Note' : 'Görsel Notu') : (language === 'en' ? 'New Note' : 'Yeni Not')),
+        zaman: language === 'en' ? 'Saved' : 'Kayıt Edildi',
         tarih_iso: null,
         action_items: [],
         ikon: base64Image ? '🖼️' : '📝',
@@ -2513,10 +2545,10 @@ export default function App() {
         mediaId,
       };
       await addNote(createdNote);
-      const whisper = 'Not kaydedildi.';
+      const whisper = language === 'en' ? 'Note saved.' : 'Not kaydedildi.';
       setStatusText(whisper);
       if (isSpoken) {
-        speakFeedback(whisper);
+        speakFeedback(whisper, language);
       }
       resetMicUI();
       return;
@@ -2531,8 +2563,8 @@ export default function App() {
           const createdNote = { ...directJson, mediaId };
           await addNote(createdNote);
           if (isSpoken) {
-            const whisper = generateWhisperText(createdNote);
-            speakFeedback(whisper);
+            const whisper = generateWhisperText(createdNote, language);
+            speakFeedback(whisper, language);
           }
           resetMicUI();
           return;
@@ -2562,10 +2594,10 @@ export default function App() {
             tetikleyici: parsedChunk.tetikleyici,
           });
         }
-        const whisper = `${chunks.length} ayrı görev ve ajanda kartı oluşturuldu.`;
+        const whisper = language === 'en' ? `${chunks.length} tasks and schedule cards created.` : `${chunks.length} ayrı görev ve ajanda kartı oluşturuldu.`;
         setStatusText(whisper);
         if (isSpoken) {
-          speakFeedback(whisper);
+          speakFeedback(whisper, language);
         }
         resetMicUI();
         return;
@@ -2583,6 +2615,7 @@ export default function App() {
             current_datetime: currentNow,
             userDomain: targetDomain,
             preferredDomain: targetDomain,
+            language: language,
           }),
         });
 
@@ -2601,11 +2634,11 @@ export default function App() {
                 return t >= startMs && t <= endMs;
               });
 
-              let whisper = args.sesli_fisilti || 'Ajandanız kontrol edildi.';
+              let whisper = args.sesli_fisilti || (language === 'en' ? 'Checked your calendar.' : 'Ajandanız kontrol edildi.');
               if (matching.length === 0) {
-                whisper = `${whisper} Belirtilen aralıkta herhangi bir planınız bulunmuyor.`;
+                whisper = `${whisper} ${language === 'en' ? 'You have no plans in this interval.' : 'Belirtilen aralıkta herhangi bir planınız bulunmuyor.'}`;
               } else {
-                whisper = `${whisper} ${matching.length} adet planınız var: ${matching.map((m) => m.baslik).join(', ')}`;
+                whisper = `${whisper} ${language === 'en' ? `You have ${matching.length} scheduled items: ${matching.map((m) => m.baslik).join(', ')}` : `${matching.length} adet planınız var: ${matching.map((m) => m.baslik).join(', ')}`}`;
               }
 
               setCalendarQueryResults({
@@ -2619,7 +2652,7 @@ export default function App() {
 
               setStatusText(whisper);
               if (isSpoken) {
-                speakFeedback(whisper);
+                speakFeedback(whisper, language);
               }
               resetMicUI();
               return;
@@ -2627,9 +2660,9 @@ export default function App() {
 
             // 2. İletişim & Taslak Hazırlayıcı (draft_message)
             if (tool === 'draft_message') {
-              const alici = args.recipient || args.alici || 'İlgili Kişi';
+              const alici = args.recipient || args.alici || (language === 'en' ? 'Contact' : 'İlgili Kişi');
               const kanal = args.channel || args.kanal || 'whatsapp';
-              const konu = args.subject || args.konu || 'Bilgilendirme';
+              const konu = args.subject || args.konu || (language === 'en' ? 'Notice' : 'Bilgilendirme');
               const metin = args.message_body || args.metin || '';
 
               setDraftedMessage({
@@ -2637,13 +2670,13 @@ export default function App() {
                 kanal,
                 konu,
                 metin,
-                sesli_fisilti: args.sesli_fisilti || 'Mesaj taslağınız hazırlandı.',
+                sesli_fisilti: args.sesli_fisilti || (language === 'en' ? 'Message draft prepared.' : 'Mesaj taslağınız hazırlandı.'),
               });
 
-              const whisper = args.sesli_fisilti || `${alici} için ${kanal === 'email' ? 'e-posta' : 'mesaj'} taslağı hazırlandı.`;
+              const whisper = args.sesli_fisilti || (language === 'en' ? `${kanal === 'email' ? 'Email' : 'Message'} draft for ${alici} is ready.` : `${alici} için ${kanal === 'email' ? 'e-posta' : 'mesaj'} taslağı hazırlandı.`);
               setStatusText(whisper);
               if (isSpoken) {
-                speakFeedback(whisper);
+                speakFeedback(whisper, language);
               }
               resetMicUI();
               return;
@@ -2651,8 +2684,9 @@ export default function App() {
 
             // 3. Bilişsel Eylem & Not Oluşturucu (create_note_or_event)
             if (tool === 'create_note_or_event') {
-              const isMissingTime = args.eksik_bilgi || (!args.zaman && !args.tarih_iso && (args.baslik?.toLowerCase().includes('randevu') || args.baslik?.toLowerCase().includes('görüşme') || args.baslik?.toLowerCase().includes('buluşma') || args.baslik?.toLowerCase().includes('toplantı')));
-              const questionToAsk = args.soru || (isMissingTime ? 'Hangi gün ve saatte planlayalım?' : null);
+              const isMissingTime = args.eksik_bilgi || (!args.zaman && !args.tarih_iso && (args.baslik?.toLowerCase().includes('randevu') || args.baslik?.toLowerCase().includes('görüşme') || args.baslik?.toLowerCase().includes('buluşma') || args.baslik?.toLowerCase().includes('toplantı') || args.baslik?.toLowerCase().includes('meeting') || args.baslik?.toLowerCase().includes('appointment')));
+              const defaultClarify = language === 'en' ? 'Which day and time should we schedule this for?' : 'Hangi gün ve saatte planlayalım?';
+              const questionToAsk = args.soru || (isMissingTime ? (args.netlestirme_sorusu || defaultClarify) : null);
 
               const createdNote = {
                 baslik: sanitizeCardTitle(args.baslik) || args.baslik,
@@ -2680,16 +2714,16 @@ export default function App() {
               if (isMissingTime && questionToAsk) {
                 setStatusText(questionToAsk);
                 if (isSpoken) {
-                  speakQuestion(questionToAsk, () => {
+                  speakQuestion(questionToAsk, language, () => {
                     setTimeout(() => {
                       handleMicClick();
                     }, 300);
                   });
                 }
               } else {
-                const whisper = args.sesli_fisilti || generateWhisperText(createdNote);
+                const whisper = args.sesli_fisilti || generateWhisperText(createdNote, language);
                 if (isSpoken) {
-                  speakFeedback(whisper);
+                  speakFeedback(whisper, language);
                 }
               }
               resetMicUI();
@@ -2714,6 +2748,7 @@ export default function App() {
           current_datetime: currentNow,
           userDomain: targetDomain,
           preferredDomain: targetDomain,
+          language: language,
           past_notes: cards.slice(0, 15).map((c) => ({
             baslik: c.baslik,
             zaman: c.zaman,
@@ -2726,8 +2761,9 @@ export default function App() {
         if (sJson.success && sJson.data) {
           console.log("2. AI Sunucu Çıktısı:", JSON.stringify(sJson.data));
           console.log("3. Ayrıştırılmış Veri:", sJson.data);
-          const isMissingTime = sJson.data.eksik_bilgi || (!sJson.data.zaman && !sJson.data.tarih_iso && (sJson.data.baslik?.toLowerCase().includes('randevu') || sJson.data.baslik?.toLowerCase().includes('görüşme') || sJson.data.baslik?.toLowerCase().includes('buluşma') || sJson.data.baslik?.toLowerCase().includes('toplantı')));
-          const questionToAsk = sJson.data.soru || (isMissingTime ? 'Hangi gün ve saatte planlayalım?' : null);
+          const isMissingTime = sJson.data.eksik_bilgi || (!sJson.data.zaman && !sJson.data.tarih_iso && (sJson.data.baslik?.toLowerCase().includes('randevu') || sJson.data.baslik?.toLowerCase().includes('görüşme') || sJson.data.baslik?.toLowerCase().includes('buluşma') || sJson.data.baslik?.toLowerCase().includes('toplantı') || sJson.data.baslik?.toLowerCase().includes('meeting') || sJson.data.baslik?.toLowerCase().includes('appointment')));
+          const defaultClarify = language === 'en' ? 'Which day and time should we schedule this for?' : 'Hangi gün ve saatte planlayalım?';
+          const questionToAsk = sJson.data.soru || (isMissingTime ? defaultClarify : null);
 
           const createdNote = {
             ...sJson.data,
@@ -2743,15 +2779,15 @@ export default function App() {
           if (isMissingTime && questionToAsk) {
             setStatusText(questionToAsk);
             if (isSpoken) {
-              speakQuestion(questionToAsk, () => {
+              speakQuestion(questionToAsk, language, () => {
                 setTimeout(() => {
                   handleMicClick();
                 }, 300);
               });
             }
           } else if (isSpoken) {
-            const whisper = generateWhisperText(createdNote);
-            speakFeedback(whisper);
+            const whisper = generateWhisperText(createdNote, language);
+            speakFeedback(whisper, language);
           }
           parsedByServer = true;
         }
@@ -2761,12 +2797,13 @@ export default function App() {
     }
 
     if (!parsedByServer) {
-      // Çevrimdışı / Hızlı Kural Motoru (Türkçe Doğal Dil Ayrıştırıcı)
+      // Çevrimdışı / Hızlı Kural Motoru (Doğal Dil Ayrıştırıcı)
       const fallback = extractSimpleNoteFromText(textInput, currentNow, cards.slice(0, 15), targetDomain);
       console.log("2. Bilişsel Kural Motoru Devrede:", fallback);
       console.log("3. Ayrıştırılmış Veri:", fallback);
-      const isMissingTime = fallback.eksik_bilgi || (!fallback.zaman && !fallback.tarih_iso && (fallback.baslik?.toLowerCase().includes('randevu') || fallback.baslik?.toLowerCase().includes('görüşme') || fallback.baslik?.toLowerCase().includes('buluşma') || fallback.baslik?.toLowerCase().includes('toplantı')));
-      const questionToAsk = fallback.soru || (isMissingTime ? 'Hangi gün ve saatte planlayalım?' : null);
+      const isMissingTime = fallback.eksik_bilgi || (!fallback.zaman && !fallback.tarih_iso && (fallback.baslik?.toLowerCase().includes('randevu') || fallback.baslik?.toLowerCase().includes('görüşme') || fallback.baslik?.toLowerCase().includes('buluşma') || fallback.baslik?.toLowerCase().includes('toplantı') || fallback.baslik?.toLowerCase().includes('meeting') || fallback.baslik?.toLowerCase().includes('appointment')));
+      const defaultClarify = language === 'en' ? 'Which day and time should we schedule this for?' : 'Hangi gün ve saatte planlayalım?';
+      const questionToAsk = fallback.soru || (isMissingTime ? defaultClarify : null);
 
       const createdNote = {
         ...fallback,
@@ -2782,15 +2819,15 @@ export default function App() {
       if (isMissingTime && questionToAsk) {
         setStatusText(questionToAsk);
         if (isSpoken) {
-          speakQuestion(questionToAsk, () => {
+          speakQuestion(questionToAsk, language, () => {
             setTimeout(() => {
               handleMicClick();
             }, 300);
           });
         }
       } else if (isSpoken) {
-        const whisper = generateWhisperText(createdNote);
-        speakFeedback(whisper);
+        const whisper = generateWhisperText(createdNote, language);
+        speakFeedback(whisper, language);
       }
     }
     resetMicUI();
@@ -2813,7 +2850,7 @@ export default function App() {
 
     // Yalnızca dolgu sesler veya mırıldanmalardan ibaretse ve görsel yoksa kullanıcıyı nazikçe uyar
     if (!sanitizedText && !imageToSend) {
-      setStatusText('Net bir eylem algılanamadı. Lütfen tekrar söyleyin.');
+      setStatusText(language === 'en' ? 'No clear action detected. Please speak again.' : 'Net bir eylem algılanamadı. Lütfen tekrar söyleyin.');
       resetMicUI();
       return;
     }
@@ -2821,9 +2858,13 @@ export default function App() {
     const textToProcess = sanitizedText || spokenText.trim();
 
     if (imageToSend) {
-      setStatusText('Görsel ve ses teşhis ediliyor...');
+      setStatusText(language === 'en' ? 'Analyzing image and speech...' : 'Görsel ve ses teşhis ediliyor...');
     } else {
-      setStatusText(textToProcess ? `"${textToProcess}" işleniyor...` : 'Anlıyorum...');
+      setStatusText(
+        language === 'en'
+          ? (textToProcess ? `Processing "${textToProcess}"...` : 'Understanding...')
+          : (textToProcess ? `"${textToProcess}" işleniyor...` : 'Anlıyorum...')
+      );
     }
     await processWithAI(textToProcess, imageToSend, true);
   };
@@ -2835,13 +2876,17 @@ export default function App() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setStatusText('Görsel işleniyor...');
+    setStatusText(language === 'en' ? 'Processing image...' : 'Görsel işleniyor...');
 
     try {
       const compressed = await compressImage(file);
       pendingCapturedImageRef.current = compressed;
       setPendingImage(compressed);
-      setStatusText('Görsel hazır. İster sesle anlat, ister doğrudan tıkla.');
+      setStatusText(
+        language === 'en'
+          ? 'Image ready. Speak to explain or tap to analyze.'
+          : 'Görsel hazır. İster sesle anlat, ister doğrudan tıkla.'
+      );
       playMicListeningChime();
 
       // İsteğe bağlı olarak mikrofonu da dinlemeye al (kullanıcı konuşursa birlikte çözümlenir)
@@ -2856,8 +2901,8 @@ export default function App() {
       console.error('Fotoğraf işleme hatası:', err);
       pendingCapturedImageRef.current = null;
       setPendingImage(null);
-      setStatusText('Görsel işlenemedi');
-      setTimeout(() => setStatusText('Söyle ya da fotoğrafını çek'), 2000);
+      setStatusText(language === 'en' ? 'Failed to process image' : 'Görsel işlenemedi');
+      setTimeout(() => setStatusText(t.speakOrWrite), 2000);
     } finally {
       if (cameraInputRef.current) {
         cameraInputRef.current.value = '';
@@ -2867,7 +2912,7 @@ export default function App() {
 
   // Google Sign-In Handler
   const handleLogin = async () => {
-    setStatusText('Google hesabı bağlanıyor...');
+    setStatusText(language === 'en' ? 'Connecting Google account...' : 'Google hesabı bağlanıyor...');
     
     try {
       // Modern mobil ve masaüstü tarayıcılarda kullanıcı tıklamasıyla tetiklenen popup en kararlı yöntemdir.
@@ -2883,31 +2928,31 @@ export default function App() {
         console.log("Mevcut Google Token başarıyla alındı:", token);
         await syncFromDrive();
       }
-      setStatusText('Google hesabı bağlandı ✓');
-      setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
+      setStatusText(language === 'en' ? 'Google account connected ✓' : 'Google hesabı bağlandı ✓');
+      setTimeout(() => setStatusText(t.speakOrWrite), 2500);
     } catch (err: any) {
       console.warn('Google giriş uyarısı / hatası:', err?.code, err?.message || err);
       
       if (err?.code === 'auth/popup-blocked') {
-        setStatusText('Açılır pencere engellendi, yönlendiriliyor...');
+        setStatusText(language === 'en' ? 'Popup blocked, redirecting...' : 'Açılır pencere engellendi, yönlendiriliyor...');
         try {
           await signInWithRedirect(auth, googleProvider);
         } catch (redirectErr: any) {
-          setStatusText(`Yönlendirme hatası: ${redirectErr?.message || redirectErr?.code || 'Bilinmeyen hata'}`);
-          setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 4000);
+          setStatusText(language === 'en' ? `Redirect error: ${redirectErr?.message || 'Unknown'}` : `Yönlendirme hatası: ${redirectErr?.message || redirectErr?.code || 'Bilinmeyen hata'}`);
+          setTimeout(() => setStatusText(t.speakOrWrite), 4000);
         }
       } else if (err?.code === 'auth/unauthorized-domain') {
         const currentHost = window.location.hostname;
-        setStatusText(`Domain yetkisiz: Firebase Console'da "${currentHost}" eklenmeli`);
-        alert(`Firebase Hatası: "${currentHost}" alan adı henüz Firebase Console > Authentication > Settings > Authorized domains bölümüne eklenmemiş.`);
-        setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 5000);
+        setStatusText(language === 'en' ? `Unauthorized domain: add "${currentHost}" in Firebase` : `Domain yetkisiz: Firebase Console'da "${currentHost}" eklenmeli`);
+        alert(`Firebase: "${currentHost}" domain is not yet in Firebase Console > Authentication > Authorized domains.`);
+        setTimeout(() => setStatusText(t.speakOrWrite), 5000);
       } else if (err?.code === 'auth/cancelled-popup-request' || err?.code === 'auth/popup-closed-by-user') {
-        setStatusText('Giriş penceresi kapatıldı');
-        setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
+        setStatusText(language === 'en' ? 'Sign-in cancelled' : 'Giriş penceresi kapatıldı');
+        setTimeout(() => setStatusText(t.speakOrWrite), 2500);
       } else {
-        const msg = err?.message || err?.code || 'Giriş yapılamadı';
-        setStatusText(`Giriş hatası: ${msg}`);
-        setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 4500);
+        const msg = err?.message || err?.code || (language === 'en' ? 'Sign-in failed' : 'Giriş yapılamadı');
+        setStatusText(language === 'en' ? `Sign-in error: ${msg}` : `Giriş hatası: ${msg}`);
+        setTimeout(() => setStatusText(t.speakOrWrite), 4500);
       }
     }
   };
@@ -2930,8 +2975,8 @@ export default function App() {
       // ignore
     }
     setCards(getLocalNotes());
-    setStatusText('Hesaptan çıkış yapıldı');
-    setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2000);
+    setStatusText(language === 'en' ? 'Signed out' : 'Hesaptan çıkış yapıldı');
+    setTimeout(() => setStatusText(t.speakOrWrite), 2000);
   };
 
   const activeUser = currentUser || simulatedUser;
@@ -3357,13 +3402,13 @@ export default function App() {
                               );
                             }}
                             className={`rounded-md border flex items-center justify-center shrink-0 cursor-pointer transition-colors mt-0.5 ${
-                              viewMode === 'grid' ? 'w-4.5 h-4.5 text-[10px]' : 'w-5 h-5 text-xs'
+                              viewMode === 'grid' ? 'w-4 h-4 text-[9px]' : 'w-5 h-5 text-xs'
                             } ${
                               isSelected
                                 ? 'bg-stone-900 border-stone-900 text-white'
                                 : 'border-stone-400 bg-white/70 hover:bg-white text-transparent'
                             }`}
-                            title={isSelected ? "Seçimi kaldır" : "Seç"}
+                            title={isSelected ? (language === 'en' ? 'Deselect' : 'Seçimi kaldır') : (language === 'en' ? 'Select' : 'Seç')}
                           >
                             ✓
                           </button>
@@ -3377,8 +3422,8 @@ export default function App() {
                               onClick={() => viewFullImage(item.mediaId!)}
                             />
                           ) : (
-                            <div className={`${viewMode === 'grid' ? 'w-7 h-7 sm:w-8 sm:h-8 rounded-lg' : 'w-9 h-9 sm:w-10 sm:h-10 rounded-xl'} flex items-center justify-center bg-white/85 dark:bg-black/25 border border-black/5 shadow-2xs select-none shrink-0 ${isCompleted ? 'grayscale opacity-60' : ''}`}>
-                              <span className={viewMode === 'grid' ? 'text-base sm:text-lg' : 'text-xl sm:text-2xl'}>
+                            <div className={`${viewMode === 'grid' ? 'w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-lg' : 'w-9 h-9 sm:w-10 sm:h-10 rounded-xl'} flex items-center justify-center bg-white/85 dark:bg-black/25 border border-black/5 shadow-2xs select-none shrink-0 ${isCompleted ? 'grayscale opacity-60' : ''}`}>
+                              <span className={viewMode === 'grid' ? 'text-sm sm:text-base' : 'text-xl sm:text-2xl'}>
                                 {item.ikon || '📌'}
                               </span>
                             </div>
@@ -3387,7 +3432,7 @@ export default function App() {
                           {isWeatherTriggered ? (
                             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white animate-ping" />
                           ) : isExpired ? (
-                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white" title="Süresi doldu" />
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white" title={language === 'en' ? 'Overdue' : 'Süresi doldu'} />
                           ) : isCompleted ? (
                             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-stone-700 ring-2 ring-white flex items-center justify-center text-[7px] text-white">✓</span>
                           ) : null}
@@ -3400,7 +3445,7 @@ export default function App() {
                             suppressContentEditableWarning={true}
                             spellCheck={false}
                             className={`font-semibold leading-snug tracking-tight outline-hidden break-words hyphens-auto w-full ${
-                              viewMode === 'grid' ? 'text-xs sm:text-sm line-clamp-2 sm:line-clamp-none' : 'text-[15px] sm:text-base'
+                              viewMode === 'grid' ? 'text-[11.5px] sm:text-xs line-clamp-2' : 'text-[15px] sm:text-base'
                             } ${
                               isCompleted
                                 ? 'text-stone-500 line-through decoration-stone-500/70'
@@ -3433,34 +3478,34 @@ export default function App() {
                           </h2>
 
                           {item.createdAt && (
-                            <span className="text-[8.5px] sm:text-[9.5px] text-stone-400 dark:text-stone-500 font-mono tracking-tight select-none mt-0.5 block truncate">
+                            <span className="text-[8px] sm:text-[9px] text-stone-400 dark:text-stone-500 font-mono tracking-tight select-none mt-0.5 block truncate">
                               {formatCreatedTime(item.createdAt, language)}
                             </span>
                           )}
                         </div>
 
-                        {/* Mobilde Hızlı Tek Dokunuş Tamamlama Butonu */}
+                        {/* Mobilde / Gridde Hızlı Tek Dokunuş Tamamlama Butonu */}
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             toggleCardCompleted(item.id);
                           }}
-                          className={`${viewMode === 'grid' ? 'w-6 h-6 rounded-lg' : 'sm:hidden w-8 h-8 rounded-xl'} border flex items-center justify-center shrink-0 transition-all cursor-pointer active:scale-90 ${
+                          className={`${viewMode === 'grid' ? 'w-5.5 h-5.5 rounded-md' : 'sm:hidden w-8 h-8 rounded-xl'} border flex items-center justify-center shrink-0 transition-all cursor-pointer active:scale-90 ${
                             isCompleted
                               ? 'bg-stone-800 border-stone-800 text-white shadow-xs'
                               : 'border-stone-300 bg-white/95 text-stone-700 hover:text-stone-900 shadow-2xs'
                           }`}
                           title={isCompleted ? t.reopenTitle : t.completeTitle}
                         >
-                          <span className={viewMode === 'grid' ? 'text-xs font-bold' : 'text-sm font-bold'}>✓</span>
+                          <span className={viewMode === 'grid' ? 'text-[10px] font-bold' : 'text-sm font-bold'}>✓</span>
                         </button>
                       </div>
 
                       {/* Kart Aksiyonları Araç Çubuğu */}
                       <div className={`flex items-center shrink-0 bg-white/95 dark:bg-black/40 backdrop-blur-xs rounded-lg sm:rounded-xl border border-black/5 dark:border-white/10 shadow-2xs ${
                         viewMode === 'grid'
-                          ? 'w-full justify-around p-0.5'
+                          ? 'w-full justify-between px-1 py-0.5'
                           : 'gap-1 justify-end sm:justify-start p-1 self-end sm:self-start'
                       }`}>
                         {/* Kartı Düzenle Butonu (Kalem) */}
@@ -3470,10 +3515,10 @@ export default function App() {
                             e.stopPropagation();
                             setEditingNote(item);
                           }}
-                          className={`${viewMode === 'grid' ? 'w-6 h-6' : 'w-7.5 h-7.5'} rounded-md sm:rounded-lg flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-white active:scale-90 transition-all cursor-pointer`}
+                          className={`${viewMode === 'grid' ? 'w-5.5 h-5.5' : 'w-7.5 h-7.5'} rounded-md sm:rounded-lg flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-white active:scale-90 transition-all cursor-pointer`}
                           title={language === 'tr' ? 'Kartı Düzenle' : 'Edit Card'}
                         >
-                          <svg className={viewMode === 'grid' ? 'w-3 h-3' : 'w-3.5 h-3.5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className={viewMode === 'grid' ? 'w-2.5 h-2.5' : 'w-3.5 h-3.5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
                         </button>
@@ -3485,7 +3530,7 @@ export default function App() {
                             e.stopPropagation();
                             setActiveReminderEditCardId(activeReminderEditCardId === item.id ? null : item.id);
                           }}
-                          className={`${viewMode === 'grid' ? 'w-6 h-6' : 'w-7.5 h-7.5'} rounded-md sm:rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-90 ${
+                          className={`${viewMode === 'grid' ? 'w-5.5 h-5.5' : 'w-7.5 h-7.5'} rounded-md sm:rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-90 ${
                             activeReminderEditCardId === item.id
                               ? 'bg-amber-500 text-white shadow-xs'
                               : item.tarih_iso
@@ -3494,7 +3539,7 @@ export default function App() {
                           }`}
                           title={language === 'tr' ? 'Hatırlatıcı & Takvim' : 'Reminder & Calendar'}
                         >
-                          <svg className={viewMode === 'grid' ? 'w-3 h-3' : 'w-3.5 h-3.5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className={viewMode === 'grid' ? 'w-2.5 h-2.5' : 'w-3.5 h-3.5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                         </button>
@@ -3506,10 +3551,10 @@ export default function App() {
                             e.stopPropagation();
                             shareNote(item);
                           }}
-                          className={`${viewMode === 'grid' ? 'w-6 h-6' : 'w-7.5 h-7.5'} rounded-md sm:rounded-lg flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-white active:scale-90 transition-all cursor-pointer`}
+                          className={`${viewMode === 'grid' ? 'w-5.5 h-5.5' : 'w-7.5 h-7.5'} rounded-md sm:rounded-lg flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-white active:scale-90 transition-all cursor-pointer`}
                           title={t.shareOrCopy}
                         >
-                          <svg className={viewMode === 'grid' ? 'w-3 h-3' : 'w-3.5 h-3.5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className={viewMode === 'grid' ? 'w-2.5 h-2.5' : 'w-3.5 h-3.5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.368 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                           </svg>
                         </button>
@@ -3522,7 +3567,7 @@ export default function App() {
                               e.stopPropagation();
                               moveSingleNote(item.id, 'up');
                             }}
-                            className={`${viewMode === 'grid' ? 'w-5 h-5 text-[9px]' : 'w-6 h-6 text-[10px]'} rounded-md flex items-center justify-center text-stone-500 hover:text-stone-900 hover:bg-white/90 active:scale-90 transition-all cursor-pointer`}
+                            className={`${viewMode === 'grid' ? 'w-4.5 h-4.5 text-[8px]' : 'w-6 h-6 text-[10px]'} rounded flex items-center justify-center text-stone-500 hover:text-stone-900 hover:bg-white/90 active:scale-90 transition-all cursor-pointer`}
                             title={t.moveUp}
                           >
                             <span>▲</span>
@@ -3533,13 +3578,13 @@ export default function App() {
                               e.stopPropagation();
                               moveSingleNote(item.id, 'down');
                             }}
-                            className={`${viewMode === 'grid' ? 'w-5 h-5 text-[9px]' : 'w-6 h-6 text-[10px]'} rounded-md flex items-center justify-center text-stone-500 hover:text-stone-900 hover:bg-white/90 active:scale-90 transition-all cursor-pointer`}
+                            className={`${viewMode === 'grid' ? 'w-4.5 h-4.5 text-[8px]' : 'w-6 h-6 text-[10px]'} rounded flex items-center justify-center text-stone-500 hover:text-stone-900 hover:bg-white/90 active:scale-90 transition-all cursor-pointer`}
                             title={t.moveDown}
                           >
                             <span>▼</span>
                           </button>
                           <div
-                            className={`${viewMode === 'grid' ? 'w-5 h-5 text-[11px]' : 'w-6 h-6 text-xs'} rounded-md flex items-center justify-center text-stone-400 hover:text-stone-700 hover:bg-white/90 cursor-grab active:cursor-grabbing touch-none select-none`}
+                            className={`${viewMode === 'grid' ? 'w-4.5 h-4.5 text-[9px]' : 'w-6 h-6 text-xs'} rounded flex items-center justify-center text-stone-400 hover:text-stone-700 hover:bg-white/90 cursor-grab active:cursor-grabbing touch-none select-none`}
                             title={t.dragToReorder}
                             onTouchStart={(e) => {
                               e.stopPropagation();
@@ -3565,10 +3610,10 @@ export default function App() {
                             e.stopPropagation();
                             directDeleteNote(item.id);
                           }}
-                          className={`${viewMode === 'grid' ? 'w-6 h-6' : 'w-7.5 h-7.5'} rounded-md sm:rounded-lg flex items-center justify-center text-stone-500 hover:text-red-600 hover:bg-red-50 active:scale-90 transition-all cursor-pointer`}
+                          className={`${viewMode === 'grid' ? 'w-5.5 h-5.5' : 'w-7.5 h-7.5'} rounded-md sm:rounded-lg flex items-center justify-center text-stone-500 hover:text-red-600 hover:bg-red-50 active:scale-90 transition-all cursor-pointer`}
                           title={t.deleteNoteTitle}
                         >
-                          <svg className={viewMode === 'grid' ? 'w-3 h-3' : 'w-3.5 h-3.5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className={viewMode === 'grid' ? 'w-2.5 h-2.5' : 'w-3.5 h-3.5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
@@ -3967,17 +4012,17 @@ export default function App() {
               <div className="flex items-center gap-2.5 min-w-0">
                 <img
                   src={pendingImage}
-                  alt="Önizleme"
+                  alt={language === 'en' ? 'Preview' : 'Önizleme'}
                   onClick={() => setModalImgSrc(pendingImage)}
                   className="w-12 h-12 rounded-xl object-cover border border-amber-300 dark:border-amber-700 shrink-0 cursor-pointer shadow-xs active:scale-95"
-                  title="Büyütmek için tıkla"
+                  title={language === 'en' ? 'Click to enlarge' : 'Büyütmek için tıkla'}
                 />
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-amber-950 dark:text-amber-100 truncate flex items-center gap-1">
-                    <span>📷</span> <span>Görsel Yüklendi</span>
+                    <span>📷</span> <span>{language === 'en' ? 'Image Uploaded' : 'Görsel Yüklendi'}</span>
                   </p>
                   <p className="text-[11px] text-amber-800 dark:text-amber-300 truncate">
-                    İster sesle anlat, ister hemen teşhis et
+                    {language === 'en' ? 'Explain by voice or analyze directly' : 'İster sesle anlat, ister hemen teşhis et'}
                   </p>
                 </div>
               </div>
@@ -3989,23 +4034,23 @@ export default function App() {
                     const img = pendingImage;
                     setPendingImage(null);
                     pendingCapturedImageRef.current = null;
-                    setStatusText('Görsel teşhis ediliyor...');
+                    setStatusText(language === 'en' ? 'Analyzing image...' : 'Görsel teşhis ediliyor...');
                     await processWithAI(textInput.trim(), img, true);
                     setTextInput('');
                   }}
                   className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer flex items-center gap-1"
                 >
-                  <span>✨ Teşhis Et</span>
+                  <span>✨ {language === 'en' ? 'Analyze' : 'Teşhis Et'}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setPendingImage(null);
                     pendingCapturedImageRef.current = null;
-                    setStatusText('Söyle, çek ya da yaz');
+                    setStatusText(language === 'en' ? 'Speak, capture, or type' : 'Söyle, çek ya da yaz');
                   }}
                   className="w-7 h-7 flex items-center justify-center text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded-lg cursor-pointer text-sm"
-                  title="Görseli İptal Et"
+                  title={language === 'en' ? 'Cancel Image' : 'Görseli İptal Et'}
                 >
                   ✕
                 </button>
