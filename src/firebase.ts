@@ -216,7 +216,7 @@ export function getGoogleAccessToken(): string | null {
   }
 }
 
-// Google Identity Services (GIS) Token Client for silent background refresh
+// Google Identity Services (GIS) Token Client for interactive user authorization
 let gisTokenClient: any = null;
 
 export function getGisTokenClient(onSuccess?: (token: string) => void): any {
@@ -241,25 +241,18 @@ export function getGisTokenClient(onSuccess?: (token: string) => void): any {
 }
 
 /**
- * Kullanıcı oturum açmışken arka planda kesintisiz token yenileme
+ * Kullanıcı bir butona tıkladığında doğrudan çağrılan interaktif token alma fonksiyonu
  */
-export async function requestSilentGisToken(): Promise<string | null> {
+export async function requestGoogleTokenInteractive(): Promise<string | null> {
   return new Promise((resolve) => {
     try {
-      const user = auth.currentUser;
-      const hint = user?.email || (typeof localStorage !== 'undefined' ? localStorage.getItem(USER_EMAIL_KEY) : undefined);
       const client = getGisTokenClient((token) => {
         resolve(token);
       });
       if (client) {
         client.requestAccessToken({
-          prompt: '',
-          hint: hint || undefined,
+          prompt: 'select_account',
         });
-        // 2 saniye içinde yanıt gelmezse timeout
-        setTimeout(() => {
-          resolve(getGoogleAccessToken());
-        }, 2200);
       } else {
         resolve(null);
       }
@@ -276,30 +269,22 @@ onAuthStateChanged(auth, async (user) => {
     if (user.email && typeof localStorage !== 'undefined') {
       localStorage.setItem(USER_EMAIL_KEY, user.email);
     }
-    // Token yoksa veya süresi dolduysa sessiz yenileme dene
-    if (!getGoogleAccessToken() || isGoogleTokenExpired()) {
-      requestSilentGisToken().catch(() => {});
-    }
   } else {
     // Sadece açıkça oturum kapatıldığında token'ı temizle
     setGoogleAccessToken(null);
   }
 });
 
-// Token süresi dolduğunda veya bulunamadığında sessizce taze token alma fonksiyonu
-export async function refreshGoogleAccessToken(): Promise<string | null> {
-  if (!auth.currentUser && typeof localStorage !== 'undefined' && !localStorage.getItem(USER_EMAIL_KEY)) {
-    return null;
+// Arka planda güvenli token kontrolü (Asla istenmeyen açılır pencere / popup tetiklemez)
+export async function refreshGoogleAccessToken(interactive: boolean = false): Promise<string | null> {
+  const token = getGoogleAccessToken();
+  if (token && !isGoogleTokenExpired()) {
+    return token;
   }
-  try {
-    // 1. Önce kullanıcıyı rahatsız etmeden sessiz GIS dene
-    const silentToken = await requestSilentGisToken();
-    if (silentToken && !isGoogleTokenExpired()) {
-      return silentToken;
-    }
 
-    // 2. Olmazsa popup ile tazele
-    if (auth.currentUser) {
+  // Yalnızca kullanıcı bir etkileşim / tıklama başlattıysa popup tetiklenebilir
+  if (interactive && auth.currentUser) {
+    try {
       const result = await signInWithPopup(auth, googleProvider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const newToken = credential?.accessToken || null;
@@ -307,12 +292,13 @@ export async function refreshGoogleAccessToken(): Promise<string | null> {
         setGoogleAccessToken(newToken);
       }
       return newToken;
+    } catch (err) {
+      console.warn('Google interaktif token yenileme hatası:', err);
+      return null;
     }
-    return null;
-  } catch (err) {
-    console.warn('Google token yenilenemedi:', err);
-    return null;
   }
+
+  return null;
 }
 
 // Çakışan etkinlikleri sessizce sorgulama

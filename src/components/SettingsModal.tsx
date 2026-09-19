@@ -158,48 +158,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       </button>
                     </div>
                   </div>
-
-                  {/* Google Drive Bulut Veritabanı Durumu ve Kesintisiz Senkronizasyon */}
-                  <div className="pt-2.5 mt-1 border-t border-stone-200/80 dark:border-stone-800 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-base shrink-0">☁️</span>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-xs font-semibold truncate text-stone-900 dark:text-stone-100">
-                            {language === 'tr' ? 'Google Drive Bulut Veritabanı' : 'Google Drive Cloud DB'}
-                          </p>
-                          <span className="inline-block px-1.5 py-0.2 rounded text-[9px] font-medium bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-300/60">
-                            {language === 'tr' ? 'Canlı Senkron' : 'Live Sync'}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-stone-500 dark:text-stone-400 truncate">
-                          {driveSyncTime
-                            ? (language === 'tr' ? `Son eşitleme: ${driveSyncTime} • Çoklu cihaz hazır` : `Last synced: ${driveSyncTime} • Multi-device ready`)
-                            : (language === 'tr' ? 'Otomatik arka plan eşitlemesi aktif' : 'Auto background sync active')}
-                        </p>
-                      </div>
-                    </div>
-                    {onSyncDrive && (
-                      <button
-                        type="button"
-                        onClick={onSyncDrive}
-                        disabled={isSyncingDrive}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer flex items-center gap-1.5 shrink-0 active:scale-95 ${
-                          isSyncingDrive
-                            ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 animate-pulse'
-                            : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-2xs'
-                        }`}
-                        title={language === 'tr' ? 'Google Drive veritabanı ile çift yönlü anında eşitle' : 'Bidirectional instant sync with Google Drive'}
-                      >
-                        <span>{isSyncingDrive ? '⏳' : '⚡'}</span>
-                        <span>
-                          {isSyncingDrive
-                            ? (language === 'tr' ? 'Eşitleniyor...' : 'Syncing...')
-                            : (language === 'tr' ? 'Şimdi Eşitle' : 'Sync Now')}
-                        </span>
-                      </button>
-                    )}
-                  </div>
                 </>
               ) : (
                 <div className="flex items-center justify-between gap-3">
@@ -354,74 +312,45 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
 
             {/* Bildirimler & Alarmlar Satırı */}
-            <div className="p-3.5 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${
-                    notificationsEnabled
-                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                      : 'bg-stone-100 dark:bg-stone-800 text-stone-500'
-                  }`}>
-                    {notificationsEnabled ? '🔔' : '🔕'}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-xs leading-tight">{t.notificationsSection}</p>
-                  </div>
+            <div className="flex items-center justify-between p-3.5">
+              <div className="flex items-center gap-2.5">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm ${
+                  notificationsEnabled
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-stone-100 dark:bg-stone-800 text-stone-500'
+                }`}>
+                  {notificationsEnabled ? '🔔' : '🔕'}
                 </div>
-                <div className="flex items-center gap-1 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl border border-stone-200/50 dark:border-stone-750">
-                  <button
-                    type="button"
-                    onClick={() => { if (!notificationsEnabled) onToggleNotifications(); }}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1 min-h-[36px] sm:min-h-0 active:scale-95 ${
-                      notificationsEnabled
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
-                    }`}
-                  >
-                    <span>🔔</span>
-                    <span>{language === 'tr' ? 'Açık' : 'On'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { if (notificationsEnabled) onToggleNotifications(); }}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1 min-h-[36px] sm:min-h-0 active:scale-95 ${
-                      !notificationsEnabled
-                        ? 'bg-stone-300 dark:bg-stone-700 text-stone-900 dark:text-white shadow-xs'
-                        : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
-                    }`}
-                  >
-                    <span>🔕</span>
-                    <span>{language === 'tr' ? 'Kapalı' : 'Off'}</span>
-                  </button>
+                <div>
+                  <p className="font-semibold text-xs leading-tight">{t.notificationsSection}</p>
                 </div>
               </div>
-
-              {/* Bildirimler Açıkken Minimalist Eylem Butonları */}
-              {notificationsEnabled && (
-                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-stone-100 dark:border-stone-800/80">
-                  {onSendTestNotification && (
-                    <button
-                      type="button"
-                      onClick={onSendTestNotification}
-                      className="px-3 py-2 sm:py-1 text-xs sm:text-[11px] font-medium rounded-lg bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-300 transition-colors cursor-pointer flex items-center gap-1.5 min-h-[36px] sm:min-h-0 active:scale-95"
-                    >
-                      <span>🔔</span>
-                      <span>{t.sendTestNotification}</span>
-                    </button>
-                  )}
-
-                  {onRemindTodayTasks && (
-                    <button
-                      type="button"
-                      onClick={onRemindTodayTasks}
-                      className="px-3 py-2 sm:py-1 text-xs sm:text-[11px] font-medium rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 dark:text-amber-200 transition-colors cursor-pointer flex items-center gap-1.5 min-h-[36px] sm:min-h-0 active:scale-95"
-                    >
-                      <span>📋</span>
-                      <span>{t.todaySummaryNotification}</span>
-                    </button>
-                  )}
-                </div>
-              )}
+              <div className="flex items-center gap-1 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl border border-stone-200/50 dark:border-stone-750">
+                <button
+                  type="button"
+                  onClick={() => { if (!notificationsEnabled) onToggleNotifications(); }}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1 min-h-[36px] sm:min-h-0 active:scale-95 ${
+                    notificationsEnabled
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+                  }`}
+                >
+                  <span>🔔</span>
+                  <span>{language === 'tr' ? 'Açık' : 'On'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { if (notificationsEnabled) onToggleNotifications(); }}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1 min-h-[36px] sm:min-h-0 active:scale-95 ${
+                    !notificationsEnabled
+                      ? 'bg-stone-300 dark:bg-stone-700 text-stone-900 dark:text-white shadow-xs'
+                      : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+                  }`}
+                >
+                  <span>🔕</span>
+                  <span>{language === 'tr' ? 'Kapalı' : 'Off'}</span>
+                </button>
+              </div>
             </div>
 
             {/* Dil Seçimi Satırı */}

@@ -126,6 +126,14 @@ export interface Translations {
   singleView: string;
   dualGridView: string;
   toggleViewMode: string;
+  moveUp: string;
+  moveDown: string;
+  moveToTop: string;
+  moveToBottom: string;
+  moveSelectedUp: string;
+  moveSelectedDown: string;
+  reorderSuccess: string;
+  dragToReorder: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -248,6 +256,14 @@ export const translations: Record<Language, Translations> = {
     singleView: 'Tekli Görünüm',
     dualGridView: 'İkili Izgara',
     toggleViewMode: 'Görünümü Değiştir (Tekli / İkili Izgara)',
+    moveUp: 'Üste Taşı',
+    moveDown: 'Alta Taşı',
+    moveToTop: 'En Üste Taşı',
+    moveToBottom: 'En Alta Taşı',
+    moveSelectedUp: 'Seçilenleri Üste Taşı',
+    moveSelectedDown: 'Seçilenleri Alta Taşı',
+    reorderSuccess: 'Not sıralaması güncellendi',
+    dragToReorder: 'Sıralamak için basılı tutup kaydırın',
   },
   en: {
     appName: 'Notivia',
@@ -368,5 +384,13 @@ export const translations: Record<Language, Translations> = {
     singleView: 'Single Column',
     dualGridView: 'Dual Grid',
     toggleViewMode: 'Toggle View Mode (Single / Dual Grid)',
+    moveUp: 'Move Up',
+    moveDown: 'Move Down',
+    moveToTop: 'Move to Top',
+    moveToBottom: 'Move to Bottom',
+    moveSelectedUp: 'Move Selected Up',
+    moveSelectedDown: 'Move Selected Down',
+    reorderSuccess: 'Note order updated',
+    dragToReorder: 'Press and hold to drag and reorder',
   },
 };

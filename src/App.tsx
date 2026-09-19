@@ -91,6 +91,7 @@ export { parseDailyLifeTime, type ParsedTimeResult };
 export interface SimpleCardItem {
   id: string;
   baslik: string;
+  customOrder?: number;
   zaman?: string | null;
   tarih_iso?: string | null;
   eksik_bilgi?: boolean;
@@ -248,6 +249,15 @@ function sortNotiviaCards(cards: SimpleCardItem[]): SimpleCardItem[] {
   const now = Date.now();
 
   return [...cards].sort((a, b) => {
+    // 0. Öncelik: Kullanıcının özel sıralaması varsa (customOrder)
+    const hasOrderA = typeof a.customOrder === 'number';
+    const hasOrderB = typeof b.customOrder === 'number';
+    if (hasOrderA && hasOrderB) {
+      return (a.customOrder as number) - (b.customOrder as number);
+    }
+    if (hasOrderA) return -1;
+    if (hasOrderB) return 1;
+
     const isCompletedA = isCompletedCard(a);
     const isCompletedB = isCompletedCard(b);
 
@@ -368,11 +378,17 @@ export default function App() {
     });
   };
 
-  // Kart üzerinde uzun basma (Long Press) ile çoklu seçim moduna geçiş
+  // Kart üzerinde uzun basma (Long Press) ve Sürükle-Bırak (Drag-to-Reorder) State & Ref'leri
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
   const isLongPressFiredRef = useRef<boolean>(false);
   const longPressFiredTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
+  const [dragOverCardId, setDragOverCardId] = useState<string | null>(null);
+  const [dragPosition, setDragPosition] = useState<'before' | 'after'>('before');
+  const isDraggingActiveRef = useRef<boolean>(false);
+  const dragTriggerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dragTargetIdRef = useRef<string | null>(null);
 
   // Geri alma state'i
   const [undoToast, setUndoToast] = useState<{
@@ -821,15 +837,8 @@ export default function App() {
         if (user) {
           // Kullanıcı oturum açtığında veya sayfa açıldığında Google Drive veritabanı senkronizasyonunu başlat
           const tok = getGoogleAccessToken();
-          if (tok) {
+          if (tok && isMounted) {
             syncFromDrive(true);
-          } else {
-            // Sessizce GIS token yenilemeyi dene ve senkronize et
-            refreshGoogleAccessToken().then((newToken) => {
-              if (newToken && isMounted) {
-                syncFromDrive(true);
-              }
-            });
           }
         }
       });
@@ -1849,36 +1858,183 @@ export default function App() {
     setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
   };
 
-  // Kart üzerinde uzun basma (Long Press) başlatıcı
-  const startLongPress = (cardId: string, clientX: number, clientY: number, target: EventTarget | null) => {
-    // Zaten çoklu seçim modundaysa uzun basmaya gerek yok
-    if (isSelectMode) return;
+  // Kartları Yeniden Sıralama (Reorder) Fonksiyonu
+  const reorderCards = (
+    sourceIds: string[],
+    targetId: string,
+    position: 'before' | 'after' = 'before'
+  ) => {
+    if (sourceIds.length === 0 || !targetId || sourceIds.includes(targetId)) return;
 
-    // Tıklanabilir/etkileşimli çocuk elemanlar (buton, input, textarea, contentEditable) üzerindeyken long-press tetikleme
+    const currentSorted = sortNotiviaCards(filteredCards);
+    const sourceItems = currentSorted.filter((c) => sourceIds.includes(c.id));
+    const remaining = currentSorted.filter((c) => !sourceIds.includes(c.id));
+
+    const targetIndex = remaining.findIndex((c) => c.id === targetId);
+    if (targetIndex === -1) return;
+
+    const insertIndex = position === 'after' ? targetIndex + 1 : targetIndex;
+    const newSorted = [
+      ...remaining.slice(0, insertIndex),
+      ...sourceItems,
+      ...remaining.slice(insertIndex),
+    ];
+
+    const idToOrderMap = new Map<string, number>();
+    newSorted.forEach((card, idx) => {
+      idToOrderMap.set(card.id, idx);
+    });
+
+    const updatedAllCards = cards.map((c) => {
+      if (idToOrderMap.has(c.id)) {
+        return { ...c, customOrder: idToOrderMap.get(c.id)! };
+      }
+      return c;
+    });
+
+    updatedAllCards.sort((a, b) => {
+      const oA = typeof a.customOrder === 'number' ? a.customOrder : 99999;
+      const oB = typeof b.customOrder === 'number' ? b.customOrder : 99999;
+      return oA - oB;
+    });
+
+    setCards(updatedAllCards);
+    saveLocalNotes(updatedAllCards);
+    triggerDriveBackup(updatedAllCards);
+
+    for (const item of sourceItems) {
+      const updated = updatedAllCards.find((c) => c.id === item.id);
+      if (updated) syncNoteToCloud(updated);
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate([20, 30]);
+      } catch {}
+    }
+
+    setStatusText(language === 'tr' ? 'Notlar taşındı ✓' : 'Notes moved ✓');
+    setTimeout(() => setStatusText(language === 'tr' ? 'Söyle, çek ya da yaz' : 'Speak, capture or write'), 2000);
+  };
+
+  // Seçilen Notları Toplu Taşıma (Yukarı / Aşağı / En Üst / En Alt)
+  const moveSelectedNotes = (direction: 'up' | 'down' | 'top' | 'bottom') => {
+    if (selectedCardIds.length === 0) return;
+
+    const currentSorted = sortNotiviaCards(filteredCards);
+    const selectedSet = new Set(selectedCardIds);
+    const selectedItems = currentSorted.filter((c) => selectedSet.has(c.id));
+    const unselectedItems = currentSorted.filter((c) => !selectedSet.has(c.id));
+
+    let newSorted: SimpleCardItem[] = [];
+
+    if (direction === 'top') {
+      newSorted = [...selectedItems, ...unselectedItems];
+    } else if (direction === 'bottom') {
+      newSorted = [...unselectedItems, ...selectedItems];
+    } else if (direction === 'up') {
+      const list = [...currentSorted];
+      for (let i = 1; i < list.length; i++) {
+        if (selectedSet.has(list[i].id) && !selectedSet.has(list[i - 1].id)) {
+          const temp = list[i];
+          list[i] = list[i - 1];
+          list[i - 1] = temp;
+        }
+      }
+      newSorted = list;
+    } else if (direction === 'down') {
+      const list = [...currentSorted];
+      for (let i = list.length - 2; i >= 0; i--) {
+        if (selectedSet.has(list[i].id) && !selectedSet.has(list[i + 1].id)) {
+          const temp = list[i];
+          list[i] = list[i + 1];
+          list[i + 1] = temp;
+        }
+      }
+      newSorted = list;
+    }
+
+    const idToOrderMap = new Map<string, number>();
+    newSorted.forEach((card, idx) => {
+      idToOrderMap.set(card.id, idx);
+    });
+
+    const updatedAllCards = cards.map((c) => {
+      if (idToOrderMap.has(c.id)) {
+        return { ...c, customOrder: idToOrderMap.get(c.id)! };
+      }
+      return c;
+    });
+
+    updatedAllCards.sort((a, b) => {
+      const oA = typeof a.customOrder === 'number' ? a.customOrder : 99999;
+      const oB = typeof b.customOrder === 'number' ? b.customOrder : 99999;
+      return oA - oB;
+    });
+
+    setCards(updatedAllCards);
+    saveLocalNotes(updatedAllCards);
+    triggerDriveBackup(updatedAllCards);
+
+    for (const item of selectedItems) {
+      const updated = updatedAllCards.find((c) => c.id === item.id);
+      if (updated) syncNoteToCloud(updated);
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try {
+        navigator.vibrate(25);
+      } catch {}
+    }
+
+    setStatusText(language === 'tr' ? 'Seçilenler taşındı ✓' : 'Selected notes moved ✓');
+    setTimeout(() => setStatusText(language === 'tr' ? 'Söyle, çek ya da yaz' : 'Speak, capture or write'), 2000);
+  };
+
+  // Tekil Notu 1 Adım Yukarı / Aşağı Taşıma
+  const moveSingleNote = (cardId: string, direction: 'up' | 'down') => {
+    const currentSorted = sortNotiviaCards(filteredCards);
+    const idx = currentSorted.findIndex((c) => c.id === cardId);
+    if (idx === -1) return;
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (targetIdx < 0 || targetIdx >= currentSorted.length) return;
+
+    const targetCard = currentSorted[targetIdx];
+    reorderCards([cardId], targetCard.id, direction === 'up' ? 'before' : 'after');
+  };
+
+  // Kart üzerinde uzun basma (Long Press) ve sürükleme başlatıcı
+  const startLongPress = (cardId: string, clientX: number, clientY: number, target: EventTarget | null) => {
     if (target instanceof HTMLElement && target.closest('button, input, textarea, a, [contenteditable="true"]')) {
       return;
     }
 
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-    }
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    if (dragTriggerTimerRef.current) clearTimeout(dragTriggerTimerRef.current);
 
     touchStartPosRef.current = { x: clientX, y: clientY };
     isLongPressFiredRef.current = false;
+    isDraggingActiveRef.current = false;
 
-    longPressTimerRef.current = setTimeout(() => {
-      isLongPressFiredRef.current = true;
+    // 250ms basılı tutulduğunda dokunmatik sürükleme modunu hazırla
+    dragTriggerTimerRef.current = setTimeout(() => {
+      isDraggingActiveRef.current = true;
+      setDraggingCardId(cardId);
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         try {
-          navigator.vibrate(40);
-        } catch {
-          // ignore
-        }
+          navigator.vibrate(35);
+        } catch {}
       }
-      setIsSelectMode(true);
+    }, 260);
+
+    // 450ms basılı tutulduğunda çoklu seçim modunu aç
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressFiredRef.current = true;
+      if (!isSelectMode) {
+        setIsSelectMode(true);
+      }
       setSelectedCardIds((prev) => (prev.includes(cardId) ? prev : [...prev, cardId]));
 
-      // Tıklama event'inin hemen ardından seçimi tersine çevirmemesi için kilit
       if (longPressFiredTimeoutRef.current) clearTimeout(longPressFiredTimeoutRef.current);
       longPressFiredTimeoutRef.current = setTimeout(() => {
         isLongPressFiredRef.current = false;
@@ -1886,21 +2042,112 @@ export default function App() {
     }, 450);
   };
 
-  // Kart üzerinde uzun basmayı iptal etme (parmak kaldırıldığında veya kaydırıldığında)
+  // Kart üzerinde uzun basmayı iptal etme veya sürükleme takibi
   const cancelLongPress = (clientX?: number, clientY?: number, checkDistance = false) => {
     if (checkDistance && touchStartPosRef.current && clientX !== undefined && clientY !== undefined) {
       const deltaX = Math.abs(clientX - touchStartPosRef.current.x);
       const deltaY = Math.abs(clientY - touchStartPosRef.current.y);
-      // Parmak 10 pikselden fazla kaydırıldıysa (örneğin sayfa kaydırma / scroll) long press'i iptal et
-      if (deltaX < 10 && deltaY < 10) {
+      
+      // Sürükleme aktifse parmağın altındaki hedef kartı hesapla
+      if (isDraggingActiveRef.current && draggingCardId) {
+        const el = document.elementFromPoint(clientX, clientY);
+        const cardEl = el?.closest('[data-card-id]') as HTMLElement | null;
+        if (cardEl) {
+          const targetId = cardEl.getAttribute('data-card-id');
+          if (targetId && targetId !== draggingCardId) {
+            const rect = cardEl.getBoundingClientRect();
+            const isAfter = clientY > (rect.top + rect.height / 2);
+            setDragOverCardId(targetId);
+            setDragPosition(isAfter ? 'after' : 'before');
+            dragTargetIdRef.current = targetId;
+          }
+        }
         return;
       }
+
+      // Henüz sürükleme aktifleşmeden parmak 12px'den fazla hareket ettiyse bu sayfa kaydırmadır (scroll)
+      if (deltaX > 12 || deltaY > 12) {
+        if (dragTriggerTimerRef.current) {
+          clearTimeout(dragTriggerTimerRef.current);
+          dragTriggerTimerRef.current = null;
+        }
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+      }
+      return;
     }
 
+    if (dragTriggerTimerRef.current) {
+      clearTimeout(dragTriggerTimerRef.current);
+      dragTriggerTimerRef.current = null;
+    }
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
+
+    // Dokunma bittiğinde sürükleme tamamlanmışsa kartları taşı
+    if (isDraggingActiveRef.current && draggingCardId && dragOverCardId && draggingCardId !== dragOverCardId) {
+      if (selectedCardIds.includes(draggingCardId) && selectedCardIds.length > 1) {
+        reorderCards(selectedCardIds, dragOverCardId, dragPosition);
+      } else {
+        reorderCards([draggingCardId], dragOverCardId, dragPosition);
+      }
+    }
+
+    isDraggingActiveRef.current = false;
+    setDraggingCardId(null);
+    setDragOverCardId(null);
+    dragTargetIdRef.current = null;
+  };
+
+  // Masaüstü Drag & Drop Event Yöneticileri
+  const handleDesktopDragStart = (e: React.DragEvent, cardId: string) => {
+    e.dataTransfer.setData('text/plain', cardId);
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggingCardId(cardId);
+    isDraggingActiveRef.current = true;
+  };
+
+  const handleDesktopDragOver = (e: React.DragEvent, targetCardId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (targetCardId === draggingCardId) return;
+
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const isAfter = e.clientY > (rect.top + rect.height / 2);
+    setDragOverCardId(targetCardId);
+    setDragPosition(isAfter ? 'after' : 'before');
+  };
+
+  const handleDesktopDragLeave = (e: React.DragEvent, targetCardId: string) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+    if (dragOverCardId === targetCardId) {
+      setDragOverCardId(null);
+    }
+  };
+
+  const handleDesktopDrop = (e: React.DragEvent, targetCardId: string) => {
+    e.preventDefault();
+    const sourceId = e.dataTransfer.getData('text/plain') || draggingCardId;
+    if (sourceId && targetCardId && sourceId !== targetCardId) {
+      if (selectedCardIds.includes(sourceId) && selectedCardIds.length > 1) {
+        reorderCards(selectedCardIds, targetCardId, dragPosition);
+      } else {
+        reorderCards([sourceId], targetCardId, dragPosition);
+      }
+    }
+    setDraggingCardId(null);
+    setDragOverCardId(null);
+    isDraggingActiveRef.current = false;
+  };
+
+  const handleDesktopDragEnd = () => {
+    setDraggingCardId(null);
+    setDragOverCardId(null);
+    isDraggingActiveRef.current = false;
   };
 
   // Kart tıklandığında çoklu seçim modundaysa seçimi aç/kapat
@@ -2853,48 +3100,114 @@ export default function App() {
             />
           </div>
 
-          {/* Çoklu Seçim ve Toplu Silme Barı */}
+          {/* Çoklu Seçim, Taşıma ve Toplu Silme Barı */}
           {isSelectMode && (
-            <div className="flex items-center justify-between bg-stone-900 text-white text-xs px-3.5 py-2.5 rounded-xl mb-3 shadow-sm animate-in fade-in duration-150">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (selectedCardIds.length === filteredCards.length) {
-                      setSelectedCardIds([]);
-                    } else {
-                      setSelectedCardIds(filteredCards.map((c) => c.id));
-                    }
-                  }}
-                  className="text-stone-300 hover:text-white underline font-medium cursor-pointer"
-                >
-                  {selectedCardIds.length === filteredCards.length ? t.clearSelection : t.selectAll}
-                </button>
-                <span className="text-stone-400">({selectedCardIds.length} {t.selectedCount})</span>
-              </div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-stone-900 text-white text-xs p-3 rounded-2xl mb-3 shadow-lg border border-stone-800 animate-in fade-in duration-150">
+              <div className="flex items-center justify-between sm:justify-start gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedCardIds.length === filteredCards.length) {
+                        setSelectedCardIds([]);
+                      } else {
+                        setSelectedCardIds(filteredCards.map((c) => c.id));
+                      }
+                    }}
+                    className="text-stone-300 hover:text-white underline font-medium cursor-pointer"
+                  >
+                    {selectedCardIds.length === filteredCards.length ? t.clearSelection : t.selectAll}
+                  </button>
+                  <span className="text-stone-400 font-medium bg-white/10 px-2 py-0.5 rounded-md text-[11px]">
+                    {selectedCardIds.length} {t.selectedCount}
+                  </span>
+                </div>
 
-              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => {
                     setIsSelectMode(false);
                     setSelectedCardIds([]);
                   }}
-                  className="px-2.5 py-1 text-stone-300 hover:text-white rounded-lg hover:bg-stone-800 transition-colors cursor-pointer"
+                  className="sm:hidden px-2 py-1 text-stone-300 hover:text-white rounded-lg hover:bg-stone-800 transition-colors cursor-pointer text-xs"
                 >
                   {t.cancelSelection}
                 </button>
-                <button
-                  type="button"
-                  disabled={selectedCardIds.length === 0}
-                  onClick={deleteSelectedNotes}
-                  className="px-3 py-1 bg-red-600 hover:bg-red-500 disabled:opacity-40 disabled:hover:bg-red-600 text-white font-semibold rounded-lg shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                  {t.deleteSelected} ({selectedCardIds.length})
-                </button>
+              </div>
+
+              {/* Hızlı Taşıma (Üst/Alt) ve Silme Butonları */}
+              <div className="flex items-center justify-between sm:justify-end gap-1.5 flex-wrap pt-1.5 sm:pt-0 border-t sm:border-t-0 border-white/10">
+                {/* Sıralama & Taşıma Butonları */}
+                <div className="flex items-center gap-1 bg-white/10 p-0.5 rounded-xl">
+                  <button
+                    type="button"
+                    disabled={selectedCardIds.length === 0}
+                    onClick={() => moveSelectedNotes('top')}
+                    className="px-2 py-1 bg-white/10 hover:bg-white/20 disabled:opacity-30 text-stone-100 rounded-lg text-[11px] font-medium transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                    title={t.moveToTop}
+                  >
+                    <span>🔝</span>
+                    <span className="hidden xs:inline">{t.moveToTop}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={selectedCardIds.length === 0}
+                    onClick={() => moveSelectedNotes('up')}
+                    className="px-2 py-1 bg-white/10 hover:bg-white/20 disabled:opacity-30 text-stone-100 rounded-lg text-[11px] font-medium transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                    title={t.moveSelectedUp}
+                  >
+                    <span>⬆️</span>
+                    <span>{t.moveUp}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={selectedCardIds.length === 0}
+                    onClick={() => moveSelectedNotes('down')}
+                    className="px-2 py-1 bg-white/10 hover:bg-white/20 disabled:opacity-30 text-stone-100 rounded-lg text-[11px] font-medium transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                    title={t.moveSelectedDown}
+                  >
+                    <span>⬇️</span>
+                    <span>{t.moveDown}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={selectedCardIds.length === 0}
+                    onClick={() => moveSelectedNotes('bottom')}
+                    className="px-2 py-1 bg-white/10 hover:bg-white/20 disabled:opacity-30 text-stone-100 rounded-lg text-[11px] font-medium transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                    title={t.moveToBottom}
+                  >
+                    <span>🔚</span>
+                    <span className="hidden xs:inline">{t.moveToBottom}</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={selectedCardIds.length === 0}
+                    onClick={deleteSelectedNotes}
+                    className="px-2.5 py-1.5 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white font-semibold rounded-xl shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span>{t.deleteSelected}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsSelectMode(false);
+                      setSelectedCardIds([]);
+                    }}
+                    className="hidden sm:inline-flex px-2.5 py-1.5 text-stone-300 hover:text-white rounded-xl hover:bg-stone-800 transition-colors cursor-pointer"
+                  >
+                    {t.cancelSelection}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -2950,61 +3263,83 @@ export default function App() {
                 const isSelected = selectedCardIds.includes(item.id);
 
                 return (
-                  <div
-                    key={item.id}
-                    onTouchStart={(e) => {
-                      const touch = e.touches[0];
-                      if (touch) {
-                        startLongPress(item.id, touch.clientX, touch.clientY, e.target);
-                      }
-                    }}
-                    onTouchMove={(e) => {
-                      const touch = e.touches[0];
-                      if (touch) {
-                        cancelLongPress(touch.clientX, touch.clientY, true);
-                      }
-                    }}
-                    onTouchEnd={() => cancelLongPress()}
-                    onTouchCancel={() => cancelLongPress()}
-                    onMouseDown={(e) => {
-                      if (e.button === 0) {
-                        startLongPress(item.id, e.clientX, e.clientY, e.target);
-                      }
-                    }}
-                    onMouseMove={(e) => {
-                      cancelLongPress(e.clientX, e.clientY, true);
-                    }}
-                    onMouseUp={() => cancelLongPress()}
-                    onMouseLeave={() => cancelLongPress()}
-                    onContextMenu={(e) => {
-                      if (isLongPressFiredRef.current || isSelectMode) {
-                        e.preventDefault();
-                      }
-                    }}
-                    onClick={(e) => handleCardClick(item.id, e)}
-                    className={`card w-full max-w-full overflow-hidden flex flex-col transition-all duration-300 hover:shadow-md ${
-                      viewMode === 'grid'
-                        ? 'p-2 sm:p-3 rounded-xl sm:rounded-2xl gap-1.5'
-                        : 'p-3.5 sm:p-4 rounded-2xl gap-2 sm:gap-2.5'
-                    } ${
-                      item.isRemoving ? 'scale-95 opacity-0' : 'scale-100'
-                    } ${
-                      isWeatherTriggered
-                        ? 'ring-2 ring-red-500 bg-red-50 animate-pulse'
-                        : isCompleted
-                        ? 'opacity-70 saturate-50 border-solid border-stone-300/80 shadow-none'
-                        : isExpired 
-                        ? 'opacity-95 border-dashed border-amber-300/80 shadow-xs' 
-                        : 'opacity-100 border-solid border-black/8 dark:border-white/10 shadow-xs'
-                    } ${isSelected ? 'ring-2 ring-stone-800 dark:ring-stone-200' : ''} ${
-                      isSelectMode ? 'cursor-pointer select-none active:scale-[0.99]' : ''
-                    }`}
-                    style={{
-                      backgroundColor: cardBgColor,
-                      borderWidth: '1px',
-                      WebkitTouchCallout: 'none',
-                    }}
-                  >
+                  <React.Fragment key={item.id}>
+                    {/* Yukarıya Yerleştirme Göstergesi (Drop Indicator Before) */}
+                    {dragOverCardId === item.id && dragPosition === 'before' && (
+                      <div className="w-full col-span-full py-1 flex items-center justify-center animate-in fade-in zoom-in-95 duration-100">
+                        <div className="w-full h-1.5 bg-indigo-600 dark:bg-indigo-400 rounded-full shadow-md flex items-center justify-center relative">
+                          <span className="absolute bg-indigo-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-xs -top-2.5 flex items-center gap-1">
+                            <span>⬆️</span> {language === 'tr' ? 'Buraya Taşı' : 'Move Here'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div
+                      data-card-id={item.id}
+                      draggable={!isSelectMode}
+                      onDragStart={(e) => handleDesktopDragStart(e, item.id)}
+                      onDragOver={(e) => handleDesktopDragOver(e, item.id)}
+                      onDragLeave={(e) => handleDesktopDragLeave(e, item.id)}
+                      onDrop={(e) => handleDesktopDrop(e, item.id)}
+                      onDragEnd={handleDesktopDragEnd}
+                      onTouchStart={(e) => {
+                        const touch = e.touches[0];
+                        if (touch) {
+                          startLongPress(item.id, touch.clientX, touch.clientY, e.target);
+                        }
+                      }}
+                      onTouchMove={(e) => {
+                        const touch = e.touches[0];
+                        if (touch) {
+                          cancelLongPress(touch.clientX, touch.clientY, true);
+                        }
+                      }}
+                      onTouchEnd={() => cancelLongPress()}
+                      onTouchCancel={() => cancelLongPress()}
+                      onMouseDown={(e) => {
+                        if (e.button === 0) {
+                          startLongPress(item.id, e.clientX, e.clientY, e.target);
+                        }
+                      }}
+                      onMouseMove={(e) => {
+                        cancelLongPress(e.clientX, e.clientY, true);
+                      }}
+                      onMouseUp={() => cancelLongPress()}
+                      onMouseLeave={() => cancelLongPress()}
+                      onContextMenu={(e) => {
+                        if (isLongPressFiredRef.current || isSelectMode) {
+                          e.preventDefault();
+                        }
+                      }}
+                      onClick={(e) => handleCardClick(item.id, e)}
+                      className={`card w-full max-w-full overflow-hidden flex flex-col transition-all duration-300 hover:shadow-md ${
+                        viewMode === 'grid'
+                          ? 'p-2 sm:p-3 rounded-xl sm:rounded-2xl gap-1.5'
+                          : 'p-3.5 sm:p-4 rounded-2xl gap-2 sm:gap-2.5'
+                      } ${
+                        item.isRemoving ? 'scale-95 opacity-0' : 'scale-100'
+                      } ${
+                        draggingCardId === item.id
+                          ? 'opacity-40 scale-[0.98] ring-2 ring-indigo-500 shadow-xl z-20'
+                          : ''
+                      } ${
+                        isWeatherTriggered
+                          ? 'ring-2 ring-red-500 bg-red-50 animate-pulse'
+                          : isCompleted
+                          ? 'opacity-70 saturate-50 border-solid border-stone-300/80 shadow-none'
+                          : isExpired 
+                          ? 'opacity-95 border-dashed border-amber-300/80 shadow-xs' 
+                          : 'opacity-100 border-solid border-black/8 dark:border-white/10 shadow-xs'
+                      } ${isSelected ? 'ring-2 ring-stone-800 dark:ring-stone-200' : ''} ${
+                        isSelectMode ? 'cursor-pointer select-none active:scale-[0.99]' : ''
+                      }`}
+                      style={{
+                        backgroundColor: cardBgColor,
+                        borderWidth: '1px',
+                        WebkitTouchCallout: 'none',
+                      }}
+                    >
                     {/* Üst Kısım: Başlık, İkon ve Hızlı İşlem Araç Çubuğu (Mobil Optimize Edilmiş Düzen) */}
                     <div className={viewMode === 'grid' ? 'flex flex-col items-start gap-1 w-full' : 'flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-2.5 w-full'}>
                       {/* Başlık, İkon ve Mobilde Hızlı Tamamlama Butonu */}
@@ -3178,6 +3513,50 @@ export default function App() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.368 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                           </svg>
                         </button>
+
+                        {/* Sıralama & Taşıma Butonları (Hızlı Yukarı/Aşağı & Tutamaç) */}
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              moveSingleNote(item.id, 'up');
+                            }}
+                            className={`${viewMode === 'grid' ? 'w-5 h-5 text-[9px]' : 'w-6 h-6 text-[10px]'} rounded-md flex items-center justify-center text-stone-500 hover:text-stone-900 hover:bg-white/90 active:scale-90 transition-all cursor-pointer`}
+                            title={t.moveUp}
+                          >
+                            <span>▲</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              moveSingleNote(item.id, 'down');
+                            }}
+                            className={`${viewMode === 'grid' ? 'w-5 h-5 text-[9px]' : 'w-6 h-6 text-[10px]'} rounded-md flex items-center justify-center text-stone-500 hover:text-stone-900 hover:bg-white/90 active:scale-90 transition-all cursor-pointer`}
+                            title={t.moveDown}
+                          >
+                            <span>▼</span>
+                          </button>
+                          <div
+                            className={`${viewMode === 'grid' ? 'w-5 h-5 text-[11px]' : 'w-6 h-6 text-xs'} rounded-md flex items-center justify-center text-stone-400 hover:text-stone-700 hover:bg-white/90 cursor-grab active:cursor-grabbing touch-none select-none`}
+                            title={t.dragToReorder}
+                            onTouchStart={(e) => {
+                              e.stopPropagation();
+                              const touch = e.touches[0];
+                              if (touch) {
+                                isDraggingActiveRef.current = true;
+                                setDraggingCardId(item.id);
+                                touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+                                if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                                  try { navigator.vibrate(35); } catch {}
+                                }
+                              }
+                            }}
+                          >
+                            <span>⋮⋮</span>
+                          </div>
+                        </div>
 
                         {/* Direkt Silme Butonu (Çöp Kutusu) */}
                         <button
@@ -3555,7 +3934,19 @@ export default function App() {
                     })()}
                   </div>
                 </div>
-              );
+
+                {/* Aşağıya Yerleştirme Göstergesi (Drop Indicator After) */}
+                {dragOverCardId === item.id && dragPosition === 'after' && (
+                  <div className="w-full col-span-full py-1 flex items-center justify-center animate-in fade-in zoom-in-95 duration-100">
+                    <div className="w-full h-1.5 bg-indigo-600 dark:bg-indigo-400 rounded-full shadow-md flex items-center justify-center relative">
+                      <span className="absolute bg-indigo-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-xs -top-2.5 flex items-center gap-1">
+                        <span>⬇️</span> {language === 'tr' ? 'Buraya Taşı' : 'Move Here'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </React.Fragment>
+            );
             })}
           </div>
           )}
