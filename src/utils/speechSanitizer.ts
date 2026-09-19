@@ -97,9 +97,45 @@ export function sanitizeCardTitle(rawTitle: string): string {
 
   if (!clean) return rawTitle.trim();
 
-  // Başlık kelimelerini düzgün baş harflerle yaz, kısaltmaları (DYS, KBS, MEB, CİMER) koru
+  // Bilinen sektörel ve teknik kısaltmalar sözlüğü
+  const KNOWN_ACRONYMS: Record<string, string> = {
+    siem: 'SIEM',
+    siemm: 'SIEM',
+    soc: 'SOC',
+    gpo: 'GPO',
+    edr: 'EDR',
+    xdr: 'XDR',
+    poc: 'POC',
+    uat: 'UAT',
+    waf: 'WAF',
+    vpn: 'VPN',
+    ipsec: 'IPsec',
+    dr: 'DR',
+    kbs: 'KBS',
+    dys: 'DYS',
+    cimer: 'CİMER',
+    smmm: 'SMMM',
+    uyap: 'UYAP',
+    haccp: 'HACCP',
+    loto: 'LOTO',
+    ebys: 'EBYS',
+    semver: 'SemVer',
+    k8s: 'K8s',
+    ram: 'RAM',
+    şök: 'ŞÖK',
+    sok: 'ŞÖK',
+    dask: 'DASK',
+    psc: 'PSC',
+    gtip: 'GTİP'
+  };
+
+  // Başlık kelimelerini düzgün baş harflerle yaz, kısaltmaları koru ve düzelt
   const words = clean.split(/\s+/);
   const formatted = words.map((word) => {
+    const lowerWord = word.toLowerCase();
+    if (KNOWN_ACRONYMS[lowerWord]) {
+      return KNOWN_ACRONYMS[lowerWord];
+    }
     // 2 veya daha fazla harfli büyük harf kısaltması ise koru (DYS, RAM, ŞÖK, KBS vb.)
     if (word === word.toUpperCase() && word.length >= 2) {
       return word;

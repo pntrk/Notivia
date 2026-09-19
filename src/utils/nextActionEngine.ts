@@ -174,5 +174,21 @@ export function generateNextActionSuggestion(noteTitle: string, noteCategory?: s
     };
   }
 
+  // 11. Bilişim Mühendisliği & Siber Güvenlik (IT / SIEM): Kurulum Tamamlandı -> Müşteriye POC & UAT Sunum Mesajı
+  if (text.includes('siem') || text.includes('soc') || text.includes('firewall') || text.includes('uat') || text.includes('poc')) {
+    return {
+      id: `next-it-${Date.now()}`,
+      title: 'Müşteriye POC & Sunum Mesajı',
+      description: 'Kurulum ve korelasyon testlerinin tamamlandığına dair müşteri sunum daveti oluştur.',
+      actionType: 'DRAFT_MESSAGE',
+      icon: '🛡️',
+      payload: {
+        recipient: 'Müşteri / Yönetim Ekibi',
+        channel: 'email',
+        messageBody: `Sayın Yetkili,\n\nTalep edilen SIEM ve güvenlik entegrasyonu altyapı kurulumu ve kural korelasyon testleri başarıyla tamamlanmıştır. Hazırlanan POC raporu, tespit bulguları ve canlı sistem demonstrasyonu için belirleyeceğiniz uygun bir zaman diliminde sunum toplantısı gerçekleştirmek isteriz.\n\nBilgilerinize sunar, iyi çalışmalar dileriz.`
+      }
+    };
+  }
+
   return null;
 }

@@ -34,7 +34,17 @@ const PHONETIC_REPLACEMENTS: [RegExp, string][] = [
   [/\b(dyss|dys belgenet)\b/gi, 'dys'],
   [/\b(zümre|zumre)\b/gi, 'zümre'],
 
-  // Mühendislik & Teknik & Sanayi
+  // Mühendislik & Bilişim / IT & Siber Güvenlik
+  [/\b(siemm|siyem|siiem|siem'in|siemler)\b/gi, 'siem'],
+  [/\b(soc analizi|sokk|soc merkezi)\b/gi, 'soc'],
+  [/\b(edr|xdr|antivirüs kurumsal)\b/gi, 'edr'],
+  [/\b(firewal|firewall|güvenlik duvarı|fortigate|forti|paloalto|palo alto|waf)\b/gi, 'firewall'],
+  [/\b(active directory|activedirectory|domain controller|aktive direktori)\b/gi, 'active directory'],
+  [/\b(veeam|viim|viam backup)\b/gi, 'veeam'],
+  [/\b(disaster recovery|dr tatbikatı|felaket kurtarma)\b/gi, 'disaster recovery'],
+  [/\b(k8s|kubarnetes|kubernetis|kubernetes)\b/gi, 'kubernetes'],
+  [/\b(pentest|pen test|sızma testi|zafiyet tarama)\b/gi, 'pentest'],
+  [/\b(uat testi|kabul testi|poc sunumu|devir teslim)\b/gi, 'uat'],
   [/\b(loto kilitleme|loto etiketi|lotoo)\b/gi, 'loto'],
   [/\b(kompanzasyon|kompanzasyon panosu)\b/gi, 'kompanzasyon'],
   [/\b(kırım testi|kirim testi|karot testi)\b/gi, 'kırım testi'],

@@ -312,5 +312,71 @@ export function detectMilestoneChain(text: string, baseDate: Date = new Date()):
     };
   }
 
+  // 7. BİLİŞİM MÜHENDİSLİĞİ: SIEM Kurulumu, Korelasyon & Müşteri Sunum Zinciri
+  if (
+    (lower.includes('siem') || lower.includes('siemm') || lower.includes('soc')) &&
+    (lower.includes('kurulum') || lower.includes('sunum') || lower.includes('poc') || lower.includes('artı') || lower.includes('kural') || lower.includes('müşteri'))
+  ) {
+    const day0Iso = baseDate.toISOString();
+    const day2 = new Date(baseDate.getTime() + 2 * 24 * 60 * 60 * 1000);
+    const day4 = new Date(baseDate.getTime() + 4 * 24 * 60 * 60 * 1000);
+    const day7 = new Date(baseDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const steps: MilestoneStep[] = [
+      {
+        id: 'ms-it-1',
+        order: 1,
+        title: 'Log Kaynakları Entegrasyonu & Agent Kurulumu',
+        targetOffsetDays: 0,
+        targetDateIso: day0Iso,
+        targetText: 'Aşama 1 (Başlangıç)',
+        isCompleted: true,
+        icon: '🔌',
+        description: 'Syslog, Firewall, Windows Event ve EDR log kaynaklarının SIEM sunucusuna yönlendirilmesi.'
+      },
+      {
+        id: 'ms-it-2',
+        order: 2,
+        title: 'Parsing, Kural Seti & Korelasyon Alarmları',
+        targetOffsetDays: 2,
+        targetDateIso: day2.toISOString(),
+        targetText: '2. Gün',
+        isCompleted: false,
+        icon: '⚙️',
+        description: 'Normalizasyon, MITRE ATT&CK use-case kural altyapısı ve sahte alarm (False-Positive) filtreleri.'
+      },
+      {
+        id: 'ms-it-3',
+        order: 3,
+        title: 'POC Test Raporu & Yönetici Özeti',
+        targetOffsetDays: 4,
+        targetDateIso: day4.toISOString(),
+        targetText: '4. Gün',
+        isCompleted: false,
+        icon: '📊',
+        description: 'Yakalanan güvenlik olayları, EPS performans grafikleri ve yönetici özet sunumunun hazırlanması.'
+      },
+      {
+        id: 'ms-it-4',
+        order: 4,
+        title: 'Müşteriye Canlı Demo Sunumu & UAT Kabulü',
+        targetOffsetDays: 7,
+        targetDateIso: day7.toISOString(),
+        targetText: '7. Gün (Final)',
+        isCompleted: false,
+        icon: '🛡️',
+        description: 'Müşteri teknik ve yönetim heyetine canlı sistem sunumu ve UAT kabul tutanağı imzalatılması.'
+      }
+    ];
+
+    return {
+      chainId: `chain-it-siem-${Date.now()}`,
+      chainName: 'SIEM Kurulumu & Müşteri POC Sunum Zinciri',
+      currentStepIndex: 1,
+      steps,
+      autoProgress: true
+    };
+  }
+
   return null;
 }

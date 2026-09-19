@@ -177,5 +177,21 @@ export function extractEntityMetrics(text: string): ExtractedMetric[] {
     });
   }
 
+  // 9. Bilişim & Siber Güvenlik Parametreleri (EPS, IP/VLAN, CVE, Port)
+  const itMatch = text.match(/(\d+)\s*(?:eps|events?\s*per\s*second)\b/i) ||
+                  text.match(/(?:vlan|port)\s*(\d+)\b/i) ||
+                  text.match(/(?:cve-\d{4}-\d{4,7})/i) ||
+                  text.match(/\b(?:192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+)(?:\/\d+)?\b/);
+  if (itMatch) {
+    metrics.push({
+      id: `metric-it-${Date.now()}`,
+      type: 'official',
+      label: 'Bilişim & Ağ Parametresi',
+      value: itMatch[0].trim(),
+      raw: itMatch[0],
+      alertLevel: 'normal'
+    });
+  }
+
   return metrics;
 }

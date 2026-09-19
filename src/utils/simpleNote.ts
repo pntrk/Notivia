@@ -1817,6 +1817,14 @@ export function parseEngineeringSuiteNote(input: string, baseDate: Date): Notivi
   const lower = input.toLowerCase();
 
   const isEngineering =
+    lower.includes('siem') || lower.includes('siemm') || lower.includes('soc') ||
+    lower.includes('firewall') || lower.includes('fortigate') || lower.includes('palo alto') || lower.includes('waf') ||
+    lower.includes('active directory') || lower.includes('domain controller') || lower.includes('gpo') || lower.includes('ldap') ||
+    lower.includes('veeam') || lower.includes('disaster recovery') || lower.includes('dr tatbikatı') || lower.includes('dr testi') || lower.includes('backup restore') ||
+    lower.includes('kubernetes') || lower.includes('k8s') || lower.includes('docker') || lower.includes('microservice') ||
+    lower.includes('pentest') || lower.includes('sızma testi') || lower.includes('zafiyet') || lower.includes('vulnerability') ||
+    lower.includes('edr') || lower.includes('xdr') || lower.includes('syslog') || lower.includes('log analizi') || lower.includes('uat') || lower.includes('poc') ||
+    ((lower.includes('kurulum') || lower.includes('sunum')) && (lower.includes('müşteri') || lower.includes('sunumu') || lower.includes('artı') || lower.includes('sistem') || lower.includes('sunucu'))) ||
     lower.includes('beton') || lower.includes('şantiye') || lower.includes('santiye') ||
     lower.includes('donatı') || lower.includes('donati') || lower.includes('kürleme') || lower.includes('kurleme') ||
     lower.includes('kırım testi') || lower.includes('kirim testi') || lower.includes('kalıp söküm') ||
@@ -1829,7 +1837,125 @@ export function parseEngineeringSuiteNote(input: string, baseDate: Date): Notivi
 
   if (!isEngineering) return null;
 
-  // 1. İNŞAAT MÜHENDİSLİĞİ: Beton Dökümü, Kürleme & Kırım Testi
+  // 1. BİLİŞİM MÜHENDİSLİĞİ & SİBER GÜVENLİK: SIEM, SOC, Log Korelasyonu, Kurulum & Müşteri Sunumu
+  if (
+    lower.includes('siem') || lower.includes('siemm') || lower.includes('soc') ||
+    ((lower.includes('kurulum') || lower.includes('sunum')) && (lower.includes('müşteri') || lower.includes('sunumu') || lower.includes('artı') || lower.includes('kural')))
+  ) {
+    return {
+      baslik: 'SIEM Kurulumu & Müşteri Sunumu',
+      zaman: 'Kurulum & Sunum Takvimi',
+      tarih_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'SIEM log kaynaklarının (Syslog, Firewall, Windows Event, EDR) entegrasyonu ve agent kurulumu', is_completed: false },
+        { task: 'Kural seti, parsing/normalization ve korelasyon alarmlarının (Use-Case) konfigürasyonu', is_completed: false },
+        { task: 'Dashboard, SOC alarm paneli ve log saklama/indeksleme sağlığının doğrulanması', is_completed: false },
+        { task: 'Müşteri/Yönetim sunumu için POC raporu, tespit edilen kritik bulgular ve yönetici özeti hazırlığı', is_completed: false },
+        { task: 'Müşteriye canlı demo/sunum gerçekleştirilmesi ve UAT kabul tutanağının imzalatılması', is_completed: false }
+      ],
+      ikon: '🛡️',
+      renk: '#E0F2FE',
+      anomali_notu: '🛡️ SIEM projelerinde log kaynaklarının sürekliliği ve EPS lisansı kontrol edilmeli, sunum öncesi sahte alarm testi ile korelasyon doğrulanmalıdır.',
+      sesli_fisilti: 'SIEM kurulumu, korelasyon kural testi ve müşteri sunum/POC adımları planlandı.'
+    };
+  }
+
+  // 2. AĞ & SİBER GÜVENLİK: Firewall, FortiGate, Palo Alto, WAF & VPN Kural Testi
+  if (lower.includes('firewall') || lower.includes('fortigate') || lower.includes('palo alto') || lower.includes('waf') || lower.includes('vpn') || lower.includes('güvenlik duvarı')) {
+    return {
+      baslik: 'Firewall & Ağ Güvenliği Yapılandırması',
+      zaman: 'Konfigürasyon Saati',
+      tarih_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'Firewall erişim kuralı (ACL/Policy) ve NAT yapılandırmalarının yazımı', is_completed: false },
+        { task: 'IPS, SSL-Inspection ve Antivirus güvenlik profillerinin aktif edilmesi', is_completed: false },
+        { task: 'Site-to-Site IPsec veya SSL-VPN tünel bağlantı testi ve 2FA doğrulaması', is_completed: false },
+        { task: 'Kural çakışma (Shadow Rule) ve canlı trafik geçiş log testlerinin yapılması', is_completed: false }
+      ],
+      ikon: '🔥',
+      renk: '#FEE2E2',
+      anomali_notu: 'Yeni firewall kuralı yazılırken Any-Any-Allow kuralı açılmamalı, kural öncesi ve sonrası log akışı doğrulanmalıdır.',
+      sesli_fisilti: 'Firewall güvenlik kuralları, VPN ve kural çakışma testleri planlandı.'
+    };
+  }
+
+  // 3. SİSTEM MÜHENDİSLİĞİ: Active Directory, Domain Controller, GPO & LDAP
+  if (lower.includes('active directory') || lower.includes('domain controller') || lower.includes('gpo') || lower.includes('ldap')) {
+    return {
+      baslik: 'Active Directory & GPO Dağıtımı',
+      zaman: 'Bakım Penceresi',
+      tarih_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'Domain Controller replikasyon sağlığı ve FSMO rolleri kontrolü', is_completed: false },
+        { task: 'Organizational Unit (OU) hiyerarşisi ve kullanıcı/grup yetkilendirmesi', is_completed: false },
+        { task: 'GPO parola karmaşıklığı, USB engelleme ve güvenlik kısıtlama dağıtımı', is_completed: false },
+        { task: 'İstemci makinelerde gpupdate /force ve RSOP politika uygulama testi', is_completed: false }
+      ],
+      ikon: '🏢',
+      renk: '#E0F2FE',
+      anomali_notu: 'GPO dağıtımlarında geniş kapsamlı OU uygulamadan önce test grubunda RSOP simülasyonu yapılmalıdır.',
+      sesli_fisilti: 'Active Directory OU yapılandırması ve GPO ilke dağıtım adımları oluşturuldu.'
+    };
+  }
+
+  // 4. İŞ SÜREKLİLİĞİ & YEDEKLEME: Veeam, Disaster Recovery & Restore Testi
+  if (lower.includes('veeam') || lower.includes('disaster recovery') || lower.includes('dr tatbikatı') || lower.includes('dr testi') || lower.includes('backup restore')) {
+    return {
+      baslik: 'Yedekleme & DR Kurtarma Testi',
+      zaman: 'Planlanan DR Testi',
+      tarih_iso: baseDate.toISOString(),
+      action_items: [
+        { task: '3-2-1 kuralı kontrolü: 3 kopya, 2 farklı medya, 1 offsite/bulut yedek', is_completed: false },
+        { task: 'Veeam snapshot ve incremental yedekleme zinciri bütünlük denetimi', is_completed: false },
+        { task: 'İzole laboratuvar ortamında (SureBackup/Sandbox) geri yükleme (Restore) testi', is_completed: false },
+        { task: 'RPO ve RTO sürelerinin hedeflenen SLA sınırlarında kaldığının raporlanması', is_completed: false }
+      ],
+      ikon: '💾',
+      renk: '#DCFCE7',
+      anomali_notu: 'Geri yüklenmeyen (Restore testi yapılmamış) yedek alınmış sayılmaz. Yılda en az 2 kez DR tatbikatı yapılmalıdır.',
+      sesli_fisilti: '3-2-1 yedekleme kuralı, sandbox geri yükleme ve DR tatbikat adımları planlandı.'
+    };
+  }
+
+  // 5. BULUT & KONTEYNER: Kubernetes, Docker & Mikroservis Dağıtımı
+  if (lower.includes('kubernetes') || lower.includes('k8s') || lower.includes('docker') || lower.includes('microservice')) {
+    return {
+      baslik: 'Kubernetes & Bulut Dağıtımı',
+      zaman: 'Dağıtım Saati',
+      tarih_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'K8s manifest/Helm chart konfigürasyonu ve ConfigMap/Secret denetimi', is_completed: false },
+        { task: 'Ingress controller, TLS sertifikası ve DNS yönlendirme ayarları', is_completed: false },
+        { task: 'Pod Resource Limit (CPU/Memory) ve HPA otomatik ölçekleme testi', is_completed: false },
+        { task: 'Rolling update sıfır kesinti pod geçişi ve liveness/readiness probe kontrolü', is_completed: false }
+      ],
+      ikon: '☁️',
+      renk: '#E0F2FE',
+      anomali_notu: 'Resource limits tanımlanmamış podlar node üzerindeki diğer servislerin çökmesine yol açabilir.',
+      sesli_fisilti: 'Kubernetes küme dağıtımı, kaynak limitleri ve healthcheck kontrolleri hazırlandı.'
+    };
+  }
+
+  // 6. SİBER GÜVENLİK & DENETİM: Pentest, Zafiyet Tarama & Sızma Testi
+  if (lower.includes('pentest') || lower.includes('sızma testi') || lower.includes('zafiyet') || lower.includes('vulnerability')) {
+    return {
+      baslik: 'Sızma Testi & Zafiyet Raporu',
+      zaman: 'Test Başlangıcı',
+      tarih_iso: baseDate.toISOString(),
+      action_items: [
+        { task: 'Kapsam belirleme, RoE (Rules of Engagement) ve yasal izin formunun imzalanması', is_completed: false },
+        { task: 'Dış/İç ağ zafiyet taraması (Vulnerability Scan) ve servis port keşfi', is_completed: false },
+        { task: 'OWASP Top 10 web/API güvenlik zafiyetlerinin manuel istismar ve kanıt toplama süreci', is_completed: false },
+        { task: 'Kritik/Yüksek seviye bulguların remediation (çözüm) önerileriyle yönetici raporuna dönüştürülmesi', is_completed: false }
+      ],
+      ikon: '🎯',
+      renk: '#FEE2E2',
+      anomali_notu: 'Pentest testleri öncesinde sistem yedekleri alınmalı ve test saatleri operasyon ekiplerine bildirilmelidir.',
+      sesli_fisilti: 'Pentest kapsam analizi, zafiyet taraması ve raporlama adımları oluşturuldu.'
+    };
+  }
+
+  // 7. İNŞAAT MÜHENDİSLİĞİ: Beton Dökümü, Kürleme & Kırım Testi
   if (lower.includes('beton') || lower.includes('şantiye') || lower.includes('santiye') || lower.includes('donatı') || lower.includes('donati') || lower.includes('kür') || lower.includes('kırım') || lower.includes('kirim')) {
     const test7 = new Date(baseDate);
     test7.setDate(test7.getDate() + 7);
@@ -1854,7 +1980,7 @@ export function parseEngineeringSuiteNote(input: string, baseDate: Date): Notivi
     };
   }
 
-  // 2. ELEKTRİK MÜHENDİSLİĞİ: LOTO & Kompanzasyon / Sayaç Takibi
+  // 8. ELEKTRİK MÜHENDİSLİĞİ: LOTO & Kompanzasyon / Sayaç Takibi
   if (lower.includes('trafo') || lower.includes('pano') || lower.includes('yüksek gerilim') || lower.includes('yuksek gerilim') || lower.includes('loto') || lower.includes('kompanzasyon') || lower.includes('endüktif') || lower.includes('kapasitif')) {
     const isLoto = lower.includes('loto') || lower.includes('trafo') || lower.includes('pano') || lower.includes('yüksek gerilim') || lower.includes('yuksek gerilim') || lower.includes('kilitleme');
     
@@ -1892,7 +2018,7 @@ export function parseEngineeringSuiteNote(input: string, baseDate: Date): Notivi
     };
   }
 
-  // 3. MAKİNE MÜHENDİSLİĞİ: Basınçlı Kaplar & Kestirimci Bakım
+  // 9. MAKİNE MÜHENDİSLİĞİ: Basınçlı Kaplar & Kestirimci Bakım
   if (lower.includes('kompresör') || lower.includes('kompresor') || lower.includes('kazan') || lower.includes('basınçlı kap') || lower.includes('basincli kap') || lower.includes('vibrasyon') || lower.includes('titreşim') || lower.includes('titresim') || lower.includes('yağ analizi') || lower.includes('yag analizi')) {
     return {
       baslik: 'Basınçlı Kap & Kestirimci Bakım',
@@ -1911,7 +2037,7 @@ export function parseEngineeringSuiteNote(input: string, baseDate: Date): Notivi
     };
   }
 
-  // 4. YAZILIM MÜHENDİSLİĞİ: Prod Deploy & Sürüm Yönetimi
+  // 10. YAZILIM MÜHENDİSLİĞİ: Prod Deploy & Sürüm Yönetimi
   const isFriday = baseDate.getDay() === 5;
   const deployTime = new Date(baseDate);
 

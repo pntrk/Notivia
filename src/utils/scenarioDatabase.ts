@@ -1645,6 +1645,126 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
       'Kalkıştan 45 dk önce gar/otogar x-ray kontrolünden geçip peronu bul',
       'Kulaklık, şarj aleti ve seyahat suyunu el çantasına al'
     ]
+  },
+
+  // 32. BİLİŞİM MÜHENDİSLİĞİ & SİBER GÜVENLİK MOTORU (IT & CYBERSECURITY SUITE)
+  {
+    id: 'it_siem_kurulum_sunum',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['siem', 'siem kurulum', 'siem kurulumu', 'siemm', 'siemm kurulumu', 'siem sunumu', 'soc', 'log korelasyon'],
+    matcher: (lower: string) =>
+      (lower.includes('siem') || lower.includes('siemm') || lower.includes('soc')) &&
+      (lower.includes('kurulum') || lower.includes('sunum') || lower.includes('poc') || lower.includes('artı') || lower.includes('kural') || lower.includes('müşteri')),
+    baslik: 'SIEM Kurulumu & Müşteri Sunumu',
+    ikon: '🛡️',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Kurulum & Sunum Takvimi',
+    hazirlikZamani: 'Kurulumdan 24 Saat Önce',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '🛡️ SIEM projelerinde log kaynaklarının sürekliliği ve EPS lisansı kontrol edilmeli, sunum öncesi sahte alarm testi ile korelasyon doğrulanmalıdır.',
+    oncedenYapilacaklar: [
+      'SIEM log kaynaklarının (Syslog, Firewall, Windows Event, EDR) entegrasyonu ve agent kurulumu',
+      'Kural seti, parsing/normalization ve korelasyon alarmlarının (Use-Case) konfigürasyonu',
+      'Dashboard, SOC alarm paneli ve log saklama/indeksleme sağlığının doğrulanması',
+      'Müşteri/Yönetim sunumu için POC raporu, tespit edilen kritik bulgular ve yönetici özeti hazırlığı',
+      'Müşteriye canlı demo/sunum gerçekleştirilmesi ve UAT kabul tutanağının imzalatılması'
+    ]
+  },
+  {
+    id: 'it_firewall_kural_test',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['firewall', 'güvenlik duvarı', 'fortigate', 'palo alto', 'waf', 'kural testi', 'vpn tüneli'],
+    baslik: 'Firewall & Ağ Güvenliği Yapılandırması',
+    ikon: '🔥',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Konfigürasyon Saati',
+    hazirlikZamani: '1 Saat Önce',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '🔥 Yeni firewall kuralı yazılırken Any-Any-Allow açılmamalı; kural öncesi ve sonrası log akışı doğrulanmalıdır.',
+    oncedenYapilacaklar: [
+      'Firewall erişim kuralı (ACL/Policy) ve NAT yapılandırmalarının yazımı',
+      'IPS, SSL-Inspection ve Antivirus güvenlik profillerinin aktif edilmesi',
+      'Site-to-Site IPsec veya SSL-VPN tünel bağlantı testi ve 2FA doğrulaması',
+      'Kural çakışma (Shadow Rule) ve canlı trafik geçiş log testlerinin yapılması'
+    ]
+  },
+  {
+    id: 'it_active_directory_gpo',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['active directory', 'domain controller', 'gpo', 'ldap', 'ad kurulumu'],
+    baslik: 'Active Directory & GPO Dağıtımı',
+    ikon: '🏢',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Bakım Penceresi',
+    hazirlikZamani: '2 Saat Önce',
+    hazirlikSaatOncesi: 2,
+    akilliFisilti: '🏢 GPO dağıtımlarında geniş kapsamlı OU uygulamadan önce test grubunda RSOP simülasyonu yapılmalıdır.',
+    oncedenYapilacaklar: [
+      'Domain Controller replikasyon sağlığı ve FSMO rolleri kontrolü',
+      'Organizational Unit (OU) hiyerarşisi ve kullanıcı/grup yetkilendirmesi',
+      'GPO parola karmaşıklığı, USB engelleme ve güvenlik kısıtlama dağıtımı',
+      'İstemci makinelerde gpupdate /force ve RSOP politika uygulama testi'
+    ]
+  },
+  {
+    id: 'it_disaster_recovery_backup',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['veeam', 'disaster recovery', 'dr tatbikatı', 'yedekleme testi', 'dr testi', 'backup restore'],
+    baslik: 'Yedekleme & DR Kurtarma Testi',
+    ikon: '💾',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Planlanan DR Testi',
+    hazirlikZamani: 'Testten 24 Saat Önce',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '💾 Geri yüklenmeyen (Restore testi yapılmamış) yedek alınmış sayılmaz. Yılda en az 2 kez DR tatbikatı yapılmalıdır.',
+    oncedenYapilacaklar: [
+      '3-2-1 kuralı kontrolü: 3 kopya, 2 farklı medya, 1 offsite/bulut yedek',
+      'Veeam snapshot ve incremental yedekleme zinciri bütünlük denetimi',
+      'İzole laboratuvar ortamında (SureBackup/Sandbox) geri yükleme (Restore) testi',
+      'RPO ve RTO sürelerinin hedeflenen SLA sınırlarında kaldığının raporlanması'
+    ]
+  },
+  {
+    id: 'it_cloud_k8s_deploy',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['kubernetes', 'k8s', 'docker', 'openshift', 'microservice', 'küme dağıtım'],
+    baslik: 'Kubernetes & Bulut Dağıtımı',
+    ikon: '☁️',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Dağıtım Saati',
+    hazirlikZamani: '1 Saat Önce',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '☁️ Resource limits tanımlanmamış podlar node üzerindeki diğer servislerin çökmesine yol açabilir.',
+    oncedenYapilacaklar: [
+      'K8s manifest/Helm chart konfigürasyonu ve ConfigMap/Secret denetimi',
+      'Ingress controller, TLS sertifikası ve DNS yönlendirme ayarları',
+      'Pod Resource Limit (CPU/Memory) ve HPA otomatik ölçekleme testi',
+      'Rolling update sıfır kesinti pod geçişi ve liveness/readiness probe kontrolü'
+    ]
+  },
+  {
+    id: 'it_pentest_zafiyet_rapor',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['pentest', 'sızma testi', 'zafiyet tarama', 'vulnerability', 'owasp testi'],
+    baslik: 'Sızma Testi & Zafiyet Raporu',
+    ikon: '🎯',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Test Başlangıcı',
+    hazirlikZamani: 'Testten 24 Saat Önce',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '🎯 Pentest testleri öncesinde sistem yedekleri alınmalı ve test saatleri operasyon ekiplerine bildirilmelidir.',
+    oncedenYapilacaklar: [
+      'Kapsam belirleme, RoE (Rules of Engagement) ve yasal izin formunun imzalanması',
+      'Dış/İç ağ zafiyet taraması (Vulnerability Scan) ve servis port keşfi',
+      'OWASP Top 10 web/API güvenlik zafiyetlerinin manuel istismar ve kanıt toplama süreci',
+      'Kritik/Yüksek seviye bulguların remediation (çözüm) önerileriyle yönetici raporuna dönüştürülmesi'
+    ]
   }
 ];
 

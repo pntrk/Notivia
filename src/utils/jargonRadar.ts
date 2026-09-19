@@ -141,6 +141,11 @@ const DOMAIN_RULES: DomainRule[] = [
     defaultIcon: '⚙️',
     defaultColor: '#E2E8F0',
     exclusiveKeywords: [
+      'siem', 'soc', 'siem kurulumu', 'korelasyon kuralı', 'edr', 'xdr',
+      'firewall', 'fortigate', 'palo alto', 'waf', 'active directory',
+      'domain controller', 'gpo', 'veeam', 'disaster recovery', 'dr tatbikatı',
+      'dr testi', 'kubernetes', 'k8s', 'docker', 'pentest', 'sızma testi',
+      'zafiyet tarama', 'syslog', 'log analizi', 'uat testi', 'poc sunumu',
       'beton dökümü', 'kırım testi', 'küp numune', 'loto', 'kompanzasyon',
       'trafo', 'pano', 'hidrostatik test', 'prod deploy', 'staging', 'hotfix',
       'semver', 'pull request', 'db migration', 'vibrasyon analizi',
@@ -152,15 +157,48 @@ const DOMAIN_RULES: DomainRule[] = [
       'canary release', 'rollback planı', 'p1 incident post-mortem'
     ],
     supportingKeywords: [
+      'bilişim', 'sunucu', 'network', 'kural', 'entegrasyon', 'kurulum', 'sunum',
+      'güvenlik', 'yedek', 'yedekleme', 'bulut', 'cloud', 'ci/cd', 'pipeline', 'devops',
       'şantiye', 'arıza', 'kalibrasyon', 'bakım', 'kod', 'deploy',
-      'sunucu', 'test', 'donatı', 'pompa', 'basınç', 'şalter', 'baret', 'beton', 'topraklama'
+      'test', 'donatı', 'pompa', 'basınç', 'şalter', 'baret', 'beton', 'topraklama'
     ],
     implicitTimeHooks: [
+      { keyword: 'siem', hour: 10, minute: 0 },
+      { keyword: 'sunum', hour: 14, minute: 30 },
+      { keyword: 'firewall', hour: 11, minute: 0 },
+      { keyword: 'soc', hour: 9, minute: 0 },
+      { keyword: 'backup', hour: 23, minute: 0 },
+      { keyword: 'veeam', hour: 22, minute: 30 },
       { keyword: 'beton', hour: 7, minute: 30 },
       { keyword: 'deploy', hour: 11, minute: 0 },
       { keyword: 'kırım', hour: 10, minute: 0 },
       { keyword: 'isg', hour: 10, minute: 0 },
       { keyword: 'spt', hour: 9, minute: 0 },
+    ]
+  },
+  {
+    domain: 'TEKNIK',
+    defaultIcon: '💻',
+    defaultColor: '#E0F2FE',
+    exclusiveKeywords: [
+      'siem', 'soc', 'siem kurulumu', 'korelasyon kuralı', 'edr', 'xdr',
+      'firewall', 'fortigate', 'palo alto', 'waf', 'active directory',
+      'domain controller', 'gpo', 'veeam', 'disaster recovery', 'dr tatbikatı',
+      'dr testi', 'kubernetes', 'k8s', 'docker', 'pentest', 'sızma testi',
+      'zafiyet tarama', 'syslog', 'log analizi', 'uat testi', 'poc sunumu',
+      'loto', 'kompanzasyon', 'prod deploy', 'staging', 'hotfix', 'semver', 'db migration'
+    ],
+    supportingKeywords: [
+      'bilişim', 'sunucu', 'network', 'kural', 'entegrasyon', 'kurulum', 'sunum',
+      'güvenlik', 'yedek', 'yedekleme', 'bulut', 'cloud', 'ci/cd', 'pipeline', 'devops',
+      'arıza', 'bakım', 'kod', 'deploy', 'test'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'siem', hour: 10, minute: 0 },
+      { keyword: 'sunum', hour: 14, minute: 30 },
+      { keyword: 'firewall', hour: 11, minute: 0 },
+      { keyword: 'soc', hour: 9, minute: 0 },
+      { keyword: 'deploy', hour: 11, minute: 0 },
     ]
   },
   {
