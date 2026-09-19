@@ -3221,8 +3221,25 @@ export function extractSimpleNoteFromText(
   pastNotes?: any[],
   userDomain?: string
 ): NotiviaSimpleNote {
+  const rawTrimmed = (input || '').trim();
+
+  // 0. ÖNCELİK: SADE / MOTORSUZ MOD (Kullanıcı motor seçimi yapmadıysa veya Sade Mod seçildiyse)
+  // Hiçbir bilişsel motor, jargon radarı, mevzuat veya otomatik alt adım üretilmez; yalnızca söylenen ham haliyle yazılır.
+  if (userDomain === 'SADE') {
+    return {
+      baslik: rawTrimmed,
+      zaman: 'Kayıt Edildi',
+      tarih_iso: null,
+      action_items: [],
+      ikon: '📝',
+      renk: '#F8FAFC',
+      anomali_notu: null,
+      sesli_fisilti: 'Notunuz kaydedildi.'
+    };
+  }
+
   // 1. Fonetik Hata ve Sesli Dikte Normalizasyonu
-  const cleanInput = normalizePhoneticJargon(input.trim());
+  const cleanInput = normalizePhoneticJargon(rawTrimmed);
   const lower = cleanInput.toLowerCase();
   const baseDate = refDatetime ? new Date(refDatetime) : new Date();
 

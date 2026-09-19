@@ -1,4 +1,6 @@
 export type ProfessionDomain =
+  | 'SADE'
+  | 'GENEL'
   | 'OGRENCI'
   | 'CALISMIYORUM'
   | 'HUKUK'
@@ -15,8 +17,7 @@ export type ProfessionDomain =
   | 'KUAFOR'
   | 'HAVACILIK'
   | 'KAMU'
-  | 'ZIRAAT'
-  | 'GENEL';
+  | 'ZIRAAT';
 
 export interface ActionButtonConfig {
   id: string;
@@ -39,6 +40,20 @@ export interface DomainThemeConfig {
 }
 
 export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
+  SADE: {
+    domain: 'SADE',
+    displayName: 'Sade Not',
+    bgCard: 'bg-stone-50/80 border-stone-200',
+    borderAccent: 'border-l-stone-400',
+    badgeBg: 'bg-stone-200/80',
+    badgeText: 'text-stone-700',
+    btnPrimaryBg: 'bg-stone-800 hover:bg-stone-900',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'share', label: 'Paylaş', icon: '↗️', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
+
   OGRENCI: {
     domain: 'OGRENCI',
     displayName: 'Öğrenci',
@@ -332,7 +347,8 @@ export interface WorkDomainOption {
 }
 
 export const WORK_DOMAIN_OPTIONS: WorkDomainOption[] = [
-  { id: 'GENEL', label: 'Genel', sublabel: 'Kişisel yaşam, ev, fatura & kira, abonelikler, alışveriş ve günlük rutinler', icon: '🏠', category: 'ozel' },
+  { id: 'SADE', label: 'Sade Not (Motorsuz)', sublabel: 'Bilişsel motorlar kapalı; yalnızca söylediğiniz ham metni doğrudan not olarak kaydeder', icon: '📝', category: 'ozel' },
+  { id: 'GENEL', label: 'Genel Yaşam', sublabel: 'Kişisel yaşam, ev, fatura & kira, abonelikler, alışveriş ve günlük rutinler', icon: '🏠', category: 'ozel' },
   { id: 'OGRENCI', label: 'Öğrenci', sublabel: 'Vize/final sınavları, ders kaydı, ödev teslimi, burs/KYK', icon: '🎓', category: 'ozel' },
   { id: 'HUKUK', label: 'Hukuk & Adalet', sublabel: 'Avukat, Hakim, Noter (UYAP, duruşma, tebligat öncelikli)', icon: '⚖️', category: 'meslek' },
   { id: 'FINANS', label: 'Mali Müşavir & Finans', sublabel: 'SMMM, Muhasebe (KDV, SGK, e-Defter, beyanname öncelikli)', icon: '📊', category: 'meslek' },
@@ -352,6 +368,10 @@ export const WORK_DOMAIN_OPTIONS: WorkDomainOption[] = [
 export function detectDomainFromNote(note: { ikon?: string; baslik?: string; anomali_notu?: string | null; teshis_notu?: string | null; renk?: string }): ProfessionDomain {
   const icon = note.ikon || '';
   const text = `${note.baslik || ''} ${note.anomali_notu || ''} ${note.teshis_notu || ''}`.toLowerCase();
+
+  if (icon === '📝' && !note.anomali_notu && !note.teshis_notu) {
+    return 'SADE';
+  }
 
   if (icon === '🎓' || text.includes('vize') || text.includes('final') || text.includes('büt') || text.includes('ödev') || text.includes('turnitin') || text.includes('intihal') || text.includes('ders kaydı') || text.includes('kyk') || text.includes('burs') || text.includes('öğrenci') || text.includes('kampüs') || text.includes('gano') || text.includes('obs')) {
     return 'OGRENCI';

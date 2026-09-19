@@ -4,6 +4,7 @@ export type { ProfessionDomain };
 export * from './domainThemes.ts';
 
 export const DOMAIN_KEYWORDS: Record<ProfessionDomain, RegExp> = {
+  SADE: /(?!.*)/, // Sade modda otomatik yakalama yapmaz
   OGRENCI: /(vize|final|bütünleme|büt|ödev teslim|lab raporu|kyk|burs|ders kaydı|üniversite|obs|kampüs|turnitin|intihal|gano)/i,
   CALISMIYORUM: /(taahhüt|abonelik|gss|işkur|su arıtma|kombi bakımı|derin dondurucu|ecza dolabı|kira|aidat|iş başvurusu|mülakat|cv güncelle|özgeçmiş|emekli|günlük rutin)/i,
   HUKUK: /(uyap|duruşma|istinaf|tebligat|müvekkil|hâkim|hakim|savcı|icra|haciz|ihtarname|mahkeme)/i,
@@ -25,6 +26,7 @@ export const DOMAIN_KEYWORDS: Record<ProfessionDomain, RegExp> = {
 };
 
 export function detectDomainFromText(text: string, fallback: ProfessionDomain = 'GENEL'): ProfessionDomain {
+  if (fallback === 'SADE') return 'SADE';
   if (!text || text.trim().length === 0) return fallback;
 
   // 1. Öncelikli 0ms Jargon Radar kontrolü (exclusive + supporting puanlama)

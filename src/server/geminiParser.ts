@@ -311,6 +311,41 @@ export function runCognitiveFallback(
   const cleanInput = (input || '').trim();
   const lower = cleanInput.toLowerCase();
 
+  // 0. Sade / Motorsuz Mod Kontrolü
+  if (userDomain === 'SADE') {
+    return {
+      summary: cleanInput,
+      detailed_note: cleanInput,
+      category: 'Genel',
+      priority: 'normal',
+      anomali_notu: null,
+      ui_meta: {
+        icon: '📝',
+        color_hex: '#F8FAFC',
+        badge_text: 'Not',
+      },
+      calendar_event: {
+        has_event: false,
+        title: cleanInput,
+        start_datetime: null,
+        end_datetime: null,
+        is_all_day: false,
+        location: null,
+      },
+      action_items: [],
+      notification: {
+        needs_reminder: false,
+        remind_at: null,
+        notification_text: null,
+      },
+      periodic_log: {
+        is_periodic: false,
+        interval_days: null,
+        next_due_date: null,
+      },
+    };
+  }
+
   // 0. Öncelik: Kısa senaryo kontrolü
   const shortScenario = matchShortScenario(cleanInput, userDomain);
   if (shortScenario) {
@@ -752,7 +787,12 @@ export async function parseSimpleWithGemini(
 ): Promise<NotiviaSimpleNote> {
   const cleanText = (text || '').trim();
 
-  // 0. Öncelik: Kullanıcı meslek/uzmanlık alanına göre yerel bilişsel motor kontrolü
+  // 0. Öncelik: Sade / Motorsuz mod ise doğrudan ham not üret
+  if (userDomain === 'SADE') {
+    return extractSimpleNoteFromText(cleanText, now, pastNotes, 'SADE');
+  }
+
+  // 0.1 Öncelik: Kullanıcı meslek/uzmanlık alanına göre yerel bilişsel motor kontrolü
   const shortScenario = matchShortScenario(cleanText, userDomain);
   if (shortScenario) {
     return extractSimpleNoteFromText(cleanText, now, pastNotes, userDomain);

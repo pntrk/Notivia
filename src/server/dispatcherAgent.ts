@@ -238,6 +238,29 @@ export function dispatchDeterministic(
   const lower = sanitizedInput.toLowerCase().trim();
   const baseDate = currentDatetime ? new Date(currentDatetime) : new Date();
 
+  // 0. KANAL: SADE / MOTORSUZ MOD (Kullanıcı motor seçimi yapmadıysa doğrudan söylenen ham haliyle not kaydı)
+  if (userDomain === 'SADE') {
+    const rawNote = input.trim();
+    return {
+      tool: 'create_note_or_event',
+      arguments: {
+        baslik: rawNote,
+        zaman: 'Kayıt Edildi',
+        tarih_iso: null,
+        eksik_bilgi: false,
+        netlestirme_sorusu: '',
+        action_items: [],
+        tetikleyici: { tip: 'surekli', sart: '', aktif_mi: false },
+        anomali_notu: null,
+        ikon: '📝',
+        renk: '#F8FAFC',
+        sesli_fisilti: 'Notunuz kaydedildi.',
+      },
+      sesli_fisilti: 'Notunuz kaydedildi.',
+      source: 'raw-simple-mode',
+    };
+  }
+
   // 1. KANAL: İLETİŞİM & TASLAK HAZIRLAYICI (draft_message)
   const isMessageDraft =
     lower.includes('yaz') ||
@@ -461,6 +484,10 @@ export async function dispatchWithGemini(
   currentDatetime: string,
   userDomain?: string
 ): Promise<DispatchResponse> {
+  if (userDomain === 'SADE') {
+    return dispatchDeterministic(input, currentDatetime, 'SADE');
+  }
+
   const sanitized = sanitizeSpokenText(input);
   const cleanInput = (sanitized || input || '').trim();
   let lower = cleanInput.toLowerCase();

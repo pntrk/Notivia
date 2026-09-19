@@ -445,7 +445,7 @@ export default function App() {
     return false;
   });
 
-  // Kullanıcının seçtiği uzmanlık / bilişsel alan (Hukuk, Maliye, Sağlık, Eğitim, Emekli, Öğrenci, vb.)
+  // Kullanıcının seçtiği uzmanlık / bilişsel alan (Varsayılan: SADE - Motor seçilmediğinde yalnızca söylenenleri yazar)
   const [workDomain, setWorkDomain] = useState<ProfessionDomain>(() => {
     try {
       if (typeof window !== 'undefined') {
@@ -458,7 +458,7 @@ export default function App() {
     } catch {
       // ignore
     }
-    return 'GENEL';
+    return 'SADE';
   });
 
   const handleSelectWorkDomain = (domain: ProfessionDomain) => {
@@ -2250,6 +2250,29 @@ export default function App() {
     if (base64Image) {
       mediaId = 'media_' + Date.now();
       await saveLocalMedia(mediaId, base64Image);
+    }
+
+    // 0. SADE / MOTORSUZ MOD (Kullanıcı motor seçimi yapmadıysa veya Sade Mod seçiliyse)
+    // Bilişsel motorlarla entegre olmadan yalnızca söylenen/yazılan ham metni kaydeder.
+    if (workDomain === 'SADE') {
+      const createdNote = {
+        baslik: textInput?.trim() || (base64Image ? 'Görsel Notu' : 'Yeni Not'),
+        zaman: 'Kayıt Edildi',
+        tarih_iso: null,
+        action_items: [],
+        ikon: base64Image ? '🖼️' : '📝',
+        renk: '#F8FAFC',
+        anomali_notu: null,
+        mediaId,
+      };
+      await addNote(createdNote);
+      const whisper = 'Not kaydedildi.';
+      setStatusText(whisper);
+      if (isSpoken) {
+        speakFeedback(whisper);
+      }
+      resetMicUI();
+      return;
     }
 
     // Doğrudan saf JSON girilmişse doğrudan ekle

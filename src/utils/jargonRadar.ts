@@ -313,6 +313,17 @@ export function detectDomainFromJargon(
   text: string,
   fallbackDomain: ProfessionDomain = 'GENEL'
 ): JargonDetectionResult {
+  if (fallbackDomain === 'SADE') {
+    return {
+      detectedDomain: 'SADE',
+      confidence: 0,
+      matchedKeywords: [],
+      suggestedIcon: '📝',
+      suggestedColor: '#F8FAFC',
+      reason: 'Sade Mod (Bilişsel motorlar kapalı)',
+    };
+  }
+
   if (!text || !text.trim()) {
     return {
       detectedDomain: fallbackDomain,

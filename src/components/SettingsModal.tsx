@@ -1,15 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import type { Language } from '../utils/i18n';
 import { translations } from '../utils/i18n';
 import type { ProfessionDomain } from '../types/domainThemes.ts';
 import { WORK_DOMAIN_OPTIONS } from '../types/domainThemes.ts';
 import { PWAInstallButton } from './PWAInstallButton';
-import {
-  getCustomVocabulary,
-  addCustomVocabularyItem,
-  removeCustomVocabularyItem,
-} from '../utils/userVocabularyEngine';
-import type { CustomVocabularyItem } from '../types/notivia';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -55,33 +49,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSyncDrive,
   isSyncingDrive,
   driveSyncTime,
-  viewMode = 'single',
-  onToggleViewMode,
 }) => {
   if (!isOpen) return null;
 
   const t = translations[language];
   const isDark = theme === 'dark';
-
-  const [vocabList, setVocabList] = useState<CustomVocabularyItem[]>(() => getCustomVocabulary());
-  const [newTerm, setNewTerm] = useState('');
-  const [newDomain, setNewDomain] = useState<ProfessionDomain>(workDomain || 'GENEL');
-  const [newNotes, setNewNotes] = useState('');
-  const [showVocabManager, setShowVocabManager] = useState(false);
-
-  const handleAddTerm = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTerm.trim()) return;
-    const added = addCustomVocabularyItem(newTerm.trim(), newDomain, newNotes.trim() || undefined);
-    setVocabList(getCustomVocabulary());
-    setNewTerm('');
-    setNewNotes('');
-  };
-
-  const handleDeleteTerm = (id: string) => {
-    removeCustomVocabularyItem(id);
-    setVocabList(getCustomVocabulary());
-  };
 
   const selectedOption = WORK_DOMAIN_OPTIONS.find((opt) => opt.id === workDomain) || WORK_DOMAIN_OPTIONS[0];
 
@@ -335,120 +307,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
-          {/* 1.6. Özel Kurumsal Sözlük & Jargon Yönetimi (Local Adaptive Vocabulary) */}
-          <div
-            id="custom-vocab-card"
-            className={`p-3.5 rounded-xl border transition-colors ${
-              isDark ? 'bg-stone-850/80 border-stone-800' : 'bg-stone-50/70 border-stone-200/80'
-            }`}
-          >
-            <div
-              onClick={() => setShowVocabManager(!showVocabManager)}
-              className="flex items-center justify-between cursor-pointer select-none"
-            >
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm shrink-0">
-                  📖
-                </div>
-                <div>
-                  <h3 className="font-semibold text-xs leading-tight">
-                    {language === 'tr' ? 'Özel Jargon & Kurum Sözlüğü' : 'Custom Jargon & Vocabulary'}
-                  </h3>
-                  <p className="text-[11px] text-stone-500 dark:text-stone-400">
-                    {vocabList.length} {language === 'tr' ? 'özel terim ve kısaltma kayıtlı' : 'custom terms active'}
-                  </p>
-                </div>
-              </div>
-              <span className="text-xs text-stone-400 font-mono">
-                {showVocabManager ? '▲' : '▼'}
-              </span>
-            </div>
-
-            {showVocabManager && (
-              <div className="mt-3 pt-3 border-t border-stone-200/60 dark:border-stone-800 space-y-3">
-                {/* Yeni Terim Ekleme Formu */}
-                <form onSubmit={handleAddTerm} className="space-y-2">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder={language === 'tr' ? 'Yeni terim / kısaltma (örn: DÖSİMM, ERP-3)' : 'New term / acronym'}
-                      value={newTerm}
-                      onChange={(e) => setNewTerm(e.target.value)}
-                      className={`flex-1 text-xs px-2.5 py-1.5 rounded-lg border outline-none ${
-                        isDark ? 'bg-stone-900 border-stone-750 text-stone-100' : 'bg-white border-stone-300 text-stone-900'
-                      }`}
-                    />
-                    <select
-                      value={newDomain}
-                      onChange={(e) => setNewDomain(e.target.value as ProfessionDomain)}
-                      className={`text-xs px-2 py-1.5 rounded-lg border outline-none ${
-                        isDark ? 'bg-stone-900 border-stone-750 text-stone-100' : 'bg-white border-stone-300 text-stone-900'
-                      }`}
-                    >
-                      {WORK_DOMAIN_OPTIONS.map((opt) => (
-                        <option key={opt.id} value={opt.id}>
-                          {opt.icon} {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder={language === 'tr' ? 'İsteğe bağlı açıklama veya standart (örn: Döner Sermaye)' : 'Optional notes'}
-                      value={newNotes}
-                      onChange={(e) => setNewNotes(e.target.value)}
-                      className={`flex-1 text-xs px-2.5 py-1.5 rounded-lg border outline-none ${
-                        isDark ? 'bg-stone-900 border-stone-750 text-stone-100' : 'bg-white border-stone-300 text-stone-900'
-                      }`}
-                    />
-                    <button
-                      type="submit"
-                      disabled={!newTerm.trim()}
-                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold disabled:opacity-40 cursor-pointer shrink-0 active:scale-95 transition-all"
-                    >
-                      + {language === 'tr' ? 'Ekle' : 'Add'}
-                    </button>
-                  </div>
-                </form>
-
-                {/* Mevcut Terimler Listesi */}
-                <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
-                  {vocabList.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`flex items-center justify-between p-2 rounded-lg text-xs border ${
-                        isDark ? 'bg-stone-900/90 border-stone-800 text-stone-200' : 'bg-white border-stone-200 text-stone-800'
-                      }`}
-                    >
-                      <div className="min-w-0 flex-1 mr-2">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-stone-900 dark:text-stone-100">{item.term}</span>
-                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 font-mono">
-                            {item.mappedDomain}
-                          </span>
-                        </div>
-                        {item.notes && (
-                          <p className="text-[10px] text-stone-500 dark:text-stone-400 truncate mt-0.5">
-                            {item.notes}
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteTerm(item.id)}
-                        className="text-stone-400 hover:text-red-500 p-1 rounded cursor-pointer"
-                        title="Sil"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* 2. Sistem Ayarları Grubu (Görünüm, Bildirimler, Dil) */}
           <div className={`rounded-xl border divide-y transition-colors overflow-hidden ${
             isDark
@@ -494,51 +352,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </button>
               </div>
             </div>
-
-            {/* Kart Düzeni Satırı (Tekli / İkili Izgara) */}
-            {onToggleViewMode && (
-              <div className="flex items-center justify-between p-3.5">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300">
-                    {viewMode === 'grid' ? '⊞' : '☰'}
-                  </div>
-                  <div>
-                    <p className="font-semibold text-xs leading-tight">
-                      {language === 'tr' ? 'Kart Düzeni' : 'Card Layout'}
-                    </p>
-                    <p className="text-[10px] text-stone-500 dark:text-stone-400">
-                      {viewMode === 'grid' ? t.dualGridView : t.singleView}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl border border-stone-200/50 dark:border-stone-750">
-                  <button
-                    type="button"
-                    onClick={() => { if (viewMode !== 'single') onToggleViewMode(); }}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1 min-h-[36px] sm:min-h-0 active:scale-95 ${
-                      viewMode === 'single'
-                        ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-xs'
-                        : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
-                    }`}
-                  >
-                    <span>☰</span>
-                    <span>{language === 'tr' ? 'Tekli' : 'Single'}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { if (viewMode !== 'grid') onToggleViewMode(); }}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer flex items-center gap-1 min-h-[36px] sm:min-h-0 active:scale-95 ${
-                      viewMode === 'grid'
-                        ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-white shadow-xs'
-                        : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
-                    }`}
-                  >
-                    <span>⊞</span>
-                    <span>{language === 'tr' ? 'İkili' : 'Grid'}</span>
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* Bildirimler & Alarmlar Satırı */}
             <div className="p-3.5 space-y-3">
