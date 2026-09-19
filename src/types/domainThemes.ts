@@ -57,17 +57,18 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
 
   CALISMIYORUM: {
     domain: 'CALISMIYORUM',
-    displayName: 'Kişisel Yaşam & Ev',
-    bgCard: 'bg-slate-50/80 border-slate-200',
-    borderAccent: 'border-l-slate-400',
-    badgeBg: 'bg-slate-100',
-    badgeText: 'text-slate-800',
-    btnPrimaryBg: 'bg-slate-700 hover:bg-slate-800',
+    displayName: 'Genel',
+    bgCard: 'bg-stone-50/80 border-stone-200',
+    borderAccent: 'border-l-stone-500',
+    badgeBg: 'bg-stone-200',
+    badgeText: 'text-stone-800',
+    btnPrimaryBg: 'bg-stone-800 hover:bg-stone-900',
     btnPrimaryText: 'text-white',
     actions: [
       { id: 'bill_track', label: 'Fatura & Kira', icon: '💳', actionType: 'COPY_TEMPLATE' },
       { id: 'contract_end', label: 'Taahhüt Bitişi', icon: '📅', actionType: 'TIMER' },
-      { id: 'home_cycle', label: 'Periyodik Bakım', icon: '🔄', actionType: 'LOTO_CHECK' }
+      { id: 'home_cycle', label: 'Periyodik Bakım', icon: '🔄', actionType: 'LOTO_CHECK' },
+      { id: 'share', label: 'Paylaş', icon: '↗️', actionType: 'COPY_TEMPLATE' }
     ]
   },
 
@@ -306,7 +307,7 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
 
   GENEL: {
     domain: 'GENEL',
-    displayName: 'Kişisel Asistan',
+    displayName: 'Genel',
     bgCard: 'bg-stone-50/80 border-stone-200',
     borderAccent: 'border-l-stone-500',
     badgeBg: 'bg-stone-200',
@@ -314,6 +315,9 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
     btnPrimaryBg: 'bg-stone-800 hover:bg-stone-900',
     btnPrimaryText: 'text-white',
     actions: [
+      { id: 'bill_track', label: 'Fatura & Kira', icon: '💳', actionType: 'COPY_TEMPLATE' },
+      { id: 'contract_end', label: 'Taahhüt Bitişi', icon: '📅', actionType: 'TIMER' },
+      { id: 'home_cycle', label: 'Periyodik Bakım', icon: '🔄', actionType: 'LOTO_CHECK' },
       { id: 'share', label: 'Paylaş', icon: '↗️', actionType: 'COPY_TEMPLATE' }
     ]
   }
@@ -328,9 +332,8 @@ export interface WorkDomainOption {
 }
 
 export const WORK_DOMAIN_OPTIONS: WorkDomainOption[] = [
-  { id: 'GENEL', label: 'Genel / Kişisel', sublabel: 'Dengeli kişisel yaşam asistanı (Tüm alanlar eşit)', icon: '🌐', category: 'ozel' },
+  { id: 'GENEL', label: 'Genel', sublabel: 'Kişisel yaşam, ev, fatura & kira, abonelikler, alışveriş ve günlük rutinler', icon: '🏠', category: 'ozel' },
   { id: 'OGRENCI', label: 'Öğrenci', sublabel: 'Vize/final sınavları, ders kaydı, ödev teslimi, burs/KYK', icon: '🎓', category: 'ozel' },
-  { id: 'CALISMIYORUM', label: 'Kişisel Yaşam & Ev', sublabel: 'Abonelik takibi, fatura & kira, periyodik ev bakımı, rutinler', icon: '🏠', category: 'ozel' },
   { id: 'HUKUK', label: 'Hukuk & Adalet', sublabel: 'Avukat, Hakim, Noter (UYAP, duruşma, tebligat öncelikli)', icon: '⚖️', category: 'meslek' },
   { id: 'FINANS', label: 'Mali Müşavir & Finans', sublabel: 'SMMM, Muhasebe (KDV, SGK, e-Defter, beyanname öncelikli)', icon: '📊', category: 'meslek' },
   { id: 'SAGLIK', label: 'Sağlık, Klinik & Tıp', sublabel: 'Doktor, Hemşire, Eczacı (SBAR, order, soğuk zincir öncelikli)', icon: '🩺', category: 'meslek' },
@@ -354,7 +357,7 @@ export function detectDomainFromNote(note: { ikon?: string; baslik?: string; ano
     return 'OGRENCI';
   }
   if (icon === '🏠' || text.includes('taahhüt') || text.includes('abonelik') || text.includes('gss') || text.includes('işkur') || text.includes('su arıtma') || text.includes('kombi bakımı') || text.includes('derin dondurucu') || text.includes('ecza dolabı') || text.includes('kira') || text.includes('aidat') || text.includes('iş başvurusu') || text.includes('mülakat') || text.includes('cv güncelle') || text.includes('özgeçmiş') || text.includes('emekli')) {
-    return 'CALISMIYORUM';
+    return 'GENEL';
   }
   if (icon === '⚖️' || icon === '📜' || (icon === '🏛️' && (text.includes('hukuk') || text.includes('mahkeme') || text.includes('savcı') || text.includes('hâkim') || text.includes('hakim'))) || text.includes('hukuk') || text.includes('duruşma') || text.includes('uyap') || text.includes('istinaf') || text.includes('tebligat') || text.includes('noter') || text.includes('beyanname')) {
     return 'HUKUK';

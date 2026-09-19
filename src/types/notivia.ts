@@ -47,6 +47,65 @@ export interface PeriodicLog {
   next_due_date: string | null;
 }
 
+export interface ExtractedMetric {
+  id: string;
+  type: 'pressure' | 'temp' | 'money' | 'vital' | 'official' | 'time_measure' | 'generic';
+  label: string;
+  value: string;
+  unit?: string;
+  raw: string;
+  alertLevel?: 'normal' | 'warning' | 'danger';
+  alertMsg?: string;
+}
+
+export interface MilestoneStep {
+  id: string;
+  order: number;
+  title: string;
+  targetOffsetDays?: number;
+  targetDateIso?: string | null;
+  targetText: string;
+  isCompleted: boolean;
+  icon?: string;
+  description?: string;
+}
+
+export interface MilestoneChain {
+  chainId: string;
+  chainName: string;
+  currentStepIndex: number;
+  steps: MilestoneStep[];
+  autoProgress?: boolean;
+}
+
+export interface NextActionSuggestion {
+  id: string;
+  title: string;
+  description: string;
+  actionType: 'DRAFT_MESSAGE' | 'CREATE_FOLLOWUP' | 'COPY_TEXT' | 'SCHEDULE_TIMER';
+  icon: string;
+  payload?: {
+    recipient?: string;
+    channel?: 'whatsapp' | 'email' | 'sms';
+    messageBody?: string;
+    followupTitle?: string;
+    followupZaman?: string;
+    followupOffsetDays?: number;
+    followupIkon?: string;
+    copyText?: string;
+  };
+}
+
+export interface CustomVocabularyItem {
+  id: string;
+  term: string;
+  mappedDomain: ProfessionDomain;
+  category?: string;
+  notes?: string;
+  createdAt: string;
+  usageCount: number;
+}
+
 export interface NotiviaTriggerInfo {
   tip?: 'hava' | 'konum' | 'surekli' | 'finansal' | 'mekan' | 'kisi' | 'durum' | 'zincirleme' | string | null;
   sart?: string;
@@ -80,6 +139,9 @@ export interface NotiviaSimpleNote {
   isAlarm?: boolean;
   isMicroTask?: boolean;
   sureDakika?: number;
+  extracted_metrics?: ExtractedMetric[];
+  milestone_chain?: MilestoneChain | null;
+  next_action?: NextActionSuggestion | null;
 }
 
 export interface NotiviaParsedNote {
@@ -98,6 +160,9 @@ export interface NotiviaParsedNote {
   action_items: ActionItem[];
   notification: NotificationInfo;
   periodic_log: PeriodicLog;
+  extracted_metrics?: ExtractedMetric[];
+  milestone_chain?: MilestoneChain | null;
+  next_action?: NextActionSuggestion | null;
   engine_meta?: {
     model: string;
     processing_time_ms: number;

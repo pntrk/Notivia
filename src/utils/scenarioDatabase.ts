@@ -1132,7 +1132,7 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
   {
     id: 'emekli_maas_tahsis',
     category: 'finans',
-    domain: 'CALISMIYORUM',
+    domain: 'GENEL',
     keywords: ['emekli maaş', 'emekli maaşı', 'tahsis no', 'maaş günü', 'maaş çek', 'emekli bayram ikramiye', 'ikramiye yattı'],
     baslik: 'Emekli Maaşı & İkramiye Çekimi',
     ikon: '🏖️',
@@ -1150,7 +1150,7 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
   {
     id: 'emekli_raporlu_ilac',
     category: 'saglik',
-    domain: 'CALISMIYORUM',
+    domain: 'GENEL',
     keywords: ['raporlu ilaç', 'ilaç yazdırma', 'sağlık ocağı ilaç', 'tansiyon ilacı bitti', 'şeker ilacı bitti', 'ilaç raporu'],
     baslik: 'Raporlu İlaç & Sağlık Ocağı',
     ikon: '💊',
@@ -1168,7 +1168,7 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
   {
     id: 'emekli_hobi_yuruyus',
     category: 'kisisel_yasam',
-    domain: 'CALISMIYORUM',
+    domain: 'GENEL',
     keywords: ['yürüyüş', 'sabah yürüyüşü', 'park yürüyüş', 'hobi bahçesi', 'tansiyon ölçümü'],
     baslik: 'Sabah Yürüyüşü & Tansiyon',
     ikon: '🌿',
@@ -1240,11 +1240,11 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
     ]
   },
 
-  // 23. ÇALIŞMIYORUM / EV YAŞAMI MOTORU (UNEMPLOYED / HOME LIFE / JOB SEEKING)
+  // 23. GENEL & EV YAŞAMI MOTORU (HOME LIFE / PERSONAL ROUTINES / JOB SEEKING)
   {
     id: 'calismiyorum_is_basvurusu_cv',
     category: 'is_kariyer',
-    domain: 'CALISMIYORUM',
+    domain: 'GENEL',
     keywords: ['iş başvurusu', 'cv güncelle', 'cv hazırla', 'özgeçmiş', 'iş ilanı', 'kariyer net', 'linkedin başvuru'],
     baslik: 'İş Başvurusu & CV Güncelleme',
     ikon: '💼',
@@ -1262,7 +1262,7 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
   {
     id: 'calismiyorum_mulakat_prova',
     category: 'is_kariyer',
-    domain: 'CALISMIYORUM',
+    domain: 'GENEL',
     keywords: ['mülakat', 'iş mülakatı', 'iş görüşmesi', 'online mülakat', 'hr görüşme', 'ik mülakatı'],
     baslik: 'İş Mülakatı & Online Görüşme',
     ikon: '🎯',
@@ -1280,7 +1280,7 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
   {
     id: 'calismiyorum_gunluk_rutin_ev',
     category: 'kisisel_yasam',
-    domain: 'CALISMIYORUM',
+    domain: 'GENEL',
     keywords: ['ev işleri', 'günlük rutin', 'haftalık plan', 'ev düzeni', 'kişisel hedef', 'kendime vakit'],
     baslik: 'Günlük Yaşam Rutini & Hedefler',
     ikon: '🏠',
@@ -1414,7 +1414,7 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
   {
     id: 'bebek_asi_takvimi',
     category: 'saglik',
-    domain: 'CALISMIYORUM',
+    domain: 'GENEL',
     keywords: ['bebek aşı', 'çocuk aşı', 'aylık aşı', 'karma aşı', 'kpa aşısı', 'verem aşısı', 'aşı randevusu', 'bebek 2 aylık', 'bebek 4 aylık', 'bebek 6 aylık', 'kkk aşısı', 'aşı takvimi'],
     baslik: 'Bebek & Çocuk Aşı Takvimi',
     ikon: '👶',
@@ -1433,7 +1433,7 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
   {
     id: 'evcil_hayvan_parazit_asi',
     category: 'ev_teknik',
-    domain: 'CALISMIYORUM',
+    domain: 'GENEL',
     keywords: ['kedi aşı', 'köpek aşı', 'iç parazit', 'dış parazit', 'kuduz aşısı', 'veteriner aşı', 'parazit damlası', 'veteriner kontrol', 'veterinere gideceğiz', 'hayvan aşısı'],
     baslik: 'Evcil Hayvan Aşı & Parazit',
     ikon: '🐾',
@@ -1452,7 +1452,7 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
   {
     id: 'ev_su_aritma_filtre',
     category: 'ev_teknik',
-    domain: 'CALISMIYORUM',
+    domain: 'GENEL',
     keywords: ['su arıtma', 'arıtma filtre', 'su arıtma filtre', 'filtre değişecek', 'arıtma filtresi', 'sediment filtre', 'membran filtre'],
     baslik: 'Su Arıtma Filtre Değişimi',
     ikon: '💧',
@@ -1470,7 +1470,7 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
   {
     id: 'kombi_petek_yillik_bakim',
     category: 'ev_teknik',
-    domain: 'CALISMIYORUM',
+    domain: 'GENEL',
     keywords: ['kombi bakım', 'kombi periyodik', 'petek temizliği', 'kombi yıllık', 'kombi basınç', 'petekler ısınmıyor'],
     baslik: 'Kombi & Petek Yıllık Bakımı',
     ikon: '🔥',

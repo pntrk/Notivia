@@ -1,4 +1,6 @@
 import type { ProfessionDomain } from '../types/domainThemes.ts';
+import { normalizePhoneticJargon } from './phoneticNormalizer.ts';
+import { matchCustomVocabulary } from './userVocabularyEngine.ts';
 
 export interface JargonDetectionResult {
   detectedDomain: ProfessionDomain;
@@ -263,7 +265,7 @@ const DOMAIN_RULES: DomainRule[] = [
     ]
   },
   {
-    domain: 'CALISMIYORUM',
+    domain: 'GENEL',
     defaultIcon: '👶',
     defaultColor: '#FDF2F8',
     exclusiveKeywords: [
@@ -321,10 +323,25 @@ export function detectDomainFromJargon(
     };
   }
 
-  // Türkçe karakter duyarlı normalizasyon
-  const normalized = text
+  // 1. Fonetik sesli dikte düzeltmesi & Türkçe karakter duyarlı normalizasyon
+  const phoneticClean = normalizePhoneticJargon(text);
+  const normalized = phoneticClean
     .toLowerCase()
     .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?"']/g, ' ');
+
+  // 2. Kullanıcının yerel özel sözlüğü kontrolü (Öncelikli Eşleşme)
+  const customMatch = matchCustomVocabulary(phoneticClean);
+  if (customMatch && customMatch.domain) {
+    const matchingRule = DOMAIN_RULES.find(r => r.domain === customMatch.domain);
+    return {
+      detectedDomain: customMatch.domain,
+      confidence: 0.95,
+      matchedKeywords: [customMatch.matchedItem.term],
+      suggestedIcon: matchingRule?.defaultIcon || '⭐',
+      suggestedColor: matchingRule?.defaultColor || '#FEF3C7',
+      reason: `Özel Kullanıcı Sözlüğü: ${customMatch.matchedItem.term} (${customMatch.matchedItem.notes || customMatch.domain})`
+    };
+  }
 
   let bestDomain: ProfessionDomain = fallbackDomain;
   let highestScore = 0;

@@ -76,7 +76,27 @@ try {
   console.warn('setPersistence catch:', e);
 }
 
-export const db: Firestore = getFirestore(app, (firebaseConfig as any).firestoreDatabaseId);
+// Firestore lazy initialization (Sadece yapılandırılmışsa ve gerekliyse yüklenir, Google Drive birincil veritabanıdır)
+let firestoreDb: Firestore | null = null;
+export function getDb(): Firestore | null {
+  if (firestoreDb) return firestoreDb;
+  try {
+    if ((firebaseConfig as any).firestoreDatabaseId) {
+      firestoreDb = getFirestore(app, (firebaseConfig as any).firestoreDatabaseId);
+    }
+  } catch {
+    // ignore
+  }
+  return firestoreDb;
+}
+
+export const db: Firestore = (typeof Proxy !== 'undefined' ? new Proxy({}, {
+  get(_target, prop) {
+    const d = getDb();
+    if (d) return (d as any)[prop];
+    return undefined;
+  }
+}) : null) as unknown as Firestore;
 
 // Anlık Kullanıcı Profil Önbelleği (Kullanıcının her açılışta 0ms içinde tanınması için)
 const CACHED_USER_KEY = 'notivia_cached_user';
@@ -115,15 +135,20 @@ export function setCachedUser(user: User | null) {
   }
 }
 
-// Google Auth Provider with Google Drive scope for user backup & sync
+// Google Auth Provider with Google Drive & Calendar scopes for user database sync
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('https://www.googleapis.com/auth/drive.file');
+googleProvider.addScope('https://www.googleapis.com/auth/calendar.events');
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 // Token management (in-memory + localStorage + sessionStorage for persistent Google Drive sync)
 const TOKEN_KEY = 'notivia_g_token';
+const TOKEN_EXPIRES_KEY = 'notivia_g_token_expires_at';
+const USER_EMAIL_KEY = 'notivia_g_user_email';
+
 let cachedAccessToken: string | null = null;
 export let googleAccessToken: string | null = null;
+
 try {
   cachedAccessToken =
     (typeof localStorage !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null) ||
@@ -137,7 +162,20 @@ try {
   // ignore
 }
 
-export function setGoogleAccessToken(token: string | null) {
+export function isGoogleTokenExpired(): boolean {
+  try {
+    const expiresStr = typeof localStorage !== 'undefined' ? localStorage.getItem(TOKEN_EXPIRES_KEY) : null;
+    if (!expiresStr) return false; // Expiry not tracked, assume valid until 401
+    const expiresAt = parseInt(expiresStr, 10);
+    if (isNaN(expiresAt)) return false;
+    // Expired if less than 60 seconds remaining
+    return Date.now() > expiresAt - 60000;
+  } catch {
+    return false;
+  }
+}
+
+export function setGoogleAccessToken(token: string | null, expiresInSeconds: number = 3540) {
   cachedAccessToken = token;
   googleAccessToken = token;
   if (typeof window !== 'undefined') {
@@ -147,10 +185,13 @@ export function setGoogleAccessToken(token: string | null) {
     if (token) {
       localStorage.setItem(TOKEN_KEY, token);
       sessionStorage.setItem(TOKEN_KEY, token);
-      console.log("Mevcut Google Token kaydedildi:", token);
+      const expiresAt = Date.now() + expiresInSeconds * 1000;
+      localStorage.setItem(TOKEN_EXPIRES_KEY, expiresAt.toString());
+      console.log("Mevcut Google Token kaydedildi (Geçerlilik süresi: ~" + Math.round(expiresInSeconds / 60) + " dk):", token.slice(0, 10) + '...');
     } else {
       localStorage.removeItem(TOKEN_KEY);
       sessionStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(TOKEN_EXPIRES_KEY);
     }
   } catch {
     // ignore
@@ -158,8 +199,8 @@ export function setGoogleAccessToken(token: string | null) {
 }
 
 export function getGoogleAccessToken(): string | null {
-  if (googleAccessToken) return googleAccessToken;
-  if (cachedAccessToken) return cachedAccessToken;
+  if (googleAccessToken && !isGoogleTokenExpired()) return googleAccessToken;
+  if (cachedAccessToken && !isGoogleTokenExpired()) return cachedAccessToken;
   try {
     const stored =
       (typeof localStorage !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null) ||
@@ -175,25 +216,99 @@ export function getGoogleAccessToken(): string | null {
   }
 }
 
+// Google Identity Services (GIS) Token Client for silent background refresh
+let gisTokenClient: any = null;
+
+export function getGisTokenClient(onSuccess?: (token: string) => void): any {
+  if (gisTokenClient) return gisTokenClient;
+  if (typeof window !== 'undefined' && (window as any).google?.accounts?.oauth2) {
+    try {
+      gisTokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+        client_id: (firebaseConfig as any).oAuthClientId || '337388503929-a3iaduo7bkgeu847jiqffhip6c2as5ms.apps.googleusercontent.com',
+        scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/calendar.events',
+        callback: (response: any) => {
+          if (response && response.access_token) {
+            setGoogleAccessToken(response.access_token, response.expires_in || 3540);
+            onSuccess?.(response.access_token);
+          }
+        },
+      });
+    } catch (e) {
+      console.warn('GIS TokenClient başlatılamadı:', e);
+    }
+  }
+  return gisTokenClient;
+}
+
+/**
+ * Kullanıcı oturum açmışken arka planda kesintisiz token yenileme
+ */
+export async function requestSilentGisToken(): Promise<string | null> {
+  return new Promise((resolve) => {
+    try {
+      const user = auth.currentUser;
+      const hint = user?.email || (typeof localStorage !== 'undefined' ? localStorage.getItem(USER_EMAIL_KEY) : undefined);
+      const client = getGisTokenClient((token) => {
+        resolve(token);
+      });
+      if (client) {
+        client.requestAccessToken({
+          prompt: '',
+          hint: hint || undefined,
+        });
+        // 2 saniye içinde yanıt gelmezse timeout
+        setTimeout(() => {
+          resolve(getGoogleAccessToken());
+        }, 2200);
+      } else {
+        resolve(null);
+      }
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
 // Automatically update cached user & token when auth state changes
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
   setCachedUser(user);
-  if (!user) {
+  if (user) {
+    if (user.email && typeof localStorage !== 'undefined') {
+      localStorage.setItem(USER_EMAIL_KEY, user.email);
+    }
+    // Token yoksa veya süresi dolduysa sessiz yenileme dene
+    if (!getGoogleAccessToken() || isGoogleTokenExpired()) {
+      requestSilentGisToken().catch(() => {});
+    }
+  } else {
+    // Sadece açıkça oturum kapatıldığında token'ı temizle
     setGoogleAccessToken(null);
   }
 });
 
 // Token süresi dolduğunda veya bulunamadığında sessizce taze token alma fonksiyonu
 export async function refreshGoogleAccessToken(): Promise<string | null> {
-  if (!auth.currentUser) return null;
+  if (!auth.currentUser && typeof localStorage !== 'undefined' && !localStorage.getItem(USER_EMAIL_KEY)) {
+    return null;
+  }
   try {
-    const result = await signInWithPopup(auth, googleProvider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    const newToken = credential?.accessToken || null;
-    if (newToken) {
-      setGoogleAccessToken(newToken);
+    // 1. Önce kullanıcıyı rahatsız etmeden sessiz GIS dene
+    const silentToken = await requestSilentGisToken();
+    if (silentToken && !isGoogleTokenExpired()) {
+      return silentToken;
     }
-    return newToken;
+
+    // 2. Olmazsa popup ile tazele
+    if (auth.currentUser) {
+      const result = await signInWithPopup(auth, googleProvider);
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const newToken = credential?.accessToken || null;
+      if (newToken) {
+        setGoogleAccessToken(newToken);
+      }
+      return newToken;
+    }
+    return null;
   } catch (err) {
     console.warn('Google token yenilenemedi:', err);
     return null;
@@ -381,8 +496,10 @@ export function cleanDataForFirestore(obj: any): any {
  */
 export async function saveUserNoteToFirestore(userId: string, note: any): Promise<void> {
   if (!userId || !note || !note.id) return;
+  const d = getDb();
+  if (!d) return;
   try {
-    const noteRef = doc(db, 'users', userId, 'notes', note.id);
+    const noteRef = doc(d, 'users', userId, 'notes', note.id);
     const cleaned = cleanDataForFirestore({
       ...note,
       updatedAt: serverTimestamp(),
@@ -398,8 +515,10 @@ export async function saveUserNoteToFirestore(userId: string, note: any): Promis
  */
 export async function deleteUserNoteFromFirestore(userId: string, noteId: string): Promise<void> {
   if (!userId || !noteId) return;
+  const d = getDb();
+  if (!d) return;
   try {
-    const noteRef = doc(db, 'users', userId, 'notes', noteId);
+    const noteRef = doc(d, 'users', userId, 'notes', noteId);
     await deleteDoc(noteRef);
   } catch (err) {
     console.warn('Firestore not silme uyarısı:', err);
@@ -411,21 +530,22 @@ export async function deleteUserNoteFromFirestore(userId: string, noteId: string
  */
 export async function batchSyncNotesToFirestore(userId: string, notes: any[]): Promise<void> {
   if (!userId || !Array.isArray(notes) || notes.length === 0) return;
+  const d = getDb();
+  if (!d) return;
   try {
     const chunks: any[][] = [];
     for (let i = 0; i < notes.length; i += 300) {
       chunks.push(notes.slice(i, i + 300));
     }
     for (const chunk of chunks) {
-      const batch = writeBatch(db);
+      const batch = writeBatch(d);
       for (const note of chunk) {
         if (!note.id) continue;
-        const noteRef = doc(db, 'users', userId, 'notes', note.id);
+        const noteRef = doc(d, 'users', userId, 'notes', note.id);
         batch.set(noteRef, cleanDataForFirestore({ ...note, updatedAt: serverTimestamp() }), { merge: true });
       }
       await batch.commit();
     }
-    console.log(`Firestore'a ${notes.length} adet not senkronize edildi ✓`);
   } catch (err) {
     console.warn('Firestore toplu senkronizasyon uyarısı:', err);
   }
@@ -443,21 +563,28 @@ export function subscribeToUserNotes(
   if (!userId) {
     return () => {};
   }
-  const notesCol = collection(db, 'users', userId, 'notes');
-  return onSnapshot(
-    notesCol,
-    (snapshot) => {
-      const items: any[] = [];
-      snapshot.forEach((docSnap) => {
-        items.push({ id: docSnap.id, ...docSnap.data() });
-      });
-      onNotes(items);
-    },
-    (err) => {
-      console.warn('Firestore gerçek zamanlı dinleme uyarısı:', err);
-      onError?.(err);
-    }
-  );
+  const d = getDb();
+  if (!d) {
+    return () => {};
+  }
+  try {
+    const notesCol = collection(d, 'users', userId, 'notes');
+    return onSnapshot(
+      notesCol,
+      (snapshot) => {
+        const items: any[] = [];
+        snapshot.forEach((docSnap) => {
+          items.push({ id: docSnap.id, ...docSnap.data() });
+        });
+        onNotes(items);
+      },
+      (err) => {
+        onError?.(err);
+      }
+    );
+  } catch {
+    return () => {};
+  }
 }
 
 // Initial connection test

@@ -13,6 +13,7 @@ import {
   onAuthStateChanged,
   setGoogleAccessToken,
   getGoogleAccessToken,
+  refreshGoogleAccessToken,
   createCalendarEvent,
   deleteCalendarEvent,
   updateCalendarEventTitle,
@@ -28,7 +29,7 @@ import {
 import { extractSimpleNoteFromText, findFermentationRecipe } from './utils/simpleNote.ts';
 import { getCardColor } from './utils/cardColors.ts';
 import { checkEpisodicMemory } from './utils/episodicMemory.ts';
-import type { ActionItem } from './types/notivia.ts';
+import type { ActionItem, ExtractedMetric, MilestoneChain, NextActionSuggestion } from './types/notivia.ts';
 import { scheduleMedicationAlarms } from './utils/medicationScheduler.ts';
 import {
   exportToDeviceCalendar,
@@ -63,6 +64,10 @@ import {
 import {
   loadNotesFromGoogleDrive,
   saveNotesToGoogleDrive,
+  syncDatabaseWithDrive,
+  checkGoogleDriveForUpdates,
+  startDriveAutoSync,
+  recordDeletedNoteId,
 } from './utils/driveStorage.ts';
 import { OfflineIndicator } from './components/OfflineIndicator.tsx';
 import { SettingsModal } from './components/SettingsModal.tsx';
@@ -124,6 +129,9 @@ export interface SimpleCardItem {
   isRemoving?: boolean;
   tamamlandi?: boolean;
   guncel_renk?: string;
+  extracted_metrics?: ExtractedMetric[] | null;
+  milestone_chain?: MilestoneChain | null;
+  next_action?: NextActionSuggestion | null;
 }
 
 export function isCompletedCard(card: SimpleCardItem): boolean {
@@ -336,6 +344,30 @@ export default function App() {
   const [isSelectMode, setIsSelectMode] = useState<boolean>(false);
   const [selectedCardIds, setSelectedCardIds] = useState<string[]>([]);
 
+  // Kart Düzeni Görünümü (Tekli Liste / İkili Izgara)
+  const [viewMode, setViewMode] = useState<'single' | 'grid'>(() => {
+    try {
+      const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('notivia_view_mode') : null;
+      return saved === 'grid' ? 'grid' : 'single';
+    } catch {
+      return 'single';
+    }
+  });
+
+  const toggleViewMode = () => {
+    setViewMode((prev) => {
+      const next = prev === 'single' ? 'grid' : 'single';
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('notivia_view_mode', next);
+        }
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
   // Kart üzerinde uzun basma (Long Press) ile çoklu seçim moduna geçiş
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartPosRef = useRef<{ x: number; y: number } | null>(null);
@@ -418,7 +450,10 @@ export default function App() {
     try {
       if (typeof window !== 'undefined') {
         const saved = localStorage.getItem('notivia_work_domain');
-        if (saved) return saved as ProfessionDomain;
+        if (saved) {
+          if (saved === 'CALISMIYORUM') return 'GENEL';
+          return saved as ProfessionDomain;
+        }
       }
     } catch {
       // ignore
@@ -690,50 +725,50 @@ export default function App() {
     }
   };
 
-  // Google Drive'a arka planda sessizce yedekleme tetikleyici
+  // Google Drive Kişisel Bulut Veritabanına Anında Kayıt Tetikleyici
   const triggerDriveBackup = async (currentNotes: SimpleCardItem[]) => {
-    const token = getGoogleAccessToken();
+    let token = getGoogleAccessToken();
+    if (!token) {
+      token = await refreshGoogleAccessToken();
+    }
     if (!token) return;
     setIsSyncingDrive(true);
     try {
       const result = await saveNotesToGoogleDrive(currentNotes);
       if (result.success) {
         setDriveSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-        console.log("Notlar kullanıcının kişisel Google Drive'ına yedeklendi ✓");
+        console.log("Notlar kullanıcının kişisel Google Drive veritabanına kaydedildi ✓");
       }
     } catch (err) {
-      console.warn("Google Drive yedekleme hatası:", err);
+      console.warn("Google Drive kaydetme hatası:", err);
     } finally {
       setIsSyncingDrive(false);
     }
   };
 
-  // Google Drive'dan notları çekme ve lokal ile birleştirme
-  const syncFromDrive = async () => {
-    const token = getGoogleAccessToken();
-    if (!token) return;
+  // Google Drive Kişisel Bulut Veritabanından Çekme ve Kesintisiz Çift Yönlü Eşitleme
+  const syncFromDrive = async (silent = false) => {
+    let token = getGoogleAccessToken();
+    if (!token) {
+      token = await refreshGoogleAccessToken();
+    }
+    if (!token) {
+      if (!silent) {
+        console.log("Google Drive senkronizasyonu için geçerli oturum bulunamadı");
+      }
+      return;
+    }
     setIsSyncingDrive(true);
     try {
-      const driveResult = await loadNotesFromGoogleDrive();
-      if (driveResult.success && driveResult.notes) {
-        const local = getLocalNotes();
-        // Eğer Drive'da yedek dosyası varsa ve boş değilse
-        if (driveResult.notes.length > 0) {
-          // Drive'daki notlar ile lokali birleştir (ID eşleşmelerine göre)
-          const mergedMap = new Map<string, SimpleCardItem>();
-          driveResult.notes.forEach((n) => mergedMap.set(n.id, n));
-          local.forEach((n) => mergedMap.set(n.id, n));
-          const mergedList = Array.from(mergedMap.values());
-          setCards(mergedList);
-          saveLocalNotes(mergedList);
-          if (currentUser?.uid) {
-            batchSyncNotesToFirestore(currentUser.uid, mergedList);
-          }
-          await saveNotesToGoogleDrive(mergedList);
-        } else if (local.length > 0) {
-          await saveNotesToGoogleDrive(local);
-        }
+      const local = getLocalNotes();
+      const syncResult = await syncDatabaseWithDrive(local);
+      if (syncResult.success) {
+        setCards(syncResult.notes);
+        saveLocalNotes(syncResult.notes);
         setDriveSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        console.log("Google Drive bulut veritabanı senkronize edildi ✓ (Kaynak:", syncResult.source, ")");
+      } else {
+        console.warn("Google Drive senkronizasyon uyarısı:", syncResult.error);
       }
     } catch (err) {
       console.warn("Drive sync hatası:", err);
@@ -742,7 +777,7 @@ export default function App() {
     }
   };
 
-  // Firebase Auth (Sürekli Kalıcı Oturum) & Gerçek Zamanlı Bulut Senkronizasyonu
+  // Firebase Auth (Sürekli Kalıcı Oturum) & Google Drive Veritabanı Entegrasyonu
   useEffect(() => {
     try {
       const storedSim = localStorage.getItem(SIMULATED_USER_KEY);
@@ -784,9 +819,17 @@ export default function App() {
         setCachedUser(user);
 
         if (user) {
-          // Arka planda Drive yedeklemesi kontrol et
-          if (getGoogleAccessToken()) {
-            syncFromDrive();
+          // Kullanıcı oturum açtığında veya sayfa açıldığında Google Drive veritabanı senkronizasyonunu başlat
+          const tok = getGoogleAccessToken();
+          if (tok) {
+            syncFromDrive(true);
+          } else {
+            // Sessizce GIS token yenilemeyi dene ve senkronize et
+            refreshGoogleAccessToken().then((newToken) => {
+              if (newToken && isMounted) {
+                syncFromDrive(true);
+              }
+            });
           }
         }
       });
@@ -798,6 +841,30 @@ export default function App() {
     } catch {
       // ignore
     }
+  }, []);
+
+  // Google Drive Kesintisiz Arka Plan Veritabanı Senkronizasyon Motoru (Continuous Multi-Device Sync)
+  // Kullanıcı başka bir cihazdan (telefon/tablet/bilgisayar) not eklese veya silse dahi,
+  // ekranı yenilemeye gerek kalmadan otomatik algılanır ve anında arayüze yansıtılır.
+  useEffect(() => {
+    const cleanup = startDriveAutoSync((updatedNotes) => {
+      console.log("Google Drive bulut veritabanından güncel notlar alındı:", updatedNotes.length);
+      setCards(updatedNotes);
+      saveLocalNotes(updatedNotes);
+      setDriveSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    }, 20000);
+
+    const handleDriveSynced = (e: any) => {
+      if (e.detail?.notes) {
+        setCards(e.detail.notes);
+      }
+    };
+    window.addEventListener('notivia_drive_database_synced', handleDriveSynced);
+
+    return () => {
+      cleanup();
+      window.removeEventListener('notivia_drive_database_synced', handleDriveSynced);
+    };
   }, []);
 
   // Gerçek Zamanlı Firestore Senkronizasyon Dinleyicisi (Real-time Cloud Sync)
@@ -1601,6 +1668,49 @@ export default function App() {
     }
   };
 
+  // 1.2 Kilometre Taşı (Milestone) Adımı Tamamlama/İlerletme
+  const toggleMilestoneStep = (cardId: string, stepIndex: number) => {
+    const targetCard = cards.find((c) => c.id === cardId);
+    if (!targetCard || !targetCard.milestone_chain) return;
+
+    const updatedSteps = targetCard.milestone_chain.steps.map((step, idx) =>
+      idx === stepIndex ? { ...step, isCompleted: !step.isCompleted } : step
+    );
+    const firstIncomplete = updatedSteps.findIndex((s) => !s.isCompleted);
+    const updatedChain = {
+      ...targetCard.milestone_chain,
+      steps: updatedSteps,
+      currentStepIndex: firstIncomplete >= 0 ? firstIncomplete : updatedSteps.length,
+    };
+
+    setCards((prev) =>
+      prev.map((c) => (c.id === cardId ? { ...c, milestone_chain: updatedChain } : c))
+    );
+
+    const local = getLocalNotes();
+    const locItem = local.find((n) => n.id === cardId);
+    if (locItem) {
+      locItem.milestone_chain = updatedChain;
+      saveLocalNotes(local);
+      syncNoteToCloud(locItem);
+      triggerDriveBackup(local);
+    }
+  };
+
+  // 1.3 Sonraki Eylem Önerisini Bağımsız Kart Olarak Ekleme
+  const handleAdoptNextAction = async (nextAction: NextActionSuggestion) => {
+    const newNote = {
+      baslik: nextAction.payload?.followupTitle || nextAction.title,
+      zaman: nextAction.payload?.followupZaman || 'Bugün',
+      anomali_notu: nextAction.description,
+      ikon: nextAction.icon || '⚡',
+      renk: '#E0F2FE',
+    };
+    await addNote(newNote);
+    setStatusText(`⚡ "${nextAction.title}" eklendi ✓`);
+    setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
+  };
+
   // Kartın tamamlanma durumunu (tik atma) değiştirme - yok etmek yerine altlara üstü çizili atar
   const toggleCardCompleted = async (cardId: string) => {
     const targetCard = cards.find((c) => c.id === cardId);
@@ -1672,6 +1782,7 @@ export default function App() {
     }
     const local = getLocalNotes().filter((n) => n.id !== card.id);
     saveLocalNotes(local);
+    recordDeletedNoteId(card.id);
     syncDeleteToCloud(card.id);
     triggerDriveBackup(local);
   };
@@ -2597,6 +2708,36 @@ export default function App() {
           </div>
 
           <div id="auth-container" className="flex items-center gap-2">
+            {/* Görünüm Modu Toggle (Tekli / İkili Izgara) */}
+            <button
+              id="view-mode-toggle-btn"
+              type="button"
+              onClick={toggleViewMode}
+              title={viewMode === 'grid' ? t.singleView : t.dualGridView}
+              className={`p-1.5 rounded-full transition-all cursor-pointer active:scale-95 ${
+                viewMode === 'grid'
+                  ? theme === 'dark' ? 'text-amber-300 bg-stone-800 ring-1 ring-amber-400/30' : 'text-stone-900 bg-stone-200 ring-1 ring-stone-300'
+                  : theme === 'dark' ? 'text-stone-400 hover:text-stone-200 hover:bg-stone-800' : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100'
+              }`}
+            >
+              {viewMode === 'grid' ? (
+                /* 2-column grid icon */
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                  <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                  <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                  <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                </svg>
+              ) : (
+                /* Single list icon */
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <line x1="3" y1="12" x2="21" y2="12" />
+                  <line x1="3" y1="18" x2="21" y2="18" />
+                </svg>
+              )}
+            </button>
+
             {/* Arama Toggle */}
             <button
               type="button"
@@ -2666,7 +2807,7 @@ export default function App() {
         {/* Kart Listesi Alanı */}
         <section
           id="cards-container"
-          className="flex-1 overflow-y-auto px-3.5 sm:px-5 py-2.5 sm:py-3 space-y-2.5 sm:space-y-3 pb-32"
+          className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full px-3 sm:px-5 py-2.5 sm:py-3 space-y-2.5 sm:space-y-3 pb-32"
         >
           {/* Gizlenebilir Arama Alanı */}
           <div
@@ -2774,249 +2915,280 @@ export default function App() {
               {searchQuery ? t.noSearchResults : t.emptyNotesDesc}
             </div>
           ) : (
-            sortNotiviaCards(filteredCards).map((item) => {
-              // Kartın süresinin dolup dolmadığını ve tamamlanma durumunu kontrol et
-              const isExpired = item.tarih_iso ? new Date(item.tarih_iso).getTime() < Date.now() : false;
-              const isCompleted = isCompletedCard(item);
-              const isWeatherTriggered = 
-                (item.tetikleyici?.sart === 'yagmur' && weather?.isRaining) ||
-                (item.tetikleyici?.sart === 'don' && weather?.isFreezing);
-              const cardBgColor = isWeatherTriggered ? '#FEE2E2' : (item.guncel_renk || item.renk || getCardColor(item.id, item.baslik));
-              const isSelected = selectedCardIds.includes(item.id);
+            <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-2 sm:gap-3 items-start' : 'flex flex-col gap-2.5 sm:gap-3'}>
+              {sortNotiviaCards(filteredCards).map((item) => {
+                // Kartın süresinin dolup dolmadığını ve tamamlanma durumunu kontrol et
+                const isExpired = item.tarih_iso ? new Date(item.tarih_iso).getTime() < Date.now() : false;
+                const isCompleted = isCompletedCard(item);
+                const isWeatherTriggered = 
+                  (item.tetikleyici?.sart === 'yagmur' && weather?.isRaining) ||
+                  (item.tetikleyici?.sart === 'don' && weather?.isFreezing);
+                const cardBgColor = isWeatherTriggered ? '#FEE2E2' : (item.guncel_renk || item.renk || getCardColor(item.id, item.baslik));
+                const isSelected = selectedCardIds.includes(item.id);
 
-              return (
-                <div
-                  key={item.id}
-                  onTouchStart={(e) => {
-                    const touch = e.touches[0];
-                    if (touch) {
-                      startLongPress(item.id, touch.clientX, touch.clientY, e.target);
-                    }
-                  }}
-                  onTouchMove={(e) => {
-                    const touch = e.touches[0];
-                    if (touch) {
-                      cancelLongPress(touch.clientX, touch.clientY, true);
-                    }
-                  }}
-                  onTouchEnd={() => cancelLongPress()}
-                  onTouchCancel={() => cancelLongPress()}
-                  onMouseDown={(e) => {
-                    if (e.button === 0) {
-                      startLongPress(item.id, e.clientX, e.clientY, e.target);
-                    }
-                  }}
-                  onMouseMove={(e) => {
-                    cancelLongPress(e.clientX, e.clientY, true);
-                  }}
-                  onMouseUp={() => cancelLongPress()}
-                  onMouseLeave={() => cancelLongPress()}
-                  onContextMenu={(e) => {
-                    if (isLongPressFiredRef.current || isSelectMode) {
-                      e.preventDefault();
-                    }
-                  }}
-                  onClick={(e) => handleCardClick(item.id, e)}
-                  className={`card p-3 sm:p-4 rounded-2xl flex flex-col gap-2 sm:gap-2.5 transition-all duration-300 hover:shadow-md ${
-                    item.isRemoving ? 'scale-95 opacity-0' : 'scale-100'
-                  } ${
-                    isWeatherTriggered
-                      ? 'ring-2 ring-red-500 bg-red-50 animate-pulse'
-                      : isCompleted
-                      ? 'opacity-70 saturate-50 border-solid border-stone-300/80 shadow-none'
-                      : isExpired 
-                      ? 'opacity-95 border-dashed border-amber-300/80 shadow-xs' 
-                      : 'opacity-100 border-solid border-black/8 dark:border-white/10 shadow-xs'
-                  } ${isSelected ? 'ring-2 ring-stone-800 dark:ring-stone-200' : ''} ${
-                    isSelectMode ? 'cursor-pointer select-none active:scale-[0.99]' : ''
-                  }`}
-                  style={{
-                    backgroundColor: cardBgColor,
-                    borderWidth: '1px',
-                    WebkitTouchCallout: 'none',
-                  }}
-                >
-                  {/* Üst Kısım: Başlık, İkon ve Hızlı İşlem Araç Çubuğu */}
-                  <div className="flex items-start justify-between gap-1.5 sm:gap-2 w-full">
-                    <div className="flex items-start gap-2 sm:gap-2.5 min-w-0 flex-1">
-                      {/* Çoklu Seçim Modunda Seçim Kutucuğu */}
-                      {isSelectMode && (
+                return (
+                  <div
+                    key={item.id}
+                    onTouchStart={(e) => {
+                      const touch = e.touches[0];
+                      if (touch) {
+                        startLongPress(item.id, touch.clientX, touch.clientY, e.target);
+                      }
+                    }}
+                    onTouchMove={(e) => {
+                      const touch = e.touches[0];
+                      if (touch) {
+                        cancelLongPress(touch.clientX, touch.clientY, true);
+                      }
+                    }}
+                    onTouchEnd={() => cancelLongPress()}
+                    onTouchCancel={() => cancelLongPress()}
+                    onMouseDown={(e) => {
+                      if (e.button === 0) {
+                        startLongPress(item.id, e.clientX, e.clientY, e.target);
+                      }
+                    }}
+                    onMouseMove={(e) => {
+                      cancelLongPress(e.clientX, e.clientY, true);
+                    }}
+                    onMouseUp={() => cancelLongPress()}
+                    onMouseLeave={() => cancelLongPress()}
+                    onContextMenu={(e) => {
+                      if (isLongPressFiredRef.current || isSelectMode) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onClick={(e) => handleCardClick(item.id, e)}
+                    className={`card w-full max-w-full overflow-hidden flex flex-col transition-all duration-300 hover:shadow-md ${
+                      viewMode === 'grid'
+                        ? 'p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl gap-1.5 sm:gap-2'
+                        : 'p-3.5 sm:p-4 rounded-2xl gap-2 sm:gap-2.5'
+                    } ${
+                      item.isRemoving ? 'scale-95 opacity-0' : 'scale-100'
+                    } ${
+                      isWeatherTriggered
+                        ? 'ring-2 ring-red-500 bg-red-50 animate-pulse'
+                        : isCompleted
+                        ? 'opacity-70 saturate-50 border-solid border-stone-300/80 shadow-none'
+                        : isExpired 
+                        ? 'opacity-95 border-dashed border-amber-300/80 shadow-xs' 
+                        : 'opacity-100 border-solid border-black/8 dark:border-white/10 shadow-xs'
+                    } ${isSelected ? 'ring-2 ring-stone-800 dark:ring-stone-200' : ''} ${
+                      isSelectMode ? 'cursor-pointer select-none active:scale-[0.99]' : ''
+                    }`}
+                    style={{
+                      backgroundColor: cardBgColor,
+                      borderWidth: '1px',
+                      WebkitTouchCallout: 'none',
+                    }}
+                  >
+                    {/* Üst Kısım: Başlık, İkon ve Hızlı İşlem Araç Çubuğu (Mobil Optimize Edilmiş Düzen) */}
+                    <div className={viewMode === 'grid' ? 'flex flex-col items-start gap-1.5 w-full' : 'flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-2.5 w-full'}>
+                      {/* Başlık, İkon ve Mobilde Hızlı Tamamlama Butonu */}
+                      <div className="flex items-start gap-2 min-w-0 flex-1 w-full">
+                        {/* Çoklu Seçim Modunda Seçim Kutucuğu */}
+                        {isSelectMode && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedCardIds((prev) =>
+                                prev.includes(item.id)
+                                  ? prev.filter((id) => id !== item.id)
+                                  : [...prev, item.id]
+                              );
+                            }}
+                            className={`w-5 h-5 rounded-lg border flex items-center justify-center text-xs shrink-0 cursor-pointer transition-colors mt-0.5 ${
+                              isSelected
+                                ? 'bg-stone-900 border-stone-900 text-white'
+                                : 'border-stone-400 bg-white/70 hover:bg-white text-transparent'
+                            }`}
+                            title={isSelected ? "Seçimi kaldır" : "Seç"}
+                          >
+                            ✓
+                          </button>
+                        )}
+
+                        {/* İkon / Medya Rozeti */}
+                        <div className="relative shrink-0">
+                          {item.mediaId ? (
+                            <CardMediaThumbnail
+                              mediaId={item.mediaId}
+                              onClick={() => viewFullImage(item.mediaId!)}
+                            />
+                          ) : (
+                            <div className={`${viewMode === 'grid' ? 'w-8 h-8 sm:w-9 sm:h-9 rounded-lg' : 'w-9 h-9 sm:w-10 sm:h-10 rounded-xl'} flex items-center justify-center bg-white/85 dark:bg-black/25 border border-black/5 shadow-2xs select-none shrink-0 ${isCompleted ? 'grayscale opacity-60' : ''}`}>
+                              <span className={viewMode === 'grid' ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl'}>
+                                {item.ikon || '📌'}
+                              </span>
+                            </div>
+                          )}
+                          {/* Küçük Durum Gösterge Noktası */}
+                          {isWeatherTriggered ? (
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white animate-ping" />
+                          ) : isExpired ? (
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white" title="Süresi doldu" />
+                          ) : isCompleted ? (
+                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-stone-700 ring-2 ring-white flex items-center justify-center text-[7px] text-white">✓</span>
+                          ) : null}
+                        </div>
+
+                        {/* Kart Başlığı ve Zaman Damgası */}
+                        <div className="min-w-0 flex-1">
+                          <h2
+                            contentEditable={!isCompleted && !isSelectMode}
+                            suppressContentEditableWarning={true}
+                            spellCheck={false}
+                            className={`font-semibold leading-snug tracking-tight outline-hidden break-words hyphens-auto w-full ${
+                              viewMode === 'grid' ? 'text-xs sm:text-sm' : 'text-[15px] sm:text-base'
+                            } ${
+                              isCompleted
+                                ? 'text-stone-500 line-through decoration-stone-500/70'
+                                : isExpired
+                                ? 'text-stone-800 cursor-text'
+                                : 'text-stone-900 cursor-text'
+                            }`}
+                            style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                (e.currentTarget as HTMLElement).blur();
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const newTitle = e.currentTarget.innerText?.trim();
+                              if (newTitle && newTitle !== item.baslik) {
+                                updateNoteTitle(
+                                  item.id,
+                                  newTitle,
+                                  item.calendarEventId || item.calendar_event_id,
+                                  item.ikon || '📌'
+                                );
+                              } else if (!newTitle) {
+                                e.currentTarget.innerText = item.baslik;
+                              }
+                            }}
+                          >
+                            {item.baslik}
+                          </h2>
+
+                          {item.createdAt && (
+                            <span className="text-[9px] sm:text-[10px] text-stone-400 dark:text-stone-500 font-mono tracking-tight select-none mt-0.5 block">
+                              {formatCreatedTime(item.createdAt, language)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Mobilde Hızlı Tek Dokunuş Tamamlama Butonu */}
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedCardIds((prev) =>
-                              prev.includes(item.id)
-                                ? prev.filter((id) => id !== item.id)
-                                : [...prev, item.id]
-                            );
+                            toggleCardCompleted(item.id);
                           }}
-                          className={`w-5 h-5 rounded-lg border flex items-center justify-center text-xs shrink-0 cursor-pointer transition-colors mt-0.5 ${
-                            isSelected
-                              ? 'bg-stone-900 border-stone-900 text-white'
-                              : 'border-stone-400 bg-white/70 hover:bg-white text-transparent'
-                          }`}
-                          title={isSelected ? "Seçimi kaldır" : "Seç"}
-                        >
-                          ✓
-                        </button>
-                      )}
-
-                      {/* İkon / Medya Rozeti */}
-                      <div className="relative shrink-0">
-                        {item.mediaId ? (
-                          <CardMediaThumbnail
-                            mediaId={item.mediaId}
-                            onClick={() => viewFullImage(item.mediaId!)}
-                          />
-                        ) : (
-                          <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center bg-white/80 dark:bg-black/15 border border-black/5 shadow-2xs select-none shrink-0 ${isCompleted ? 'grayscale opacity-60' : ''}`}>
-                            <span className="text-lg sm:text-2xl">
-                              {item.ikon || '📌'}
-                            </span>
-                          </div>
-                        )}
-                        {/* Küçük Durum Gösterge Noktası */}
-                        {isWeatherTriggered ? (
-                          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white animate-ping" />
-                        ) : isExpired ? (
-                          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white" title="Süresi doldu" />
-                        ) : isCompleted ? (
-                          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-stone-700 ring-2 ring-white flex items-center justify-center text-[7px] text-white">✓</span>
-                        ) : null}
-                      </div>
-
-                      {/* Kart Başlığı ve Zaman Damgası */}
-                      <div className="min-w-0 flex-1">
-                        <h2
-                          contentEditable={!isCompleted && !isSelectMode}
-                          suppressContentEditableWarning={true}
-                          spellCheck={false}
-                          className={`font-semibold text-sm sm:text-base leading-snug tracking-tight outline-hidden break-words hyphens-auto ${
+                          className={`${viewMode === 'grid' ? 'w-6.5 h-6.5' : 'sm:hidden w-8 h-8'} rounded-xl border flex items-center justify-center shrink-0 transition-all cursor-pointer active:scale-90 ${
                             isCompleted
-                              ? 'text-stone-500 line-through decoration-stone-500/70'
-                              : isExpired
-                              ? 'text-stone-800 cursor-text'
-                              : 'text-stone-900 cursor-text'
+                              ? 'bg-stone-800 border-stone-800 text-white shadow-xs'
+                              : 'border-stone-300 bg-white/95 text-stone-700 hover:text-stone-900 shadow-2xs'
                           }`}
-                          style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              (e.currentTarget as HTMLElement).blur();
-                            }
-                          }}
-                          onBlur={(e) => {
-                            const newTitle = e.currentTarget.innerText?.trim();
-                            if (newTitle && newTitle !== item.baslik) {
-                              updateNoteTitle(
-                                item.id,
-                                newTitle,
-                                item.calendarEventId || item.calendar_event_id,
-                                item.ikon || '📌'
-                              );
-                            } else if (!newTitle) {
-                              e.currentTarget.innerText = item.baslik;
-                            }
-                          }}
+                          title={isCompleted ? t.reopenTitle : t.completeTitle}
                         >
-                          {item.baslik}
-                        </h2>
+                          <span className={viewMode === 'grid' ? 'text-xs font-bold' : 'text-sm font-bold'}>✓</span>
+                        </button>
+                      </div>
 
-                        {item.createdAt && (
-                          <span className="text-[10px] text-stone-400 dark:text-stone-500 font-mono tracking-tight select-none mt-0.5 block">
-                            {formatCreatedTime(item.createdAt, language)}
-                          </span>
+                      {/* Kart Aksiyonları Araç Çubuğu */}
+                      <div className={`flex items-center gap-1 shrink-0 bg-white/95 dark:bg-black/40 backdrop-blur-xs rounded-xl border border-black/5 dark:border-white/10 shadow-2xs ${
+                        viewMode === 'grid'
+                          ? 'w-full justify-between p-0.5'
+                          : 'justify-end sm:justify-start p-1 self-end sm:self-start'
+                      }`}>
+                        {/* Kartı Düzenle Butonu (Kalem) */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingNote(item);
+                          }}
+                          className={`${viewMode === 'grid' ? 'w-6 h-6 sm:w-6.5 sm:h-6.5' : 'w-7.5 h-7.5'} rounded-lg flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-white active:scale-92 transition-all cursor-pointer`}
+                          title={language === 'tr' ? 'Kartı Düzenle' : 'Edit Card'}
+                        >
+                          <svg className={viewMode === 'grid' ? 'w-3 h-3' : 'w-3.5 h-3.5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+
+                        {/* Hatırlatıcı, Cihaz Takvimi ve Bildirim Düzenleme Butonu */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveReminderEditCardId(activeReminderEditCardId === item.id ? null : item.id);
+                          }}
+                          className={`${viewMode === 'grid' ? 'w-6 h-6 sm:w-6.5 sm:h-6.5' : 'w-7.5 h-7.5'} rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-92 ${
+                            activeReminderEditCardId === item.id
+                              ? 'bg-amber-500 text-white shadow-xs'
+                              : item.tarih_iso
+                              ? 'text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 shadow-2xs'
+                              : 'text-stone-600 hover:text-stone-900 hover:bg-white'
+                          }`}
+                          title={language === 'tr' ? 'Hatırlatıcı & Takvim' : 'Reminder & Calendar'}
+                        >
+                          <svg className={viewMode === 'grid' ? 'w-3 h-3' : 'w-3.5 h-3.5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </button>
+
+                        {/* Paylaş Butonu */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            shareNote(item);
+                          }}
+                          className={`${viewMode === 'grid' ? 'w-6 h-6 sm:w-6.5 sm:h-6.5' : 'w-7.5 h-7.5'} rounded-lg flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-white active:scale-92 transition-all cursor-pointer`}
+                          title={t.shareOrCopy}
+                        >
+                          <svg className={viewMode === 'grid' ? 'w-3 h-3' : 'w-3.5 h-3.5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.368 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                          </svg>
+                        </button>
+
+                        {/* Direkt Silme Butonu (Çöp Kutusu) */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            directDeleteNote(item.id);
+                          }}
+                          className={`${viewMode === 'grid' ? 'w-6 h-6 sm:w-6.5 sm:h-6.5' : 'w-7.5 h-7.5'} rounded-lg flex items-center justify-center text-stone-500 hover:text-red-600 hover:bg-red-50 active:scale-92 transition-all cursor-pointer`}
+                          title={t.deleteNoteTitle}
+                        >
+                          <svg className={viewMode === 'grid' ? 'w-3 h-3' : 'w-3.5 h-3.5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+
+                        {/* Masaüstünde Tamamlama Butonu (Tik) */}
+                        {viewMode !== 'grid' && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleCardCompleted(item.id);
+                            }}
+                            className={`hidden sm:flex w-7.5 h-7.5 rounded-lg border items-center justify-center transition-all cursor-pointer active:scale-92 ${
+                              isCompleted
+                                ? 'bg-stone-800 border-stone-800 text-white shadow-xs'
+                                : 'border-stone-300 bg-white/80 text-stone-600 hover:text-stone-900 hover:border-stone-400'
+                            }`}
+                            title={isCompleted ? t.reopenTitle : t.completeTitle}
+                          >
+                            <span className="text-xs font-bold">✓</span>
+                          </button>
                         )}
                       </div>
                     </div>
-
-                    {/* Kart Aksiyonları Araç Çubuğu (Mobilde Rahat Dokunulabilir) */}
-                    <div className="flex items-center gap-1 shrink-0 bg-white/90 dark:bg-black/40 backdrop-blur-xs p-1 rounded-xl border border-black/5 dark:border-white/10 shadow-2xs self-start">
-                      {/* Kartı Düzenle Butonu (Kalem) */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingNote(item);
-                        }}
-                        className="w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-white active:scale-92 transition-all cursor-pointer"
-                        title={language === 'tr' ? 'Kartı Düzenle' : 'Edit Card'}
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-
-                      {/* Hatırlatıcı, Cihaz Takvimi ve Bildirim Düzenleme Butonu */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveReminderEditCardId(activeReminderEditCardId === item.id ? null : item.id);
-                        }}
-                        className={`w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg flex items-center justify-center transition-all cursor-pointer active:scale-92 ${
-                          activeReminderEditCardId === item.id
-                            ? 'bg-amber-500 text-white shadow-xs'
-                            : item.tarih_iso
-                            ? 'text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 shadow-2xs'
-                            : 'text-stone-600 hover:text-stone-900 hover:bg-white'
-                        }`}
-                        title={language === 'tr' ? 'Hatırlatıcı & Takvim' : 'Reminder & Calendar'}
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </button>
-
-                      {/* Paylaş Butonu */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          shareNote(item);
-                        }}
-                        className="w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-white active:scale-92 transition-all cursor-pointer"
-                        title={t.shareOrCopy}
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                        </svg>
-                      </button>
-
-                      {/* Direkt Silme Butonu (Çöp Kutusu) */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          directDeleteNote(item.id);
-                        }}
-                        className="w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg flex items-center justify-center text-stone-500 hover:text-red-600 hover:bg-red-50 active:scale-92 transition-all cursor-pointer"
-                        title={t.deleteNoteTitle}
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-
-                      {/* Tamamlama Butonu (Tik) */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleCardCompleted(item.id);
-                        }}
-                        className={`w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg border flex items-center justify-center transition-all cursor-pointer active:scale-92 ${
-                          isCompleted
-                            ? 'bg-stone-800 border-stone-800 text-white shadow-xs'
-                            : 'border-stone-300 bg-white/80 text-stone-600 hover:text-stone-900 hover:border-stone-400'
-                        }`}
-                        title={isCompleted ? t.reopenTitle : t.completeTitle}
-                      >
-                        <span className="text-xs font-bold">✓</span>
-                      </button>
-                    </div>
-                  </div>
 
                   {/* Kart Gövdesi: Rozetler, Uyarılar ve Alt Görevler (Kartın Tam Genişliğini Kullanır) */}
                   <div className="w-full space-y-2">
@@ -3193,6 +3365,104 @@ export default function App() {
                       </div>
                     )}
 
+                    {/* 1. Çıkarılan Metrik ve Parametre Rozetleri (Extracted Entity Metrics) */}
+                    {item.extracted_metrics && item.extracted_metrics.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-0.5">
+                        {item.extracted_metrics.map((m, mIdx) => (
+                          <div
+                            key={mIdx}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-stone-900/10 dark:bg-white/10 text-stone-900 dark:text-stone-100 text-[11px] font-medium border border-black/5 dark:border-white/10"
+                          >
+                            <span className="opacity-70 text-[10px] uppercase tracking-wider">{m.label}:</span>
+                            <span className="font-bold">{m.value} {m.unit}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 2. Kilometre Taşı İlerleme Zinciri (Sequential Milestone Chain) */}
+                    {item.milestone_chain && item.milestone_chain.steps.length > 0 && (
+                      <div className="mt-1 p-2 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-stone-800 dark:text-stone-200 mb-1.5">
+                          <span className="flex items-center gap-1">
+                            <span>⛓️</span>
+                            <span>{item.milestone_chain.chainName}</span>
+                          </span>
+                          <span className="text-[10px] text-stone-500 font-mono">
+                            Adım {item.milestone_chain.currentStepIndex + 1}/{item.milestone_chain.steps.length}
+                          </span>
+                        </div>
+
+                        {/* Yatay Adım Çizgisi */}
+                        <div className="space-y-1.5">
+                          {item.milestone_chain.steps.map((step, sIdx) => (
+                            <div
+                              key={sIdx}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleMilestoneStep(item.id, sIdx);
+                              }}
+                              className="flex items-center gap-2 text-xs py-1 px-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer transition-colors"
+                            >
+                              <span
+                                className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 transition-colors ${
+                                  step.isCompleted
+                                    ? 'bg-emerald-600 text-white shadow-2xs'
+                                    : sIdx === item.milestone_chain?.currentStepIndex
+                                    ? 'border-2 border-indigo-600 bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold'
+                                    : 'border border-stone-400 text-stone-500 bg-white/70 dark:bg-stone-800'
+                                }`}
+                              >
+                                {step.isCompleted ? '✓' : sIdx + 1}
+                              </span>
+                              <span
+                                className={`flex-1 text-[11px] select-none ${
+                                  step.isCompleted
+                                    ? 'line-through text-stone-400 dark:text-stone-500'
+                                    : sIdx === item.milestone_chain?.currentStepIndex
+                                    ? 'font-bold text-stone-900 dark:text-white'
+                                    : 'text-stone-700 dark:text-stone-300'
+                                }`}
+                              >
+                                {step.title}
+                              </span>
+                              {step.targetText && (
+                                <span className="text-[10px] text-stone-500 font-mono shrink-0">
+                                  {step.targetText}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 3. Proaktif Sıradaki Eylem Önerisi (Next-Action Suggestion) */}
+                    {item.next_action && (
+                      <div className="mt-1 p-2 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/15 border border-indigo-500/20 text-indigo-950 dark:text-indigo-100 flex items-center justify-between gap-2 text-xs">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1 font-semibold text-[11px] text-indigo-700 dark:text-indigo-300">
+                            <span>⚡ Sıradaki Öneri:</span>
+                            <span className="truncate">{item.next_action.title}</span>
+                          </div>
+                          <p className="text-[10px] text-indigo-900/70 dark:text-indigo-200/70 truncate mt-0.5">
+                            {item.next_action.description}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAdoptNextAction(item.next_action!);
+                          }}
+                          className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-[11px] rounded-lg shadow-2xs cursor-pointer active:scale-95 transition-all shrink-0"
+                          title="Bu öneriyi yeni görev olarak ekle"
+                        >
+                          + Ekle
+                        </button>
+                      </div>
+                    )}
+
                     {/* Alt Görevler: Görsel İlerleme Çubuğu ve Liste */}
                     {item.action_items && item.action_items.length > 0 && (() => {
                       const completedCount = item.action_items.filter(t => t.is_completed).length;
@@ -3259,7 +3529,8 @@ export default function App() {
                   </div>
                 </div>
               );
-            })
+            })}
+          </div>
           )}
         </section>
 
@@ -3874,6 +4145,8 @@ export default function App() {
         onSyncDrive={syncFromDrive}
         isSyncingDrive={isSyncingDrive}
         driveSyncTime={driveSyncTime}
+        viewMode={viewMode}
+        onToggleViewMode={toggleViewMode}
       />
     </div>
   );

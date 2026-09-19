@@ -123,6 +123,9 @@ export interface Translations {
   manualModalTitlePlaceholder: string;
   syncToGoogleCalendar: string;
   saveButton: string;
+  singleView: string;
+  dualGridView: string;
+  toggleViewMode: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -242,6 +245,9 @@ export const translations: Record<Language, Translations> = {
     manualModalTitlePlaceholder: 'Not başlığı (örn: Randevu, Toplantı, İlaç)',
     syncToGoogleCalendar: "Google Takvim'e işle",
     saveButton: 'Kaydet',
+    singleView: 'Tekli Görünüm',
+    dualGridView: 'İkili Izgara',
+    toggleViewMode: 'Görünümü Değiştir (Tekli / İkili Izgara)',
   },
   en: {
     appName: 'Notivia',
@@ -359,5 +365,8 @@ export const translations: Record<Language, Translations> = {
     manualModalTitlePlaceholder: 'Note title (e.g., Meeting, Dentist, Pill)',
     syncToGoogleCalendar: 'Sync to Google Calendar',
     saveButton: 'Save',
+    singleView: 'Single Column',
+    dualGridView: 'Dual Grid',
+    toggleViewMode: 'Toggle View Mode (Single / Dual Grid)',
   },
 };

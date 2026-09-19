@@ -1,4 +1,8 @@
 import type { NotiviaParsedNote, NotiviaSimpleNote } from '../types/notivia.ts';
+import { normalizePhoneticJargon } from './phoneticNormalizer.ts';
+import { extractEntityMetrics } from './entityMetricExtractor.ts';
+import { detectMilestoneChain } from './milestoneChainEngine.ts';
+import { generateNextActionSuggestion } from './nextActionEngine.ts';
 import {
   getNextMonthEndTargetDate,
   calculateOffsetIso,
@@ -126,8 +130,9 @@ export function dispatchDomainRule(
     };
   }
 
-  // Çalışmıyorum / Kişisel Yaşam tespiti
+  // Genel / Kişisel Yaşam & Ev Rutini tespiti
   if (
+    domain === 'GENEL' ||
     domain === 'CALISMIYORUM' ||
     /(taahhüt|fatura|abonelik|su arıtma|kombi bakımı|gss|işkur|aidat|kira)/i.test(text)
   ) {
@@ -3216,7 +3221,8 @@ export function extractSimpleNoteFromText(
   pastNotes?: any[],
   userDomain?: string
 ): NotiviaSimpleNote {
-  const cleanInput = input.trim();
+  // 1. Fonetik Hata ve Sesli Dikte Normalizasyonu
+  const cleanInput = normalizePhoneticJargon(input.trim());
   const lower = cleanInput.toLowerCase();
   const baseDate = refDatetime ? new Date(refDatetime) : new Date();
 
@@ -3404,8 +3410,8 @@ export function extractSimpleNoteFromText(
       if (eduResult) return enrichWithPredictiveGraph(eduResult, cleanInput);
       const studentResult = parseAcademicStudentSuiteNote(cleanInput, baseDate);
       if (studentResult) return enrichWithPredictiveGraph(studentResult, cleanInput);
-    } else if (activeDomain === 'CALISMIYORUM') {
-      const domainRuleResult = dispatchDomainRule('CALISMIYORUM', cleanInput, zaman, tarih_iso);
+    } else if (activeDomain === 'GENEL' || activeDomain === 'CALISMIYORUM') {
+      const domainRuleResult = dispatchDomainRule('GENEL', cleanInput, zaman, tarih_iso);
       if (domainRuleResult) return enrichWithPredictiveGraph(domainRuleResult, cleanInput);
       const personalRoutineResult = parsePersonalRoutineCareNote(cleanInput, baseDate);
       if (personalRoutineResult) return enrichWithPredictiveGraph(personalRoutineResult, cleanInput);
@@ -4129,6 +4135,30 @@ function enrichWithPredictiveGraph(note: NotiviaSimpleNote, input: string): Noti
   }
   if (predictive.renk && (!result.renk || result.renk === '#FEF3C7' || result.renk.startsWith('#F5'))) {
     result.renk = predictive.renk;
+  }
+
+  // 6. Sayısal Parametre ve Varlık Çıkarımı (Entity & Metric Extraction)
+  if (!result.extracted_metrics || result.extracted_metrics.length === 0) {
+    const metrics = extractEntityMetrics(input);
+    if (metrics.length > 0) {
+      result.extracted_metrics = metrics;
+    }
+  }
+
+  // 7. Çok Aşamalı Süreç Zinciri (Sequential Milestone Chain)
+  if (!result.milestone_chain) {
+    const chain = detectMilestoneChain(input, result.tarih_iso ? new Date(result.tarih_iso) : new Date());
+    if (chain) {
+      result.milestone_chain = chain;
+    }
+  }
+
+  // 8. Proaktif Bir Sonraki Adım Önerisi (Next Action Dispatcher)
+  if (!result.next_action) {
+    const nextAction = generateNextActionSuggestion(result.baslik, undefined, input);
+    if (nextAction) {
+      result.next_action = nextAction;
+    }
   }
 
   return result;

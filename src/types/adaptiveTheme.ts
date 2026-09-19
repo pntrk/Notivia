@@ -21,7 +21,7 @@ export const DOMAIN_KEYWORDS: Record<ProfessionDomain, RegExp> = {
   HAVACILIK: /(uçuş|kokpit|ofp|metar|notam|dispatch|fdp|walkaround|fms|brifing|pilot)/i,
   KAMU: /(sekreter|yönetici|yonetici|insan kaynakları|insan kaynaklari|ik\b|işe giriş|ise giris|işten çıkış|isten cikis|deneme süresi|deneme suresi|brifing|vip|karşılama|karsilama|ebys|cimer|memur|kamu)/i,
   ZIRAAT: /(sulama serinliği|çiçek suvar|orkide daldırma|hobi bahçe|budama|peyzaj|botanik|ziraat)/i,
-  GENEL: /.*/
+  GENEL: /(taahhüt|abonelik|gss|işkur|su arıtma|kombi bakımı|derin dondurucu|ecza dolabı|kira|aidat|iş başvurusu|mülakat|cv güncelle|özgeçmiş|emekli|günlük rutin|fatura)/i
 };
 
 export function detectDomainFromText(text: string, fallback: ProfessionDomain = 'GENEL'): ProfessionDomain {
@@ -30,15 +30,17 @@ export function detectDomainFromText(text: string, fallback: ProfessionDomain = 
   // 1. Öncelikli 0ms Jargon Radar kontrolü (exclusive + supporting puanlama)
   const radar = detectDomainFromJargon(text, fallback);
   if (radar.confidence >= 0.4 && radar.detectedDomain !== 'GENEL') {
-    return radar.detectedDomain;
+    return radar.detectedDomain === 'CALISMIYORUM' ? 'GENEL' : radar.detectedDomain;
   }
 
   // 2. Yedek regex taraması
   for (const [domain, regex] of Object.entries(DOMAIN_KEYWORDS)) {
     if (domain !== 'GENEL' && regex.test(text)) {
-      return domain as ProfessionDomain;
+      const res = domain as ProfessionDomain;
+      return res === 'CALISMIYORUM' ? 'GENEL' : res;
     }
   }
 
-  return radar.detectedDomain || fallback;
+  const detected = radar.detectedDomain || fallback;
+  return detected === 'CALISMIYORUM' ? 'GENEL' : detected;
 }
