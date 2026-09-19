@@ -39,18 +39,21 @@ const DOMAIN_RULES: DomainRule[] = [
       'puantaj', 'zümre', 'zümresi', 'nöbet defteri', 'yazılı kağıdı',
       'taşımalı yemek', 'öğretmenler odası', 'kazanım analizi', 'barem',
       'tefbis', 'okul aile birliği', 'bina sınav komisyonu', 'lgs görev',
-      'yks görev', 'e-kurs', 'dyk', 'norm kadro', 'ders dağıtım'
+      'yks görev', 'e-kurs', 'dyk', 'norm kadro', 'ders dağıtım',
+      'ram yönlendirme', 'bep toplantısı', 'lgs deneme', 'yks deneme',
+      'ortak yazılı mazeret', 'mazeret sınavı', 'zümre başkanı'
     ],
     supportingKeywords: [
       'okul', 'sınav', 'veli', 'müdür', 'müdür yardımcısı', 'nöbet',
       'ders', 'teneffüs', 'karne', 'tatil', 'idare', 'tutanak', 'öğrenci',
-      'bağış', 'sosyal etkinlik'
+      'bağış', 'sosyal etkinlik', 'karneler', 'ödev'
     ],
     implicitTimeHooks: [
       { keyword: 'nöbet', hour: 8, minute: 0 },
       { keyword: 'zümre', hour: 15, minute: 30 },
       { keyword: 'ek ders', hour: 17, minute: 0 },
       { keyword: 'tefbis', hour: 16, minute: 0 },
+      { keyword: 'bep', hour: 14, minute: 30 },
     ]
   },
   {
@@ -62,17 +65,24 @@ const DOMAIN_RULES: DomainRule[] = [
       'mazeret dilekçesi', 'ihtiyati haciz', 'tensip', 'celse', 'icra takibi',
       'esastan ret', 'gerekçeli karar', 'baro', 'bilirkişi raporu',
       'arabuluculuk', 'arabulucu', 'uzlaştırma', 'uzlaştırmacı',
-      'kıymet takdiri', '103 davetiyesi', 'fiili haciz', 'son tutanak'
+      'kıymet takdiri', '103 davetiyesi', 'fiili haciz', 'son tutanak',
+      '89/1', '89/2', '89/3', 'haciz ihbarnamesi', 'kıymet takdiri itirazı',
+      'e-satış', 'mezat', 'sıra cetveli', 'icra edilebilirlik şerhi',
+      'cmk 100', 'cmk 101', 'tutukluluğa itiraz', 'kyok', 'kovuşturmaya yer olmadığı',
+      'takipsizlik kararı', 'segbis', 'istintak'
     ],
     supportingKeywords: [
       'duruşma', 'adliye', 'mahkeme', 'savcı', 'savcılık', 'hâkim', 'hakim',
-      'dava', 'müvekkil', 'tutanak', 'keşif', 'ihtarname', 'haciz', 'satış'
+      'dava', 'müvekkil', 'tutanak', 'keşif', 'ihtarname', 'haciz', 'satış',
+      'itiraz', 'dilekçe', 'tahliye'
     ],
     implicitTimeHooks: [
       { keyword: 'duruşma', hour: 9, minute: 30 },
       { keyword: 'keşif', hour: 11, minute: 0 },
       { keyword: 'uyap', hour: 16, minute: 0 },
       { keyword: 'arabulucu', hour: 14, minute: 0 },
+      { keyword: '89/1', hour: 15, minute: 0 },
+      { keyword: 'kyok', hour: 16, minute: 30 },
     ]
   },
   {
@@ -83,16 +93,21 @@ const DOMAIN_RULES: DomainRule[] = [
       'smmm', 'ymm', 'kdv', 'muhsgk', 'muhtasar', 'geçici vergi', 'e-defter',
       'edefter', 'berat', 'sgk bildirgesi', 'ba-bs', 'babs', 'mizan',
       'stopaj', 'amortisman', 'vergi dairesi', 'luca', 'zirve',
-      'kdv iadesi', 'karşıt inceleme', 'bağımsız denetim', 'kgk', 'çalışma kağıdı'
+      'kdv iadesi', 'karşıt inceleme', 'bağımsız denetim', 'kgk', 'çalışma kağıdı',
+      'vuk geçici 33', 'enflasyon düzeltmesi', 'tevkifat', 'kdv tevkifatı',
+      'tevkifatlı fatura', '9/10 tevkifat', '5/10 tevkifat', 'gekap',
+      'ba-bs mutabakatı', 'tarhiyat öncesi uzlaşma', 'vergi mahkemesi dava',
+      'işe giriş bildirgesi', 'işten çıkış bildirgesi', 'eksik gün kodu', 'kıdem tavanı'
     ],
     supportingKeywords: [
       'fatura', 'ekstre', 'mükellef', 'beyanname', 'bordro', 'bağkur',
-      'kasa', 'gelir tablosu', 'tahakkuk', 'faturasını', 'ödeme', 'tasdik'
+      'kasa', 'gelir tablosu', 'tahakkuk', 'faturasını', 'ödeme', 'tasdik', 'vergi'
     ],
     implicitTimeHooks: [
       { keyword: 'beyanname', hour: 17, minute: 0 },
       { keyword: 'kdv', hour: 16, minute: 30 },
       { keyword: 'sgk', hour: 18, minute: 0 },
+      { keyword: 'enflasyon', hour: 15, minute: 0 },
     ]
   },
   {
@@ -104,17 +119,21 @@ const DOMAIN_RULES: DomainRule[] = [
       'sbar', 'otoklav', 'dikiş alma', 'pansuman', 'hemogram', 'biyokimya',
       'its karekod', 'medula', 'endodonti', 'kanal tedavisi',
       'gebe izlem', 'bebek izlem', 'asm', 'negatif performans', 'hyp',
-      'paramedik', '112 acil', 'narkotik sayım'
+      'paramedik', '112 acil', 'narkotik sayım',
+      'aydınlatılmış onam', 'kırmızı alan', 'sarı alan', 'cpr resüsitasyon',
+      'cross-match', 'transfüzyon reaksiyon', 'renkli reçete', 'yeşil reçete',
+      'kırmızı reçete devir', 'majistral formül', 'medula fatura'
     ],
     supportingKeywords: [
       'hasta', 'ameliyat', 'ilaç', 'reçete', 'klinik', 'tahlil', 'aşı',
-      'damla', 'poliklinik', 'doktor', 'hemşire', 'eczane', 'röntgen', 'ambulans'
+      'damla', 'poliklinik', 'doktor', 'hemşire', 'eczane', 'röntgen', 'ambulans', 'kan'
     ],
     implicitTimeHooks: [
       { keyword: 'pansuman', hour: 10, minute: 0 },
       { keyword: 'ameliyat', hour: 8, minute: 30 },
       { keyword: 'konsültasyon', hour: 14, minute: 0 },
       { keyword: 'izlem', hour: 10, minute: 30 },
+      { keyword: 'transfüzyon', hour: 11, minute: 0 },
     ]
   },
   {
@@ -126,17 +145,22 @@ const DOMAIN_RULES: DomainRule[] = [
       'trafo', 'pano', 'hidrostatik test', 'prod deploy', 'staging', 'hotfix',
       'semver', 'pull request', 'db migration', 'vibrasyon analizi',
       'isg', 'ibys', 'onaylı defter', 'ramak kala', 'yapı denetim',
-      'donatı vizesi', 'demir teslim', 'şantiye günlüğü'
+      'donatı vizesi', 'demir teslim', 'şantiye günlüğü',
+      'geoteknik', 'zemin etüdü', 'spt vuruş', 'plaka yükleme', 'grobeton',
+      'yeşil defter', 'ataşman', 'röleve', 'hakediş pursantajı', 'topraklama meger',
+      'trafo yağ dielektrik', 'kaçak akım rölesi', '30ma', '300ma', 'owasp',
+      'canary release', 'rollback planı', 'p1 incident post-mortem'
     ],
     supportingKeywords: [
       'şantiye', 'arıza', 'kalibrasyon', 'bakım', 'kod', 'deploy',
-      'sunucu', 'test', 'donatı', 'pompa', 'basınç', 'şalter', 'baret'
+      'sunucu', 'test', 'donatı', 'pompa', 'basınç', 'şalter', 'baret', 'beton', 'topraklama'
     ],
     implicitTimeHooks: [
       { keyword: 'beton', hour: 7, minute: 30 },
       { keyword: 'deploy', hour: 11, minute: 0 },
       { keyword: 'kırım', hour: 10, minute: 0 },
       { keyword: 'isg', hour: 10, minute: 0 },
+      { keyword: 'spt', hour: 9, minute: 0 },
     ]
   },
   {
@@ -300,6 +324,90 @@ const DOMAIN_RULES: DomainRule[] = [
       { keyword: 'deneme', hour: 10, minute: 0 },
       { keyword: 'mtv', hour: 16, minute: 0 },
       { keyword: 'fatura', hour: 15, minute: 0 },
+    ]
+  },
+  {
+    domain: 'VETERINER',
+    defaultIcon: '🐾',
+    defaultColor: '#CCFBF1',
+    exclusiveKeywords: [
+      'petvet', 'mikroçip', 'kuduz titrasyon', 'iç parazit', 'dış parazit',
+      'karma aşı', 'kısırlaştırma post-op', 'lökosit', 'hemogram kan sayımı',
+      'veteriner hekim', 'aşı karnesi', 'traş anestezi', 'kedi pansiyon',
+      'panleukopeni', 'parvoviral', 'fip', 'leishmania', 'anestezi onam'
+    ],
+    supportingKeywords: [
+      'veteriner', 'kedi', 'köpek', 'aşı', 'klinik', 'tedavi', 'ameliyat',
+      'parazit', 'pansuman', 'mama', 'ilaç', 'damla', 'hayvan'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'aşı', hour: 10, minute: 0 },
+      { keyword: 'kısırlaştırma', hour: 9, minute: 0 },
+      { keyword: 'pansuman', hour: 11, minute: 30 },
+      { keyword: 'petvet', hour: 14, minute: 0 }
+    ]
+  },
+  {
+    domain: 'EMLAK',
+    defaultIcon: '🏢',
+    defaultColor: '#FEF3C7',
+    exclusiveKeywords: [
+      'taşınmaz ticareti', 'yetki belgesi', 'web-tapu', 'webtapu', 'tapu harcı',
+      'dask poliçesi', 'ipotek fek', 'rayiç bedel', 'cayma akçesi',
+      'emlak beyanı', 'tahliye taahhütnamesi', 'döner sermaye bedeli',
+      'kat irtifakı', 'kat mülkiyeti', 'iskan raporu', 'imar durumu', 'ada parsel'
+    ],
+    supportingKeywords: [
+      'tapu', 'kira', 'kiracı', 'daire', 'arsa', 'konut', 'satış', 'kiralık',
+      'satılık', 'komisyon', 'gayrimenkul', 'emlakçı', 'noter', 'ipotek'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'tapu', hour: 10, minute: 30 },
+      { keyword: 'sunum', hour: 14, minute: 0 },
+      { keyword: 'belediye', hour: 11, minute: 0 },
+      { keyword: 'dask', hour: 15, minute: 0 }
+    ]
+  },
+  {
+    domain: 'DENIZCILIK',
+    defaultIcon: '⚓',
+    defaultColor: '#CFFAFE',
+    exclusiveKeywords: [
+      'psc denetimi', 'port state control', 'ism kodu', 'draft survey',
+      'sintine jurnali', 'balast suyu', 'oow', 'seyir vardiyası', 'demirleme',
+      'borda', 'çarmıh', 'gemi adamı cüzdanı', 'slop tank', 'marpol', 'solas',
+      'iskele borda', 'sancak borda', 'dümen dolabı', 'baş itici'
+    ],
+    supportingKeywords: [
+      'kaptan', 'gemi', 'liman', 'deniz', 'demir', 'vardiya', 'yakıt',
+      'kumanya', 'bunker', 'sefer', 'yanaşma', 'kalkış', 'radar'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'denetim', hour: 9, minute: 0 },
+      { keyword: 'draft', hour: 10, minute: 0 },
+      { keyword: 'bunker', hour: 14, minute: 30 },
+      { keyword: 'vardiya', hour: 8, minute: 0 }
+    ]
+  },
+  {
+    domain: 'GUMRUK',
+    defaultIcon: '📦',
+    defaultColor: '#E0E7FF',
+    exclusiveKeywords: [
+      'atr dolaşım belgesi', 'menşe şahadetnamesi', 'antrepo beyannamesi',
+      'supalan muayene', 'kırmızı hat', 'sarı hat', 'yeşil hat', 'mavi hat',
+      'konşimento', 'bill of lading', 'ordino teslimi', 'gümrük müşaviri',
+      'dahilde işleme', 'dii̇b', 'gti̇p tespiti', 'ötv teminatı', 'antrepo devir'
+    ],
+    supportingKeywords: [
+      'gümrük', 'ithalat', 'ihracat', 'beyanname', 'konteyner', 'liman',
+      'antrepo', 'ordino', 'muayene', 'tahakkuk', 'navlun', 'vergi'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'muayene', hour: 10, minute: 0 },
+      { keyword: 'antrepo', hour: 11, minute: 30 },
+      { keyword: 'ordino', hour: 14, minute: 0 },
+      { keyword: 'kırmızı hat', hour: 13, minute: 30 }
     ]
   }
 ];

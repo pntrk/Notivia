@@ -17,7 +17,11 @@ export type ProfessionDomain =
   | 'KUAFOR'
   | 'HAVACILIK'
   | 'KAMU'
-  | 'ZIRAAT';
+  | 'ZIRAAT'
+  | 'VETERINER'
+  | 'EMLAK'
+  | 'DENIZCILIK'
+  | 'GUMRUK';
 
 export interface ActionButtonConfig {
   id: string;
@@ -320,6 +324,70 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
     ]
   },
 
+  VETERINER: {
+    domain: 'VETERINER',
+    displayName: 'Veteriner Hekim',
+    bgCard: 'bg-teal-50/75 border-teal-200',
+    borderAccent: 'border-l-teal-600',
+    badgeBg: 'bg-teal-100',
+    badgeText: 'text-teal-800',
+    btnPrimaryBg: 'bg-teal-700 hover:bg-teal-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'petvet_chip', label: 'Petvet Mikroçip Kaydı', icon: '🐾', actionType: 'COPY_TEMPLATE' },
+      { id: 'rabies_titer', label: 'Kuduz Titrasyon (3 Ay)', icon: '💉', actionType: 'TIMER' },
+      { id: 'postop_antibiotic', label: 'Post-Op Antibiyotik', icon: '💊', actionType: 'TIMER' }
+    ]
+  },
+
+  EMLAK: {
+    domain: 'EMLAK',
+    displayName: 'Gayrimenkul & Emlak',
+    bgCard: 'bg-amber-50/75 border-amber-200',
+    borderAccent: 'border-l-amber-600',
+    badgeBg: 'bg-amber-100',
+    badgeText: 'text-amber-800',
+    btnPrimaryBg: 'bg-amber-700 hover:bg-amber-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'webtapu_submit', label: 'Web-Tapu Harç Mesajı', icon: '🏢', actionType: 'WHATSAPP' },
+      { id: 'dask_renewal', label: 'DASK & Rayiç Bedel', icon: '📑', actionType: 'COPY_TEMPLATE' },
+      { id: 'mortgage_release', label: 'İpotek Fek Yazısı', icon: '🏛️', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
+
+  DENIZCILIK: {
+    domain: 'DENIZCILIK',
+    displayName: 'Denizcilik & Gemi',
+    bgCard: 'bg-cyan-50/75 border-cyan-200',
+    borderAccent: 'border-l-cyan-600',
+    badgeBg: 'bg-cyan-100',
+    badgeText: 'text-cyan-800',
+    btnPrimaryBg: 'bg-cyan-700 hover:bg-cyan-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'psc_check', label: 'PSC Denetim Kontrolü', icon: '⚓', actionType: 'LOTO_CHECK' },
+      { id: 'draft_survey', label: 'Draft Survey Yük Hesabı', icon: '🚢', actionType: 'COPY_TEMPLATE' },
+      { id: 'ballast_log', label: 'Sintine & Balast Jurnali', icon: '🌊', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
+
+  GUMRUK: {
+    domain: 'GUMRUK',
+    displayName: 'Gümrük & Dış Ticaret',
+    bgCard: 'bg-indigo-50/75 border-indigo-200',
+    borderAccent: 'border-l-indigo-600',
+    badgeBg: 'bg-indigo-100',
+    badgeText: 'text-indigo-800',
+    btnPrimaryBg: 'bg-indigo-700 hover:bg-indigo-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'red_line_inspect', label: 'Kırmızı Hat Fiziki Muayene', icon: '📦', actionType: 'LOTO_CHECK' },
+      { id: 'ordino_handover', label: 'Ordino & Konşimento Teslim', icon: '📑', actionType: 'COPY_TEMPLATE' },
+      { id: 'atr_origin', label: 'ATR & Menşe Belgesi', icon: '🌐', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
+
   GENEL: {
     domain: 'GENEL',
     displayName: 'Genel',
@@ -350,18 +418,22 @@ export const WORK_DOMAIN_OPTIONS: WorkDomainOption[] = [
   { id: 'SADE', label: 'Sade Not (Motorsuz)', sublabel: 'Bilişsel motorlar kapalı; yalnızca söylediğiniz ham metni doğrudan not olarak kaydeder', icon: '📝', category: 'ozel' },
   { id: 'GENEL', label: 'Genel Yaşam', sublabel: 'Kişisel yaşam, ev, fatura & kira, abonelikler, alışveriş ve günlük rutinler', icon: '🏠', category: 'ozel' },
   { id: 'OGRENCI', label: 'Öğrenci', sublabel: 'Vize/final sınavları, ders kaydı, ödev teslimi, burs/KYK', icon: '🎓', category: 'ozel' },
-  { id: 'HUKUK', label: 'Hukuk & Adalet', sublabel: 'Avukat, Hakim, Noter (UYAP, duruşma, tebligat öncelikli)', icon: '⚖️', category: 'meslek' },
-  { id: 'FINANS', label: 'Mali Müşavir & Finans', sublabel: 'SMMM, Muhasebe (KDV, SGK, e-Defter, beyanname öncelikli)', icon: '📊', category: 'meslek' },
-  { id: 'SAGLIK', label: 'Sağlık, Klinik & Tıp', sublabel: 'Doktor, Hemşire, Eczacı (SBAR, order, soğuk zincir öncelikli)', icon: '🩺', category: 'meslek' },
-  { id: 'EGITIM', label: 'Eğitim & Okul Yönetimi', sublabel: 'Öğretmen, Müdür, Akademisyen (e-Okul, sınav okuma, KBS)', icon: '📚', category: 'meslek' },
-  { id: 'TEKNIK', label: 'Mühendislik & Teknik', sublabel: 'İnşaat, Elektrik, Makine, Yazılım (Beton, LOTO, deploy)', icon: '🏗️', category: 'meslek' },
-  { id: 'SAVUNMA', label: 'Savunma & Emniyet', sublabel: 'Polis, İtfaiye, Asker (Gözaltı, SCBA, içtima, tekmil)', icon: '👮', category: 'meslek' },
-  { id: 'LOJISTIK', label: 'Lojistik & Otomotiv', sublabel: 'Ağır Vasıta Şoförü, Oto Tamircisi (Takograf, muayene, akü)', icon: '🚛', category: 'meslek' },
+  { id: 'HUKUK', label: 'Hukuk & Adalet', sublabel: 'Avukat, Hakim, Noter, Arabulucu (UYAP, duruşma, 89/1, tebligat öncelikli)', icon: '⚖️', category: 'meslek' },
+  { id: 'FINANS', label: 'Mali Müşavir & Finans', sublabel: 'SMMM, Muhasebe (KDV tevkifatı, VUK 33, SGK, e-Defter, beyanname)', icon: '📊', category: 'meslek' },
+  { id: 'SAGLIK', label: 'Sağlık, Klinik & Tıp', sublabel: 'Doktor, Hemşire, Eczacı (SBAR, aydınlatılmış onam, kan transfüzyon)', icon: '🩺', category: 'meslek' },
+  { id: 'EGITIM', label: 'Eğitim & Okul Yönetimi', sublabel: 'Öğretmen, Müdür, Akademisyen (e-Okul, BEP, TEFBİS, sınav okuma, KBS)', icon: '📚', category: 'meslek' },
+  { id: 'TEKNIK', label: 'Mühendislik & Şantiye', sublabel: 'İnşaat, Elektrik, Makine, Yazılım (SPT zemin, 30mA kaçak akım, LOTO, deploy)', icon: '🏗️', category: 'meslek' },
+  { id: 'VETERINER', label: 'Veteriner & Hayvan Sağlığı', sublabel: 'Klinik Hekim (Petvet mikroçip, kuduz titrasyon, aşı takvimi, post-op)', icon: '🐾', category: 'meslek' },
+  { id: 'EMLAK', label: 'Gayrimenkul & Emlak', sublabel: 'Emlak Danışmanı (Yetki belgesi, Web-Tapu harç, DASK, ipotek fek)', icon: '🏢', category: 'meslek' },
+  { id: 'GUMRUK', label: 'Gümrük & Dış Ticaret', sublabel: 'Gümrük Müşaviri (Kırmızı hat muayene, ATR, konşimento, ordino teslim)', icon: '📦', category: 'meslek' },
+  { id: 'DENIZCILIK', label: 'Denizcilik & Gemi İdaresi', sublabel: 'Kaptan, Gemi Zabitleri (PSC denetimi, ISM, draft survey, balast jurnali)', icon: '⚓', category: 'meslek' },
+  { id: 'SAVUNMA', label: 'Savunma & Emniyet', sublabel: 'Polis, İtfaiye, Asker (Gözaltı fezleke, SCBA, içtima, tekmil)', icon: '👮', category: 'meslek' },
+  { id: 'LOJISTIK', label: 'Lojistik & Otomotiv', sublabel: 'Ağır Vasıta Şoförü, Oto Tamircisi (Takograf, muayene, CMR, akü)', icon: '🚛', category: 'meslek' },
   { id: 'TICARET', label: 'Ticaret, Satış & Esnaf', sublabel: 'Satış Danışmanı, Kasiyer, Dükkan Sahibi (Teklif, kasa, Z raporu)', icon: '💼', category: 'meslek' },
-  { id: 'GASTRONOMI', label: 'Gastronomi & Mutfak', sublabel: 'Şef, Aşçı, Mutfak Ekibi (Mise en place, HACCP, tadım)', icon: '👨‍🍳', category: 'meslek' },
+  { id: 'GASTRONOMI', label: 'Gastronomi & Mutfak', sublabel: 'Şef, Aşçı, Mutfak Ekibi (Mise en place, HACCP, soğuk oda, tadım)', icon: '👨‍🍳', category: 'meslek' },
   { id: 'KUAFOR', label: 'Kuaför & Güzellik', sublabel: 'Saç Tasarım, Kuaför, Renk Uzmanı (Dip açma, keratin, oryal)', icon: '✂️', category: 'meslek' },
   { id: 'HAVACILIK', label: 'Havacılık & Kokpit', sublabel: 'Pilot, Uçuş Operasyon (OFP, METAR, FDP dinlenme)', icon: '✈️', category: 'meslek' },
-  { id: 'KAMU', label: 'Kamu & Kurumsal Ofis', sublabel: 'Devlet Memuru, İK, Bürokrasi (EBYS, CİMER, doğrudan temin)', icon: '🗂️', category: 'meslek' },
+  { id: 'KAMU', label: 'Kamu & Kurumsal Ofis', sublabel: 'Devlet Memuru, İK, Bürokrasi (EBYS, CİMER, doğrudan temin 22/d)', icon: '🗂️', category: 'meslek' },
   { id: 'ZIRAAT', label: 'Ziraat & Botanik', sublabel: 'Bahçıvan, Peyzaj, Çiçekçi (Güneş kuralı, sulama serinliği)', icon: '🌿', category: 'meslek' },
 ];
 
@@ -373,25 +445,37 @@ export function detectDomainFromNote(note: { ikon?: string; baslik?: string; ano
     return 'SADE';
   }
 
+  if (icon === '🐾' || text.includes('petvet') || text.includes('mikroçip') || text.includes('kuduz titrasyon') || text.includes('veteriner') || text.includes('kedi aşı') || text.includes('köpek aşı') || text.includes('parazit')) {
+    return 'VETERINER';
+  }
+  if (icon === '🏢' || text.includes('web-tapu') || text.includes('webtapu') || text.includes('dask') || text.includes('ipotek fek') || text.includes('taşınmaz ticareti') || text.includes('rayiç bedel') || text.includes('tapu harcı') || text.includes('cayma akçesi')) {
+    return 'EMLAK';
+  }
+  if (icon === '⚓' || icon === '🚢' || text.includes('psc denetim') || text.includes('draft survey') || text.includes('sintine') || text.includes('balast') || text.includes('gemi') || text.includes('kaptan') || text.includes('denizcilik')) {
+    return 'DENIZCILIK';
+  }
+  if (icon === '📦' || text.includes('kırmızı hat') || text.includes('antrepo') || text.includes('konşimento') || text.includes('ordino') || text.includes('atr belgesi') || text.includes('gümrük') || text.includes('supalan')) {
+    return 'GUMRUK';
+  }
   if (icon === '🎓' || text.includes('vize') || text.includes('final') || text.includes('büt') || text.includes('ödev') || text.includes('turnitin') || text.includes('intihal') || text.includes('ders kaydı') || text.includes('kyk') || text.includes('burs') || text.includes('öğrenci') || text.includes('kampüs') || text.includes('gano') || text.includes('obs')) {
     return 'OGRENCI';
   }
   if (icon === '🏠' || text.includes('taahhüt') || text.includes('abonelik') || text.includes('gss') || text.includes('işkur') || text.includes('su arıtma') || text.includes('kombi bakımı') || text.includes('derin dondurucu') || text.includes('ecza dolabı') || text.includes('kira') || text.includes('aidat') || text.includes('iş başvurusu') || text.includes('mülakat') || text.includes('cv güncelle') || text.includes('özgeçmiş') || text.includes('emekli')) {
     return 'GENEL';
   }
-  if (icon === '⚖️' || icon === '📜' || (icon === '🏛️' && (text.includes('hukuk') || text.includes('mahkeme') || text.includes('savcı') || text.includes('hâkim') || text.includes('hakim'))) || text.includes('hukuk') || text.includes('duruşma') || text.includes('uyap') || text.includes('istinaf') || text.includes('tebligat') || text.includes('noter') || text.includes('beyanname')) {
+  if (icon === '⚖️' || icon === '📜' || (icon === '🏛️' && (text.includes('hukuk') || text.includes('mahkeme') || text.includes('savcı') || text.includes('hâkim') || text.includes('hakim'))) || text.includes('hukuk') || text.includes('duruşma') || text.includes('uyap') || text.includes('istinaf') || text.includes('tebligat') || text.includes('noter') || text.includes('beyanname') || text.includes('89/1') || text.includes('haciz ihbarnamesi') || text.includes('arabuluculuk') || text.includes('cmk 100') || text.includes('kyok')) {
     return 'HUKUK';
   }
-  if (icon === '📊' || icon === '📈' || text.includes('kdv') || text.includes('muhsgk') || text.includes('smmm') || text.includes('beyanname') || text.includes('e-defter') || text.includes('berat') || text.includes('mali müşavir') || text.includes('finans')) {
+  if (icon === '📊' || icon === '📈' || text.includes('kdv') || text.includes('muhsgk') || text.includes('smmm') || text.includes('beyanname') || text.includes('e-defter') || text.includes('berat') || text.includes('mali müşavir') || text.includes('finans') || text.includes('tevkifat') || text.includes('vuk 33') || text.includes('enflasyon düzeltmesi')) {
     return 'FINANS';
   }
-  if (icon === '🩺' || icon === '💉' || icon === '🦷' || icon === '💊' || text.includes('ilaç') || text.includes('hasta') || text.includes('doktor') || text.includes('hemşire') || text.includes('klinik') || text.includes('sbar') || text.includes('dekübitus')) {
+  if (icon === '🩺' || icon === '💉' || icon === '🦷' || icon === '💊' || text.includes('ilaç') || text.includes('hasta') || text.includes('doktor') || text.includes('hemşire') || text.includes('klinik') || text.includes('sbar') || text.includes('dekübitus') || text.includes('aydınlatılmış onam') || text.includes('transfüzyon')) {
     return 'SAGLIK';
   }
-  if (icon === '📚' || icon === '🏫' || icon === '🍱' || (icon === '🏛️' && (text.includes('dys') || text.includes('okul') || text.includes('mem') || text.includes('müdür'))) || text.includes('e-okul') || text.includes('ek ders') || text.includes('kbs') || text.includes('devamsızlık mektubu') || text.includes('öğretmen') || text.includes('zümre') || text.includes('taşımalı') || text.includes('okul')) {
+  if (icon === '📚' || icon === '🏫' || icon === '🍱' || (icon === '🏛️' && (text.includes('dys') || text.includes('okul') || text.includes('mem') || text.includes('müdür'))) || text.includes('e-okul') || text.includes('ek ders') || text.includes('kbs') || text.includes('devamsızlık mektubu') || text.includes('öğretmen') || text.includes('zümre') || text.includes('taşımalı') || text.includes('okul') || text.includes('bep') || text.includes('tefbis')) {
     return 'EGITIM';
   }
-  if (icon === '🔧' || icon === '🛠️' || icon === '⚡' || icon === '⚙️' || icon === '📐' || icon === '💻' || text.includes('loto') || text.includes('arıza') || text.includes('bakım') || text.includes('şantiye') || text.includes('mimar') || text.includes('teknik') || text.includes('tamir')) {
+  if (icon === '🔧' || icon === '🛠️' || icon === '⚡' || icon === '⚙️' || icon === '📐' || icon === '💻' || text.includes('loto') || text.includes('arıza') || text.includes('bakım') || text.includes('şantiye') || text.includes('mimar') || text.includes('teknik') || text.includes('tamir') || text.includes('spt') || text.includes('kaçak akım')) {
     return 'TEKNIK';
   }
   if (icon === '👮' || icon === '🪖' || icon === '🛡️' || icon === '🎯' || text.includes('gözaltı') || text.includes('fezleke') || text.includes('polis') || text.includes('asker') || text.includes('emniyet') || text.includes('nöbet') || text.includes('savunma')) {

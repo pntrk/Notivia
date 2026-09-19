@@ -123,7 +123,7 @@ export function extractEntityMetrics(text: string): ExtractedMetric[] {
 
   // 5. Resmi Dosya & Esas Numaraları / Kanun Maddeleri
   const officialMatch = text.match(/(\d{4}\s*\/\s*\d+)\s*(?:esas|karar|dosya|d\.iş)\b/i) ||
-                        text.match(/(?:4734|3071|657|hmk|cmk)\s*(?:sayılı)?\s*(?:kanun|madde)?\b/i);
+                        text.match(/(?:4734|3071|657|hmk|cmk|vuk)\s*(?:sayılı)?\s*(?:kanun|madde)?\b/i);
   if (officialMatch) {
     metrics.push({
       id: `metric-official-${Date.now()}`,
@@ -131,6 +131,48 @@ export function extractEntityMetrics(text: string): ExtractedMetric[] {
       label: 'Resmi Kod / Dosya No',
       value: officialMatch[0].trim(),
       raw: officialMatch[0],
+      alertLevel: 'normal'
+    });
+  }
+
+  // 6. Ada / Parsel ve Alan Metrikleri (Emlak / Gayrimenkul)
+  const landMatch = text.match(/(\d+)\s*ada\s*(\d+)\s*parsel/i) ||
+                    text.match(/(\d+(?:[.,]\d+)?)\s*(?:m2|m²|metrekare)\b/i);
+  if (landMatch) {
+    metrics.push({
+      id: `metric-land-${Date.now()}`,
+      type: 'official',
+      label: 'Kadastro / Alan Bilgisi',
+      value: landMatch[0].trim(),
+      raw: landMatch[0],
+      alertLevel: 'normal'
+    });
+  }
+
+  // 7. Denizcilik Draft / Tonaj Metrikleri
+  const marineMatch = text.match(/(\d+(?:[.,]\d+)?)\s*(?:metre|m)\s*draft/i) ||
+                      text.match(/(\d+(?:[.,]\d+)?)\s*(?:ton|mt)\s*(?:balast|yakıt|bunker|kumanya)/i);
+  if (marineMatch) {
+    metrics.push({
+      id: `metric-marine-${Date.now()}`,
+      type: 'official',
+      label: 'Denizcilik Parametresi',
+      value: marineMatch[0].trim(),
+      raw: marineMatch[0],
+      alertLevel: 'normal'
+    });
+  }
+
+  // 8. Mikroçip & GTİP Kodları
+  const codeMatch = text.match(/(?:çip|cip|mikroçip)\s*(?:no|numarası)?\s*:?\s*(\d{10,15})/i) ||
+                    text.match(/gtip\s*(?:kodu)?\s*:?\s*(\d{8,12})/i);
+  if (codeMatch) {
+    metrics.push({
+      id: `metric-code-${Date.now()}`,
+      type: 'official',
+      label: 'Resmi Çip / GTİP Kodu',
+      value: codeMatch[0].trim(),
+      raw: codeMatch[0],
       alertLevel: 'normal'
     });
   }

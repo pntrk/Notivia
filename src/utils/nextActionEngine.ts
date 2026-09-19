@@ -108,5 +108,71 @@ export function generateNextActionSuggestion(noteTitle: string, noteCategory?: s
     };
   }
 
+  // 7. Veteriner: Operasyon / Kısırlaştırma -> 7. Gün Dikiş Alma & Post-Op Kontrol
+  if (text.includes('kısırlaştırma') || text.includes('ameliyat') || text.includes('post-op') || text.includes('dikiş')) {
+    return {
+      id: `next-vet-${Date.now()}`,
+      title: '7. Gün Dikiş & Post-Op Kontrolü',
+      description: 'Cerrahi operasyon sonrası yara iyileşmesi ve dikiş kontrolü kur.',
+      actionType: 'CREATE_FOLLOWUP',
+      icon: '🐾',
+      payload: {
+        followupTitle: 'Veteriner 7. Gün Dikiş & Post-Op Kontrolü',
+        followupZaman: '7 Gün Sonra 11:00',
+        followupOffsetDays: 7,
+        followupIkon: '🐾'
+      }
+    };
+  }
+
+  // 8. Emlak: Tapu Satışı -> DASK & Abonelik İptal / Devir Mesajı
+  if (text.includes('tapu') || text.includes('satış devir') || text.includes('gayrimenkul')) {
+    return {
+      id: `next-re-${Date.now()}`,
+      title: 'Alıcı/Satıcı Abonelik Bilgilendirmesi',
+      description: 'Tapu devri sonrası DASK ve elektrik/su/doğalgaz devir mesajı hazırla.',
+      actionType: 'DRAFT_MESSAGE',
+      icon: '🏢',
+      payload: {
+        recipient: 'Alıcı & Satıcı',
+        channel: 'whatsapp',
+        messageBody: `Tebrik ederiz, tapu devir işlemi başarıyla tamamlanmıştır. Yeni malikin elektrik, su ve doğalgaz aboneliklerini üzerine alabilmesi için DASK poliçesi ve tapu fotokopisiyle ilgili kurumlara başvurması gerekmektedir.`
+      }
+    };
+  }
+
+  // 9. Denizcilik: Liman Yanaşma -> Draft Survey & Jurnal Kaydı
+  if (text.includes('psc') || text.includes('liman') || text.includes('yanaşma') || text.includes('demirleme')) {
+    return {
+      id: `next-mar-${Date.now()}`,
+      title: 'Draft Survey & Sintine Jurnal Kaydı',
+      description: 'Liman emniyeti ve PSC denetim evrakı için draft ve balast kontrolü ata.',
+      actionType: 'CREATE_FOLLOWUP',
+      icon: '⚓',
+      payload: {
+        followupTitle: 'PSC Denetim & Draft Survey Raporu',
+        followupZaman: 'Yarın 09:00',
+        followupOffsetDays: 1,
+        followupIkon: '⚓'
+      }
+    };
+  }
+
+  // 10. Gümrük: Kırmızı Hat -> Muayene Refakati & Ordino Takibi
+  if (text.includes('kırmızı hat') || text.includes('sarı hat') || text.includes('supalan') || text.includes('gümrük')) {
+    return {
+      id: `next-customs-${Date.now()}`,
+      title: 'Müşteriye Muayene Durum Mesajı',
+      description: 'Beyanname hat durumu ve muayene randevusu hakkında bilgilendirme ilet.',
+      actionType: 'DRAFT_MESSAGE',
+      icon: '📦',
+      payload: {
+        recipient: 'İthalatçı / İhracatçı Firma',
+        channel: 'email',
+        messageBody: `Sayın Yetkili, ilgili beyannameniz gümrük tescilinden geçmiş olup sistem tarafından muayene hattına sevk edilmiştir. Muayene memuru refakati ve fiziki kontrol adımları takip edilmektedir.`
+      }
+    };
+  }
+
   return null;
 }
