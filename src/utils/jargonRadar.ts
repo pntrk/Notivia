@@ -224,15 +224,27 @@ const DOMAIN_RULES: DomainRule[] = [
     defaultColor: '#FEF9C3',
     exclusiveKeywords: [
       'ebys', 'belgenet', 'sdp', 'standart dosya', 'paraf', 'makam oluru',
-      'cimer', '22/d', 'doğrudan temin', 'taşınır işlem fişi', 'tif', 'mys'
+      'cimer', 'çimer', '4982', '3071', '22/d', '22-d', '4734', 'doğrudan temin',
+      'dogrudan temin', 'taşınır işlem fişi', 'tif', 'tkys', 'mys v2', 'ödeme emri belgesi',
+      'harcama talimatı', 'muayene kabul', 'piyasa fiyat araştırma', 'tek hekim raporu',
+      'disiplin soruşturması', 'savunma istem', 'sayıştay', 'sorgu layihası', 'sgk işe giriş',
+      'işten ayrılış bildirgesi', 'karar defteri', 'yönetim kurulu kararı', 'ttsg'
     ],
     supportingKeywords: [
-      'üst yazı', 'daire başkanı', 'şube müdürü', 'memur', 'komisyon',
-      'ihale', 'evrak', 'resmi yazı', 'malmüdürlüğü', 'valilik', 'kaymakamlık'
+      'üst yazı', 'daire başkanı', 'şube müdürü', 'memur', 'komisyon', 'müfettiş',
+      'ihale', 'evrak', 'resmi yazı', 'malmüdürlüğü', 'valilik', 'kaymakamlık',
+      'devlet memuru', '657 dmk', 'özlük dosyası', 'deneme süresi', 'teftiş',
+      'protokol oturma', 'çelenk sunma', 'toplantı tutanağı', 'brifing dosyası',
+      'yönetici asistanı', 'sekreter', 'satın alma teklif', 'nda'
     ],
     implicitTimeHooks: [
-      { keyword: 'cimer', hour: 16, minute: 0 },
-      { keyword: 'üst yazı', hour: 15, minute: 0 },
+      { keyword: 'cimer', hour: 17, minute: 0 },
+      { keyword: 'ebys', hour: 16, minute: 30 },
+      { keyword: 'üst yazı', hour: 16, minute: 0 },
+      { keyword: 'doğrudan temin', hour: 15, minute: 0 },
+      { keyword: 'sağlık raporu', hour: 9, minute: 0 },
+      { keyword: 'yönetim kurulu', hour: 15, minute: 0 },
+      { keyword: 'brifing', hour: 10, minute: 0 },
     ]
   },
   {
@@ -241,20 +253,30 @@ const DOMAIN_RULES: DomainRule[] = [
     defaultColor: '#DCFCE7',
     exclusiveKeywords: [
       'zirai don', 'phi süresi', 'kalıntı süresi', 'çks', 'tarsim', 'tarım sigortası',
-      'damlama sulama', 'bordo bulamacı', 'yaprak gübresi', 'hasat yasağı', 'akarit',
-      'fungusit', 'türkvet', 'turkvet', 'küpeleme', 'kupeleme', 'şap aşısı', 'kuduz aşısı',
-      'hayvan sevk', 'veteriner'
+      'damlama sulama', 'bordo bulamacı', 'aşı macunu', 'yaprak gübresi', 'taban gübresi',
+      'fertigasyon', 'daldırma sulama', 'orkide sula', 'orkide bakımı', 'suvarıver',
+      'sulayuver', 'verive gari', 'çiçekler susamış', 'çiçek sula', 'kök mantarı',
+      'kök boğazı', 'ardıç katranı', 'fungisit', 'pestisit', 'herbisit', 'akarisit',
+      'kireçli toprak', 'toprak ph', 'ec değeri', 'budama zamanı', 'tüplü fidan',
+      'can suyu', 'herek', 'çim havalandırma', 'verticut', 'sera havalandırma',
+      'kserofitik', 'sukulent sulama', 'kaktüs sulama', 'sardunya sulama', 'mercek etkisi'
     ],
     supportingKeywords: [
       'gübreleme', 'sulama', 'ilaçlama', 'budama', 'hasat', 'tarla',
-      'bahçe', 'sera', 'fidan', 'traktör', 'toprak', 'buzağı', 'kuzu', 'çiftlik'
+      'bahçe', 'sera', 'fidan', 'traktör', 'toprak', 'çiftlik', 'çiçek', 'saksı',
+      'orkide', 'kaktüs', 'sukulent', 'sardunya', 'petunya', 'zeytin', 'bağ', 'meyve bahçesi'
     ],
     implicitTimeHooks: [
       { keyword: 'don', hour: 3, minute: 30 },
+      { keyword: 'zirai don', hour: 3, minute: 30 },
       { keyword: 'sulama', hour: 19, minute: 30 }, // Akşam serinliği kuralı
+      { keyword: 'sula', hour: 19, minute: 30 },
+      { keyword: 'suvar', hour: 19, minute: 30 },
+      { keyword: 'orkide', hour: 9, minute: 30 }, // Orkide sabah kuralı
       { keyword: 'ilaçlama', hour: 7, minute: 0 },
-      { keyword: 'küpeleme', hour: 9, minute: 0 },
+      { keyword: 'budama', hour: 8, minute: 30 },
       { keyword: 'tarsim', hour: 16, minute: 0 },
+      { keyword: 'çks', hour: 16, minute: 0 }
     ]
   },
   {
@@ -280,16 +302,20 @@ const DOMAIN_RULES: DomainRule[] = [
     defaultColor: '#DCFCE7',
     exclusiveKeywords: [
       'z raporu', 'z-raporu', 'pos rulosu', 'gün sonu', 'kasa sayımı',
-      'kasa açığı', 'veresiye defteri', 'iskonto', 'irsaliyeli fatura'
+      'kasa açığı', 'kasa avansı', 'ara kasa', 'ara tahliye', 'veresiye', 'veresiye defteri',
+      'deftere yaz', 'açık hesap', 'mal kabul', 'koli adedi', 'irsaliye',
+      'çek vadesi', 'senet vadesi', 'iskonto', 'irsaliyeli fatura', 'bağkur primi', 'dükkan kirası'
     ],
     supportingKeywords: [
-      'dükkan', 'kasiyer', 'müşteri', 'stok', 'toptancı', 'satış',
-      'teklif', 'hesap', 'para', 'tahsilat', 'pos'
+      'dükkan', 'dukkan', 'kasiyer', 'müşteri', 'stok', 'toptancı', 'toptanci', 'satış', 'satis',
+      'teklif', 'hesap', 'para', 'tahsilat', 'pos', 'koli', 'tedarik', 'esnaf', 'fatura', 'avans', 'rulo'
     ],
     implicitTimeHooks: [
       { keyword: 'z raporu', hour: 19, minute: 0 },
       { keyword: 'gün sonu', hour: 19, minute: 30 },
       { keyword: 'kasa sayımı', hour: 18, minute: 45 },
+      { keyword: 'kasa avansı', hour: 8, minute: 30 },
+      { keyword: 'kasa açılışı', hour: 8, minute: 30 },
     ]
   },
   {
@@ -372,17 +398,25 @@ const DOMAIN_RULES: DomainRule[] = [
       'petvet', 'mikroçip', 'kuduz titrasyon', 'iç parazit', 'dış parazit',
       'karma aşı', 'kısırlaştırma post-op', 'lökosit', 'hemogram kan sayımı',
       'veteriner hekim', 'aşı karnesi', 'traş anestezi', 'kedi pansiyon',
-      'panleukopeni', 'parvoviral', 'fip', 'leishmania', 'anestezi onam'
+      'panleukopeni', 'parvoviral', 'fip', 'leishmania', 'anestezi onam',
+      'türkvet', 'turkvet', 'kolostrum', 'suni tohumlama', 'distosi',
+      'kavitron', 'tartar temizliği', 'wood lambası', 'elizabeth yakalığı',
+      'pre-op', 'post-op', 'vetbis', 'rnatt', 'felv', 'fiv', 'laminitis',
+      'vsr', 'veteriner sağlık raporu', 'buzağı küpe', 'cmt testi', 'süt arınma'
     ],
     supportingKeywords: [
       'veteriner', 'kedi', 'köpek', 'aşı', 'klinik', 'tedavi', 'ameliyat',
-      'parazit', 'pansuman', 'mama', 'ilaç', 'damla', 'hayvan'
+      'parazit', 'pansuman', 'mama', 'ilaç', 'damla', 'hayvan', 'buzağı',
+      'inek', 'sığır', 'koyun', 'kuzu', 'at', 'küpeleme', 'dikiş'
     ],
     implicitTimeHooks: [
       { keyword: 'aşı', hour: 10, minute: 0 },
       { keyword: 'kısırlaştırma', hour: 9, minute: 0 },
       { keyword: 'pansuman', hour: 11, minute: 30 },
-      { keyword: 'petvet', hour: 14, minute: 0 }
+      { keyword: 'petvet', hour: 14, minute: 0 },
+      { keyword: 'tohumlama', hour: 9, minute: 30 },
+      { keyword: 'küpeleme', hour: 8, minute: 30 },
+      { keyword: 'sağım', hour: 6, minute: 30 }
     ]
   },
   {
@@ -391,17 +425,22 @@ const DOMAIN_RULES: DomainRule[] = [
     defaultColor: '#FEF3C7',
     exclusiveKeywords: [
       'taşınmaz ticareti', 'yetki belgesi', 'web-tapu', 'webtapu', 'tapu harcı',
-      'dask poliçesi', 'ipotek fek', 'rayiç bedel', 'cayma akçesi',
-      'emlak beyanı', 'tahliye taahhütnamesi', 'döner sermaye bedeli',
-      'kat irtifakı', 'kat mülkiyeti', 'iskan raporu', 'imar durumu', 'ada parsel'
+      'dask poliçesi', 'dask', 'ipotek fek', 'ipotek fekki', 'rayiç bedel', 'cayma akçesi',
+      'emlak beyanı', 'tahliye taahhütnamesi', 'tahliye taahhüdü', 'döner sermaye bedeli',
+      'kat irtifakı', 'kat mülkiyeti', 'iskan raporu', 'iskan', 'imar durumu', 'imar çapı',
+      'ada parsel', 'yer gösterme belgesi', 'yer gösterme', 'yer gosterme', 'taputakas',
+      'tapu takas', 'güvenli tapu', 'bloke çek', 'eids', 'takyidat', 'kira sözleşmesi',
+      'kira kontratı', 'depozito iadesi', 'depozito mahsubu', 'tüfe kira'
     ],
     supportingKeywords: [
       'tapu', 'kira', 'kiracı', 'daire', 'arsa', 'konut', 'satış', 'kiralık',
-      'satılık', 'komisyon', 'gayrimenkul', 'emlakçı', 'noter', 'ipotek'
+      'satılık', 'komisyon', 'gayrimenkul', 'emlakçı', 'noter', 'ipotek',
+      'portföy', 'sunum', 'ekspertiz', 'değerleme', 'rayiç', 'ev sahibi'
     ],
     implicitTimeHooks: [
       { keyword: 'tapu', hour: 10, minute: 30 },
       { keyword: 'sunum', hour: 14, minute: 0 },
+      { keyword: 'yer gösterme', hour: 15, minute: 30 },
       { keyword: 'belediye', hour: 11, minute: 0 },
       { keyword: 'dask', hour: 15, minute: 0 }
     ]

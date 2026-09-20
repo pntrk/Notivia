@@ -378,5 +378,310 @@ export function detectMilestoneChain(text: string, baseDate: Date = new Date()):
     };
   }
 
+  // 8. EMLAK & GAYRİMENKUL: Kiracı Tahliyesi & Depozito Mahsup Zinciri
+  if (
+    (lower.includes('kiracı') || lower.includes('kiraci') || lower.includes('tahliye')) &&
+    (lower.includes('çıktı') || lower.includes('cikti') || lower.includes('anahtar') || lower.includes('boşalttı') || lower.includes('depozito'))
+  ) {
+    const day0Iso = baseDate.toISOString();
+    const day3 = new Date(baseDate.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const day7 = new Date(baseDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const steps: MilestoneStep[] = [
+      {
+        id: 'ms-re-1',
+        order: 1,
+        title: 'Anahtar Teslimi & Sayaç Endeks Tespiti',
+        targetOffsetDays: 0,
+        targetDateIso: day0Iso,
+        targetText: 'Aşama 1 (Tahliye Anı)',
+        isCompleted: true,
+        icon: '🔑',
+        description: 'Elektrik, su ve doğalgaz sayaç fotoğraflarının çekilmesi ve anahtar teslim tutanağının imzalanması.'
+      },
+      {
+        id: 'ms-re-2',
+        order: 2,
+        title: 'Boya, Armatür Hasar & Yönetim Borç Kontrolü',
+        targetOffsetDays: 3,
+        targetDateIso: day3.toISOString(),
+        targetText: '3. Gün',
+        isCompleted: false,
+        icon: '📋',
+        description: 'Daire hasar tespiti, usta tamir maliyet hesabı ve site yönetiminden aidat borçsuzluk belgesi temini.'
+      },
+      {
+        id: 'ms-re-3',
+        order: 3,
+        title: 'Fatura Mahsubu & Kalan Depozito İadesi',
+        targetOffsetDays: 7,
+        targetDateIso: day7.toISOString(),
+        targetText: '7. Gün',
+        isCompleted: false,
+        icon: '💳',
+        description: 'Son faturaların ve tamir masraflarının depozitodan düşülerek kalan tutarın kiracıya iadesi.'
+      }
+    ];
+
+    return {
+      chainId: `chain-re-eviction-${Date.now()}`,
+      chainName: 'Kiracı Tahliyesi & Depozito Mahsup Zinciri',
+      currentStepIndex: 1,
+      steps,
+      autoProgress: true
+    };
+  }
+
+  // 8.1. EMLAK: Web-Tapu Satış & Mülkiyet Devir Zinciri
+  if (
+    lower.includes('webtapu') || lower.includes('web-tapu') || lower.includes('tapu devri') ||
+    lower.includes('tapu randevusu') || (lower.includes('tapu') && (lower.includes('satış') || lower.includes('satis') || lower.includes('devir')))
+  ) {
+    const day0Iso = baseDate.toISOString();
+    const day1 = new Date(baseDate.getTime() + 1 * 24 * 60 * 60 * 1000);
+    const day2 = new Date(baseDate.getTime() + 2 * 24 * 60 * 60 * 1000);
+    const day5 = new Date(baseDate.getTime() + 5 * 24 * 60 * 60 * 1000);
+
+    const steps: MilestoneStep[] = [
+      {
+        id: 'ms-wt-1',
+        order: 1,
+        title: 'Web-Tapu Başvurusu, DASK & Rayiç Yükleme',
+        targetOffsetDays: 0,
+        targetDateIso: day0Iso,
+        targetText: 'Aşama 1 (Başvuru)',
+        isCompleted: true,
+        icon: '📑',
+        description: 'Web-Tapu sistemine güncel DASK poliçesi, belediye rayiç bedel belgesi ve taraf kimliklerinin yüklenmesi.'
+      },
+      {
+        id: 'ms-wt-2',
+        order: 2,
+        title: 'Harç SMS\'i, Takasbank / Bloke Çek Transferi',
+        targetOffsetDays: 1,
+        targetDateIso: day1.toISOString(),
+        targetText: '1. Gün',
+        isCompleted: false,
+        icon: '💳',
+        description: 'Alıcı/satıcı tapu harcı ve döner sermayenin yatırılması, Takasbank TapuTakas veya bloke çekin hazırlanması.'
+      },
+      {
+        id: 'ms-wt-3',
+        order: 3,
+        title: 'Tapu Müdürlüğü Resmi İmzalar & Tapu Teslimi',
+        targetOffsetDays: 2,
+        targetDateIso: day2.toISOString(),
+        targetText: '2. Gün (Randevu Saati)',
+        isCompleted: false,
+        icon: '🏢',
+        description: 'Kimlik asılları ile müdür huzurunda resmi senedin imzalanması ve yeni tapu senedinin teslim alınması.'
+      },
+      {
+        id: 'ms-wt-4',
+        order: 4,
+        title: 'Abonelik Devirleri & Belediye Emlak Beyanı',
+        targetOffsetDays: 5,
+        targetDateIso: day5.toISOString(),
+        targetText: '5. Gün',
+        isCompleted: false,
+        icon: '⚡',
+        description: 'Elektrik, su, doğalgaz sayaç devirleri ve belediyeye yeni malik emlak vergisi beyan bildirimi.'
+      }
+    ];
+
+    return {
+      chainId: `chain-re-webtapu-${Date.now()}`,
+      chainName: 'Web-Tapu Satış & Mülkiyet Devir Zinciri',
+      currentStepIndex: 1,
+      steps,
+      autoProgress: true
+    };
+  }
+
+  // 8.2. EMLAK: Kira Sözleşmesi & Tahliye Taahhüt Zinciri
+  if (
+    (lower.includes('kira sözleşmesi') || lower.includes('kira kontratı') || lower.includes('yeni kiracı') || lower.includes('kiraya verdik'))
+  ) {
+    const day0Iso = baseDate.toISOString();
+    const day3 = new Date(baseDate.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const day30 = new Date(baseDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    const steps: MilestoneStep[] = [
+      {
+        id: 'ms-rk-1',
+        order: 1,
+        title: 'Kira Sözleşmesi, Demirbaş Tespiti & Depozito',
+        targetOffsetDays: 0,
+        targetDateIso: day0Iso,
+        targetText: 'Aşama 1 (İmza & Anahtar)',
+        isCompleted: true,
+        icon: '📝',
+        description: 'Kontratın imzalanması, kombi/demirbaş fotoğraf föyü, sayaç ilk endeksleri ve vadeli mevduat depozitosu.'
+      },
+      {
+        id: 'ms-rk-2',
+        order: 2,
+        title: 'Abonelik Devir Teyidi & Noter Tahliye Taahhüdü',
+        targetOffsetDays: 3,
+        targetDateIso: day3.toISOString(),
+        targetText: '3. Gün',
+        isCompleted: false,
+        icon: '📜',
+        description: 'Kiracının sayaçları üzerine alma teyidi ve Yargıtay kuralı gereği teslimden sonraki tarihli tahliye taahhütnamesi tanzimi.'
+      },
+      {
+        id: 'ms-rk-3',
+        order: 3,
+        title: '1. Ay Kira Ödemesi & Banka Dekont Takibi',
+        targetOffsetDays: 30,
+        targetDateIso: day30.toISOString(),
+        targetText: '30. Gün',
+        isCompleted: false,
+        icon: '🏦',
+        description: 'İlk kiranın banka üzerinden yasal açıklamayla yatırılmasının teyidi ve cari kira takip kartının güncellenmesi.'
+      }
+    ];
+
+    return {
+      chainId: `chain-re-lease-${Date.now()}`,
+      chainName: 'Kira Sözleşmesi & Tahliye Taahhüt Zinciri',
+      currentStepIndex: 1,
+      steps,
+      autoProgress: true
+    };
+  }
+
+  // 9. SAĞLIK & CERRAHİ: Post-Op İyileşme & Dikiş Alma Zinciri
+  if (
+    (lower.includes('post-op') || lower.includes('postop') || lower.includes('ameliyat') || lower.includes('cerrahi')) &&
+    (lower.includes('çıktı') || lower.includes('yattı') || lower.includes('dikiş') || lower.includes('servis'))
+  ) {
+    const day0Iso = baseDate.toISOString();
+    const day1 = new Date(baseDate.getTime() + 1 * 24 * 60 * 60 * 1000);
+    const day7 = new Date(baseDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const day14 = new Date(baseDate.getTime() + 14 * 24 * 60 * 60 * 1000);
+
+    const steps: MilestoneStep[] = [
+      {
+        id: 'ms-med-1',
+        order: 1,
+        title: 'Post-Op Vital & Dren / Kanama İzlemi',
+        targetOffsetDays: 0,
+        targetDateIso: day0Iso,
+        targetText: 'İlk 24 Saat',
+        isCompleted: true,
+        icon: '🩺',
+        description: 'İlk 2 saat 15 dk bir, sonra saatlik vital takibi, dren akışı ve pansuman kanama kontrolü.'
+      },
+      {
+        id: 'ms-med-2',
+        order: 2,
+        title: 'Mobilizasyon & Oral Beslenme Başlangıcı',
+        targetOffsetDays: 1,
+        targetDateIso: day1.toISOString(),
+        targetText: '1. Gün',
+        isCompleted: false,
+        icon: '🚶‍♂️',
+        description: 'Bağırsak seslerinin dinlenmesi, gaz çıkışı, ilk adım mobilizasyonu ve sulu gıda orderı.'
+      },
+      {
+        id: 'ms-med-3',
+        order: 3,
+        title: '7. Gün Dikiş Alma & Pansuman Kontrolü',
+        targetOffsetDays: 7,
+        targetDateIso: day7.toISOString(),
+        targetText: '7. Gün',
+        isCompleted: false,
+        icon: '✂️',
+        description: 'Cerrahi yara hattı enfeksiyon/skar kontrolü ve poliklinikte dikişlerin alınması.'
+      },
+      {
+        id: 'ms-med-4',
+        order: 4,
+        title: 'Patoloji Raporu & Nihai Epikriz Kapanışı',
+        targetOffsetDays: 14,
+        targetDateIso: day14.toISOString(),
+        targetText: '14. Gün',
+        isCompleted: false,
+        icon: '🔬',
+        description: 'Ameliyat materyali patoloji tetkik sonucunun hekimce değerlendirilmesi ve epikriz onayı.'
+      }
+    ];
+
+    return {
+      chainId: `chain-med-postop-${Date.now()}`,
+      chainName: 'Post-Op Cerrahi İyileşme & Dikiş Zinciri',
+      currentStepIndex: 1,
+      steps,
+      autoProgress: true
+    };
+  }
+
+  // 10. EMNİYET & ASAYİŞ: Gözaltı & 24 Saat Savcılık Fezleke Zinciri
+  if (
+    lower.includes('gözaltı') || lower.includes('gozalti') ||
+    lower.includes('yakalama') || lower.includes('nezarethane')
+  ) {
+    const day0Iso = baseDate.toISOString();
+    const hr6 = new Date(baseDate.getTime() + 6 * 60 * 60 * 1000);
+    const hr18 = new Date(baseDate.getTime() + 18 * 60 * 60 * 1000);
+    const hr24 = new Date(baseDate.getTime() + 24 * 60 * 60 * 1000);
+
+    const steps: MilestoneStep[] = [
+      {
+        id: 'ms-law-enf-1',
+        order: 1,
+        title: 'Yakalama Tutanağı & Giriş Adli Muayenesi',
+        targetOffsetDays: 0,
+        targetDateIso: day0Iso,
+        targetText: 'Gözaltı Başlangıcı',
+        isCompleted: true,
+        icon: '👮',
+        description: 'Şüphelinin üst araması, adli emanet teslimi ve hastaneden giriş adli muayene raporu alımı.'
+      },
+      {
+        id: 'ms-law-enf-2',
+        order: 2,
+        title: 'Baro Avukatı Eşliğinde İfade Alma',
+        targetOffsetDays: 0,
+        targetDateIso: hr6.toISOString(),
+        targetText: '6. Saat',
+        isCompleted: false,
+        icon: '⚖️',
+        description: 'Müdafi huzurunda şüpheli ifade tutanağının tanzimi ve şüpheli hakları formunun imzalatılması.'
+      },
+      {
+        id: 'ms-law-enf-3',
+        order: 3,
+        title: 'Savcılık Soruşturma Fezlekesi Tanzimi',
+        targetOffsetDays: 0,
+        targetDateIso: hr18.toISOString(),
+        targetText: '18. Saat (Kritik)',
+        isCompleted: false,
+        icon: '📄',
+        description: '24 saatlik yasal süre dolmadan önce tüm delil, kamera ve tutanakların fezlekeye bağlanması.'
+      },
+      {
+        id: 'ms-law-enf-4',
+        order: 4,
+        title: 'Çıkış Adli Raporu & Adliyeye Sevk',
+        targetOffsetDays: 1,
+        targetDateIso: hr24.toISOString(),
+        targetText: '24. Saat (Süre Sonu)',
+        isCompleted: false,
+        icon: '🏛️',
+        description: 'Hastaneden çıkış hekim raporunun alınması ve şüphelinin adliyede nöbetçi savcılığa teslimi.'
+      }
+    ];
+
+    return {
+      chainId: `chain-police-custody-${Date.now()}`,
+      chainName: '24 Saat Yasal Gözaltı & Fezleke Zinciri',
+      currentStepIndex: 1,
+      steps,
+      autoProgress: true
+    };
+  }
+
   return null;
 }

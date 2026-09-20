@@ -51,6 +51,12 @@ export function getDomainTheme(domain: string): { ikon: string; renk: string } {
   if (d.includes('hukuk') || d.includes('dava') || d.includes('durusma') || d.includes('mahkeme') || d.includes('avukat')) {
     return { ikon: '⚖️', renk: '#FEF3C7' };
   }
+  if (d.includes('kuafor') || d.includes('kuaför') || d.includes('berber') || d.includes('guzellik') || d.includes('güzellik') || d.includes('sac') || d.includes('saç') || d.includes('ombre') || d.includes('balyaj') || d.includes('oryal')) {
+    let ikon = '✂️';
+    if (d.includes('tirnak') || d.includes('tırnak') || d.includes('oje') || d.includes('manikur') || d.includes('pedikur')) ikon = '💅';
+    else if (d.includes('cilt') || d.includes('lazer') || d.includes('epilasyon')) ikon = '✨';
+    return { ikon, renk: '#FCE7F3' };
+  }
   if (d.includes('saglik') || d.includes('medikal') || d.includes('tahlil') || d.includes('asi') || d.includes('mr') || d.includes('ameliyat') || d.includes('ilac') || d.includes('alacak')) {
     let ikon = '🩺';
     if (d.includes('goz')) ikon = '👁️';
@@ -117,6 +123,19 @@ export function getDomainTheme(domain: string): { ikon: string; renk: string } {
     }
     return { ikon, renk };
   }
+  if (d.includes('deniz') || d.includes('gemi') || d.includes('kaptan') || d.includes('maritime') || d.includes('psc') || d.includes('liman') || d.includes('balast') || d.includes('draft') || d.includes('carkci') || d.includes('zabit') || d.includes('bunkering') || d.includes('passage') || d.includes('sintine') || d.includes('ows') || d.includes('isps') || d.includes('solas') || d.includes('marpol')) {
+    let ikon = '⚓';
+    if (d.includes('draft') || d.includes('yukleme') || d.includes('tahliye')) ikon = '🚢';
+    else if (d.includes('balast') || d.includes('sintine') || d.includes('bwm')) ikon = '🌊';
+    else if (d.includes('passage') || d.includes('seyir') || d.includes('rota') || d.includes('ecdis')) ikon = '🧭';
+    else if (d.includes('pilot') || d.includes('kilavuz') || d.includes('carmıh')) ikon = '🧑‍✈️';
+    else if (d.includes('bunker') || d.includes('yakit')) ikon = '⛽';
+    else if (d.includes('tatbikat') || d.includes('filika') || d.includes('terk')) ikon = '🛟';
+    else if (d.includes('kapali_mahal') || d.includes('sicak_calisma')) ikon = '🦺';
+    else if (d.includes('isps') || d.includes('gangway') || d.includes('guvenlik')) ikon = '🛡️';
+    else if (d.includes('ordino') || d.includes('pratique') || d.includes('evrak') || d.includes('gumruk')) ikon = '📑';
+    return { ikon, renk: '#CFFAFE' };
+  }
   if (d.includes('insaat') || d.includes('beton') || d.includes('santiye') || d.includes('donati') || d.includes('kurleme') || d.includes('kirim')) {
     return { ikon: '🏗️', renk: '#FEF3C7' };
   }
@@ -159,7 +178,31 @@ export function getDomainTheme(domain: string): { ikon: string; renk: string } {
   if (d.includes('mimar') || d.includes('mimarlik') || d.includes('ruhsat') || d.includes('clash') || d.includes('cakisma') || d.includes('çakışma') || d.includes('render') || d.includes('mahal_listesi') || d.includes('metraj')) {
     return { ikon: '📐', renk: '#FEF08A' };
   }
-  if (d.includes('sofor') || d.includes('şoför') || d.includes('tir') || d.includes('tır') || d.includes('dorse') || d.includes('takograf') || d.includes('aetr') || d.includes('kantar') || d.includes('lojistik') || d.includes('sevkiyat')) {
+  if (d.includes('sofor') || d.includes('şoför') || d.includes('tir') || d.includes('tır') || d.includes('dorse') || d.includes('takograf') || d.includes('aetr') || d.includes('kantar') || d.includes('lojistik') || d.includes('sevkiyat') || d.includes('cmr') || d.includes('adr') || d.includes('frigo') || d.includes('wms') || d.includes('vgm') || d.includes('lashing') || d.includes('intermodal')) {
+    if (d.includes('adr') || d.includes('tehlikeli')) {
+      return { ikon: '☣️', renk: '#FEE2E2' };
+    }
+    if (d.includes('frigo') || d.includes('soguk_zincir') || d.includes('soğuk_zincir') || d.includes('atp')) {
+      return { ikon: '❄️', renk: '#E0F2FE' };
+    }
+    if (d.includes('cmr') || d.includes('irsaliye')) {
+      return { ikon: '📄', renk: '#FEF3C7' };
+    }
+    if (d.includes('konteyner') || d.includes('vgm') || d.includes('demuraj')) {
+      return { ikon: '🚢', renk: '#CFFAFE' };
+    }
+    if (d.includes('wms') || d.includes('depo') || d.includes('mal_kabul')) {
+      return { ikon: '🏬', renk: '#FEF3C7' };
+    }
+    if (d.includes('lashing') || d.includes('spanzet')) {
+      return { ikon: '⛓️', renk: '#E2E8F0' };
+    }
+    if (d.includes('transit') || d.includes('t1') || d.includes('ncts')) {
+      return { ikon: '🛂', renk: '#E0E7FF' };
+    }
+    if (d.includes('lastmile') || d.includes('kurye') || d.includes('dagitim') || d.includes('dağıtım')) {
+      return { ikon: '📦', renk: '#DCFCE7' };
+    }
     return { ikon: '🚛', renk: '#FED7AA' };
   }
   if (d.includes('teknisyen') || d.includes('saha_servisi') || d.includes('is_emri') || d.includes('iş_emri') || d.includes('sla') || d.includes('dbm') || d.includes('fiber_ek') || d.includes('gerilim_sifirlama')) {
@@ -205,12 +248,42 @@ export function getDomainTheme(domain: string): { ikon: string; renk: string } {
   if (d.includes('market') || d.includes('alisveris') || d.includes('alışveriş') || d.includes('pazar') || d.includes('liste') || d.includes('bakkal') || d.includes('envanter') || d.includes('eksik')) {
     return { ikon: '🛒', renk: '#DCFCE7' };
   }
-  if (d.includes('botanik') || d.includes('cicek') || d.includes('bitki') || d.includes('sula') || d.includes('bahce') || d.includes('orkide') || d.includes('sardunya') || d.includes('kaktus') || d.includes('sukulent') || d.includes('pasa_kilici') || d.includes('baris_cicegi')) {
-    let ikon = '🪴';
-    if (d.includes('orkide') || d.includes('petunya')) ikon = '🌸';
-    else if (d.includes('sardunya') || d.includes('baris_cicegi')) ikon = '🌺';
-    else if (d.includes('kaktus') || d.includes('sukulent')) ikon = '🌵';
-    return { ikon, renk: '#DCFCE7' };
+  if (
+    d.includes('botanik') || d.includes('ziraat') || d.includes('tarim') || d.includes('tarım') ||
+    d.includes('cicek') || d.includes('çiçek') || d.includes('bitki') || d.includes('sula') ||
+    d.includes('bahce') || d.includes('bahçe') || d.includes('sera') || d.includes('tarla') ||
+    d.includes('orkide') || d.includes('sardunya') || d.includes('kaktus') || d.includes('sukulent') ||
+    d.includes('budama') || d.includes('ilac') || d.includes('ilaç') || d.includes('tarsim') ||
+    d.includes('cks') || d.includes('çks') || d.includes('fertigasyon') || d.includes('fidan') ||
+    d.includes('cim') || d.includes('çim') || d.includes('pasa_kilici') || d.includes('baris_cicegi')
+  ) {
+    let ikon = '🌿';
+    let renk = '#DCFCE7';
+    if (d.includes('orkide') || d.includes('petunya')) {
+      ikon = '🌸';
+      renk = '#FDF2F8';
+    } else if (d.includes('sardunya') || d.includes('baris_cicegi') || d.includes('cicek') || d.includes('çiçek')) {
+      ikon = '🌺';
+    } else if (d.includes('kaktus') || d.includes('sukulent')) {
+      ikon = '🌵';
+      renk = '#FEF3C7';
+    } else if (d.includes('ilac') || d.includes('ilaç') || d.includes('pestisit') || d.includes('fungisit')) {
+      ikon = '🧪';
+    } else if (d.includes('budama')) {
+      ikon = '✂️';
+      renk = '#FEF3C7';
+    } else if (d.includes('don')) {
+      ikon = '❄️';
+      renk = '#E0F2FE';
+    } else if (d.includes('tarsim') || d.includes('cks') || d.includes('çks')) {
+      ikon = '🌾';
+      renk = '#FEF3C7';
+    } else if (d.includes('damlama') || d.includes('fertigasyon')) {
+      ikon = '💧';
+    } else if (d.includes('fidan') || d.includes('cim') || d.includes('çim')) {
+      ikon = '🌱';
+    }
+    return { ikon, renk };
   }
   if (d.includes('sosyal') || d.includes('iletisim') || d.includes('toren') || d.includes('nikah') || d.includes('dugun') || d.includes('taziye') || d.includes('sunnet') || d.includes('ziyaret')) {
     let ikon = '🤝';
@@ -415,25 +488,161 @@ const PREDICTIVE_GRAPH_PATTERNS: Array<{
       ],
       akilliFisilti: '📦 İnternet ve elektrik nakil randevuları 2-3 gün sürebilir.'
     }
+  },
+
+  // 10. EBYS / Belgenet Günlü Evrak & Paraf Zinciri
+  {
+    matcher: (l) => l.includes('ebys') || l.includes('belgenet') || l.includes('dys') || l.includes('günlü evrak') || l.includes('gunlu evrak') || l.includes('paraf zinciri') || l.includes('acele yazı'),
+    inference: {
+      domain: 'kamu_ebys',
+      hazirlikZamani: '1 İş Günü Önce 16:30',
+      hazirlikSaatOncesi: 24,
+      oncedenYapilacaklar: [
+        'Yazı taslağını hazırlayıp Standart Dosya Planı (SDP) kodunu seç',
+        'Şef, Şube Müdürü ve Daire Başkanı hiyerarşik paraf zincirine sun',
+        'Ekli belgelerin (CD, cetvel, fiziki dosya) üst yazıya tam iliştirildiğini kontrol et',
+        'Nitelikli elektronik sertifika (e-İmza) ile nihai makam olurunu alıp giden evrak sayı/tarihini ver',
+        'Muhatap idareye veya UETS/KEP adresine teslim teyidini alarak arşive kaldır'
+      ],
+      akilliFisilti: '🖋️ Günlü ve ivedi yazılarda gecikmeye meydan vermemek için son tarihten en az 1 iş günü önce iç paraf zinciri tamamlanmalıdır.'
+    }
+  },
+
+  // 11. CİMER & 3071 Bilgi Edinme Yasal Süreci
+  {
+    matcher: (l) => l.includes('cimer') || l.includes('çimer') || l.includes('bilgi edinme') || l.includes('3071') || l.includes('4982'),
+    inference: {
+      domain: 'kamu_cimer',
+      hazirlikZamani: 'İlk 3 İş Gününde Alt Birim Yazışması',
+      hazirlikSaatOncesi: 72,
+      oncedenYapilacaklar: [
+        'CİMER başvuru konusunu incele; gerekiyorsa 3 iş günü içinde ilgili birim veya taşra teşkilatına ara yazı yaz',
+        'Alt birimden gelen bilgi ve belgeleri mevzuat süzgecinden geçirerek gerekçeli cevap taslağını hazırla',
+        'Kişisel veriler (KVKK) ve ticari sır teşkil eden bilgileri karartarak metni nihai hale getir',
+        'Şube Müdürü parafı ve Makam Onayı ile CİMER sistemine cevabı yükleyip başvuruyu kapat',
+        'Vatandaşa sistem üzerinden bilgilendirme SMS/e-postası düştüğünü teyit et'
+      ],
+      akilliFisilti: '🏛️ 4982 sayılı Kanunda 15 gün, 3071 sayılı Kanunda 30 günlük yasal cevap süresi esastır; ara yazışmalar ilk 3 günde çıkmalıdır.'
+    }
+  },
+
+  // 12. 4734 Sayılı KİK 22/d Doğrudan Temin & TİF / MYS V2
+  {
+    matcher: (l) => l.includes('doğrudan temin') || l.includes('dogrudan temin') || l.includes('22/d') || l.includes('22-d') || l.includes('tkys') || (l.includes('tif') && (l.includes('kes') || l.includes('ambar'))) || (l.includes('mys') && l.includes('ödeme emri')),
+    inference: {
+      domain: 'kamu_dogrudan_temin',
+      hazirlikZamani: 'Fatura & Muayene Kabul Aşaması',
+      hazirlikSaatOncesi: 24,
+      oncedenYapilacaklar: [
+        'Harcama yetkilisinden onaylı Harcama Talimatını al ve en az 3 firmadan kaşeli piyasa teklif mektubu topla',
+        'Piyasa Fiyat Araştırma Tutanağını tanzim edip en uygun teklif sahibiyle sözleşme/sipariş oluştur',
+        'Mal/hizmet tesliminde Muayene ve Kabul Komisyonu Tutanağını komisyon üyelerine ıslak imzalattır',
+        'Taşınır Kayıt ve Yönetim Sistemi (TKYS) üzerinden Taşınır İşlem Fişi (TİF) kes ve ambar kaydını yap',
+        'MYS V2 üzerinden Ödeme Emri Belgesi (ÖEB) düzenleyip fatura aslıyla birlikte Malmüdürlüğü/Muhasebeye teslim et'
+      ],
+      akilliFisilti: '🗂️ 4734 sayılı KİK 22/d alımlarında piyasa fiyat araştırma tutanağı, fatura tarihi, Muayene Kabul ve TİF tarihleri birebir uyumlu olmalıdır.'
+    }
+  },
+
+  // 13. İK: 5510 Sayılı Kanun SGK İşe Giriş Bildirgesi
+  {
+    matcher: (l) => l.includes('işe giriş') || l.includes('ise giris') || l.includes('sgk işe giriş') || l.includes('5510 işe giriş'),
+    inference: {
+      domain: 'kurumsal_sgk_ise_giris',
+      hazirlikZamani: 'İşe Başlamadan 24 Saat Önce (T-1 Gün Zorunluluğu)',
+      hazirlikSaatOncesi: 24,
+      oncedenYapilacaklar: [
+        'KIRMIZI ALARM: İşe başlama tarihinden en az 1 gün önce SGK e-Bildirge üzerinden işe giriş bildirgesini onayla',
+        'Belirli/belirsiz süreli iş sözleşmesi, KVKK açık rıza metni ve şirket iç yönetmeliğini ıslak imzalattır',
+        'Sağlık raporu, adli sicil kaydı, diploma ve ikametgah evraklarını özlük klasörüne tak',
+        'Zimmet teslim tutanağıyla laptop, telefon, şirket kredi kartı ve giriş kartını teslim et',
+        'İşe giriş tarihinden 45 gün sonrasına \'Deneme Süresi Performans Değerlendirme\' hatırlatması kur'
+      ],
+      akilliFisilti: '⚠️ 5510 sayılı Kanun uyarınca sigortalı işe giriş bildirgesi çalışanın işe fiilen başlamasından en az 1 gün önce (T-1 gün) e-Bildirge üzerinden onaylanmalıdır.'
+    }
+  },
+
+  // 14. VIP Yönetici Ajandası, Brifing & Toplantı Tamponu
+  {
+    matcher: (l) => l.includes('sekreter') || l.includes('yönetici asistanı') || l.includes('yonetici asistani') || l.includes('vip brifing') || l.includes('toplantı tamponu') || l.includes('brifing dosyası'),
+    inference: {
+      domain: 'kurumsal_yonetici_brifing',
+      hazirlikZamani: 'Toplantıdan 2 Saat Önce',
+      hazirlikSaatOncesi: 2,
+      oncedenYapilacaklar: [
+        'Arka arkaya toplantılar arasına min. 30 dakika seyahat, toparlanma ve nefeslenme tamponu koy',
+        'Üst düzey görüşmeden 2 saat önce: Katılımcı özgeçmişleri, toplantı bilgi notu ve ikram teyidini sağla',
+        'Uçuşlu seyahatlerde T-24 saatte online check-in yap, VIP lounge ve havalimanı transferini teyit et',
+        'Toplantı bitiminde MoM (Minutes of Meeting - Toplantı Tutanağı) ve aksiyon sahipleri listesini ilgili yöneticilere dağıt'
+      ],
+      akilliFisilti: '🗂️ Yönetici ajandasında ardışık toplantılar arasına min. 30 dakika tampon konulmalı, brifing dosyası 2 saat önce masaya sunulmalıdır.'
+    }
   }
 ];
 
 // src/utils/predictiveGraph.ts dosyasına eklenecek yeni yaşam alanları:
 export const EXPANDED_LIFE_DOMAINS = [
-  // 1. Tapu & Gayrimenkul
+  // 1. Tapu, Web-Tapu & Gayrimenkul Devri
   {
-    matcher: (l: string) => l.includes('tapu') || l.includes('ev sat') || l.includes('rayiç'),
+    matcher: (l: string) => l.includes('tapu') || l.includes('webtapu') || l.includes('web-tapu') || l.includes('ev sat') || l.includes('rayiç') || l.includes('dask'),
     inference: {
       domain: 'gayrimenkul_tapu',
-      hazirlikZamani: '1 Gün Önce 14:00',
+      hazirlikZamani: 'Randevudan 24 Saat Önce',
       hazirlikSaatOncesi: 24,
       oncedenYapilacaklar: [
-        'DASK deprem sigortası poliçesi güncel mi?',
-        'Belediyeden emlak beyan değeri (rayiç) belgesi al',
-        'Döner sermaye ve tapu harcı SMS kodunu bekle ve öde',
-        'Kimlik asılları ve tapu senedini dosyala'
+        'Web-Tapu sistemine DASK poliçesi ve belediye rayiç belgesini yükle',
+        'Gelen SMS takip numarası ile alıcı/satıcı tapu harcı ve döner sermayesini yatır',
+        'Para transferini güvene almak için Takasbank TapuTakas veya bloke çek hazırla',
+        'Randevudan 15 dk önce kimlik asılları ve fotoğraf ile hazır bulun'
       ],
-      akilliFisilti: '💡 Tapu randevusu öncesi döner sermaye harcının yatırılması zorunludur.'
+      akilliFisilti: '🏢 Tapu randevusu öncesi belediye rayiç belgesi ve DASK olmadan harç SMS\'i gelmez; para transferi Takasbank veya bloke çekle korunmalıdır.'
+    }
+  },
+  // 1.1. Kira Sözleşmesi & Tahliye Taahhütnamesi
+  {
+    matcher: (l: string) => l.includes('kira sözleşmesi') || l.includes('kira kontratı') || l.includes('kiraya verdik') || l.includes('yeni kiracı'),
+    inference: {
+      domain: 'gayrimenkul_kira',
+      hazirlikZamani: 'İmza Öncesi',
+      hazirlikSaatOncesi: 24,
+      oncedenYapilacaklar: [
+        'Kiracının kimlik, gelir ve kefil bilgilerini kontrol et',
+        'Demirbaş teslim tutanağı ile kombi, armatür ve duvar boyasını fotoğrafla',
+        'Elektrik, su, doğalgaz sayaç ilk endekslerini tutanağa bağla',
+        'Tahliye taahhütnamesini Yargıtay kuralı gereği teslimden sonraki güne tanzim et'
+      ],
+      akilliFisilti: '📝 Kira sözleşmesiyle aynı gün tarihli tahliye taahhütnamesi baskı altında imzalanmış sayılarak geçersiz sayılabilir.'
+    }
+  },
+  // 1.2. Taşınmaz Gösterme & Sunum
+  {
+    matcher: (l: string) => l.includes('yer gösterme') || l.includes('yer gosterme') || l.includes('evi göstereceğiz') || l.includes('portföy sunumu'),
+    inference: {
+      domain: 'gayrimenkul_sunum',
+      hazirlikZamani: 'Sunumdan 1 Saat Önce',
+      hazirlikSaatOncesi: 1,
+      oncedenYapilacaklar: [
+        'Mülk sahibi veya mevcut kiracıyla randevuyu teyit et ve site güvenliğini bilgilendir',
+        'Daireye 15 dk önce varıp pencereleri açarak havalandır ve aydınlatmaları yak',
+        'Müşteriye Taşınmaz Gösterme Belgesini sunum başlamadan önce imzalat',
+        'Net/brüt m2, bina yaşı, aidat ve tapu takyidat bilgilerini eksiksiz aktar'
+      ],
+      akilliFisilti: '🤝 Taşınmaz Ticareti Yönetmeliği md. 19 gereği yer gösterme belgesi imzalatılmadan yapılan sunumlarda komisyon hakkı korunamaz.'
+    }
+  },
+  // 1.3. İpotek Fekki & Kredi Kapanışı
+  {
+    matcher: (l: string) => l.includes('ipotek fek') || l.includes('ipotek terkin') || l.includes('ipotek kaldırma') || l.includes('kredi kapandı'),
+    inference: {
+      domain: 'gayrimenkul_ipotek',
+      hazirlikZamani: 'Kredi Kapanış Sonrası',
+      hazirlikSaatOncesi: 24,
+      oncedenYapilacaklar: [
+        'Bankadan kredi borcunun kapandığını gösteren tasfiye dekontunu al',
+        'Bankanın Web-Tapu/TAKPAS üzerinden elektronik fek yazısı göndermesini sağla',
+        'Tapu fek terkin harcını yatır ve kütükten ipotek şerhinin silindiğini teyit et'
+      ],
+      akilliFisilti: '🏛️ Borç bitse bile banka fek yazısı göndermez ve harç ödenmezse ipotek kütükte kalmaya devam eder.'
     }
   },
   // 2. Ehliyet & Sürücü Belgesi
@@ -1037,6 +1246,266 @@ export const EXPANDED_LIFE_DOMAINS = [
       ikon: '🪴',
       renk: '#DCFCE7'
     }
+  },
+
+  // 37. Ziraat: Zirai İlaçlama, Rüzgarsız Saat & PHI Bekleme Süresi
+  {
+    matcher: (l: string) =>
+      l.includes('ilaçlama') || l.includes('ilaclama') || l.includes('pestisit') || l.includes('fungisit') ||
+      l.includes('böcek ilacı') || l.includes('mantar ilacı') || l.includes('kırmızı örümcek') || l.includes('phi süresi'),
+    inference: {
+      domain: 'ziraat_ilaclama',
+      baslik: 'Zirai İlaçlama & Meteoroloji Takibi',
+      hazirlikZamani: 'İlaçlama Öncesi 45 Dk (06:15)',
+      hazirlikSaatOncesi: 1,
+      oncedenYapilacaklar: [
+        'Meteoroloji rüzgar hızını (<10 km/s) ve 24 saatlik yağışsızlık durumunu teyit et',
+        'Kimyasal buhar maskesi (A2P3), koruyucu tulum, gözlük ve nitril eldiven kuşan',
+        'İlaçlama suyu pH değerini (5.5 - 6.5 aralığı) kontrol et; etiket reçete dozajına uy',
+        'Komşu arıcılara haber ver; etiket üzerindeki PHI (hasat öncesi bekleme süresi) gününü kaydet',
+        'İlaçlama bitiminde pülverizatör tankını ve memelerini bol temiz suyla yıka'
+      ],
+      akilliFisilti: '⚠️ Rüzgarlı havada ilaçlama sürüklenme zehirlenmesine, yağmur ise ilacın yıkanmasına yol açar. PHI bekleme süresine uyulmalıdır.',
+      sesliFisilti: 'Rüzgarsız hava şartı, İSG donanımı ve PHI hasat bekleme takvimli ilaçlama kartı açıldı.',
+      ikon: '🧪',
+      renk: '#DCFCE7'
+    }
+  },
+
+  // 38. Ziraat: Mevsimlik Budama, Yara Bakımı & Bordo Bulamacı
+  {
+    matcher: (l: string) =>
+      l.includes('budama') || l.includes('bordo bulamacı') || l.includes('bordo bulamaci') ||
+      l.includes('aşı macunu') || l.includes('asi macunu') || l.includes('ardıç katranı') || l.includes('ağaçları budadık'),
+    inference: {
+      domain: 'ziraat_budama',
+      baslik: 'Budama & Bordo Bulamacı Koruma',
+      hazirlikZamani: 'Budamadan Hemen Sonra (İlk 48 Saat)',
+      hazirlikSaatOncesi: 2,
+      oncedenYapilacaklar: [
+        'Budama aletlerini %10 çamaşır suyu veya alkolle dezenfekte et (kanser bulaşmasını önle)',
+        'Kuru, hastalıklı, obur ve içe bakan dalları tırnak bırakmadan dipten kes',
+        '2 cm üzerindeki kalın kesim yaralarını aşı macunu (ardıç katranı) ile hava almayacak şekilde kapat',
+        'Budama biter bitmez gövdeye bakteri/mantar girişini önleyen %1.5-2 Bordo Bulamacı püskürt',
+        'Budanan hastalıklı dal artıklarını bahçeden uzaklaştırarak imha et'
+      ],
+      akilliFisilti: '🌳 Kalın kesik yüzeyleri aşı macunuyla kapatılmazsa ağaçlar dal kanseri (Pseudomonas) kapar.',
+      sesliFisilti: 'Budama alet dezenfeksiyonu, yara macunu ve Bordo Bulamacı koruma adımları hazırlandı.',
+      ikon: '✂️',
+      renk: '#FEF3C7'
+    }
+  },
+
+  // 39. Ziraat: Damlama Sulama & Fertigasyon Protokolü
+  {
+    matcher: (l: string) =>
+      l.includes('damlama') || l.includes('fertigasyon') || l.includes('taban gübre') ||
+      l.includes('yaprak gübre') || l.includes('toprak tahlili'),
+    inference: {
+      domain: 'ziraat_fertigasyon',
+      baslik: 'Damlama Sulama & Fertigasyon Protokolü',
+      hazirlikZamani: 'Sulama Öncesi Filtre Kontrolü',
+      hazirlikSaatOncesi: 1,
+      oncedenYapilacaklar: [
+        'Toprak tahlili sonuçlarına göre N-P-K gübre dozunu tankta tamamen erit',
+        'İlk 15-20 dk sistemi temiz suyla doldurup manometreden 1.5-2.0 bar çalışma basıncını sağla',
+        'Gübre enjeksiyonu bittikten sonra hatlarda kristal kalmaması için 20-30 dk temiz su bas',
+        'Damlatıcıların tıkanmaması için disk/kum filtrelerini ters yıkama ile temizle',
+        'Kireç birikimlerine karşı damlama borularına düşük doz fosforik asit şoku ver'
+      ],
+      akilliFisilti: '💧 Fertigasyon sonrasında damlama borularına temiz su basılmazsa damlatıcı memeleri gübre tuzlarıyla tıkanır.',
+      sesliFisilti: 'Fertigasyon dozu, hat basınç kontrolü ve filtre temizleme adımları planlandı.',
+      ikon: '💧',
+      renk: '#DCFCE7'
+    }
+  },
+
+  // 40. Ziraat: Zirai Don Nöbeti & Sera Isıtma
+  {
+    matcher: (l: string) =>
+      l.includes('zirai don') || l.includes('don tehlikesi') || l.includes('serayı ısıt') ||
+      l.includes('don nöbeti') || l.includes('dona karşı') || l.includes('don vuracak') || l.includes('sera don'),
+    inference: {
+      domain: 'ziraat_don_nobeti',
+      baslik: 'Zirai Don Nöbeti & Sera Isıtma',
+      hazirlikZamani: 'Akşam 21:00 (Soba & Termometre)',
+      hazirlikSaatOncesi: 6,
+      oncedenYapilacaklar: [
+        'Gece sıcaklıklarının 0°C altına düşüş hızını dijital termometreden anlık takip et',
+        'Seralarda soba veya sıcak hava üreteçlerini saat 02:00 itibarıyla ateşle',
+        'Açık meyve bahçelerinde don öncesi hafif sulama yap (ıslak toprak gündüz ısısını geceye taşır)',
+        'Aşırı donda yağmurlama sisleme sistemini açarak donma gizli ısısıyla tomurcukları koru',
+        'Don hasarı sonrasında bitkiyi toparlamak için yapraktan amino asit takviyesi ver'
+      ],
+      akilliFisilti: '❄️ Kuru toprak gece ıslak topraktan 1.5-2°C daha soğuk olur; don gecesinde nem ve sisleme kritik koruma sağlar.',
+      sesliFisilti: 'Gece zirai don nöbeti, sera ısıtma ve bitki don koruma protokolü devreye alındı.',
+      ikon: '❄️',
+      renk: '#E0F2FE'
+    }
+  },
+
+  // 41. Ziraat: ÇKS (Çiftçi Kayıt Sistemi) & TARSİM Sigortası
+  {
+    matcher: (l: string) =>
+      l.includes('çks') || l.includes('cks') || l.includes('tarsim') ||
+      l.includes('tarım sigortası') || l.includes('çiftçi kayıt sistemi') || l.includes('mazot gübre desteği'),
+    inference: {
+      domain: 'ziraat_cks_tarsim',
+      baslik: 'ÇKS Dosyası & TARSİM Sigorta Başvurusu',
+      hazirlikZamani: 'Son Başvuru Tarihinden 3 Gün Önce',
+      hazirlikSaatOncesi: 48,
+      oncedenYapilacaklar: [
+        'Tapu fotokopileri, muvafakatnameler ve kira sözleşmelerini Ziraat Odasına onaylat',
+        'İlçe Tarım Müdürlüğüne ÇKS formlarını ve parsel beyanlarını teslim et',
+        'TARSİM yetkili acentesinden don, dolu, fırtına ve yangın risk poliçesini kestir',
+        'Doğal afet hasarında en geç 10 gün içinde TARSİM çağrı merkezine hasar ihbarı yap',
+        'e-Devlet üzerinden Mazot-Gübre ve prim destekleme hakediş durumunu sorgula'
+      ],
+      akilliFisilti: '🌾 ÇKS kaydı süresinde yenilenmeyen araziler mazot-gübre devlet desteğinden ve TARSİM prim indiriminden faydalanamaz.',
+      sesliFisilti: 'ÇKS dosya yenileme, mazot-gübre desteği ve TARSİM tarım sigortası adımları açıldı.',
+      ikon: '🌾',
+      renk: '#FEF3C7'
+    }
+  },
+
+  // 42. Ziraat: Fidan Dikimi & Can Suyu
+  {
+    matcher: (l: string) =>
+      l.includes('fidan diktik') || l.includes('fidan dikimi') || l.includes('ağaç diktik') ||
+      l.includes('tüplü fidan') || l.includes('can suyu'),
+    inference: {
+      domain: 'ziraat_fidan_dikimi',
+      baslik: 'Fidan Dikimi & Can Suyu Protokolü',
+      hazirlikZamani: 'Dikimden Hemen Sonra',
+      hazirlikSaatOncesi: 1,
+      oncedenYapilacaklar: [
+        'Dikim çukurunu fidan kökünden 2 kat geniş kaz; tabanına yanmış çiftlik gübresi harmanla',
+        'Açık köklü fidanlarda kök tuvaleti yap (kırık ve hasarlı kökleri steril makasla kes)',
+        'Fidan aşı noktasının toprak yüzeyinden en az 5-10 cm yukarıda kalmasına dikkat et',
+        'Fidanı destek hereğine rüzgar yönüne göre esnek iple 8 şeklinde bağla',
+        'Topraktaki hava boşluklarını kapatmak için bol miktarda ilk CAN SUYU ver'
+      ],
+      akilliFisilti: '🌱 Fidan aşı noktası toprağa gömülürse fidan anaç özelliğini kaybeder veya gövde çürüyerek kurur.',
+      sesliFisilti: 'Kök tuvaleti, aşı boğazı hizası ve ilk can suyu dikim protokolü oluşturuldu.',
+      ikon: '🌱',
+      renk: '#DCFCE7'
+    }
+  },
+
+  // 43. Ziraat: Çim Alan Bakımı & Verticut
+  {
+    matcher: (l: string) =>
+      l.includes('çim biçme') || l.includes('cim bicme') || l.includes('çim havalandırma') ||
+      l.includes('verticut') || l.includes('çim sarardı'),
+    inference: {
+      domain: 'ziraat_cim_bakimi',
+      baslik: 'Çim Alan Bakımı & Verticut Protokolü',
+      hazirlikZamani: 'Sabah Erken 07:30',
+      hazirlikSaatOncesi: 0,
+      oncedenYapilacaklar: [
+        'Çim biçme makinesi bıçaklarının keskin olduğunu kontrol et (kör bıçak çimi sarartır)',
+        'Çim boyunun 1/3\'ünden fazlasını tek seferde kesme (kademeli biçim)',
+        'Çimleri sabah erken saatte sula; akşam sulamasından kaçın (ıslak yaprak pas mantarı yapar)',
+        'Yılda iki kez keçe tabakasını temizlemek için verticut havalandırma yap',
+        'Seyrelen kel bölgelere ara ekim tohumu serpip ince torfla ört'
+      ],
+      akilliFisilti: '🌱 Çimler akşam sulanırsa sabaha kadar ıslak kalan yapraklarda kahverengi yama ve pas mantarı oluşur.',
+      sesliFisilti: 'Sabah erken fıskiye sulaması, 1/3 boy kesim ve verticut çim bakım kartı açıldı.',
+      ikon: '🌱',
+      renk: '#DCFCE7'
+    }
+  },
+
+  // 44. Denizcilik: PSC Liman Devleti Denetimi & Paris MoU
+  {
+    matcher: (l: string) =>
+      l.includes('psc') || l.includes('paris mou') || l.includes('med mou') || l.includes('liman devleti denetim'),
+    inference: {
+      domain: 'denizcilik_psc_paris_mou',
+      baslik: 'PSC Liman Devleti Denetimi & Paris MoU',
+      hazirlikZamani: 'Liman Öncesi 24 Saat (Gemi İçi Denetim)',
+      hazirlikSaatOncesi: 24,
+      oncedenYapilacaklar: [
+        'Can filikaları indirme donanımı, motor çalıştırma ve acil durum dümen tatbikatını icra et',
+        '15 PPM sintine separatörü (OWS) 3 yollu vana alarm ve otomatik durdurma testini doğrula',
+        'Yağ Kayıt Jurnali (ORB Part I) ve Çöp Kayıt Jurnalini Başmühendis ve Kaptan imzalı hazırla',
+        'Yangın damperleri, manyetik pusula deviasyon kartı, acil yangın pompası ve navigasyon fenerlerini test et',
+        'Gemi adamları STCW ehliyetleri, MLC 2006 çalışma sözleşmeleri ve klas sertifikalarını denetim masasına aç'
+      ],
+      akilliFisilti: '⚓ Paris MoU ve Akdeniz MoU denetimlerinde filika indirme, yangın tatbikatı ve 15 PPM OWS arızası doğrudan geminin tutulmasına (detention) yol açar.',
+      sesliFisilti: 'PSC Paris MoU denetimi için filika, OWS ve SOLAS emniyet çeklisti oluşturuldu.',
+      ikon: '⚓',
+      renk: '#CFFAFE'
+    }
+  },
+
+  // 45. Denizcilik: Draft Survey & Yükleme Balans Hesabı
+  {
+    matcher: (l: string) =>
+      l.includes('draft survey') || l.includes('draft hesabı') || l.includes('draft okuma') || l.includes('densimetre'),
+    inference: {
+      domain: 'denizcilik_draft_survey',
+      baslik: 'Draft Survey & Yükleme Balans Hesabı',
+      hazirlikZamani: 'Ölçümden 1 Saat Önce',
+      hazirlikSaatOncesi: 1,
+      oncedenYapilacaklar: [
+        'Baş, kıç ve vasat (Forward, Aft, Midship) sancak/iskele draft değerlerini draft iskelesi veya botla oku',
+        'Borda iskelesinden numune alarak kalibre densimetre ile deniz suyu yoğunluğunu (Specific Gravity) ölç',
+        'Tüm balast, tatlı su, yakıt (FO/DO) ve sintine tanklarının iskandillerini (sounding) alarak hacimleri belirle',
+        'Hogging/sagging omurga sehimi düzeltmesini uygulayarak gemi net deplasmanını ve yük miktarını hesapla',
+        'Yükleyici/tahliye sörveyörü ile müşterek draft survey tutanağını (Survey Report) karşılıklı imza altına al'
+      ],
+      akilliFisilti: '🚢 Draft survey hesaplarında deniz suyu yoğunluğu (SG) densimetre ile yerinde ölçülmeden yapılan ağırlık hesabı binlerce tonluk navlun ihtilafına sebep olur.',
+      sesliFisilti: 'Draft survey okuma, densimetre ve iskandil yük balans protokolü hazırlandı.',
+      ikon: '🚢',
+      renk: '#E0F2FE'
+    }
+  },
+
+  // 46. Denizcilik: Balast Suyu Yönetimi & BWM Jurnali
+  {
+    matcher: (l: string) =>
+      l.includes('balast jurnali') || l.includes('bwm') || l.includes('balast basma') || l.includes('balast tahliyesi') || l.includes('ballast water'),
+    inference: {
+      domain: 'denizcilik_bwm_balast_jurnali',
+      baslik: 'Balast Suyu Yönetimi & BWM Jurnali',
+      hazirlikZamani: 'Operasyon Öncesi (D-2 Standart Testi)',
+      hazirlikSaatOncesi: 1,
+      oncedenYapilacaklar: [
+        'BWM D-2 arıtma sistemi (BWTS) UV lambaları ve filtrasyon basınç farkını operasyon öncesi test et',
+        'Açık deniz derin su balast değişimini (Ballast Exchange) kıyıdan en az 200 deniz mili açıkta ve 200 metre derinlikte tamamla',
+        'Balast Kayıt Jurnaline (BWRB) başlangıç/bitiş koordinatları, tank numaraları ve metreküp hacmini eksiksiz işle',
+        'Pompa emiş ve basma basınçlarını sürekli izleyerek tank taşması veya havalık tıkanıklığını engelle',
+        'Liman otoritesine ve PSC müfettişine ibraz edilmek üzere güncel Balast Su Bildirim Formunu hazırla'
+      ],
+      akilliFisilti: '🌊 IMO BWM Sözleşmesi uyarınca açık denizde derin su balast değişimi en az 200 mil açıkta ve 200 metre derinlikte yapılmalıdır.',
+      sesliFisilti: 'BWM D-2 standart testi ve balast kayıt jurnali operasyon kartı oluşturuldu.',
+      ikon: '🌊',
+      renk: '#CFFAFE'
+    }
+  },
+
+  // 47. Denizcilik: Passage Plan & Seyir Çeklisti
+  {
+    matcher: (l: string) =>
+      l.includes('passage plan') || l.includes('sefer planı') || l.includes('kalkış hazırlığı') || l.includes('dümen testi') || l.includes('ecdis rota'),
+    inference: {
+      domain: 'denizcilik_passage_plan_kalkis',
+      baslik: 'Passage Plan & Kalkış Seyir Çeklisti',
+      hazirlikZamani: 'Kalkıştan 2 Saat Önce',
+      hazirlikSaatOncesi: 2,
+      oncedenYapilacaklar: [
+        'Berthing to Berthing (Rıhtımdan rıhtıma) ECDIS rota planını, No-Go Area ve Squat derinlik paylarını onayla',
+        'SOLAS kuralı: Dümen motorları (Steering Gear) ana/acil durum geçişini, tele-motor ve dümen açısı müşirini test et',
+        'Manyetik pusula ve Gyro pusula repeater eşitlemesini yap; seyir fenerleri ve sesli sis düdüğünü dene',
+        'VHF, GMDSS Navtex, EPIRB ve SART cihazlarının batarya ve alıcı testlerini gerçekleştir',
+        'Liman kontrol (VTS) ile irtibata geçerek kalkış izni (Departure Clearance) ve römorkör/palamar koordinasyonunu sağla'
+      ],
+      akilliFisilti: '🧭 SOLAS Chapter V uyarınca kalkıştan en geç 12 saat önce acil durum dümen donanımı ve telsiz teçhizatı bizzat test edilmelidir.',
+      sesliFisilti: 'SOLAS 12 saatlik acil dümen testi ve ECDIS passage plan çeklisti hazırlandı.',
+      ikon: '🧭',
+      renk: '#E0F2FE'
+    }
   }
 ];
 
@@ -1117,7 +1586,7 @@ import { matchShortScenario } from './scenarioDatabase.ts';
 /**
  * Kullanıcı girdisini analiz ederek gizli ön koşulları ve hazırlık adımlarını çıkarır.
  */
-export function inferPredictiveActions(text: string, now: Date = new Date()): PredictiveInference | null {
+export function inferPredictiveActions(text: string, now: Date = new Date(), userDomain?: string): PredictiveInference | null {
   if (!text) return null;
   let lower = text.toLowerCase();
   
@@ -1178,7 +1647,7 @@ export function inferPredictiveActions(text: string, now: Date = new Date()): Pr
 
   // 3. Genişletilmiş Kısa Senaryo Veritabanından (Scenario Database) çıkarım yap
   if (!matched) {
-    const shortMatch = matchShortScenario(text);
+    const shortMatch = matchShortScenario(text, userDomain);
     if (shortMatch) {
       matched = {
         domain: shortMatch.id,

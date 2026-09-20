@@ -228,6 +228,10 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
     btnPrimaryText: 'text-white',
     actions: [
       { id: 'tacho_rest', label: 'Takograf 45dk Mola', icon: '🛑', actionType: 'TIMER' },
+      { id: 'pretrip_check', label: 'Pre-Trip & King-Pin', icon: '🚛', actionType: 'LOTO_CHECK' },
+      { id: 'cmr_reserve', label: 'CMR Rezerv & Şerh', icon: '📄', actionType: 'COPY_TEMPLATE' },
+      { id: 'adr_check', label: 'ADR & UN Levha Kontrol', icon: '☣️', actionType: 'LOTO_CHECK' },
+      { id: 'cold_chain', label: 'Frigo ATP & Isı Grafiği', icon: '❄️', actionType: 'LOTO_CHECK' },
       { id: 'ramp_nav', label: 'Rampaya Rota Aç', icon: '📍', actionType: 'NAVIGATE' }
     ]
   },
@@ -303,15 +307,19 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
     btnPrimaryBg: 'bg-purple-700 hover:bg-purple-800',
     btnPrimaryText: 'text-white',
     actions: [
-      { id: 'sgk_check', label: 'SGK İşe Giriş Bildirgesi', icon: '👥', actionType: 'TIMER' },
-      { id: 'meeting_buffer', label: 'Toplantı Brifing Dosyası', icon: '🗂️', actionType: 'COPY_TEMPLATE' },
-      { id: 'trial_eval', label: 'Deneme Süresi Formu', icon: '📝', actionType: 'COPY_TEMPLATE' }
+      { id: 'ebys_paraf', label: 'EBYS / e-İmza Parafı', icon: '🖋️', actionType: 'COPY_TEMPLATE' },
+      { id: 'cimer_track', label: 'CİMER Yasal Takip', icon: '🏛️', actionType: 'TIMER' },
+      { id: 'temin_22d', label: '22/d Temin & TİF', icon: '🗂️', actionType: 'LOTO_CHECK' },
+      { id: 'sgk_check', label: '5510 SGK İşe Giriş (T-1)', icon: '👥', actionType: 'TIMER' },
+      { id: 'meeting_buffer', label: 'VIP Brifing & Tampon', icon: '🗂️', actionType: 'COPY_TEMPLATE' },
+      { id: 'trial_eval', label: 'Deneme Süresi Formu', icon: '📝', actionType: 'COPY_TEMPLATE' },
+      { id: 'board_decision', label: 'Yönetim Kurulu Karar Defteri', icon: '📜', actionType: 'COPY_TEMPLATE' }
     ]
   },
 
   ZIRAAT: {
     domain: 'ZIRAAT',
-    displayName: 'Ziraat & Peyzaj',
+    displayName: 'Ziraat & Botanik',
     bgCard: 'bg-lime-50/70 border-lime-200',
     borderAccent: 'border-l-lime-600',
     badgeBg: 'bg-lime-100',
@@ -319,14 +327,17 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
     btnPrimaryBg: 'bg-lime-700 hover:bg-lime-800',
     btnPrimaryText: 'text-white',
     actions: [
-      { id: 'sunset_water', label: 'Akşam Serinliği (19:30)', icon: '🌿', actionType: 'TIMER' },
-      { id: 'orchid_submerge', label: 'Daldırma Sulama', icon: '🌸', actionType: 'COPY_TEMPLATE' }
+      { id: 'sunset_water', label: 'Akşam Sulama Hatırlatıcısı (19:30)', icon: '🌿', actionType: 'TIMER' },
+      { id: 'orchid_morning', label: 'Orkide Sabah Daldırma (09:30)', icon: '🌸', actionType: 'TIMER' },
+      { id: 'zirai_spray_wind', label: 'İlaçlama & Rüzgar Kontrolü', icon: '💨', actionType: 'COPY_TEMPLATE' },
+      { id: 'bordo_bulamaci', label: 'Bordo Bulamacı & Aşı Macunu', icon: '🧪', actionType: 'COPY_TEMPLATE' },
+      { id: 'tarsim_cks', label: 'ÇKS & TARSİM Takvimi', icon: '🌾', actionType: 'WHATSAPP' }
     ]
   },
 
   VETERINER: {
     domain: 'VETERINER',
-    displayName: 'Veteriner Hekim',
+    displayName: 'Veteriner Hekim & Hayvan Sağlığı',
     bgCard: 'bg-teal-50/75 border-teal-200',
     borderAccent: 'border-l-teal-600',
     badgeBg: 'bg-teal-100',
@@ -334,9 +345,12 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
     btnPrimaryBg: 'bg-teal-700 hover:bg-teal-800',
     btnPrimaryText: 'text-white',
     actions: [
-      { id: 'petvet_chip', label: 'Petvet Mikroçip Kaydı', icon: '🐾', actionType: 'COPY_TEMPLATE' },
-      { id: 'rabies_titer', label: 'Kuduz Titrasyon (3 Ay)', icon: '💉', actionType: 'TIMER' },
-      { id: 'postop_antibiotic', label: 'Post-Op Antibiyotik', icon: '💊', actionType: 'TIMER' }
+      { id: 'petvet_chip', label: 'Petvet Mikroçip & Pasaport', icon: '🐾', actionType: 'COPY_TEMPLATE' },
+      { id: 'rabies_titer', label: 'Kuduz Titrasyon (3 Ay)', icon: '✈️', actionType: 'TIMER' },
+      { id: 'preop_fasting', label: 'Pre-Op Açlık & Onam', icon: '🩺', actionType: 'COPY_TEMPLATE' },
+      { id: 'postop_suture', label: 'Post-Op 8. Gün Dikiş', icon: '🧵', actionType: 'TIMER' },
+      { id: 'turkvet_tag', label: 'TÜRKVET Küpeleme & Aşı', icon: '🐄', actionType: 'COPY_TEMPLATE' },
+      { id: 'cmt_mastitis', label: 'CMT & Süt Arınma Karantinası', icon: '🥛', actionType: 'LOTO_CHECK' }
     ]
   },
 
@@ -351,6 +365,7 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
     btnPrimaryText: 'text-white',
     actions: [
       { id: 'webtapu_submit', label: 'Web-Tapu Harç Mesajı', icon: '🏢', actionType: 'WHATSAPP' },
+      { id: 'yer_gosterme', label: 'Yer Gösterme Tutanağı', icon: '🤝', actionType: 'COPY_TEMPLATE' },
       { id: 'dask_renewal', label: 'DASK & Rayiç Bedel', icon: '📑', actionType: 'COPY_TEMPLATE' },
       { id: 'mortgage_release', label: 'İpotek Fek Yazısı', icon: '🏛️', actionType: 'COPY_TEMPLATE' }
     ]
@@ -368,7 +383,9 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
     actions: [
       { id: 'psc_check', label: 'PSC Denetim Kontrolü', icon: '⚓', actionType: 'LOTO_CHECK' },
       { id: 'draft_survey', label: 'Draft Survey Yük Hesabı', icon: '🚢', actionType: 'COPY_TEMPLATE' },
-      { id: 'ballast_log', label: 'Sintine & Balast Jurnali', icon: '🌊', actionType: 'COPY_TEMPLATE' }
+      { id: 'ballast_log', label: 'Sintine & Balast Jurnali', icon: '🌊', actionType: 'COPY_TEMPLATE' },
+      { id: 'passage_plan', label: 'Passage Plan & Seyir', icon: '🧭', actionType: 'COPY_TEMPLATE' },
+      { id: 'pilot_ladder', label: 'Pilot Çarmıhı & MPX', icon: '🧑‍✈️', actionType: 'LOTO_CHECK' }
     ]
   },
 
@@ -448,10 +465,41 @@ export function detectDomainFromNote(note: { ikon?: string; baslik?: string; ano
   if (icon === '🐾' || text.includes('petvet') || text.includes('mikroçip') || text.includes('kuduz titrasyon') || text.includes('veteriner') || text.includes('kedi aşı') || text.includes('köpek aşı') || text.includes('parazit')) {
     return 'VETERINER';
   }
-  if (icon === '🏢' || text.includes('web-tapu') || text.includes('webtapu') || text.includes('dask') || text.includes('ipotek fek') || text.includes('taşınmaz ticareti') || text.includes('rayiç bedel') || text.includes('tapu harcı') || text.includes('cayma akçesi')) {
+  if (
+    icon === '🏢' ||
+    text.includes('web-tapu') || text.includes('webtapu') || text.includes('dask') ||
+    text.includes('ipotek fek') || text.includes('taşınmaz ticareti') || text.includes('rayiç bedel') ||
+    text.includes('tapu harcı') || text.includes('cayma akçesi') || text.includes('tahliye taahhüt') ||
+    text.includes('yer gösterme') || text.includes('kira sözleşmesi') || text.includes('kira kontratı') ||
+    text.includes('emlak') || text.includes('gayrimenkul') || text.includes('takyidat') ||
+    text.includes('imar durumu') || text.includes('iskan raporu') || text.includes('ada parsel') ||
+    text.includes('taputakas') || text.includes('güvenli tapu') || text.includes('kiracı tahliye')
+  ) {
     return 'EMLAK';
   }
-  if (icon === '⚓' || icon === '🚢' || text.includes('psc denetim') || text.includes('draft survey') || text.includes('sintine') || text.includes('balast') || text.includes('gemi') || text.includes('kaptan') || text.includes('denizcilik')) {
+  if (
+    icon === '⚓' ||
+    icon === '🚢' ||
+    icon === '🌊' ||
+    icon === '🧭' ||
+    icon === '🧑‍✈️' ||
+    text.includes('psc denetim') ||
+    text.includes('draft survey') ||
+    text.includes('sintine') ||
+    text.includes('balast') ||
+    text.includes('gemi') ||
+    text.includes('kaptan') ||
+    text.includes('denizcilik') ||
+    text.includes('çarkçı') ||
+    text.includes('zabit') ||
+    text.includes('bunkering') ||
+    text.includes('passage plan') ||
+    text.includes('pilot çarmıh') ||
+    text.includes('free pratique') ||
+    text.includes('isps') ||
+    text.includes('solas') ||
+    text.includes('marpol')
+  ) {
     return 'DENIZCILIK';
   }
   if (icon === '📦' || text.includes('kırmızı hat') || text.includes('antrepo') || text.includes('konşimento') || text.includes('ordino') || text.includes('atr belgesi') || text.includes('gümrük') || text.includes('supalan')) {
@@ -481,7 +529,70 @@ export function detectDomainFromNote(note: { ikon?: string; baslik?: string; ano
   if (icon === '👮' || icon === '🪖' || icon === '🛡️' || icon === '🎯' || text.includes('gözaltı') || text.includes('fezleke') || text.includes('polis') || text.includes('asker') || text.includes('emniyet') || text.includes('nöbet') || text.includes('savunma')) {
     return 'SAVUNMA';
   }
-  if (icon === '🚛' || text.includes('takograf') || text.includes('aetr') || text.includes('kantar') || text.includes('dorse') || text.includes('şoför') || text.includes('lojistik') || text.includes('sevkiyat')) {
+  if (
+    icon === '🚛' ||
+    icon === '🚚' ||
+    text.includes('takograf') ||
+    text.includes('aetr') ||
+    text.includes('kantar') ||
+    text.includes('dorse') ||
+    text.includes('treyler') ||
+    text.includes('şoför') ||
+    text.includes('sofor') ||
+    text.includes('çekici') ||
+    text.includes('cekici') ||
+    text.includes('lojistik') ||
+    text.includes('sevkiyat') ||
+    text.includes('cmr') ||
+    text.includes('sevk irsaliyesi') ||
+    text.includes('taşıma irsaliyesi') ||
+    text.includes('hasar rezerv') ||
+    text.includes('adr') ||
+    text.includes('tehlikeli madde') ||
+    text.includes('un no') ||
+    text.includes('src5') ||
+    text.includes('src-5') ||
+    text.includes('turuncu plaka') ||
+    text.includes('kemler') ||
+    text.includes('frigo') ||
+    text.includes('soğuk zincir') ||
+    text.includes('soguk zincir') ||
+    text.includes('atp') ||
+    text.includes('data logger') ||
+    text.includes('termokin') ||
+    text.includes('ncts') ||
+    text.includes('t1') ||
+    text.includes('mrn') ||
+    text.includes('tir karnesi') ||
+    text.includes('wms') ||
+    text.includes('cross-docking') ||
+    text.includes('mal kabul') ||
+    text.includes('rampa randevu') ||
+    text.includes('solas vgm') ||
+    text.includes('vgm') ||
+    text.includes('demuraj') ||
+    text.includes('detention') ||
+    text.includes('ardiye') ||
+    text.includes('lashing') ||
+    text.includes('spanzet') ||
+    text.includes('en 12195') ||
+    text.includes('hava kargo') ||
+    text.includes('iata') ||
+    text.includes('awb') ||
+    text.includes('intermodal') ||
+    text.includes('ro-ro') ||
+    text.includes('ro-la') ||
+    text.includes('swap body') ||
+    text.includes('last-mile') ||
+    text.includes('last mile') ||
+    text.includes('kurye') ||
+    text.includes('teslimat kodu') ||
+    text.includes('pod') ||
+    text.includes('tüvtürk') ||
+    text.includes('tuvturk') ||
+    text.includes('king-pin') ||
+    text.includes('kingpin')
+  ) {
     return 'LOJISTIK';
   }
   if (icon === '💼' || icon === '🧾' || text.includes('teklif') || text.includes('z raporu') || text.includes('kasa') || text.includes('müşteri takibi') || text.includes('pos gün sonu')) {
@@ -499,7 +610,17 @@ export function detectDomainFromNote(note: { ikon?: string; baslik?: string; ano
   if (icon === '👥' || (icon === '🗂️' && (text.includes('sekreter') || text.includes('yönetici') || text.includes('brifing') || text.includes('vip') || text.includes('toplantı') || text.includes('kamu') || text.includes('memur'))) || text.includes('sekreter') || text.includes('insan kaynakları') || text.includes('işe giriş') || text.includes('işten çıkış') || text.includes('ebys') || text.includes('cimer') || text.includes('deneme süresi') || text.includes('yönetici asistanı') || text.includes('vip karşılama')) {
     return 'KAMU';
   }
-  if (icon === '🌿' || icon === '🌱' || icon === '🌸' || text.includes('sulama') || text.includes('orkide') || text.includes('bahçe') || text.includes('çiçek')) {
+  if (
+    icon === '🌿' || icon === '🌱' || icon === '🌸' || icon === '🌾' ||
+    text.includes('sulama') || text.includes('orkide') || text.includes('bahçe') || text.includes('çiçek') ||
+    text.includes('suvar') || text.includes('sulayuver') || text.includes('suver') || text.includes('çiçekler susamış') ||
+    text.includes('budama') || text.includes('gübre') || text.includes('gubre') || text.includes('zirai') ||
+    text.includes('pestisit') || text.includes('fungisit') || text.includes('herbisit') || text.includes('bordo bulamacı') ||
+    text.includes('aşı macunu') || text.includes('çks') || text.includes('tarsim') || text.includes('damlama') ||
+    text.includes('kaktüs') || text.includes('sukulent') || text.includes('sardunya') || text.includes('tarla') ||
+    text.includes('hasat') || text.includes('fidan') || text.includes('peyzaj') || text.includes('botanik') ||
+    text.includes('seracılık') || text.includes('sera') || text.includes('zirai don')
+  ) {
     return 'ZIRAAT';
   }
 

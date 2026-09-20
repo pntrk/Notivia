@@ -1070,22 +1070,245 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
     ]
   },
 
-  // 18. DEVLET MEMURU & RESMİ EVRAK (EBYS, CİMER, DOĞRUDAN TEMİN)
+  // 18. KAMU, DEVLET MEMURU & KURUMSAL OFİS MOTORU (CIVIL SERVANT, BUREAUCRACY & CORPORATE OFFICE)
   {
-    id: 'memur_ebys_evrak',
+    id: 'kamu_ebys_gunlu_evrak',
     category: 'resmi',
-    keywords: ['ebys', 'belgenet', 'günlü evrak', 'acele yazı', 'paraf zinciri', 'cimer cevap'],
-    baslik: 'EBYS Günlü Evrak & Paraf',
+    domain: 'KAMU',
+    keywords: ['ebys', 'belgenet', 'dys', 'günlü evrak', 'gunlu evrak', 'acele yazı', 'paraf zinciri', 'sdp', 'standart dosya', 'e-imza evrak', 'sayı tarih al'],
+    baslik: 'EBYS Günlü & İvedi Evrak Parafı',
+    ikon: '🖋️',
+    renk: '#FEF9C3',
+    varsayilanZaman: 'Teslimden 1 Gün Önce 16:00',
+    hazirlikZamani: 'İç Onay & Paraf Zinciri',
+    akilliFisilti: '🖋️ Günlü ve ivedi yazılarda gecikmeye meydan vermemek için son tarihten en az 1 iş günü önce iç paraf zinciri tamamlanmalıdır.',
+    oncedenYapilacaklar: [
+      'Yazı taslağını hazırlayıp Başbakanlık/Cumhurbaşkanlığı Standart Dosya Planı (SDP) kodunu seç',
+      'Şef, Şube Müdürü ve Daire Başkanı hiyerarşik paraf zincirine sun',
+      'Ekli belgelerin (CD, cetvel, fiziki dosya) üst yazıya tam iliştirildiğini kontrol et',
+      'Nitelikli elektronik sertifika (e-İmza) ile nihai makam olurunu alıp giden evrak sayı/tarihini ver',
+      'Muhatap idareye veya UETS/KEP adresine teslim teyidini alarak arşive kaldır'
+    ]
+  },
+  {
+    id: 'kamu_cimer_bilgi_edinme',
+    category: 'resmi',
+    domain: 'KAMU',
+    keywords: ['cimer', 'çimer', 'bilgi edinme', '3071', 'dilekçe hakkı', 'cimer başvuru', 'cimer cevap'],
+    baslik: 'CİMER & Bilgi Edinme Yasal Süreci',
+    ikon: '🏛️',
+    renk: '#FEF9C3',
+    varsayilanZaman: 'Yasal Süre (15-30 Gün)',
+    hazirlikZamani: '3 İş Gününde Alt Birim Yazışması',
+    akilliFisilti: '🏛️ 4982 sayılı Bilgi Edinme Hakkı Kanununda 15 gün, 3071 sayılı Dilekçe Kanununda 30 günlük yasal cevap süresi esastır.',
+    oncedenYapilacaklar: [
+      'CİMER başvuru konusunu incele; gerekiyorsa 3 iş günü içinde ilgili birim veya taşra teşkilatına ara yazı yaz',
+      'Alt birimden gelen bilgi ve belgeleri mevzuat süzgecinden geçirerek gerekçeli cevap taslağını hazırla',
+      'Kişisel veriler (KVKK) ve ticari sır teşkil eden bilgileri karartarak metni nihai hale getir',
+      'Şube Müdürü parafı ve Makam Onayı ile CİMER sistemine cevabı yükleyip başvuruyu kapat',
+      'Vatandaşa sistem üzerinden bilgilendirme SMS/e-postası düştüğünü teyit et'
+    ]
+  },
+  {
+    id: 'kamu_dogrudan_temin_tif',
+    category: 'resmi',
+    domain: 'KAMU',
+    keywords: ['doğrudan temin', 'dogrudan temin', '4734', '22/d', 'tif', 'tkys', 'mys', 'mys v2', 'muayene kabul', 'piyasa fiyat araştırma', 'harcama talimatı'],
+    baslik: 'Doğrudan Temin (22/d) & TİF Süreci',
     ikon: '🗂️',
     renk: '#FEF9C3',
-    varsayilanZaman: 'Son Gün 16:00',
-    hazirlikZamani: '1 İş Günü Önce',
-    akilliFisilti: '🗂️ Günlü ve süreli yazılarda yasal süre aşılmamalı; e-İmza sertifikası takılı olmalıdır.',
+    varsayilanZaman: 'Fatura / Hakediş Onayı',
+    hazirlikZamani: 'Piyasa Araştırması & Muayene Kabul',
+    akilliFisilti: '🗂️ 4734 sayılı KİK 22/d alımlarında piyasa fiyat araştırma tutanağı, fatura tarihi, Muayene Kabul ve TİF tarihleri birebir uyumlu olmalıdır.',
     oncedenYapilacaklar: [
-      'Yazı taslağını hazırlayıp Standart Dosya Kodu (SDP) seçimi yap',
-      'Şef ve Şube Müdürü paraf zincirine sun',
-      'Nitelikli elektronik sertifika (e-İmza) ile nihai onayı alıp sayı/tarih ver',
-      'CİMER veya mahkeme bilgi talebi ise yasal süre sayacını kapat'
+      'Harcama yetkilisinden onaylı Harcama Talimatını al ve en az 3 firmadan kaşeli piyasa teklif mektubu topla',
+      'Piyasa Fiyat Araştırma Tutanağını tanzim edip en uygun teklif sahibiyle sözleşme/sipariş oluştur',
+      'Mal/hizmet tesliminde Muayene ve Kabul Komisyonu Tutanağını komisyon üyelerine ıslak imzalattır',
+      'Taşınır Kayıt ve Yönetim Sistemi (TKYS) üzerinden Taşınır İşlem Fişi (TİF) kes ve ambar kaydını yap',
+      'MYS V2 üzerinden Ödeme Emri Belgesi (ÖEB) düzenleyip fatura aslıyla birlikte Malmüdürlüğü/Muhasebeye teslim et'
+    ]
+  },
+  {
+    id: 'kamu_dmk_rapor_izin',
+    category: 'resmi',
+    domain: 'KAMU',
+    keywords: ['sağlık raporu', 'saglik raporu', 'memur izin', 'rapor aldım', 'istirahat raporu', 'tek hekim raporu', 'dmk izin', '657 izin'],
+    baslik: '657 DMK Sağlık Raporu & İzin Bildirimi',
+    ikon: '📋',
+    renk: '#FEF9C3',
+    varsayilanZaman: 'Mesai Başlangıcı (İvedi)',
+    hazirlikZamani: 'En Geç Mesai Bitimine Kadar İntikal',
+    akilliFisilti: '📋 Devlet Memurları İzin Yönetmeliği uyarınca tek hekim raporu azami 10 gün verilebilir; rapor en geç mesai bitimine kadar kuruma ulaştırılmalıdır.',
+    oncedenYapilacaklar: [
+      'Mesai başlangıç saatinde birim amirine sözlü ve yazılı olarak istirahat raporu bilgisini ver',
+      'EBYS veya kurum portalı üzerinden \'Sağlık İzni Talep Formu\' doldurarak rapor görselini sisteme yükle',
+      'Tek hekim raporu 10 günü, yılda tek hekim toplamı 40 günü aşıyorsa Sağlık Kurulu Raporu zorunluluğunu gözet',
+      'Rapor bitiminde görevine fiilen başlama yazısını veya izin onayının özlük birimince işlendiğini teyit et'
+    ]
+  },
+  {
+    id: 'kamu_dmk_disiplin_savunma',
+    category: 'resmi',
+    domain: 'KAMU',
+    keywords: ['disiplin soruşturması', 'disiplin savunma', 'savunma istem', 'muhakkik', 'disiplin amiri', '657 disiplin', 'uyarma cezası', 'kınama'],
+    baslik: 'Disiplin Soruşturması & Savunma Takvimi',
+    ikon: '⚖️',
+    renk: '#FEF9C3',
+    varsayilanZaman: 'Yasal Savunma Süresi (7 Gün)',
+    hazirlikZamani: 'Soruşturma Evrakı İnceleme (İlk 3 Gün)',
+    akilliFisilti: '⚖️ 657 sayılı DMK m. 130 gereğince memura en az 7 gün süre verilmeden disiplin cezası verilemez; savunma hakkı kutsaldır.',
+    oncedenYapilacaklar: [
+      'Savunma istem yazısının tebellüğ tarihini kaydet (7 günlük yasal geri sayımı başlat)',
+      'Soruşturma dosyasındaki iddia tutanaklarını, tanık ifadelerini ve delilleri bizzat incele',
+      'Hukuki ve somut delillere dayalı yazılı savunma dilekçesini hazırla',
+      'Disiplin amiri veya muhakkike savunmayı EBYS kaydıyla veya imza karşılığı teslim et',
+      'Disiplin cezası zamanaşımı sürelerini (öğrenmeden itibaren 1 ay, fiilden itibaren 2 yıl) denetle'
+    ]
+  },
+  {
+    id: 'kamu_sayistay_teftis_layiha',
+    category: 'resmi',
+    domain: 'KAMU',
+    keywords: ['sayıştay', 'sayistay', 'denetçi sorgusu', 'sorgu layihası', 'teftiş', 'müfettiş', 'iç denetim', 'kamu zararı', 'kişi borcu'],
+    baslik: 'Sayıştay Sorgusu & Teftiş Savunma Layihası',
+    ikon: '🏛️',
+    renk: '#FEF9C3',
+    varsayilanZaman: 'Yasal Cevap Süresi (30 Gün)',
+    hazirlikZamani: 'Mali Veri & Dayanak Belgeleri Toplama',
+    akilliFisilti: '🏛️ Sayıştay Kanunu gereği denetçi sorgularına 30 gün içinde gerekçeli ve belgeli savunma layihası verilmesi zorunludur.',
+    oncedenYapilacaklar: [
+      'Sayıştay Denetçi Sorgusu veya Teftiş Raporundaki kamu zararı/mevzuata aykırılık iddialarını maddeler halinde çıkar',
+      'İddia edilen harcama kalemlerine ait kanıtlayıcı belgeleri (hakediş, meclis kararı, piyasa araştırması, mevzuat hükmü) derle',
+      'Sayıştay içtihatları ve Danıştay emsal kararları ışığında savunma layihası taslağını oluştur',
+      'Harcama Yetkilisi ve Gerçekleştirme Görevlisiyle müşterek savunma metnini parafe edip resmi yazıyla Sayıştay Dairesine ilet'
+    ]
+  },
+  {
+    id: 'kamu_resmi_protokol_toren',
+    category: 'resmi',
+    domain: 'KAMU',
+    keywords: ['protokol', 'resmi tören', 'çelenk sunma', 'tebrikat', 'protokol listesi', 'oturma düzeni', 'valilik tören', 'bayramlaşma'],
+    baslik: 'Resmi Tören & Protokol Oturma Düzeni',
+    ikon: '🎖️',
+    renk: '#FEF9C3',
+    varsayilanZaman: 'Tören Saati (09:00)',
+    hazirlikZamani: 'T-24 Saat Saha ve Ses Düzeni Provası',
+    akilliFisilti: '🎖️ Ulusal ve Resmi Bayramlarda protokol oturma sırası Resmi Gazete\'de yayımlanan Yönetmelik hiyerarşisine harfiyen uygun olmalıdır.',
+    oncedenYapilacaklar: [
+      'Güncel İl/İlçe Protokol Listesine göre protokol tribünü isimliklerini ve oturma düzenini hazırla',
+      'Çelenk sunma sırasını (Mülki İdare Amiri, Garnizon Komutanı, Belediye Başkanı) ve çelenk taşıyıcı personeli belirle',
+      'Ses sistemi, İstiklal Marşı kaydı ve sunum metnini (tören programını) tören alanında prova et',
+      'Tebrikat kabul salonu ikram ve kabul zincirini koordine et'
+    ]
+  },
+  {
+    id: 'kurumsal_yonetici_brifing_tampon',
+    category: 'resmi',
+    domain: 'KAMU',
+    keywords: ['sekreter', 'yönetici asistanı', 'yonetici asistani', 'vip brifing', 'toplantı tamponu', 'brifing dosyası', 'toplantı tutanağı', 'mom'],
+    baslik: 'VIP Yönetici Ajandası & Brifing Protokolü',
+    ikon: '🗂️',
+    renk: '#EDE9FE',
+    varsayilanZaman: 'Toplantı Öncesi (T-2 Saat Brifing)',
+    hazirlikZamani: '30 Dk Seyahat Tamponu',
+    akilliFisilti: '🗂️ Yönetici ajandasında ardışık toplantılar arasına min. 30 dakika tampon konulmalı, brifing dosyası 2 saat önce sunulmalıdır.',
+    oncedenYapilacaklar: [
+      'Arka arkaya toplantılar arasına min. 30 dakika seyahat, toparlanma ve nefeslenme tamponu koy',
+      'Üst düzey görüşmeden 2 saat önce: Katılımcı özgeçmişleri, toplantı bilgi notu ve ikram teyidini sağla',
+      'Uçuşlu seyahatlerde T-24 saatte online check-in yap, VIP lounge ve havalimanı transferini teyit et',
+      'Toplantı bitiminde MoM (Minutes of Meeting - Toplantı Tutanağı) ve aksiyon sahipleri listesini ilgili yöneticilere dağıt'
+    ]
+  },
+  {
+    id: 'kurumsal_sgk_ise_giris',
+    category: 'resmi',
+    domain: 'KAMU',
+    keywords: ['sgk işe giriş', 'ise giris', 'işe başlama', 'özlük dosyası', '5510 işe giriş', 'e-bildirge giriş'],
+    baslik: '5510 SGK İşe Giriş Bildirgesi & Özlük',
+    ikon: '👥',
+    renk: '#E0E7FF',
+    varsayilanZaman: 'T-1 Gün Önce (SGK Yasal Zorunluluk)',
+    hazirlikZamani: 'İşe Başlamadan 24 Saat Önce',
+    akilliFisilti: '⚠️ 5510 sayılı Kanun uyarınca sigortalı işe giriş bildirgesi işe başlamadan en az 1 gün önce onaylanmalıdır; aksi takdirde idari para cezası kesilir.',
+    oncedenYapilacaklar: [
+      'KIRMIZI ALARM: İşe başlama tarihinden en az 1 gün önce SGK e-Bildirge üzerinden işe giriş bildirgesini onayla',
+      'Belirli/belirsiz süreli iş sözleşmesi, KVKK açık rıza metni ve şirket iç yönetmeliğini ıslak imzalattır',
+      'Sağlık raporu, adli sicil kaydı, diploma ve ikametgah evraklarını özlük klasörüne tak',
+      'Zimmet teslim tutanağıyla laptop, telefon, şirket kredi kartı ve giriş kartını teslim et',
+      'İşe giriş tarihinden 45 gün sonrasına \'Deneme Süresi Performans Değerlendirme\' hatırlatması kur'
+    ]
+  },
+  {
+    id: 'kurumsal_sgk_isten_cikis',
+    category: 'resmi',
+    domain: 'KAMU',
+    keywords: ['sgk işten çıkış', 'isten cikis', 'işten ayrılış bildirgesi', 'istifa', 'ibraname', 'tazminat bordrosu', 'çıkış kodu'],
+    baslik: 'SGK İşten Çıkış Bildirgesi & İbraname',
+    ikon: '👥',
+    renk: '#E0E7FF',
+    varsayilanZaman: 'Yasal Süre: 10 Gün (SGK Çıkış)',
+    hazirlikZamani: 'İstifa / Fesih İtibarıyla İlk 3 Gün',
+    akilliFisilti: '👥 İşten ayrılış bildirgesi fesih tarihinden itibaren en geç 10 gün içinde SGK\'ya verilmelidir; doğru SGK çıkış kodu seçilmelidir.',
+    oncedenYapilacaklar: [
+      'SGK e-Bildirge üzerinden 10 gün içinde uygun fesih koduyla (Kod 03, 04 vb.) işten ayrılış bildirgesini ver',
+      'BT ve idari işlerden zimmet iade formunu (bilgisayar, araç, kart vb.) ve kurumsal hesap iptalini tamamla',
+      'Kıdem tazminatı, ihbar tazminatı ve kullanılmayan yıllık izin ücreti bordrosunu hesaplayıp imzalat',
+      'İş Kanunu m. 19 uyarınca İbraname ve Çalışma Belgesini (Hizmet Belgesi) ıslak imzalı olarak özlük dosyasına kaldır'
+    ]
+  },
+  {
+    id: 'kurumsal_deneme_suresi_kpi',
+    category: 'resmi',
+    domain: 'KAMU',
+    keywords: ['deneme süresi', 'deneme suresi', '2 aylık deneme', 'deneme süresi formu', 'performans değerlendirme'],
+    baslik: '2 Aylık Deneme Süresi Değerlendirmesi',
+    ikon: '📝',
+    renk: '#E0E7FF',
+    varsayilanZaman: '45. Gün (2 Ay Dolmadan)',
+    hazirlikZamani: '15 Günlük Karar Tamponu',
+    akilliFisilti: '📝 4857 sayılı İş Kanununda deneme süresi azami 2 aydır; değerlendirme 45. günde tamamlanmazsa standart fesih hükümleri yürürlüğe girer.',
+    oncedenYapilacaklar: [
+      'Bölüm yöneticisine \'Deneme Süresi Performans & Yetkinlik Değerlendirme Formunu\' ilet',
+      'Yöneticinin KPI hedefleri, uyum ve teknik yeterlilik notlarını analiz et',
+      'Olumsuz kararda bildirimsiz ve tazminatsız fesih tebligatını 60. gün dolmadan önce çalışana yazılı ilet',
+      'Olumlu kararda bordro ve kariyer planlama sistemine daimi kadro onayını düş'
+    ]
+  },
+  {
+    id: 'kurumsal_yonetim_kurulu_karar',
+    category: 'resmi',
+    domain: 'KAMU',
+    keywords: ['yönetim kurulu', 'yonetim kurulu', 'karar defteri', 'yk kararı', 'genel kurul', 'hazirun cetveli', 'imza sirküleri', 'ttsg'],
+    baslik: 'Yönetim Kurulu (Board) & Karar Defteri',
+    ikon: '📜',
+    renk: '#EDE9FE',
+    varsayilanZaman: 'Toplantı Günü (Mesai 15:00)',
+    hazirlikZamani: 'Toplantıdan 3 Gün Önce Gündem Dağıtımı',
+    akilliFisilti: '📜 Türk Ticaret Kanunu (TTK) uyarınca Yönetim Kurulu kararları noter tasdikli ciltli Karar Defterine yapıştırılıp üyelerce ıslak imzalanmalıdır.',
+    oncedenYapilacaklar: [
+      'Toplantıdan en az 3-7 gün önce gündem maddelerini, sunumları ve finansal tabloları üyelere tebliğ et',
+      'Toplantı açılışında Hazirun Cetvelini (Katılımcı Listesi) ve toplantı nisabını kontrol et',
+      'Alınan kararları TTK ve şirket ana sözleşmesine uygun şekilde resmi karar metnine dönüştür',
+      'Noter onaylı Karar Defterine metni aktarıp tüm yönetim kurulu üyelerine ıslak imza attır',
+      'Tescile tabi kararlarda (imza sirküleri, temsil ilzam, adres değişikliği) Ticaret Sicil randevusu alıp TTSG ilanını takip et'
+    ]
+  },
+  {
+    id: 'kurumsal_satinalma_teklif_nda',
+    category: 'resmi',
+    domain: 'KAMU',
+    keywords: ['satın alma', 'satinalma', 'tedarikçi teklif', 'teklif karşılaştırma', 'nda', 'gizlilik sözleşmesi', 'masraf formu', 'purchase order'],
+    baslik: 'Kurumsal Satın Alma & Tedarikçi NDA',
+    ikon: '💼',
+    renk: '#E0E7FF',
+    varsayilanZaman: 'Sipariş Onayı (PO)',
+    hazirlikZamani: '3 Teklif Karşılaştırma Matrisi',
+    akilliFisilti: '💼 Şirket satın alma prosedürü gereği gizli teknik veriler paylaşılmadan önce karşılıklı Gizlilik Sözleşmesi (NDA) akdedilmeli, min. 3 teklif alınmalıdır.',
+    oncedenYapilacaklar: [
+      'Tedarikçiyle şirketler arası Gizlilik Sözleşmesini (NDA) karşılıklı imza altına al',
+      'Teknik şartnameye uygun en az 3 bağımsız tedarikçiden kaşeli teklif topla ve Karşılaştırma Matrisi hazırla',
+      'Departman bütçe koduna uygun Satın Alma Sipariş Formunu (PO) ERP sisteminde aç ve onaylat',
+      'Malzeme teslim fişi, irsaliye ve e-faturayı kontrol ederek muhasebe masraf kapatmasını yap'
     ]
   },
 
@@ -1110,21 +1333,239 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
 
   // 20. PROJE, LOJİSTİK & ŞOFÖR (TAKOGRAF, AETR, TAKİP)
   {
-    id: 'sofor_takograf_aetr',
+    id: 'lojistik_aetr_takograf',
     category: 'arac_ulasim',
     domain: 'LOJISTIK',
-    keywords: ['takograf', 'aetr', 'kantar', 'cmr', 'irsaliye', 'tır şoförü', 'uzun yol sürüş'],
-    baslik: 'Takograf & AETR Sürüş Takibi',
+    keywords: ['takograf', 'aetr', 'sürüş süresi', 'sürüş mola', 'takograf kartı', '4.5 saat sürüş', 'takograf verisi', '9 saat sürüş'],
+    baslik: 'AETR Takograf Sürüş & Mola Takvimi',
     ikon: '🚛',
     renk: '#FED7AA',
     varsayilanZaman: 'Yola Çıkış',
     hazirlikZamani: 'Kalkıştan 45 Dk Önce',
-    akilliFisilti: '🚛 AETR kuralları gereği 4.5 saatlik sürüşe 45 dakika mola verilmelidir; günlük azami sürüş 9 saattir.',
+    akilliFisilti: '🚛 AETR kuralları gereği 4.5 saatlik sürüşten sonra en az 45 dakika mola zorunludur; günlük azami sürüş 9 saattir.',
     oncedenYapilacaklar: [
-      'Dijital takograf sürücü kartını tak ve günlük mod kontrolü yap',
-      'Dorse lastik havaları, pleyt kilidi ve emniyet zincirini kontrol et',
-      'İrsaliye, CMR ve kantar evraklarını araç torpidosuna al',
-      '4.5 saat dolmadan dinlenme tesisi ve güvenli park alanı planla'
+      'Dijital takograf sürücü kartını tak ve günlük başlangıç ülke kodunu onayla',
+      '4.5 saatlik sürüş sonrasında kesintisiz 45 dk (veya 15+30 dk) dinlenme molasını planla',
+      'Günlük 9 saat (haftada en fazla 2 kez 10 saat) azami sürüş süresini aşma',
+      '24 saatlik periyot içinde 11 saatlik kesintisiz günlük dinlenmeyi tamamla',
+      'Takograf kart verisini en geç 28 günde bir şirket veri arşivine aktar'
+    ]
+  },
+  {
+    id: 'lojistik_cmr_irsaliye',
+    category: 'arac_ulasim',
+    domain: 'LOJISTIK',
+    keywords: ['cmr', 'sevk mektubu', 'sevk irsaliyesi', 'taşıma irsaliyesi', 'hasar rezerv', 'çekince şerhi', 'rezervasyon', 'eksik teslim'],
+    baslik: 'CMR Sevk Mektubu & Hasar Rezervi',
+    ikon: '📄',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Yükleme / Teslim Anı',
+    hazirlikZamani: 'Yük Kabul Öncesi',
+    akilliFisilti: '📄 CMR üzerine açık hasar veya koli eksiği için yazılı rezerv düşülmeden teslim alınan mallar kusursuz teslim kabul edilir.',
+    oncedenYapilacaklar: [
+      'CMR Sevk Mektubunun 1. (Gönderici), 2. (Alıcı) ve 3. (Taşıyıcı) nüshalarını eksiksiz kaşele',
+      'Koli/palet yırtığı, ıslanma veya ambalaj hasarında CMR Kutu 18\'e gerekçeli rezerv düş',
+      'e-İrsaliye karekodu, sevk irsaliyesi ve araç plaka/şoför TC kimlik eşleşmesini doğrula',
+      'Gizli hasar durumunda teslimden sonraki 7 gün içinde yazılı ihbar süresini alıcıya hatırlat'
+    ]
+  },
+  {
+    id: 'lojistik_adr_tehlikeli_madde',
+    category: 'arac_ulasim',
+    domain: 'LOJISTIK',
+    keywords: ['adr', 'tehlikeli madde', 'un no', 'un numarası', 'src5', 'turuncu plaka', 'kemler', 'paketleme grubu', 'adr çantası'],
+    baslik: 'ADR Tehlikeli Madde Taşıma Güvenliği',
+    ikon: '☣️',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Yükleme Saati',
+    hazirlikZamani: 'Kalkıştan 1 Saat Önce',
+    akilliFisilti: '☣️ ADR gereği geçerli SRC-5 belgesi, turuncu tehlike levhaları, ADR yazılı talimatı ve mühürlü yangın tüpleri zorunludur.',
+    oncedenYapilacaklar: [
+      'UN numarası, teknik adı ve paketleme grubunu (PG I/II/III) ADR taşıma belgesiyle karşılaştır',
+      'Çekici ve dorse ön/arka turuncu plakalarını (Kemler kodlu) ve yan tehlike etiketlerini tak',
+      'Şoförün geçerli SRC-5 belgesini ve kabinde Türkçe/İngilizce ADR Yazılı Talimat föyünü bulundur',
+      'Yangın tüplerinin basınçlarını (asgari 12 kg toplam) ve ADR emniyet çantasını kontrol et',
+      'Tünel kısıtlama kodunu (B/C/D/E) güzergah planına işle ve meskun mahal park kurallarına uy'
+    ]
+  },
+  {
+    id: 'lojistik_frigo_soguk_zincir',
+    category: 'arac_ulasim',
+    domain: 'LOJISTIK',
+    keywords: ['frigo', 'soğuk zincir', 'soguk zincir', 'atp', 'data logger', 'termokin', 'reefer', 'dondurulmuş gıda', 'ısı sapması'],
+    baslik: 'Frigorifik Soğuk Zincir & ATP Takibi',
+    ikon: '❄️',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Yükleme Öncesi',
+    hazirlikZamani: 'Yüklemeden 2 Saat Önce',
+    akilliFisilti: '❄️ ATP konvansiyonu gereği dorse set ısısına ulaşmadan (pre-cooling) yükleme yapılamaz; teslimde data logger çıktısı zorunludur.',
+    oncedenYapilacaklar: [
+      'Dorse içi ön soğutma (Pre-cooling) yap: Donuk -18°C / Taze +4°C set değerine ulaşmasını bekle',
+      'Kalibrasyonlu Data Logger ve dorse içi dijital ısı sensörlerinin kayıt başlattığını teyit et',
+      'Palet yüklemesinde tavan hava sirkülasyon kanalı ve taban hava ızgaralarını kapatma',
+      'Teslim noktasında termokin yazıcısından sıcaklık grafiği çıktısını (printout) alıp teslim tutanağına ekle'
+    ]
+  },
+  {
+    id: 'lojistik_ncts_t1_transit',
+    category: 'arac_ulasim',
+    domain: 'LOJISTIK',
+    keywords: ['t1', 't2', 'ncts', 'mrn', 'tir karnesi', 'transit rejimi', 'gümrük mührü', 'varış gümrüğü', 'transit süresi'],
+    baslik: 'Gümrük Transit & NCTS (T1/T2) Rejimi',
+    ikon: '🛂',
+    renk: '#E0E7FF',
+    varsayilanZaman: 'Gümrük Çıkışı',
+    hazirlikZamani: 'Çıkış Öncesi',
+    akilliFisilti: '🛂 NCTS Transit Refakat Belgesindeki MRN numarası, varış gümrüğü yasal süresi ve gümrük mührü eksiksiz korunmalıdır.',
+    oncedenYapilacaklar: [
+      'MRN barkodlu Transit Refakat Belgesini (TRB) ve kapsam teminat mektubunu teslim al',
+      'Gümrük muhafaza memurunun taktığı kurşun/plastik gümrük mührünün numarasını beyannameyle eşleştir',
+      'Belirlenen seyahat güzergahına uyarak varış gümrüğü son teslim tarihini (transit süresi) aşma',
+      'Mühür kopması veya kaza halinde güzergah üzerindeki en yakın gümrük veya kollukla tutanak tut'
+    ]
+  },
+  {
+    id: 'lojistik_wms_mal_kabul',
+    category: 'arac_ulasim',
+    domain: 'LOJISTIK',
+    keywords: ['wms', 'mal kabul', 'cross-docking', 'cross docking', 'depo', 'palet sayımı', 'fefo', 'fifo', 'rampa randevu', 'dock appointment'],
+    baslik: 'Depo Mal Kabul & WMS Entegrasyonu',
+    ikon: '🏬',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Rampa Randevu Saati',
+    hazirlikZamani: 'Rampadan 30 Dk Önce',
+    akilliFisilti: '🏬 WMS sisteminde lot, seri ve SKT eşleşmesi yapılmadan rampa mal kabulü tamamlanamaz; hasarlı palet sarı karantinaya alınır.',
+    oncedenYapilacaklar: [
+      'Rampa randevu (Dock Appointment) saatinde yanaş, teker takozunu koy ve kontak anahtarını güvenliğe teslim et',
+      'Sevk irsaliyesi ile koli/palet adetlerini RF el terminaliyle barkod taratarak WMS sistemine işle',
+      'Hasarlı, ıslak veya devrilmiş paletleri derhal sarı karantina alanına çekip fotoğraflı tutanak tut',
+      'SKT kontrolü ile FEFO (First Expired First Out) kuralına göre paletleri adresli raf gözlerine yerleştir'
+    ]
+  },
+  {
+    id: 'lojistik_vgm_konteyner_demuraj',
+    category: 'arac_ulasim',
+    domain: 'LOJISTIK',
+    keywords: ['vgm', 'konteyner', 'demuraj', 'detention', 'ardiye', 'free time', 'bolt seal', 'cıvata mühür', 'eir', 'liman konteyner'],
+    baslik: 'Konteyner VGM Tartım & Demuraj / Detention',
+    ikon: '🚢',
+    renk: '#CFFAFE',
+    varsayilanZaman: 'Liman Girişi',
+    hazirlikZamani: 'Tartımdan 2 Saat Önce',
+    akilliFisilti: '🚢 SOLAS VGM sertifikası olmayan konteyner gemiye yüklenemez; free time aşımı günlük yüksek demuraj ve ardiye cezası üretir.',
+    oncedenYapilacaklar: [
+      'SOLAS Chapter VI gereği kantar istasyonundan onaylı Doğrulanmış Brüt Ağırlık (VGM) sertifikasını al',
+      'ISO 17712 uyumlu yüksek güvenlikli cıvata mührünü (Bolt Seal) konteyner kapısına takıp konşimentoya işlet',
+      'Acente serbest süresini (Free Time gün sayısı) takip ederek demuraj ve ardiye risk saati öncesi boşalt',
+      'Boş konteyneri acente deposuna iade ederken EIR (Equipment Interchange Receipt) formuyla hasarsız teslim al'
+    ]
+  },
+  {
+    id: 'lojistik_pretrip_kingpin_kantar',
+    category: 'arac_ulasim',
+    domain: 'LOJISTIK',
+    keywords: ['pre-trip', 'king-pin', 'kingpin', 'beşinci teker', 'dorse pleyt', 'lastik basıncı', 'kantar tartım', 'aks ağırlığı', 'tonaj aşımı'],
+    baslik: 'Ağır Vasıta Pre-Trip & Aks Kantar Kontrolü',
+    ikon: '🚛',
+    renk: '#FED7AA',
+    varsayilanZaman: 'Kalkıştan 45 Dk Önce',
+    hazirlikZamani: 'Kalkış Öncesi',
+    akilliFisilti: '🚛 Dorse king-pin pleyt kilit mandalı fiziki kontrol edilmeden ve aks kantarı ölçülmeden yola çıkılması hayati tehlikedir.',
+    oncedenYapilacaklar: [
+      'Beşinci tekerlek (pleyt) king-pin kilidinin oturduğunu ve emniyet mandalının kilitlendiğini gözle doğrula',
+      'Kırmızı ve sarı spiral hava fren hortumlarını, ABS/EBS elektrik soketlerini dorseye bağla',
+      'Lastiklerin soğuk hava basınçlarını (110-120 PSI) ve diş derinliklerini (en az 1.6 mm / kış 4 mm) kontrol et',
+      'Karayolları 40/44 ton sınırını aşmamak için kantar fişiyle çekici ve dorse aks yük dağılımını denetle'
+    ]
+  },
+  {
+    id: 'lojistik_lashing_spanzet',
+    category: 'arac_ulasim',
+    domain: 'LOJISTIK',
+    keywords: ['lashing', 'spanzet', 'yük emniyeti', 'gergi kayışı', 'cırcırlı kayış', 'en 12195', 'kaymaz paspas', 'köşe koruyucu', 'yük bağlama'],
+    baslik: 'EN 12195 Yük Emniyeti & Lashing Planı',
+    ikon: '⛓️',
+    renk: '#E2E8F0',
+    varsayilanZaman: 'Yükleme Bitimi',
+    hazirlikZamani: 'Yükleme Esnasında',
+    akilliFisilti: '⛓️ EN 12195 standardı gereği palet altı kaymaz kauçuk paspaslar yerleştirilmeli ve ilk 30 km sonra spanzet gergisi kontrol edilmelidir.',
+    oncedenYapilacaklar: [
+      'Palet ve rulo yüklerin altına sürtünme katsayısını artıran EN 12195 standardı kaymaz kauçuk paspaslar ser',
+      'Kayış kesilmesini ve koli ezilmesini önlemek için plastik köşe koruyucuları palet kenarlarına yerleştir',
+      'Spanzet cırcırlarını (ratchet) LC çekme kapasitesine göre gerdir ve şasi kancalarına tam oturt',
+      'Kalkıştan sonraki ilk 25-50 km mesafede güvenli cebe girerek yük kayışlarının gerginliğini yeniden sık'
+    ]
+  },
+  {
+    id: 'lojistik_hava_kargo_iata',
+    category: 'arac_ulasim',
+    domain: 'LOJISTIK',
+    keywords: ['hava kargo', 'air cargo', 'iata', 'dgr', 'awb', 'air waybill', 'uld', 'kargo uçağı', 'bilinen gönderici'],
+    baslik: 'Hava Kargo & IATA DGR Operasyonu',
+    ikon: '✈️',
+    renk: '#DDD6FE',
+    varsayilanZaman: 'Uçuş Öncesi Teslim',
+    hazirlikZamani: 'Uçuştan 6 Saat Önce',
+    akilliFisilti: '✈️ IATA kuralları gereği tehlikeli madde içeren hava kargolarda DGD beyanı ve ULD kontur ölçüleri zorunludur.',
+    oncedenYapilacaklar: [
+      'Master AWB ve House AWB konşimento numaralarını kargo etiketleri ve çeki listesiyle eşleştir',
+      'Tehlikeli madde içeren kargolarda IATA DGR kurallarına uygun Shipper\'s Declaration (DGD) föyünü tanzim et',
+      'ULD (uçak konteyneri/paleti) kontur ölçülerini (aircraft contour) ve brüt ağırlık tartımını yap',
+      'Havalimanı antrepo X-Ray güvenlik taramasını ve gümrük beyannamesi kapama onayını al'
+    ]
+  },
+  {
+    id: 'lojistik_intermodal_roro_swap',
+    category: 'arac_ulasim',
+    domain: 'LOJISTIK',
+    keywords: ['intermodal', 'ro-ro', 'ro-la', 'swap body', 'swap-body', 'kombine taşımacılık', 'treyler vinçleme', 'twist-lock', 'cim'],
+    baslik: 'İntermodal & Ro-Ro / Ro-La Taşımacılığı',
+    ikon: '🚆',
+    renk: '#FEF08A',
+    varsayilanZaman: 'Terminal Girişi',
+    hazirlikZamani: 'Gemi/Tren Öncesi 3 Saat',
+    akilliFisilti: '🚆 Ro-Ro güvertesinde çekici ayakları kilitlenmeli, Ro-La vagon yüklemesinde P400 gabari yüksekliği denetlenmelidir.',
+    oncedenYapilacaklar: [
+      'Ro-Ro gemi yüklemesinde dorse şasi lashing halkalarını ve çekici ayaklarını gemi güvertesine bağla',
+      'Demiryolu Ro-La vagon yüklemesinde P400 gabari yüksekliğini ve treyler vinçleme ceplerini kontrol et',
+      'Swap-body konteyner twist-lock kilitlerinin şasiye oturduğunu ve mandalların emniyete alındığını teyit et',
+      'Demiryolu CIM taşıma senedini ve intermodal aktarma liman giriş barkodunu sürücüye teslim et'
+    ]
+  },
+  {
+    id: 'lojistik_lastmile_kurye_dagitim',
+    category: 'arac_ulasim',
+    domain: 'LOJISTIK',
+    keywords: ['last-mile', 'last mile', 'son kilometre', 'kurye', 'paket dağıtım', 'rota optimizasyonu', 'teslimat kodu', 'pod'],
+    baslik: 'Son Kilometre Dağıtım & Teslimat (POD)',
+    ikon: '📦',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Dağıtım Saati',
+    hazirlikZamani: 'Yola Çıkıştan 15 Dk Önce',
+    akilliFisilti: '📦 Alıcıya SMS teslimat penceresi gönderilmeli, temassız teslimat kodu veya dijital imza (POD) alınmadan paket teslim edilmemelidir.',
+    oncedenYapilacaklar: [
+      'Günlük dağıtım manifestosunu adres kümeleme ve trafik yoğunluğuna göre navigasyonda optimize et',
+      'Alıcıya tahmini teslimat penceresini (ETA time-window) ve 4 haneli SMS teslimat kodunu ilet',
+      'Kapıda teslimatta alıcı kodunu el terminaline gir veya dijital teslimat kanıtı (POD) imzasını kaydet',
+      'Adreste bulunamayan veya hasarlı paketleri gün sonunda şube iade karantinasına teslim tutanağıyla bırak'
+    ]
+  },
+  {
+    id: 'lojistik_tuvturk_takograf_kalibrasyon',
+    category: 'arac_ulasim',
+    domain: 'LOJISTIK',
+    keywords: ['tüvtürk muayene', 'tuvturk', 'ağır vasıta muayene', 'takograf kalibrasyon', 'k2 belgesi', 'psikoteknik', 'filo bakım'],
+    baslik: 'TÜVTÜRK Muayene & Takograf Kalibrasyonu',
+    ikon: '🔧',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Muayene Randevusu',
+    hazirlikZamani: 'Randevudan 1 Gün Önce',
+    akilliFisilti: '🔧 Ağır vasıta TÜVTÜRK muayenesi öncesi fren test merdanesi ölçümü ve 2 yıllık takograf periyodik kalibrasyon etiketi şarttır.',
+    oncedenYapilacaklar: [
+      'Yetkili serviste fren test merdanesiyle ön/çekici/dorse fren sapma yüzdesinin <%30 olduğunu doğrula',
+      'Dijital takografın 2 yıllık periyodik kalibrasyonunu (W katsayısı ve plaka eşleşmesi) yetkili serviste yenilet',
+      'K1/C2/L2 yetki belgesi taşıt kartı vizesini ve araç Zorunlu Trafik Sigortası poliçesini kontrol et',
+      'Şoförlerin SRC mesleki yeterlilik ve psikoteknik değerlendirme raporlarının geçerliliğini filo sisteminde onayla'
     ]
   },
 
@@ -1298,77 +1739,393 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
 
   // 24. TİCARET & ESNAF MOTORU (SALES & LOCAL SHOP)
   {
+    id: 'ticaret_veresiye_alacak',
+    category: 'finans',
+    domain: 'TICARET',
+    keywords: ['veresiye', 'deftere yaz', 'açık hesap', 'veresiye defteri', 'müşteri borcu', 'alacak tahsilat', 'hesaba yaz'],
+    baslik: 'Veresiye / Müşteri Alacağı & Vade',
+    ikon: '📓',
+    renk: '#FEF3C7',
+    varsayilanZaman: '14 Gün Sonra Vade',
+    hazirlikZamani: '7. Gün Ara Bakiye Teyidi',
+    akilliFisilti: '📓 Veresiye kayıtlarında ürün detayı ve vade tarihi açıkça belirtilmeli; 14 günlük vade aşılmadan ara teyit yapılmalıdır.',
+    oncedenYapilacaklar: [
+      'Deftere veya sisteme müşteri adı, borç kalemi, telefon ve net tutarı kaydet',
+      'Müşteriye WhatsApp/SMS ile borç dökümü ve fiş detayını nezaketle teyit ettir',
+      '7. günde ara bakiye kontrolü yaparak ihtilaflı kalem olup olmadığını gözden geçir',
+      '14. gün vade bitiminde nazik bir hatırlatma ve hesap kapatma mesajı ilet'
+    ]
+  },
+  {
+    id: 'ticaret_toptanci_mal_kabul',
+    category: 'finans',
+    domain: 'TICARET',
+    keywords: ['toptancı geldi', 'mal kabul', 'koli geldi', 'irsaliye kontrolü', 'fatura geldi', 'gelen mal', 'koli indirdik'],
+    baslik: 'Toptancı Mal Kabulü & İrsaliye',
+    ikon: '📦',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Mal Kabul Anında',
+    hazirlikZamani: 'Sipariş Listesiyle Karşılaştırma',
+    akilliFisilti: '📦 Şoförün yanında irsaliye şerhi düşülmeyen eksik veya hasarlı malların sonradan toptancıya iadesi kabul edilmez; STT ve adet kontrolü zorunludur.',
+    oncedenYapilacaklar: [
+      'Şoför ayrılmadan gelen fiziki koli/kasa adedini ve ambalaj bütünlüğünü say',
+      'İrsaliyedeki ürün çeşitlerini, adetleri ve birim fiyatları sipariş fişiyle tek tek eşleştir',
+      'Raf ömrü olan ürünlerde Son Tüketim Tarihi (STT) ve parti numarasını denetle',
+      'Varsa eksik, ezik veya kırık ürünleri irsaliye nüshasına şerh düşüp şoföre imzalatarak iade tutanağı düzenle',
+      'Teslim alınan sağlam malları depoya FIFO (ilk giren ilk çıkar) kuralıyla yerleştir'
+    ]
+  },
+  {
+    id: 'ticaret_toptanci_siparis',
+    category: 'finans',
+    domain: 'TICARET',
+    keywords: ['toptancıya sipariş', 'eksik listesi', 'stok sayımı', 'mal siparişi', 'toptancı günü', 'koli sipariş', 'sipariş geç'],
+    baslik: 'Toptancı Siparişi & Eksik Listesi',
+    ikon: '📋',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Toptancı Gelmeden 1 Gün Önce',
+    hazirlikZamani: 'Hızlı Tüketim & Raf Kontrolü',
+    akilliFisilti: '📋 Toptancı gününden önce eksik sayımı yapılmazsa raf boşluğu ciro kaybına, gereksiz fazla sipariş ise nakit sıkışıklığına yol açar.',
+    oncedenYapilacaklar: [
+      'Kritik stok seviyesinin altına düşen raf ve depo ürünlerini sayarak listele',
+      'Hızlı tüketilen çok satan (A grubu) ürünlerin tükenme hızını ve raf payını kontrol et',
+      'Toptancının vadeli iskonto veya promosyonlu koli kampanyalarını değerlendir',
+      'Net sipariş listesini toptancı temsilcisine WhatsApp veya sipariş portalından teyitli ilet'
+    ]
+  },
+  {
+    id: 'ticaret_cek_senet_vade',
+    category: 'finans',
+    domain: 'TICARET',
+    keywords: ['çek ödemesi', 'senet ödemesi', 'toptancı çeki', 'çek vadesi', 'senet vadesi', 'vade ödemesi', 'çek var', 'senet var'],
+    baslik: 'Toptancı Çek / Senet & Vade Ödemesi',
+    ikon: '💸',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Vadeden 1 Gün Önce (Nakit Akışı)',
+    hazirlikZamani: 'Takas Saati (11:00) Öncesi Bakiye',
+    akilliFisilti: '💸 Çek ve senet vadelerinde 1 gün önceden nakit provizyonu sağlanmazsa karşılıksız işlem cezası, protesto ve banka kredi sicili bozulması riski doğar.',
+    oncedenYapilacaklar: [
+      'Takas saati (11:00) öncesinde banka hesabındaki nakit bakiyeyi ve provizyon limitini teyit et',
+      'Vadesi gelen çek/senet tutarını toptancı cari hesap mutabakatıyla eşleştir',
+      'Havale/EFT yapılacaksa banka günlük EFT işlem limitlerini kontrol et',
+      'Ödeme dekontunu ve tahsil makbuzunu cari hesap dosyasına arşivle'
+    ]
+  },
+  {
+    id: 'ticaret_kasa_avans_acilis',
+    category: 'finans',
+    domain: 'TICARET',
+    keywords: ['kasa avansı', 'kasa açılışı', 'bozuk para', 'bozukluk kalmadı', 'pos rulosu', 'sabah kasası', 'yazarkasa rulosu'],
+    baslik: 'Kasa Açılışı & Bozuk Para Avansı',
+    ikon: '🪙',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Açılış 08:30 (Vardiya Başı)',
+    hazirlikZamani: 'Açılış Öncesi Sayım',
+    akilliFisilti: '🪙 Güne bozuk para avansı ve yedek POS rulosu olmadan başlamak ilk müşteride para üstü verememe ve satış kaçırma krizine yol açar.',
+    oncedenYapilacaklar: [
+      'Madeni para ve küçük kupürlü kağıt para avansını sayarak yazar kasa sistemine gir',
+      'Yazar kasa ve POS terminallerinin termal rulo seviyelerini kontrol et, yedeği çekmeceye koy',
+      'Banka POS cihazlarının gün başı provizyon sinyalini ve internet bağlantısını test et',
+      'Sahte para kontrol dedektörünü / mor ışığı bankoda hazırla'
+    ]
+  },
+  {
     id: 'ticaret_teklif_sicak_takip',
     category: 'finans',
     domain: 'TICARET',
-    keywords: ['satış teklif', 'teklif takibi', 'fiyat teklifi', 'müşteri arama', 'teklif attım', 'opsiyon süresi'],
+    keywords: ['satış teklif', 'teklif takibi', 'fiyat teklifi', 'müşteri arama', 'teklif attım', 'opsiyon süresi', 'teklif verdik', 'follow-up'],
     baslik: 'Teklif Sıcak Takibi (Follow-Up)',
     ikon: '💼',
     renk: '#FEF3C7',
     varsayilanZaman: '24-48 Saat Sonra',
     hazirlikZamani: 'Görüşme Öncesi Notlar',
-    akilliFisilti: '💼 Gönderilen teklifin 24-48 saat içinde nazikçe sorgulanması kapanış oranını %40 artırır.',
+    akilliFisilti: '💼 Gönderilen teklifin 24-48 saat içinde nazikçe sorgulanması kapanış oranını %40 artırır; opsiyon süresi ve stok rezervasyonu unutulmamalıdır.',
     oncedenYapilacaklar: [
-      'Teklif detaylarını, iskonto oranını ve opsiyon bitiş tarihini aç',
-      'Müşterinin kritik beklentilerini ve bütçe hassasiyetini hatırla',
-      'Telefon veya WhatsApp ile nazik bir hatırlatma ve teyit mesajı ilet',
-      'Görüşme sonucunu CRM veya müşteri kartına not et'
+      'Müşteriye gönderilen teklifin ulaştığını ve opsiyon/fiyat geçerlilik süresini teyit et',
+      'Teklifteki ürünlerin tükenmemesi için depo sistemine geçici stok rezervasyonu gir',
+      '24-48 saat sonra arayarak soruları yanıtla, müşteri endişelerini gider ve karar sürecini nazikçe yokla',
+      'Teklife tamamlayıcı sarf, garanti uzatımı veya montaj çapraz satış (cross-sell) alternatiflerini sun'
     ]
   },
   {
     id: 'ticaret_kasa_z_raporu',
     category: 'finans',
     domain: 'TICARET',
-    keywords: ['z raporu', 'kasa sayımı', 'pos gün sonu', 'kasa kapat', 'gün sonu hasılat'],
-    baslik: 'Gün Sonu Kasa & Z Raporu',
+    keywords: ['z raporu', 'kasa sayımı', 'pos gün sonu', 'kasa kapat', 'gün sonu hasılat', 'ara kasa tahliye', 'dükkanı kapattık'],
+    baslik: 'Gün Sonu Kasa, Z Raporu & POS Mutabakatı',
     ikon: '🧾',
     renk: '#DCFCE7',
     varsayilanZaman: 'Kapanış 20:30',
-    hazirlikZamani: 'Kapanıştan 15 Dk Önce',
-    akilliFisilti: '🧾 POS cihazlarından gün sonu alınmalı ve çekmecedeki fiziki nakit ile sistem mutabakatı yapılmalıdır.',
+    hazirlikZamani: 'Kapanıştan 15 Dk Önce (Ara Tahliye)',
+    akilliFisilti: '🧾 Kasa açığı veya fazlası oluşmaması için Z raporu mali cirosu, POS gün sonu slipleri ve fiziki nakit mutabakatı her akşam sıcağı sıcağına yapılmalıdır.',
     oncedenYapilacaklar: [
-      'Tüm POS cihazlarından Gün Sonu slip dökümlerini al',
-      'Yazar kasadan mali Z Raporu alıp günlük deftere zımbala',
-      'Kasada kalan avans bozuk parayı ayırıp günün net nakit cirosunu say',
-      'Kasa mutabakat tutanağını doldurup kasayı kilitle'
+      'Gün içinde biriken büyük kupürler için ara kasa tahliyesi tutarını denetle',
+      'Tüm banka POS terminallerinden tek tek Gün Sonu slip dökümlerini al',
+      'Mali yazar kasadan günlük Z Raporu çıktısını al ve tarihli koçana zımbala',
+      'Kasada kalan avans bozuk parayı ayırıp günün net nakit cirosunu say ve Z raporuyla kuruşu kuruşuna mutabakat yap',
+      'Ertesi günün açılış avansını çekmecede bırakıp net hasılatı çelik kasaya kilitle'
+    ]
+  },
+  {
+    id: 'ticaret_esnaf_ay_sonu',
+    category: 'finans',
+    domain: 'TICARET',
+    keywords: ['bağkur', 'bağ-kur', 'dükkan kirası', 'stopaj ödemesi', 'muhasebeciye fatura', 'esnaf mali', 'fatura teslim', 'z raporu teslim'],
+    baslik: 'Esnaf Mali Takvimi (Kira, Bağ-Kur & Muhasebe)',
+    ikon: '🏪',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Ayın 20\'si Evrak / Ay Sonu Ödeme',
+    hazirlikZamani: 'Fatura & Z Raporu Dosyalama',
+    akilliFisilti: '🏪 Dükkan kiralarının elden ödenmesi Vergi Usul Kanununa göre usulsüzlük cezası doğurur; Bağ-Kur ödemelerinin aksatılması prim teşvikini yakar.',
+    oncedenYapilacaklar: [
+      'Ayın 15-20\'si: Alış/satış faturalarını, POS sliplerini ve aylık Z raporlarını muhasebeciye teslim et',
+      'Dükkan kira ödemesini yasa gereği mutlaka banka üzerinden "Kira Ödemesi" açıklamasıyla havale et',
+      'Ayın son gününe kadar Bağ-Kur primini ve SGK çalışan primlerini bankadan/GİB\'den öde',
+      'Muhasebeciden gelen KDV ve Stopaj (Muhtasar) tahakkuk fişlerinin ödemesini gerçekleştir'
+    ]
+  },
+  {
+    id: 'ticaret_tamir_usta_servis',
+    category: 'ev_teknik',
+    domain: 'TICARET',
+    keywords: ['oto tamir', 'balata değişimi', 'yağ değişimi', 'obd arıza', 'arıza kodu', 'torklama', 'parça değişimi', 'oto servis', 'fren testi'],
+    baslik: 'Araç / Cihaz Onarımı & Teslimat Protokolü',
+    ikon: '🔧',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Teslimattan 45 Dk Önce (Test & OBD)',
+    hazirlikZamani: 'Onarım Öncesi (Müşteri Onayı)',
+    akilliFisilti: '🔧 Müşteri onayı alınmayan ilave parça değişimi hukuki ihtilaf doğurur; teslimat öncesi tork kontrolü ve OBD testi can güvenliği gereğidir.',
+    oncedenYapilacaklar: [
+      'Müşteri yazılı/sözlü teyidi ve tahmini parça/işçilik bütçe mutabakatı almadan söküme başlama',
+      'Takılacak orijinal/OEM parçanın fatura, garanti belgesi ve eski çıkan parçayı müşteriye ayır',
+      'Teslimattan 45 dk önce: Tork anahtarıyla kritik bağlantıları sık ve OBD cihazıyla arıza hafızasını sıfırla',
+      'Sıvı kaçak kontrolü ve 5 km kısa yol testi gerçekleştirip aracı teslimat alanına çek'
+    ]
+  },
+  {
+    id: 'ticaret_reyon_etiket_iade',
+    category: 'finans',
+    domain: 'TICARET',
+    keywords: ['fiyat etiketi', 'etiket kontrolü', 'raf fiyatı', 'ürün iadesi', 'değişim fişi', 'müşteri iadesi', 'reyon düzeni'],
+    baslik: 'Reyon Etiket Kontrolü & İade / Değişim',
+    ikon: '🏷️',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Haftalık Kontrol / İade Anında',
+    hazirlikZamani: 'Barkod Karşılaştırması',
+    akilliFisilti: '🏷️ Raf fiyatı ile kasa fiyatı arasındaki farklar Tüketici Hakem Heyeti ve Ticaret Bakanlığı denetiminde idari para cezasına tabidir.',
+    oncedenYapilacaklar: [
+      'Reyondaki raf etiket fiyatları ile kasa barkod sistemindeki fiyatları tek tek eşleştir',
+      'İade veya değişim talebinde satış fişi/faturayı kontrol et ve ürünün ambalaj/hasar durumunu incele',
+      'İade alınan ürün için iade gider pusulası düzenle ve ürünü hasarlı/sağlam reyonuna ayır',
+      'Vitrin ve çok satan öne çıkan ürünlerin reyon aydınlatması ve dizilimini tazele'
     ]
   },
 
-  // 25. ZİRAAT & BOTANİK MOTORU (AGRICULTURE & BOTANY)
+  // 25. ZİRAAT & BOTANİK MOTORU (AGRICULTURE & BOTANY SUITE)
   {
     id: 'ziraat_aksam_sulama',
     category: 'ev_teknik',
     domain: 'ZIRAAT',
-    keywords: ['çiçek sula', 'sulama', 'bahçe sula', 'suvarıver', 'sulayuver', 'çiçekler susamış', 'domates sula'],
+    keywords: ['çiçek sula', 'sulama', 'bahçe sula', 'suvarıver', 'sulayuver', 'çiçekler susamış', 'domates sula', 'bostan sula', 'saksı sula', 'verive gari'],
     baslik: 'Akşam Serinliği Sulaması',
     ikon: '🌿',
     renk: '#DCFCE7',
     varsayilanZaman: 'Akşam 19:30',
     hazirlikZamani: 'Güneş Battıktan Sonra',
-    akilliFisilti: '🌿 Güneş altında sulanan yapraklar mercek etkisiyle yanar; sulama daima akşam serinliğinde yapılmalıdır.',
+    akilliFisilti: '☀️ Güneş altında sulanan yapraklar mercek etkisiyle yanar ve kökler haşlanır; sulama daima akşam serinliğinde yapılmalıdır.',
     oncedenYapilacaklar: [
-      'Toprağın 3-4 cm derinine parmak batırarak nem kontrolü yap',
-      'Güneşin tamamen batmasını ve toprağın soğumasını bekle (19:30)',
-      'Suyu doğrudan yapraklara değil, kök boğazına dinlendirilmiş suyla ver',
-      'Saksı tabağında biriken fazla suyu kök çürümesini önlemek için boşalt'
+      'Toprağın 3-4 cm derinine parmak batırarak nem kontrolü yap (ıslaksa sulama yapma)',
+      'Güneşin tamamen batmasını ve saksı/toprak sıcaklığının düşmesini bekle (19:30)',
+      'Suyu doğrudan yapraklara değil, kök boğazına dinlendirilmiş kireçsiz suyla ver',
+      'Saksı tabağında biriken fazla suyu kök çürümesini önlemek için 15 dakika sonra boşalt'
     ]
   },
   {
     id: 'ziraat_orkide_daldirma',
     category: 'ev_teknik',
     domain: 'ZIRAAT',
-    keywords: ['orkide sulama', 'orkide bakım', 'orkide su', 'orkide kökleri gri'],
-    baslik: 'Orkide Daldırma Sulama',
+    keywords: ['orkide sulama', 'orkide bakım', 'orkide su', 'orkide kökleri gri', 'daldırma sulama'],
+    baslik: 'Orkide Daldırma Sulama Protokolü',
     ikon: '🌸',
     renk: '#FDF2F8',
     varsayilanZaman: 'Yarın Sabah 09:30',
-    hazirlikZamani: 'Sabah Işığı',
-    akilliFisilti: '🌸 Orkideler gece ıslak kalırsa kök mantarı oluşur; işlem sabah 15 dk daldırma yöntemiyle yapılmalıdır.',
+    hazirlikZamani: 'Sabah Filtrelenmiş Gün Işığı',
+    akilliFisilti: '🌸 Orkideler gece ıslak kalırsa ve tabakta su bekletilirse hızla kök mantarı oluşur; işlem sabah 10-15 dk daldırma yöntemiyle yapılmalıdır.',
     oncedenYapilacaklar: [
-      'Kök renginin yeşilden gümüş-griye döndüğünü kontrol et',
-      'Oda sıcaklığındaki dinlenmiş su dolu kaba saksıyı 15 dakika daldır',
-      'Sudan çıkarıp tüm fazla suyun süzülmesini bekle (Damlamasın)',
-      'Güneş alan ancak doğrudan yakıcı güneş almayan aydınlık yere koy'
+      'Şeffaf saksıdaki köklerin gümüş-griye döndüğünü kontrol et (Kökler canlı yeşilse sulama yapma)',
+      'Oda sıcaklığındaki dinlenmiş kireçsiz su dolu kaba şeffaf saksıyı 10-15 dakika daldır',
+      'Sudan çıkarıp tüm fazla suyun tamamen süzülmesini bekle (Damlamasın)',
+      'Yaprak göbeğine su kaçtıysa peçeteyle kurula ve tül arkası aydınlık konuma yerleştir'
+    ]
+  },
+  {
+    id: 'ziraat_ilaclama_ruzgar_phi',
+    category: 'ev_teknik',
+    domain: 'ZIRAAT',
+    keywords: ['zirai ilaçlama', 'ilaçlama', 'pestisit', 'fungisit', 'kırmızı örümcek', 'yaprak biti', 'phi süresi', 'böcek ilacı'],
+    baslik: 'Zirai İlaçlama & Meteoroloji Takibi',
+    ikon: '🧪',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Sabah 07:00 (Rüzgarsız Saat)',
+    hazirlikZamani: 'İlaçlama Öncesi 45 Dk (06:15)',
+    akilliFisilti: '⚠️ Rüzgarlı havada ilaçlama sürüklenme zehirlenmesine, yağmur ise ilacın yıkanmasına yol açar. PHI hasat bekleme süresine titizlikle uyulmalıdır.',
+    oncedenYapilacaklar: [
+      'Meteoroloji rüzgar hızını (<10 km/s) ve 24 saatlik yağışsızlık durumunu teyit et',
+      'Kimyasal buhar maskesi (A2P3), koruyucu tulum, gözlük ve nitril eldiven donanımını kuşan',
+      'İlaçlama suyu pH değerini (5.5 - 6.5 aralığı) kontrol et; etiket reçete dozajını aşma',
+      'Komşu arıcılara haber ver; etiket üzerindeki PHI (son ilaçlama ile hasat arası bekleme) gününü kaydet',
+      'Pülverizatör tankı ve memelerini uygulama bitiminde bol temiz suyla yıkayarak arındır'
+    ]
+  },
+  {
+    id: 'ziraat_budama_bordo_bulamaci',
+    category: 'ev_teknik',
+    domain: 'ZIRAAT',
+    keywords: ['ağaç budama', 'budama', 'bordo bulamacı', 'aşı macunu', 'ardıç katranı', 'zeytin budama', 'meyve budama'],
+    baslik: 'Budama & Bordo Bulamacı Protokolü',
+    ikon: '✂️',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Sabah 08:30 (Budama Sonrası)',
+    hazirlikZamani: 'Budamadan Hemen Sonra (İlk 48 Saat)',
+    akilliFisilti: '🌳 Kalın kesik yüzeyleri aşı macunuyla kapatılmazsa ve aletler dezenfekte edilmezse ağaçlar dal kanseri (Pseudomonas) kapar.',
+    oncedenYapilacaklar: [
+      'Budama makası, testere ve aletleri %10 çamaşır suyu veya alkolle dezenfekte et',
+      'Kuru, hastalıklı, obur ve içe bakan dalları tırnak bırakmadan dipten kes',
+      '2 cm üzerindeki kalın kesim yaralarını aşı macunu (ardıç katranı) ile hava almayacak şekilde kapat',
+      'Budama biter bitmez gövdeye bakteri/mantar girişini önleyen %1.5-2 Bordo Bulamacı püskürt',
+      'Budanan hastalıklı dal artıklarını bahçeden uzaklaştırarak imha et'
+    ]
+  },
+  {
+    id: 'ziraat_damlama_fertigasyon',
+    category: 'ev_teknik',
+    domain: 'ZIRAAT',
+    keywords: ['damlama sulama', 'fertigasyon', 'taban gübresi', 'yaprak gübresi', 'damlatıcı tıkandı', 'asit şoku'],
+    baslik: 'Damlama Sulama & Fertigasyon Protokolü',
+    ikon: '💧',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Sabah 08:00 (Damlama Döngüsü)',
+    hazirlikZamani: 'Sulama Öncesi Filtre & Basınç Kontrolü',
+    akilliFisilti: '💧 Fertigasyon sonrasında damlama borularına temiz su basılmazsa damlatıcı memeleri gübre tuzları ve kireçle kalıcı olarak tıkanır.',
+    oncedenYapilacaklar: [
+      'Toprak ve yaprak tahlili sonuçlarına göre N-P-K gübre dozunu fertigasyon tankında tamamen erit',
+      'İlk 15-20 dakikada hatları temiz suyla doldurup manometreden çalışma basıncını (1.5-2.0 bar) sağla',
+      'Gübre enjeksiyonu bittikten sonra hatlarda kristal kalmaması için 20-30 dakika temiz su bas',
+      'Damlatıcıların tıkanmaması için disk/kum filtrelerini ters yıkama (backwash) yaparak temizle',
+      'Sezonluk kireç birikimlerine karşı damlama borularına düşük doz fosforik/nitrik asit şoku ver'
+    ]
+  },
+  {
+    id: 'ziraat_don_nobeti_sera',
+    category: 'ev_teknik',
+    domain: 'ZIRAAT',
+    keywords: ['zirai don', 'don tehlikesi', 'serayı ısıt', 'don nöbeti', 'dona karşı sulama', 'don vuracak'],
+    baslik: 'Zirai Don Nöbeti & Sera Isıtma Alarmı',
+    ikon: '❄️',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Gece Don Nöbeti (03:30)',
+    hazirlikZamani: 'Akşam 21:00 (Termometre & Soba)',
+    akilliFisilti: '❄️ Kuru toprak gece ıslak topraktan 1.5 - 2°C daha soğuk olur; don gecesinde don pervaneleri ve nem kritik hayati koruma sağlar.',
+    oncedenYapilacaklar: [
+      'Gece sıcaklıklarının 0°C ve altına düşüş hızını seradaki dijital termometreden anlık takip et',
+      'Seralarda soba veya sıcak hava üreteçlerini saat 02:00 itibarıyla ateşle',
+      'Açık meyve bahçelerinde don öncesi hafif sulama yap (Islak toprak gündüz ısısını geceye taşır)',
+      'Aşırı don riskinde üstten yağmurlama sisleme sistemini açarak donma gizli ısısıyla tomurcukları koru',
+      'Don hasarı sonrasında bitkinin toparlanması için yapraktan amino asit ve deniz yosunu takviyesi ver'
+    ]
+  },
+  {
+    id: 'ziraat_cks_tarsim_sigorta',
+    category: 'resmi',
+    domain: 'ZIRAAT',
+    keywords: ['çks', 'cks', 'tarsim', 'çiftçi kayıt sistemi', 'tarım sigortası', 'mazot gübre desteği', 'ürün sigortası'],
+    baslik: 'ÇKS Yenileme & TARSİM Sigorta Protokolü',
+    ikon: '🌾',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Başvuru Dönemi (Mesai 16:00)',
+    hazirlikZamani: 'Evrak Hazırlığı (Ziraat Odası & Tapu)',
+    akilliFisilti: '🌾 ÇKS kaydı süresinde yenilenmeyen araziler mazot-gübre devlet desteğinden ve TARSİM prim indiriminden faydalanamaz.',
+    oncedenYapilacaklar: [
+      'Güncel tapu fotokopileri, muvafakatnameler ve kira sözleşmelerini bağlı bulunulan Ziraat Odasına onaylat',
+      'İlçe Tarım ve Orman Müdürlüğüne ÇKS formlarını ve parsel beyanlarını teslim et',
+      'TARSİM yetkili acentesinden don, dolu, fırtına ve yangın risk teminat poliçesini son tarihten önce kestir',
+      'Doğal afet hasarı oluştuğunda en geç 10 gün içinde TARSİM çağrı merkezine ihbarda bulunarak ekspertiz talep et',
+      'e-Devlet üzerinden Mazot-Gübre ve prim destekleme hakediş durumunu sorgula'
+    ]
+  },
+  {
+    id: 'ziraat_fidan_dikimi_cansuyu',
+    category: 'ev_teknik',
+    domain: 'ZIRAAT',
+    keywords: ['fidan diktik', 'fidan dikimi', 'ağaç diktik', 'tüplü fidan', 'can suyu', 'fidan aldık'],
+    baslik: 'Fidan Dikimi & Can Suyu Protokolü',
+    ikon: '🌱',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Dikimden Hemen Sonra (İlk 24 Saat)',
+    hazirlikZamani: 'Dikim Çukuru & Herek Hazırlığı',
+    akilliFisilti: '🌱 Fidan aşı noktası toprağa gömülürse fidan asil kök verir, yabani anacın özelliği kaybolur veya gövde çürüyerek fidan kurur.',
+    oncedenYapilacaklar: [
+      'Dikim çukurunu fidan kökünden 2 kat geniş ve derin kaz; tabanına yanmış çiftlik gübresi harmanla',
+      'Açık köklü fidanlarda kök tuvaleti yap (Ezilmiş ve hasarlı kökleri steril makasla buda)',
+      'Fidan aşı noktasının toprak yüzeyinden en az 5-10 cm yukarıda kalmasına dikkat et (Aşı boğulmasın)',
+      'Fidanı rüzgar yönüne göre destek hereğine (kazığa) 8 şeklinde esnek iple bağla',
+      'Topraktaki hava boşluklarını kapatmak ve kökü sabitlemek için bol miktarda ilk CAN SUYU ver'
+    ]
+  },
+  {
+    id: 'ziraat_cim_verticut_havalandirma',
+    category: 'ev_teknik',
+    domain: 'ZIRAAT',
+    keywords: ['çim biçme', 'cim bicme', 'çim havalandırma', 'verticut', 'çim sulama', 'çim sarardı'],
+    baslik: 'Çim Alan Bakımı & Verticut Protokolü',
+    ikon: '🌱',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Sabah Erken 07:30 (Çim Bakımı)',
+    hazirlikZamani: 'Bıçak Bileme & Zemin Kontrolü',
+    akilliFisilti: '🌱 Çimler akşam sulanırsa sabaha kadar ıslak kalan yapraklarda kahverengi yama (Brown Patch) ve pas mantarı oluşur.',
+    oncedenYapilacaklar: [
+      'Çim biçme makinesinin bıçaklarının keskin olduğunu kontrol et (Kör bıçak çim ucunu parçalar ve sarartır)',
+      'Çim boyunun 1/3\'ünden fazlasını tek seferde kesme (Bitkiyi strese sokmamak için kademeli biç)',
+      'Çimleri sabah erken saatte sula; akşam sulamasından kaçın (Sabaha kadar ıslak yaprak pas ve mantar yapar)',
+      'Yılda iki kez keçe tabakasını temizlemek için verticut havalandırma ve silindirleme yap',
+      'Seyrelen kel bölgelere ara ekim tohumu serpip üzerini ince elenmiş torf ve silis kumla ört'
+    ]
+  },
+  {
+    id: 'ziraat_kaktus_sukulent_kurakcil',
+    category: 'ev_teknik',
+    domain: 'ZIRAAT',
+    keywords: ['kaktüs sulama', 'kaktus', 'sukulent', 'paşa kılıcı', 'yılan bitkisi', 'kaktüs bakım'],
+    baslik: 'Kaktüs & Sukulent Kurakçıl Bakım',
+    ikon: '🌵',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Sabah 10:00 (2-3 Haftada Bir)',
+    hazirlikZamani: 'Tam Kuruluk Testi Sonrası',
+    akilliFisilti: '🌵 Kaktüs ve sukulentlerin en yaygın ölüm sebebi aşırı sulamadır; toprak tamamen kurumadan kesinlikle su verilmemelidir.',
+    oncedenYapilacaklar: [
+      'Toprağın saksı dibine kadar tamamen kuruduğundan çöp şiş veya nem ölçerle emin ol',
+      'Oda sıcaklığında dinlenmiş kireçsiz suyla sadece kök çevresine az miktarda su ver',
+      'Gövdeye ve yaprak etli dokusuna su temas ettirme (Çürüme ve mantar lekesini önle)',
+      'Saksı tabağında kesinlikle su bırakma, kış dinlenmesi döneminde sulamayı ayda bire düşür'
+    ]
+  },
+  {
+    id: 'ziraat_toprak_tahlili_numune',
+    category: 'ev_teknik',
+    domain: 'ZIRAAT',
+    keywords: ['toprak tahlili', 'toprak analizi', 'toprak numunesi', 'gübre analizi', 'tarladan toprak'],
+    baslik: 'Toprak Tahlili & Numune Alma Protokolü',
+    ikon: '🧪',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Sonbahar / Ekim Öncesi',
+    hazirlikZamani: 'Ekim Öncesi 30 Gün',
+    akilliFisilti: '🧪 Gübreleme tahlil sonucuna göre yapılmazsa fazla gübre toprağı tuzlandırır ve bitki köklerini yakar.',
+    oncedenYapilacaklar: [
+      'Arazide zikzak (Z) çizerek homojen 10-15 farklı noktayı belirle (Yol kenarı ve gübre yığınından alma)',
+      'Üst 3-5 cm bitki artıklarını sıyırıp V şeklinde 0-30 cm ve 30-60 cm derinlikte çukur kaz',
+      'Çukurun yan duvarından kürekle 3-4 cm kalınlığında toprak dilimi kesip temiz plastik kovaya koy',
+      'Tüm numuneleri kova içinde iyice harmanlayıp 1 kg\'lık temiz bez torbaya veya kilitli poşete aktar',
+      'Mevki, ada/parsel, ön bitki ve ekilecek ürün etiketini poşetin içine ve dışına iliştirip yetkili laboratuvara teslim et'
     ]
   },
 
@@ -1764,6 +2521,1301 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
       'Dış/İç ağ zafiyet taraması (Vulnerability Scan) ve servis port keşfi',
       'OWASP Top 10 web/API güvenlik zafiyetlerinin manuel istismar ve kanıt toplama süreci',
       'Kritik/Yüksek seviye bulguların remediation (çözüm) önerileriyle yönetici raporuna dönüştürülmesi'
+    ]
+  },
+  // 17. GELİŞMİŞ MESLEKİ SEZGİ SENARYOLARI (LEB DEMEDEN LEBLEBİYİ ANLAMA)
+  {
+    id: 'hukuk_tensip_zapti_cevap',
+    category: 'resmi',
+    domain: 'HUKUK',
+    keywords: ['tensip zaptı', 'tensip zapti', 'tensip geldi', 'dava dilekçesi tebliği'],
+    baslik: 'Tensip Zaptı & 2 Haftalık Cevap Süresi',
+    ikon: '⚖️',
+    renk: '#E0E7FF',
+    varsayilanZaman: '2 Hafta Kesin Süre',
+    hazirlikZamani: 'Süre Bitimine 3 Gün Kala',
+    hazirlikSaatOncesi: 72,
+    akilliFisilti: '⚖️ HMK uyarınca tensip zaptı tebliğinden itibaren cevap dilekçesi ve delil avansı süresi 2 haftadır.',
+    oncedenYapilacaklar: [
+      'HMK m. 127 uyarınca 2 haftalık kesin cevap süresini ve varsa ek süre talebini hesapla',
+      'Tensip zaptındaki ara kararları ve delil/gider avansı vezne yatırma tutarını incele',
+      'Müvekkilden savunma dayanağı ıslak imzalı delil ve tanık listesini temin et',
+      'UYAP üzerinden cevap dilekçesini e-imzalı olarak mahkemeye sun ve derkenar al'
+    ]
+  },
+  {
+    id: 'hukuk_kesinlesen_icra_103',
+    category: 'resmi',
+    domain: 'HUKUK',
+    keywords: ['icra takibi kesinleşti', 'icra kesinleşti', '103 davetiyesi', 'haciz talebi'],
+    baslik: 'İcra Haciz Talebi & 103 Davetiyesi',
+    ikon: '🏛️',
+    renk: '#E0E7FF',
+    varsayilanZaman: 'Derhal / 3 İş Günü',
+    hazirlikZamani: '24 Saat İçinde',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '🏛️ İtiraz süresi dolup kesinleşen icra takibinde vakit kaybetmeden UYAP sorguları ve haciz talebi açılmalıdır.',
+    oncedenYapilacaklar: [
+      'UYAP üzerinden MERNİS, SGK çalışan, araç ve TAKBİS gayrimenkul sorgulaması yap',
+      'Bankalara İİK 89/1 haciz ihbarnamesi müzekkeresi gönderilmesi talebi aç',
+      'Borçluya İİK 103 davetiyesi çıkarılması ve menkul/gayrimenkul haciz şerhi işletilmesi',
+      'Dosya kapak hesabı ve vekalet ücreti tahakkukunu denetle'
+    ]
+  },
+  {
+    id: 'it_vpn_ipsec_kesinti',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['vpn koptu', 'ipsec düştü', 'vpn kesildi', 'tünel koptu', 'site to site vpn'],
+    baslik: 'IPsec / VPN Tünel Müdahalesi',
+    ikon: '🛡️',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Acil Müdahale (SLA: 15 Dk)',
+    hazirlikZamani: 'Derhal',
+    akilliFisilti: '🛡️ VPN tünel kesintilerinde önce Faz 1/2 IKE Security Association ve WAN ISP ping durumu kontrol edilir.',
+    oncedenYapilacaklar: [
+      'Firewall üzerinde IKE Phase 1 ve Phase 2 durum loglarını kontrol et',
+      'Uzak lokasyon WAN IP ping ve ISP hat erişilebilirliğini doğrula',
+      'Pre-shared key (PSK), crypto profile ve lifetime süre uyumunu test et',
+      'Yedek SD-WAN veya mobil APN failover hattının devreye girdiğini teyit et'
+    ]
+  },
+  {
+    id: 'it_ad_gpo_deployment',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['gpo basma', 'gpo dağıtımı', 'yeni sunucu kuruldu', 'active directory domain'],
+    baslik: 'Domain & GPO Dağıtım Rutini',
+    ikon: '💻',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Dağıtım Saati',
+    hazirlikZamani: '1 Saat Önce',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '💻 GPO dağıtımı öncesinde test OU üzerinde gpupdate /force ve rsop.msc denetimi yapılmalıdır.',
+    oncedenYapilacaklar: [
+      'Yeni sunucuyu Active Directory domainine al ve doğru OU altına taşı',
+      'Test grubu üzerinde gpupdate /force ile Group Policy etkinliğini doğrula',
+      'EDR ve SIEM log iletim agentlarını kur ve merkezi konsoldan online teyidi al',
+      'Veeam üzerinde yeni makine için otomatik yedekleme (Backup Job) tanımla'
+    ]
+  },
+  {
+    id: 'it_ssl_tls_renewal',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['ssl sertifikası bitiyor', 'ssl yenileme', 'tls sertifikası', 'wildcard ssl'],
+    baslik: 'SSL / TLS Sertifika Yenileme',
+    ikon: '🔒',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Süre Bitimine 7 Gün Kala',
+    hazirlikZamani: '7 Gün Önce',
+    hazirlikSaatOncesi: 168,
+    akilliFisilti: '🔒 SSL sertifikası süresi dolduğunda tarayıcılar siteye erişimi "Güvenli Değil" uyarısıyla tamamen engeller.',
+    oncedenYapilacaklar: [
+      '2048-bit RSA veya ECC private key ile yeni CSR üret',
+      'DNS TXT veya HTTP-01 doğrulama kaydını tamamla',
+      'Nginx, Apache veya IIS web sunucu binding konfigürasyonunu güncelle',
+      'HSTS başlıkları ve SSL Labs testinde A+ güvenlik derecesini doğrula'
+    ]
+  },
+  {
+    id: 'muhendislik_insaat_beton_kirim',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['beton döktük', 'beton döküldü', 'beton dökümü', 'kırım testi', 'küp numune', 'silindir numune', 'kürleme', 'beton kür'],
+    baslik: 'Beton Dökümü & 7/28 Gün Kırım Testi',
+    ikon: '🏗️',
+    renk: '#FEF3C7',
+    varsayilanZaman: '7. & 28. Gün Laboratuvar Kırımı',
+    hazirlikZamani: 'İlk 3 Gün (Sabah/Akşam Kürleme)',
+    hazirlikSaatOncesi: 72,
+    akilliFisilti: '🏗️ TS EN 206 standardı uyarınca ilk 72 saat kürleme aksatılmamalı; 7. gün erken ve 28. gün nihai tasarım dayanımı basınç testleri laboratuvarda yapılmalıdır.',
+    oncedenYapilacaklar: [
+      'Küp/silindir beton numunelerinin şantiyede etiketlenmesi ve standart su kür havuzuna alınması',
+      'İlk 72 saat boyunca günde en az iki kez düzenli beton kür sulaması veya kür membranı uygulaması',
+      'Yapı denetim ve şantiye şefi ıslak imzalı beton döküm ve donatı teslim tutanağını dosyala',
+      '7. gün akredite laboratuvarda erken dayanım (hedef: en az %70) kırım testi ve rapor onayı',
+      '28. gün nihai karakteristik basınç dayanımı kırım testi ve statik uygunluk kabulü'
+    ]
+  },
+  {
+    id: 'muhendislik_insaat_kalip_donati_onam',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['donatı teslim', 'kalıp kontrolü', 'demir donatı', 'beton döküm izni', 'şantiye şefi onayı', 'yapı denetim donatı', 'paspayı kontrolü'],
+    baslik: 'Kalıp-Donatı Kontrolü & Döküm Vizesi',
+    ikon: '🏗️',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Dökümden 24 Saat Önce',
+    hazirlikZamani: 'T-24 Saat (Proje Donatı Kontrolü)',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '🏗️ Donatı çapı, aralığı, paspayı ve etriye sıklaştırması yapı denetim ve şantiye şefince imzalanmadan beton mikseri sahaya sokulamaz.',
+    oncedenYapilacaklar: [
+      'Statik mimari projeye göre kolon, kiriş ve perde donatı çap ve adetlerinin bizzat sayımı',
+      'Kolon-kiriş birleşim bölgelerinde etriye sıklaştırma aralıklarının ve gönyelerin kontrolü',
+      'Kalıp altı ve yan yüzeylerde plastik paspayı takozlarının yerleşimi ve kalıp temizliği',
+      'Yapı denetim mühendisi ile şantiye mahallinde donatı vize tutanağının müştereken imzalanması'
+    ]
+  },
+  {
+    id: 'muhendislik_elektrik_loto_guvenlik',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['loto prosedürü', 'trafo bakımı', 'pano bakımı', 'yüksek gerilim müdahale', 'kilitleme etiketleme', 'loto', 'enerji kesme'],
+    baslik: 'Pano/Trafo Bakımı & LOTO Güvenliği',
+    ikon: '⚡',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Müdahale Öncesi (İSG)',
+    hazirlikZamani: 'T-30 Dk (Enerji Kesme & Ölçüm)',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '⚡ Can güvenliği için enerjinin kesildiği fiziksel gerilim kalemi ve multimetreyle ölçülmeden panoya asla dokunulmamalıdır.',
+    oncedenYapilacaklar: [
+      'LOTO Prosedürü: Ana kesici ve kompakt şalteri indir, asma kilitle kilitle ve ikaz levhasını as',
+      'Gerilim kontrol kalemi ile baralarda 0V olduğunu doğrula ve seyyar topraklama donanımını tak',
+      'Termal kamera ile bara bağlantıları, kontaktör ve klemenslerde aşırı ısınma/gevşeklik taraması yap',
+      'Bakım bitiminde megger mego metre ile izolasyon direnci testi ve teslim tutanağını imzala'
+    ]
+  },
+  {
+    id: 'muhendislik_elektrik_kompanzasyon_sayac',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['kompanzasyon', 'reaktif ceza', 'endüktif sayaç', 'kapasitif sayaç', 'kondansatör kademe', 'sayaç okuma'],
+    baslik: 'Kompanzasyon & Sayaç Takibi',
+    ikon: '⚡',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Haftalık Sayaç Okuma',
+    hazirlikZamani: 'Pazartesi 09:00',
+    hazirlikSaatOncesi: 2,
+    akilliFisilti: '⚡ Endüktif oran %20, kapasitif oran %15 sınırını aştığında elektrik faturasına ağır reaktif ceza yansır.',
+    oncedenYapilacaklar: [
+      'Aktif (T), reaktif endüktif (Ri) ve reaktif kapasitif (Rc) sayaç endekslerini haftalık olarak kaydet',
+      'Reaktif oranları hesapla: Endüktif <%20 ve Kapasitif <%15 güvenlik sınırında olduğunu teyit et',
+      'Reaktif güç kontrol rölesi (RGKR) kademe akımlarını ve arızalı kondansatörleri pensampermetre ile test et',
+      'Yapışık kalan kontaktör veya deşarj direnci bozulmuş kondansatörlerin değişimini planla'
+    ]
+  },
+  {
+    id: 'muhendislik_makine_basincli_kap_hidrostatik',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['hidrostatik test', 'basınçlı kap', 'kompresör testi', 'kazan testi', 'emniyet ventili', 'hava tankı'],
+    baslik: 'Basınçlı Kap Hidrostatik Testi',
+    ikon: '⚙️',
+    renk: '#E2E8F0',
+    varsayilanZaman: 'Yıllık Yasal Periyodik Muayene',
+    hazirlikZamani: 'Testten 24 Saat Önce',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '⚙️ İş Ekipmanları Yönetmeliği uyarınca basınçlı kaplar yılda en az bir kez akredite kuruluşça işletme basıncının 1.5 katıyla hidrostatik teste tabi tutulmalıdır.',
+    oncedenYapilacaklar: [
+      'Tank veya kazanın havasını tahliye edip suyla doldurarak 1.5 x İşletme Basıncında hidrostatik test hazırla',
+      'Emniyet ventili açma basıncını test standında doğrula ve kurşun mühür durumunu denetle',
+      'Kaynak dikişleri, gövde korozyonu ve et kalınlığı ultrasonik kalınlık ölçüm cihazıyla tara',
+      'TÜRKAK akredite A-Tipi muayene kuruluşundan periyodik kontrol uygunluk raporunu teslim al'
+    ]
+  },
+  {
+    id: 'muhendislik_makine_kestirimci_bakim_vibrasyon',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['vibrasyon analizi', 'titreşim ölçümü', 'yağ analizi', 'kestirimci bakım', 'rulman sıcaklığı'],
+    baslik: 'Kestirimci Bakım & Vibrasyon Analizi',
+    ikon: '⚙️',
+    renk: '#E2E8F0',
+    varsayilanZaman: 'Aylık Rutin Ölçüm',
+    hazirlikZamani: 'Ölçümden 1 Saat Önce',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '⚙️ ISO 10816 standart limitleri aşıldığında rulman ve kaplin hasarı kaçınılmazdır; FFT spektrum analiziyle arıza kaynağı saptanmalıdır.',
+    oncedenYapilacaklar: [
+      'Motor ve pompa yatak noktalarından (Yatay, Dikey, Eksenel) titreşim ivme ve hız RMS değerlerini ölç',
+      'Lazerli kaplin ayarı (şaft hizalama) ve balanssızlık açılarını kontrol et',
+      'Redüktör ve hidrolik üniteden yağ numunesi alarak viskozite, aşınma metali ve partikül analizine gönder',
+      'Kritik eşiği aşan rulmanlar için duruş planı oluştur ve yedek parça siparişini tetikle'
+    ]
+  },
+  {
+    id: 'muhendislik_yazilim_prod_deploy_cuma',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['prod deploy', 'canlıya alma', 'canliya alma', 'production deployment', 'release çıkışı', 'canlıya geçiş'],
+    baslik: 'Production Deploy & Sürüm Yönetimi',
+    ikon: '💻',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Deploy Saati / Bakım Penceresi',
+    hazirlikZamani: 'T-1 Saat (DB Backup & Runbook)',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '💻 Canlıya geçiş öncesinde veri tabanı snapshot yedeği alınmalı, rollback adımları test edilmiş olmalıdır.',
+    oncedenYapilacaklar: [
+      'Production veritabanı anlık snapshot yedeğini al ve migration scriptlerinin geriye dönük uyumunu test et',
+      'Staging ortamında E2E regresyon testlerinin ve ürün yöneticisi (PO) kabul onayının tamamlandığını doğrula',
+      'SemVer standardına uygun Git tag/release etiketini oluştur ve PR onaylarını kilitle',
+      'Deploy sonrası APM hata oranı, Sentry logları ve Kubernetes pod restart metriklerini 30 dakika canlı izle',
+      'Kritik anomali durumunda otomatik/manuel rollback runbook prosedürünü hazır beklet'
+    ]
+  },
+  {
+    id: 'muhendislik_yazilim_hotfix_semver',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['hotfix', 'acil yama', 'semver tag', 'bugfix release', 'patch sürümü', 'acil hotfix'],
+    baslik: 'Hotfix & SemVer Sürüm Dağıtımı',
+    ikon: '💻',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Acil Yama (SLA: 2 Saat)',
+    hazirlikZamani: 'Derhal',
+    hazirlikSaatOncesi: 0,
+    akilliFisilti: '💻 Hotfix ana dala (main) atıldıktan sonra mutlaka develop dalına da cherry-pick edilmeli ve patch sürüm etiketi verilmelidir.',
+    oncedenYapilacaklar: [
+      'Production crash/hata logunu (Sentry/Datadog) izole et ve lokal ortamda yeniden üret (reproduce)',
+      'Hedefe yönelik minimal düzeltme kodunu yaz ve birim (unit) testlerini çalıştır',
+      'Kodu main dalına squash/merge yapıp SemVer PATCH sürüm artırımını (vX.Y.Z) etiketle',
+      'Düzeltmeyi develop dalına cherry-pick ile senkronize ederek regresyon oluşmasını engelle'
+    ]
+  },
+  {
+    id: 'muhendislik_jeoteknik_zemin_etudu',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['zemin etüdü', 'zemin sondajı', 'spt deneyi', 'jeoteknik rapor', 'taşıma gücü', 'spt'],
+    baslik: 'Zemin Etüdü & SPT Sondaj Takibi',
+    ikon: '📐',
+    renk: '#FEF08A',
+    varsayilanZaman: 'Sondaj Günü 09:00',
+    hazirlikZamani: 'T-24 Saat (Yeraltı Altyapı Taraması)',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '📐 TBDY 2018 uyarınca zemin sınıfı, sıvılaşma riski ve yeraltı su seviyesi jeoteknik raporda netleşmeden temel statik projesi onaylanamaz.',
+    oncedenYapilacaklar: [
+      'Sondaj yapılacak parselde İSKİ, İGDAŞ ve Telekom altyapı çakışma taramasını tamamla',
+      'Her 1.5 metrede bir Standart Penetrasyon Testi (SPT) darbe sayılarını (N30) log defterine kaydet',
+      'Yeraltı su seviyesi (YASS) derinliğini ve karot numune tüplerini etiketleyip laboratuvara sevk et',
+      'Zemin mekaniği laboratuvar deney sonuçlarıyla (Atterberg, elek, üç eksenli) jeoteknik raporu hazırla'
+    ]
+  },
+  {
+    id: 'muhendislik_biyomedikal_cihaz_kalibrasyon',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['biyomedikal kalibrasyon', 'tıbbi cihaz kalibrasyonu', 'iec 62353', 'elektriksel güvenlik testi', 'ventilatör kalibrasyonu'],
+    baslik: 'Biyomedikal Cihaz Kalibrasyonu & İSG',
+    ikon: '🔬',
+    renk: '#CCFBF1',
+    varsayilanZaman: 'Yıllık Periyodik Kalibrasyon',
+    hazirlikZamani: 'Testten 2 Saat Önce',
+    hazirlikSaatOncesi: 2,
+    akilliFisilti: '🔬 Hastanelerde kritik yaşam destek cihazları IEC 62353 elektriksel güvenlik ve metrolojik kalibrasyon sertifikası olmadan hasta başında kullanılamaz.',
+    oncedenYapilacaklar: [
+      'IEC 62353 standardına göre kaçak akım ve gövde topraklama süreklilik testini analizörle ölç',
+      'Ventilatör, defibrilatör veya anestezi cihazının basınç, debi ve enerji çıkış hassasiyetini kalibre et',
+      'Kalibrasyon yeşil onay etiketini cihazın görünür yerine yapıştır ve sonraki test tarihini işle',
+      'Klinik Mühendislik HBYS sistemine kalibrasyon sertifikasını yükleyip servise teslim imzasını al'
+    ]
+  },
+  {
+    id: 'muhendislik_endustri_5s_kaizen',
+    category: 'is_kariyer',
+    domain: 'TEKNIK',
+    keywords: ['5s denetimi', 'kaizen', 'balık kılçığı', 'kök neden analizi', 'spc kontrolü', 'fmea analizi', '5s'],
+    baslik: '5S Saha Denetimi & Kaizen Rutini',
+    ikon: '📊',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Haftalık Saha Denetimi',
+    hazirlikZamani: 'Denetimden 1 Gün Önce',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '📊 Yalın üretimde 5S (Ayıkla, Düzenle, Temizle, Standartlaştır, Sürdür) panoları ve Kaizen aksiyonları periyodik denetimle canlı tutulur.',
+    oncedenYapilacaklar: [
+      'Üretim hattında kırmızı etiket (red-tag) uygulaması ile gereksiz malzeme ve aletleri ayıkla',
+      'Alet panoları, zemin çizgileri ve malzeme stok alanlarının gölge pano standartlarına uygunluğunu denetle',
+      'Haftalık 5S puanlama skorunu hesapla ve operatörlerle birlikte Kaizen iyileştirme panosuna as',
+      'Kritik sapmalar için Balık Kılçığı (İshikawa) veya 5 Neden analiziyle kök neden aksiyon planı aç'
+    ]
+  },
+  {
+    id: 'smmm_sirket_kurulusu',
+    category: 'finans',
+    domain: 'MALIYE',
+    keywords: ['şirket kuruluşu', 'ltd şti kurduk', 'mersis kuruluşu', 'yeni mükellef açılışı'],
+    baslik: 'Şirket Kuruluşu & MERSİS Süreci',
+    ikon: '📊',
+    renk: '#DCFCE7',
+    varsayilanZaman: '3 İş Günü',
+    hazirlikZamani: 'Kuruluş Günü',
+    akilliFisilti: '📊 MERSİS tescilinden sonra vergi dairesi e-yoklama randevusu ve imza sirküleri için 24 saat kuralı işler.',
+    oncedenYapilacaklar: [
+      'MERSİS ana sözleşme girişi ve unvan kontrolünün tamamlanması',
+      'Potansiyel vergi kimlik numarası alımı ve kurucular sermaye bloke yazısı',
+      'Ticaret Sicil randevusu ile tescil ve ilan evraklarının teslimi',
+      'Vergi dairesi e-yoklama talebi açılması ve noter onaylı imza sirküleri çıkarılması'
+    ]
+  },
+  {
+    id: 'emlak_kiraci_tahliye_devir',
+    category: 'finans',
+    domain: 'EMLAK',
+    keywords: ['kiracı çıktı', 'kiraci cikti', 'anahtarı teslim aldım', 'daireyi boşalttı'],
+    baslik: 'Kiracı Tahliyesi & Sayaç / Depozito Devri',
+    ikon: '🏢',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Tahliye Günü',
+    hazirlikZamani: 'Teslim Öncesi',
+    akilliFisilti: '🏢 Depozito iadesi yapılmadan önce elektrik, su, doğalgaz son endeksleri okunmalı ve yönetim borçsuzluk belgesi alınmalıdır.',
+    oncedenYapilacaklar: [
+      'Elektrik, su ve doğalgaz sayaçlarının son endeks fotoğraflarını çek ve tutanağa yaz',
+      'Daire içi boya, kombi, ankastre ve armatür hasar tespit fotoğraflarını kaydet',
+      'Apartman/site yönetiminden aidat borçsuzluk yazısını teyit et',
+      'Hasar ve fatura mahsuplarını düşerek depozito iade mutabakat tutanağını imzalat'
+    ]
+  },
+  {
+    id: 'emlak_webtapu_satis_devir',
+    category: 'finans',
+    domain: 'EMLAK',
+    keywords: ['tapu devri', 'webtapu başvuru', 'tapu günü', 'ev satışı tapu'],
+    baslik: 'Web-Tapu Satış & Devir Protokolü',
+    ikon: '🏢',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Tapu Randevu Saati',
+    hazirlikZamani: 'Randevudan 24 Saat Önce',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '🏢 DASK poliçesi olmadan ve belediye rayiç bedel yazısı sisteme yüklenmeden tapu harç SMS\'i gelmez.',
+    oncedenYapilacaklar: [
+      'Web-Tapu sistemine DASK poliçesi ve belediye rayiç belgesini yükle',
+      'Gelen SMS takip numarası ile alıcı/satıcı tapu harcı ve döner sermayesini yatır',
+      'Tapu dairesinde kimlik, fotoğraf ve vekaletname asıllarını hazır bulundur',
+      'Bloke çek veya Güvenli Tapu Ödeme Sistemi üzerinden satış bedeli transferini sağla'
+    ]
+  },
+  {
+    id: 'emlak_kira_sozlesmesi_tahliye',
+    category: 'finans',
+    domain: 'EMLAK',
+    keywords: ['kira sözleşmesi', 'kira kontratı', 'tahliye taahhütnamesi', 'yeni kiracı', 'kiraya verdik', 'daire kiralandı'],
+    baslik: 'Kira Sözleşmesi & Tahliye Taahhütnamesi',
+    ikon: '📝',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Sözleşme İmzası',
+    hazirlikZamani: 'İmza Öncesi (Kimlik & Föy)',
+    akilliFisilti: '📝 Yargıtay içtihatlarına göre kira kontratıyla aynı gün imzalanan tahliye taahhütnamesi geçersiz sayılabilir; tanzim tarihi teslim sonrasına bırakılmalıdır.',
+    oncedenYapilacaklar: [
+      'Kiracının T.C. kimlik, adli sicil ve düzenli gelir teyidini al',
+      'Kira sözleşmesine net kira, artış oranı (TÜFE), ödeme günü ve IBAN bilgilerini yaz',
+      'Demirbaş teslim tutanağı ile kombi, ankastre, armatür ve duvar boya durumunu fotoğrafla',
+      'Elektrik, su, doğalgaz sayaç ilk endekslerini kaydederek aboneliklerin devrini şart koş',
+      'Tahliye taahhütnamesini anahtar teslimi sonrası tarihe tanzim et ve tercihen noterde onaylat',
+      'En fazla 3 aylık kira tutarındaki depozitoyu vadeli banka mevduat hesabına bloke ettir'
+    ]
+  },
+  {
+    id: 'emlak_yer_gosterme_sunum',
+    category: 'finans',
+    domain: 'EMLAK',
+    keywords: ['yer gösterme', 'yer gosterme', 'evi göstereceğiz', 'sunum randevusu', 'portföy sunumu', 'daireyi gezdireceğiz'],
+    baslik: 'Taşınmaz Gösterme Belgesi & Portföy Sunumu',
+    ikon: '🤝',
+    renk: '#E0E7FF',
+    varsayilanZaman: 'Müşteri Randevu Saati',
+    hazirlikZamani: 'Sunumdan 1 Saat Önce (Mülk Sahibi Teyidi)',
+    akilliFisilti: '🤝 Taşınmaz Ticareti Yönetmeliği md. 19 uyarınca yer gösterme belgesi imzalatılmadan yapılan sunumlarda hizmet bedeli (komisyon) tahsilinde hukuki ihtilaf doğar.',
+    oncedenYapilacaklar: [
+      'Sunumdan 1 saat önce mülk sahibi veya kiracıyla randevuyu teyit et ve güvenliğe bildir',
+      'Daireye 15 dk önce gidip pencereleri açarak havalandır ve aydınlatmaları hazırla',
+      'Taşınmaz Ticareti Yönetmeliğine uygun Taşınmaz Gösterme Belgesini müşteriye imzalat',
+      'Net/brüt metrekare, aidat, bina yaşı, cephe ve tapu takyidat durumunu şeffafça açıkla',
+      'Müşterinin geri bildirimini ve teklif niyetini CRM takip föyüne kaydet'
+    ]
+  },
+  {
+    id: 'emlak_imar_iskan_takyidat',
+    category: 'finans',
+    domain: 'EMLAK',
+    keywords: ['imar durumu', 'imar çapı', 'iskan raporu', 'kat irtifakı', 'kat mülkiyeti', 'takyidat', 'ada parsel sorgu'],
+    baslik: 'İmar, İskan & Tapu Takyidat Denetimi',
+    ikon: '📐',
+    renk: '#FEF08A',
+    varsayilanZaman: 'Belediye & Tapu Mesaisi',
+    hazirlikZamani: 'Ekspertiz Öncesi (Ada/Parsel)',
+    akilliFisilti: '📐 İskansız (yapı kullanma izinsiz) binalarda konut kredisi kısıtlaması yaşanır; tapu takyidatında görünmeyen kamu hacizleri satış anında devri kilitler.',
+    oncedenYapilacaklar: [
+      'TKGM Parsel Sorgu üzerinden ada, parsel, alan ve sınırları doğrula',
+      'Web-Tapudan güncel Takyidat Belgesi alarak haciz, ipotek veya mahkeme şerhlerini incele',
+      'İlgili belediyeden imar çapı, yapı ruhsatı ve İskan (Yapı Kullanma İzni) durumunu sorgula',
+      'Belediye arşivinden onaylı mimari projeyi inceleyerek projeye aykırı kaçak büyüme olup olmadığını denetle',
+      'Bölgedeki emsal satışları derleyerek gayrimenkul ekspertiz ve değerleme analizi hazırla'
+    ]
+  },
+  {
+    id: 'emlak_ipotek_fek_terkin',
+    category: 'finans',
+    domain: 'EMLAK',
+    keywords: ['ipotek fek', 'ipotek kaldırma', 'kredi kapandı', 'ipotek terkin', 'banka ipotek fekki'],
+    baslik: 'İpotek Fekki & Tapu Terkin Protokolü',
+    ikon: '🏛️',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Kredi Kapanışı Sonrası',
+    hazirlikZamani: 'Banka Borçsuzluk Teyidi',
+    akilliFisilti: '🏛️ Kredi borcu kapansa dahi banka sisteme fek yazısı göndermez ve harç ödenmezse ipotek tapu kütüğünde kalmaya devam eder ve satışa engel teşkil eder.',
+    oncedenYapilacaklar: [
+      'Bankadan konut kredisinin sıfırlandığını ve borcun kapandığını teyit eden dekontu al',
+      'Bankanın Genel Müdürlüğünden Tapu Müdürlüğüne TAKPAS üzerinden elektronik İpotek Fekki göndermesini talep et',
+      'Tapu fek terkin harcının tahakkukunu kontrol et ve ödemesini tamamla',
+      'Web-Tapu üzerinden güncel tapu kaydı alarak ipotek şerhinin silindiğini doğrula',
+      'Temiz, takyidatsız tapu senedini mülk sahibine veya alıcıya teslim et'
+    ]
+  },
+  {
+    id: 'emlak_tufe_kira_artisi',
+    category: 'finans',
+    domain: 'EMLAK',
+    keywords: ['kira artışı', 'kira artisi', 'tüfe kira', 'tufe kira', 'kira zammı', 'kira yenileme'],
+    baslik: 'TÜFE Kira Artışı & Yenileme Bildirimi',
+    ikon: '📈',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Sözleşme Bitişinden 30 Gün Önce',
+    hazirlikZamani: 'TÜİK 12 Aylık TÜFE Açıklanması',
+    akilliFisilti: '📈 TBK md. 344 uyarınca konut kiralarında artış oranı son 12 aylık TÜFE ortalamasını aşamaz; kira bedellerinin elden ödenmesi VUK uyarınca usulsüzlük cezasına tabidir.',
+    oncedenYapilacaklar: [
+      'TÜİK tarafından açıklanan son 12 Aylık TÜFE Ortalaması yasal tavan artış oranını belirle',
+      'Mevcut kira bedeline yasal tavanı uygulayarak yeni dönem net aylık kira rakamını hesapla',
+      'Kira yenileme gününden en az 30 gün önce kiracıya yeni dönem kirasını ve banka IBAN hesabını yazılı bildir',
+      'Ödemelerin dekontta "X Ayı Kira Bedeli" açıklamasıyla bankadan yapılmasını hatırlat',
+      'Yeni kira bedeline göre depozito tamamlama farkını ve kefil durumunu gözden geçir'
+    ]
+  },
+  {
+    id: 'emlak_eids_yetki_ilani',
+    category: 'finans',
+    domain: 'EMLAK',
+    keywords: ['yetki belgesi', 'yetki sözleşmesi', 'eids', 'ilan girişi', 'satılık ilanı', 'kiralık ilanı', 'portföy aldık'],
+    baslik: 'EİDS Yetkilendirme & Portföy İlan Protokolü',
+    ikon: '📸',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'İlan Yayını Öncesi',
+    hazirlikZamani: 'Portföy Çekimi & Evrak Toplama',
+    akilliFisilti: '📸 EİDS yetkilendirmesi veya yazılı yetki sözleşmesi olmayan gayrimenkullerin portallarda ilana verilmesi Ticaret Bakanlığı tarafından idari para cezasına tabidir.',
+    oncedenYapilacaklar: [
+      'Mülk sahibinden e-Devlet EİDS üzerinden işletmeye yetkilendirme onayını aldır',
+      'Taşınmaz Ticareti Yönetmeliğine uygun Yetkilendirme Sözleşmesini ıslak imzalı tanzim et',
+      'Dairenin profesyonel geniş açı fotoğraf, video ve kat planı çekimlerini hazırla',
+      'Tapudaki net ve brüt m2, ada/parsel, bina yaşı, ısıtma ve aidat bilgilerini ilana gir',
+      'İlanı portallarda ve web sitesinde EİDS yetki onay koduyla yayına al'
+    ]
+  },
+  {
+    id: 'saglik_postop_vital_izlem',
+    category: 'saglik',
+    domain: 'SAGLIK',
+    keywords: ['hasta servise çıktı', 'post-op hasta', 'ameliyattan çıktı', 'cerrahi servis yatış'],
+    baslik: 'Post-Op Vital & Cerrahi Servis İzlemi',
+    ikon: '🩺',
+    renk: '#E0F2FE',
+    varsayilanZaman: '15 Dk / Saatlik Rutin',
+    hazirlikZamani: 'Servis Kabul Anında',
+    akilliFisilti: '🩺 Post-op ilk 2 saat 15 dakikada bir, sonraki 4 saatte yarım saatte bir vital bulgu (TA, Nabız, SpO2) takibi yapılır.',
+    oncedenYapilacaklar: [
+      'İlk 2 saat 15 dakikada bir vital bulgu (Tansiyon, Nabız, SpO2, Solunum) kaydet',
+      'Cerrahi dren miktarı, rengi ve pansuman kanama sızıntı kontrolünü yap',
+      'Hastanın post-op aldığı-çıkardığı (AÇT) sıvı dengesini order föyüne işle',
+      'Cerrahi hekimin post-op analjezik ve antibiyotik orderını 5 Doğru Kuralı ile uygula'
+    ]
+  },
+  {
+    id: 'saglik_acil_konsultasyon_stat',
+    category: 'saglik',
+    domain: 'SAGLIK',
+    keywords: ['acil konsültasyon', 'acil konsultasyon', 'stat kons', 'kırmızı alan kons', 'acil hekim kons', 'konsültasyon istendi'],
+    baslik: 'Acil Konsültasyon (30 Dk SLA)',
+    ikon: '🚨',
+    renk: '#FEE2E2',
+    varsayilanZaman: '30 Dk İçinde (Kritik SLA)',
+    akilliFisilti: '🩺 Sağlık Bakanlığı Kalite Standartları gereği acil konsültasyon yanıt süresi en fazla 30 dakikadır.',
+    oncedenYapilacaklar: [
+      '30 dakika içinde hastayı bizzat değerlendir ve konsültasyon notunu HBYS\'ye işle',
+      'İsteyen acil/servis hekimi ile sözlü iletişim kur ve tedavi revizyonunu planla',
+      'Gerekli acil görüntüleme, EKG ve laboratuvar istemlerini HBYS üzerinden onayla'
+    ]
+  },
+  {
+    id: 'saglik_mavi_kod_cpr',
+    category: 'saglik',
+    domain: 'SAGLIK',
+    keywords: ['mavi kod', 'code blue', '2222', 'cpr resüsitasyon', 'kardiyak arrest', 'kalp masajı'],
+    baslik: 'Mavi Kod (Code Blue) & CPR',
+    ikon: '🚨',
+    renk: '#BFDBFE',
+    varsayilanZaman: '3 Dk İntikal SLA',
+    akilliFisilti: '🚨 Mavi Kod çağrısında ekibin olay yerine intikal süresi maksimum 3 dakikadır. 30:2 göğüs basısı ve 2 dakikada bir ritim analizi esastır.',
+    oncedenYapilacaklar: [
+      'Mavi kod çağrı saatini ve olay yerine intikal süresini (maksimum 3 dk) tutanağa kaydet',
+      '30:2 göğüs basısı / solutma döngüsü ve 2 dakikada bir ritim/nabız analizi sağla',
+      'İlk 3-5 dakika içinde 1 mg IV Epinefrin (Adrenalin) ve defibrilasyon hazırlığı yap',
+      'Mavi Kod Müdahale Formunu eksiksiz doldurup Kalite Yönetim Birimine teslim et'
+    ]
+  },
+  {
+    id: 'saglik_adli_vaka_muayene',
+    category: 'saglik',
+    domain: 'SAGLIK',
+    keywords: ['adli vaka', 'adli rapor', 'adli muayene', 'darp raporu', 'trafik kazası raporu', 'adli emanet'],
+    baslik: 'Adli Vaka & Tıbbi Raporlama',
+    ikon: '⚖️',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Derhal (Resmi Bildirim)',
+    akilliFisilti: '⚖️ Adli vakalarda geçici/kesin hekim raporu 2 nüsha tanzim edilir ve resmi kolluğa (hastane polisi) gecikmeksizin teslim edilir.',
+    oncedenYapilacaklar: [
+      'Hastanın kimlik tespitini ve kolluk (polis/jandarma) sevk müzekkeresini kontrol et',
+      'Lezyonların milimetrik boyut, renk ve anatomik lokalizasyonunu adli rapora 2 nüsha kaydet',
+      'Elbise, mermi çekirdeği veya biyolojik delilleri adli emanet torbasında mühürle',
+      'Raporu hastane polisine zimmet karşılığı teslim edip HBYS adli vaka kutucuğunu işaretle'
+    ]
+  },
+  {
+    id: 'saglik_preop_cerrahi_hazirlik',
+    category: 'saglik',
+    domain: 'SAGLIK',
+    keywords: ['pre-op hasta', 'preop hazırlık', 'ameliyat hazırlığı', 'ameliyata gidecek', 'cerrahi hazırlık', 'ameliyathane hazırlığı'],
+    baslik: 'Pre-Op Cerrahi Hazırlık',
+    ikon: '🏥',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Ameliyattan 8 Saat Önce (NPO)',
+    hazirlikZamani: 'Operasyondan 8 Saat Önce',
+    akilliFisilti: '🏥 Elektif cerrahi öncesi en az 8 saatlik NPO mutlak açlık, anestezi onamı ve cross-match teyidi zorunludur.',
+    oncedenYapilacaklar: [
+      'T-8 saat: Ameliyat saatinden en az 8 saat önce tüm oral alımı (su dahil) kes (NPO)',
+      'Kan grubu, cross-match ve Kan Merkezinden ayrılan kan torbalarını teyit et',
+      'Aydınlatılmış cerrahi ve anestezi onam formlarının ıslak imzalı olduğunu dosyala',
+      'Cerrahi taraf işaretleme ve premedikasyon tedavisini hekim orderına göre uygula'
+    ]
+  },
+  {
+    id: 'saglik_taburculuk_epikriz',
+    category: 'saglik',
+    domain: 'SAGLIK',
+    keywords: ['hasta taburcu', 'taburculuk işlemleri', 'epikriz yazılacak', 'taburcu edilecek', 'çıkış özeti'],
+    baslik: 'Hasta Taburculuk & Epikriz',
+    ikon: '🩺',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Taburculuk Saati (10 Gün Kontrol)',
+    akilliFisilti: '🩺 Epikriz raporu, Medula e-Reçete ve 10 gün sonraki poliklinik kontrol randevusu kapatılmadan taburculuk tamamlanamaz.',
+    oncedenYapilacaklar: [
+      'Detaylı klinik epikriz raporunu HBYS üzerinde tamamla ve e-İmza ile mühürle',
+      'SGK Medula e-Reçetesini düzenleyip reçete numarasını hastaya/yakınına ilet',
+      'Taburculuk tarihinden 10 gün sonrasına ilgili poliklinikten kontrol randevusu planla',
+      'Bekleyen patoloji, mikrobiyoloji ve laboratuvar sonuç onaylarını kapat'
+    ]
+  },
+  {
+    id: 'saglik_hemsire_dekubitus',
+    category: 'saglik',
+    domain: 'SAGLIK',
+    keywords: ['dekübitus', 'dekubitus', 'bası yarası', 'pozisyon değişim', 'pozisyon ver', 'immobil hasta'],
+    baslik: 'Dekübitus Pozisyon Değişimi',
+    ikon: '💉',
+    renk: '#CCFBF1',
+    varsayilanZaman: '2 Saatte Bir (Periyodik)',
+    akilliFisilti: '💉 İmmobil hastalarda bası yarasını önlemek için en geç 2 saatte bir vücut pozisyonu değiştirilir ve Braden skalası puanlanır.',
+    oncedenYapilacaklar: [
+      'Hastanın vücut pozisyonunu sırayla değiştir (Sol lateral / Supine / Sağ lateral)',
+      'Kemik çıkıntıları (Sakrum, iskium, topuklar, skapula) kızarıklık yönünden denetle ve bariyer krem sür',
+      'Pozisyon değişim saatini ve Braden bası yarası risk skorunu hemşire takip formuna işle',
+      'Havalı yatak basınç ayarını ve çarşaf kırışıklık kontrolünü tamamla'
+    ]
+  },
+  {
+    id: 'saglik_hemsire_sbar_teslim',
+    category: 'saglik',
+    domain: 'SAGLIK',
+    keywords: ['sbar teslim', 'hemşire devir', 'nöbet devri hemşire', 'hasta teslimi sbar', 'narkotik sayımı'],
+    baslik: 'SBAR Nöbet Devir-Teslim Föyü',
+    ikon: '💉',
+    renk: '#CCFBF1',
+    varsayilanZaman: 'Nöbet Bitimine 45 Dk Kala',
+    akilliFisilti: '💉 Nöbet devrinde SBAR standardı ve yeşil/kırmızı reçeteli narkotik dolabının çift imza ile devri zorunludur.',
+    oncedenYapilacaklar: [
+      'SBAR (Durum, Arka Plan, Değerlendirme, Öneri) formatında hasta devir föyünü hazırla',
+      'Kırmızı/yeşil reçeteli narkotik ampul sayımını devralan hemşireyle bizzat sayıp çift imza at',
+      'Kritik laboratuvar sonuçları, vital trendler, açık mayiler ve orderları yeni ekibe aktar',
+      'Servis genel düzeni, arızalı cihazlar ve acil arabası (crash cart) mührünü teyit et'
+    ]
+  },
+  {
+    id: 'saglik_kan_transfuzyon',
+    category: 'saglik',
+    domain: 'SAGLIK',
+    keywords: ['kan transfüzyon', 'eritrosit süspansiyonu', 'kan takılacak', 'tdp takılacak', 'transfüzyon reaksiyonu'],
+    baslik: 'Kan Transfüzyonu & Çift Hemşire Teyidi',
+    ikon: '🩸',
+    renk: '#FECACA',
+    varsayilanZaman: 'Transfüzyon Başlangıcı (İlk 15 Dk Gözlem)',
+    akilliFisilti: '🩸 Kan ürünü dolaptan çıktıktan sonra 30 dk içinde başlanmalı, ilk 15 dakika yatak başında vital izlenmeli ve 4 saati aşmamalıdır.',
+    oncedenYapilacaklar: [
+      'İki sağlık personeli ile hasta kimliği, kan grubu, torba numarası ve cross-match teyidi yap',
+      'Transfüzyon öncesi başlangıç vital bulgularını (Ateş, TA, Nabız) kaydet',
+      'İlk 15 dakika hastanın başında kalarak anafilaksi ve transfüzyon reaksiyonu gözlemi yap',
+      'İnfüzyon süresinin maksimum 4 saati aşmamasını sağla ve boş torbayı 24 saat sakla'
+    ]
+  },
+  {
+    id: 'saglik_eczane_soguk_zincir',
+    category: 'saglik',
+    domain: 'SAGLIK',
+    keywords: ['soğuk zincir kontrolü', 'aşı dolabı ısısı', '2-8 derece kontrol', 'eczane buzdolabı log', 'aşı dolabı log'],
+    baslik: 'Eczane Soğuk Zincir (2-8°C) Logu',
+    ikon: '💊',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Sabah 09:00 & Akşam 18:00',
+    akilliFisilti: '💊 Soğuk zincir ilaç ve aşıları için dijital termometre sıcaklığı (2-8°C) sabah ve akşam günde iki kez log defterine işlenir.',
+    oncedenYapilacaklar: [
+      'Sabah 09:00: Dijital göstergedeki anlık, minimum ve maksimum sıcaklığı log defterine kaydet',
+      'Akşam 18:00: İkinci sıcaklık ve nem ölçümünü yapıp imzanı at',
+      '2-8°C dışı bir sapma varsa aşı/ilaçları acil soğuk kutusuna alıp İTS bildirimini başlat',
+      'Haftalık buzdolabı içi hava sirkülasyonu ve buzlanma kontrolünü yap'
+    ]
+  },
+  {
+    id: 'saglik_eczane_medula_miad',
+    category: 'saglik',
+    domain: 'SAGLIK',
+    keywords: ['medula döküm', 'sgk fatura teslim', 'reçete dökümü', 'miad kontrolü eczane', 'depo iade eczane'],
+    baslik: 'Medula Reçete & Miad Kontrolü',
+    ikon: '💊',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Ayın 1-7\'si / Ay Sonu',
+    akilliFisilti: '💊 SGK Medula reçete evrakları her ayın ilk haftasında teslim edilir; miadı 3 aydan az kalan ürünler ecza depolarına iade edilir.',
+    oncedenYapilacaklar: [
+      'Ayın ilk haftası: Medula A-B grubu reçete döküm çıktılarını alıp faturalandır',
+      'Döküm özetlerini, reçete ve kupürleri klasörleyip SGK Sağlık Sosyal Güvenlik Merkezine teslim et',
+      'Ay sonu: Miadı 3 ay kalan ürünlerin fiziki sayımını yapıp İTS iade faturasını düzenle',
+      'Renkli Reçete Sistemi (RRS) uyuşturucu/psikotrop aylık satış mutabakatını mühürle'
+    ]
+  },
+  {
+    id: 'saglik_dis_otoklav_spor',
+    category: 'saglik',
+    domain: 'SAGLIK',
+    keywords: ['otoklav spor testi', 'biyolojik indikatör diş', 'sterilizasyon kontrolü diş', 'otoklav döngüsü'],
+    baslik: 'Otoklav Spor Testi & Sterilizasyon',
+    ikon: '🦷',
+    renk: '#EDE9FE',
+    varsayilanZaman: 'Haftalık Biyolojik / Günlük Kimyasal',
+    akilliFisilti: '🦷 Otoklav sterilizasyonunda haftalık Bacillus stearothermophilus biyolojik spor testi ve her çevrimde Class 5 indikatör takibi zorunludur.',
+    oncedenYapilacaklar: [
+      'Haftalık biyolojik spor test ampulünü en zorlu pakete yerleştirip otoklav döngüsünü çalıştır',
+      'Çevrim bitiminde test ampulünü inkübatörde 24-48 saat üremeye bırakıp kontrol tüpüyle kıyasla',
+      'Günlük paketleme indikatör şeritlerinin renk değişimini Class 5 parametresine göre onayla',
+      'Steril paketlerin üzerine sterilizasyon ve 30 günlük son kullanım tarihini etiketle'
+    ]
+  },
+  {
+    id: 'saglik_dis_implant_dikis',
+    category: 'saglik',
+    domain: 'SAGLIK',
+    keywords: ['implant dikiş alma', 'diş dikiş alınacak', 'protez prova randevusu', 'implant cerrahi kontrol'],
+    baslik: 'Dental İmplant & 7. Gün Dikiş Alma',
+    ikon: '🦷',
+    renk: '#EDE9FE',
+    varsayilanZaman: 'Operasyondan 7 Gün Sonra',
+    akilliFisilti: '🦷 İmplant cerrahisinden 7 gün sonra dikişler alınır, diş eti primer iyileşmesi ve osteoentegrasyon stabilitesi denetlenir.',
+    oncedenYapilacaklar: [
+      'Operasyonun 7. gününde cerrahi dikişleri steril aletlerle al ve diş eti cep derinliğini yokla',
+      'Gerekiyorsa kontrol periapikal/panoramik röntgen çekerek kemik seviyesini değerlendir',
+      'Protez ölçü modeli için diş protez laboratuvarı ile prova takvimini netleştir',
+      'Hastaya klorheksidinli gargara ve arayüz fırçası kullanım talimatlarını yenile'
+    ]
+  },
+  {
+    id: 'saglik_lab_panik_deger',
+    category: 'saglik',
+    domain: 'SAGLIK',
+    keywords: ['panik değer bildirimi', 'kritik laboratuvar sonucu', 'troponin pozitif çıktı', 'potasyum panik değer', 'kan gazı kritik'],
+    baslik: 'Laboratuvar Panik Değer Bildirimi',
+    ikon: '⚠️',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Derhal (Read-Back Telefonla)',
+    akilliFisilti: '⚠️ Panik değerlerde (Kritik Sonuç) hastanın hekimine veya servis sorumlu hemşiresine telefonla ulaşılarak geri okuma (Read-Back) yöntemiyle bildirim yapılır.',
+    oncedenYapilacaklar: [
+      'Analiz sonucunu cihazda ve ikinci testle (serum kontrolü) derhal doğrula',
+      'Hastanın sorumlu hekimi veya servis hemşiresine doğrudan telefonla ulaş',
+      'Hasta adı, protokol numarası ve test değerini okuyup karşı tarafa aynen geri okut (Read-Back)',
+      'Bildirimi alan kişinin adı, unvanı, arama saati ve dakikasını HBYS panik değer modülüne işle'
+    ]
+  },
+  {
+    id: 'ziraat_ekim_can_suyu',
+    category: 'is_kariyer',
+    domain: 'ZIRAAT',
+    keywords: ['mısır ektik', 'buğday ekildi', 'arpa ektik', 'tarla ekimi bitti', 'tohum ekildi'],
+    baslik: 'Ekim Sonrası Can Suyu & Ot Kontrolü',
+    ikon: '🌾',
+    renk: '#DCFCE7',
+    varsayilanZaman: '24 Saat İçinde Can Suyu',
+    hazirlikZamani: 'Ekimden 15 Gün Sonra',
+    hazirlikSaatOncesi: 360,
+    akilliFisilti: '🌾 Ekimden sonraki ilk 24 saat içinde verilecek can suyu çimlenme oranını %35 artırır.',
+    oncedenYapilacaklar: [
+      'Ekimden hemen sonra ilk can suyu sulamasını damlama/yağmurlama ile başlat',
+      'Tohum çimlenme derinliğini ve toprak tavını sahada kontrol et',
+      '15 gün sonraki dar ve geniş yapraklı yabancı ot (herbisit) çıkışını denetle',
+      'ÇKS (Çiftçi Kayıt Sistemi) parsel beyanını ilçe tarım müdürlüğüne bildir'
+    ]
+  },
+  {
+    id: 'ziraat_budama_bordo_bulamaci',
+    category: 'is_kariyer',
+    domain: 'ZIRAAT',
+    keywords: ['ağaçları budadık', 'budama bitti', 'fidan budaması', 'zeytin budama'],
+    baslik: 'Budama Sonrası Bordo Bulamacı & Yara Bakımı',
+    ikon: '🌿',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Budamadan Hemen Sonra',
+    hazirlikZamani: '48 Saat İçinde',
+    hazirlikSaatOncesi: 48,
+    akilliFisilti: '🌿 Budama kesiklerinden mantar ve bakteri girişini önlemek için %1.5-2\'lik bordo bulamacı uygulanmalıdır.',
+    oncedenYapilacaklar: [
+      'Kalın kesim yüzeylerini aşı macunu (ardıç katranı) ile hava almayacak şekilde kapat',
+      'Hava sıcaklığı 5°C üzerindeyken rüzgarsız havada %2\'lik Bordo Bulamacı püskürt',
+      'Budanan hastalıklı dal ve artıkları bahçeden uzaklaştırıp imha et',
+      'Budama makas ve testerelerini çamaşır suyu veya alkolle dezenfekte et'
+    ]
+  },
+  {
+    id: 'veteriner_asi_parazit_bakim',
+    category: 'saglik',
+    domain: 'VETERINER',
+    keywords: ['kediye aşı', 'köpeğe aşı', 'pire damlası sıktım', 'iç parazit yapıldı'],
+    baslik: 'Aşı / Parazit Sonrası 48 Saat Bakımı',
+    ikon: '🐾',
+    renk: '#CCFBF1',
+    varsayilanZaman: '48 Saat Takip',
+    hazirlikZamani: '60 Gün Sonraki Rapel',
+    hazirlikSaatOncesi: 1440,
+    akilliFisilti: '🐾 Dış parazit damlası sonrası 48 saat hayvan yıkanmamalı ve aşı sonrası halsizlik yakından izlenmelidir.',
+    oncedenYapilacaklar: [
+      'Ense bölgesine uygulanan dış parazit damlasını 48 saat suyla temas ettirme ve yıkama',
+      'Hayvanın damla bölgesini yalamasını engelle (Gerekirse Elizabeth yakalığı tak)',
+      'İlk 24 saat içinde gelişebilecek alerjik reaksiyon, iştahsızlık ve ateşi gözlemle',
+      'Petvet çip sistemine ve aşı karnesine 2 ay sonraki rapel takvimini işle'
+    ]
+  },
+  {
+    id: 'vet_petvet_mikrocip',
+    category: 'saglik',
+    domain: 'VETERINER',
+    keywords: ['petvet mikroçip', 'çip taktık', 'çip takıldı', 'evcil hayvan pasaportu', 'kediye çip'],
+    baslik: 'PETVET Mikroçip & Pasaport Tescili',
+    ikon: '🐾',
+    renk: '#CCFBF1',
+    varsayilanZaman: 'PETVET Kayıt Saati',
+    hazirlikZamani: 'İmplantasyon Öncesi Çip Barkod Testi',
+    akilliFisilti: '🐾 5199 sayılı Kanun gereğince mikroçip implantasyonu ve PETVET sistem kaydı resmi pasaportla belgelenmelidir.',
+    oncedenYapilacaklar: [
+      '15 haneli mikroçipi enjektörden çıkarmadan önce okuyucuyla test et',
+      'Sol skapular bölgeye aseptik mikroçip implantasyonu uygula ve ardından tekrar tara',
+      'Bakanlık PETVET sistemine sahip, ırk, doğum tarihi ve aşı bilgilerini kaydet',
+      'Resmi Evcil Hayvan Pasaportuna barkodu yapıştır ve kaşe/imza ile mühürle'
+    ]
+  },
+  {
+    id: 'vet_kuduz_titrasyon',
+    category: 'saglik',
+    domain: 'VETERINER',
+    keywords: ['kuduz titrasyon testi', 'rnatt testi', 'yurt dışı çıkış kedi', 'yurt dışı köpek kuduz', 'titre testi'],
+    baslik: 'Kuduz Titrasyon (RNATT) Protokolü',
+    ikon: '✈️',
+    renk: '#E0F2FE',
+    varsayilanZaman: '30 Gün Sonra Kan Alımı (90 Gün Karantina)',
+    hazirlikZamani: 'Kuduz Aşısından En Az 30 Gün Sonra',
+    akilliFisilti: '✈️ Kuduz titrasyon testinde antikor seviyesi ≥0.50 IU/mL çıkmalı ve kan alımından itibaren 3 ay beklenmelidir.',
+    oncedenYapilacaklar: [
+      'Kuduz aşısının çip takıldıktan sonra yapıldığını ve 30 gün geçtiğini doğrula',
+      'Jelli tüpe kan al, santrifüj edip serumu ayır ve soğuk zincirde Yetkili Enstitüye gönder',
+      'Sonucun ≥0.50 IU/mL olduğunu resmi raporla onayla ve 90 günlük bekleme sayacını başlat',
+      'Uçuş öncesi 48 saat içinde İlçe Tarımdan Uluslararası Sağlık Sertifikası (VSR) al'
+    ]
+  },
+  {
+    id: 'vet_preop_onam',
+    category: 'saglik',
+    domain: 'VETERINER',
+    keywords: ['ameliyat öncesi açlık', 'pre-op açlık', 'kısırlaştırma açlık', 'cerrahi onam formu'],
+    baslik: 'Pre-Op Cerrahi Açlık & Anestezi Onamı',
+    ikon: '🩺',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Operasyon Sabahı (09:00)',
+    hazirlikZamani: '12 Saat Önceden Mama, 2 Saat Önceden Su Kesimi',
+    akilliFisilti: '🩺 Aspirasyon pnömonisi riskine karşı 8-12 saat mama açlığı sağlanmalı ve aydınlatılmış cerrahi onam imzalatılmalıdır.',
+    oncedenYapilacaklar: [
+      '8-12 saat mama ve 2 saat su açlığı protokolünü teyit et',
+      'Pre-anestetik Hemogram ve ALT, AST, BUN, Cre biyokimya paneli çalış',
+      'Hasta sahibine Aydınlatılmış Cerrahi ve Anestezi Onam Formunu imzalat',
+      'IV damar yolu kanülü takarak izotonik sıvı infüzyonu ve premedikasyonu başlat'
+    ]
+  },
+  {
+    id: 'vet_turkvet_kupe',
+    category: 'saglik',
+    domain: 'VETERINER',
+    keywords: ['türkvet küpeleme', 'buzağı küpeleme', 'kuzu küpeleme', 'turkvet kayıt'],
+    baslik: 'TÜRKVET Küpeleme & Doğum Tescili',
+    ikon: '🐄',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Saha Küpeleme Ziyareti',
+    hazirlikZamani: 'Doğumdan İtibaren İlk 30 Gün',
+    akilliFisilti: '🐄 5996 sayılı Kanun uyarınca buzağılar 30 gün içinde küpelenmeli ve TÜRKVET sistemine kaydedilmelidir.',
+    oncedenYapilacaklar: [
+      'Kulak küpesini dezenfektan sıkarak aseptik pens ile tak',
+      'Doğum tarihi, ana kulak no, ırk ve cinsiyeti Doğum Bildirim Formuna işle',
+      'İlçe Tarım TÜRKVET portalına küpe seri numarasını tescil et',
+      'Satış veya kesime giden hayvanların TÜRKVET düşüm işlemlerini tamamla'
+    ]
+  },
+  {
+    id: 'vet_cmt_mastitis_sut',
+    category: 'saglik',
+    domain: 'VETERINER',
+    keywords: ['cmt testi yaptık', 'mastitis tedavisi', 'antibiyotikli süt', 'süt arınma süresi'],
+    baslik: 'CMT & Süt Arınma Karantinası',
+    ikon: '🥛',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Sağım Saati (72 Saat Süt İmhası)',
+    hazirlikZamani: 'Tedavi Süresince Sağım Sırası En Son',
+    akilliFisilti: '🥛 Türk Gıda Kodeksi uyarınca antibiyotikli sütler tanka dökülemez; yasal arınma süresi (72-96 saat) boyunca imha edilmelidir.',
+    oncedenYapilacaklar: [
+      '4 meme lobundan ön sütleri atıp CMT reaktifi ile jelleşmeyi skorla',
+      'Klinik mastitisli lobdan steril süt numunesi alarak antibiyograma gönder',
+      'Antibiyotik uygulanan ineğe renkli bacak bandı takarak sağım sonuna al',
+      'İlacın yasal arınma süresi dolana kadar (72-96 saat) sütü imha et'
+    ]
+  },
+  {
+    id: 'kuafor_acici_ombre_keratin',
+    category: 'kisisel_yasam',
+    domain: 'KUAFOR',
+    keywords: [
+      'ombre', 'sombre', 'röfle', 'rofle', 'balyaj', 'oryal', 'açıcı', 'acici',
+      'platin açıcı', 'saça ombre', 'saç açıldı', 'saç açtık', 'saç açma',
+      'ombre yapıldı', 'ombre yaptık', 'sombre yapıldı', 'sombre yaptık',
+      'röfle yapıldı', 'röfle yaptık', 'balyaj yapıldı', 'balyaj yaptık',
+      'açıcı sürüldü', 'açıcı yapıldı', 'oryal sürüldü', 'oryal yapıldı'
+    ],
+    matcher: (lower: string) => {
+      return (
+        lower.includes('ombre') ||
+        lower.includes('sombre') ||
+        lower.includes('röfle') ||
+        lower.includes('rofle') ||
+        lower.includes('balyaj') ||
+        lower.includes('oryal') ||
+        (lower.includes('açıcı') && (lower.includes('saç') || lower.includes('platin') || lower.includes('boya') || lower.includes('sür') || lower.includes('yap'))) ||
+        (lower.includes('saç') && (lower.includes('açıldı') || lower.includes('açtık') || lower.includes('açma') || lower.includes('açtırma')))
+      );
+    },
+    baslik: 'Açıcı / Ombre Sonrası 48 Saat & Keratin',
+    ikon: '✂️',
+    renk: '#FCE7F3',
+    varsayilanZaman: '48 Saat Yıkama Yasağı',
+    hazirlikZamani: '3 Hafta Sonra Keratin',
+    hazirlikSaatOncesi: 504,
+    akilliFisilti: '✂️ Oryal veya açıcı uygulanan saç 48 saat yıkanmamalı; sararma önleyici mor şampuan ve 3 hafta sonra nem yüklemesi yapılmalıdır.',
+    oncedenYapilacaklar: [
+      'Müşteriye ilk 48 saat saçı yıkamaması ve sıcak fön çekmemesi talimatını ver',
+      'Turunculaşma ve sararmayı önlemek için sülfatsız mor şampuan kullanımını tavsiye et',
+      'Açma işlemi sonrası saç elastikiyetini korumak için 3 hafta sonrasına keratin/botoks seansı planla',
+      'Dip boya ve cila tazeleme randevusunu 5 hafta sonrasına kaydet'
+    ]
+  },
+  {
+    id: 'kuafor_dip_boya_cila',
+    category: 'kisisel_yasam',
+    domain: 'KUAFOR',
+    keywords: [
+      'dip boya', 'dip boyası', 'cila', 'cila atıldı', 'cila yaptık', 'beyaz kapama',
+      'dip açma', 'dip boyandı', 'dip boyadık', 'saç boyandı', 'saç boyadık', 'renk tazeleme'
+    ],
+    matcher: (lower: string) => {
+      return (
+        lower.includes('dip boya') ||
+        lower.includes('cila atıldı') ||
+        lower.includes('cila yap') ||
+        lower.includes('beyaz kapama') ||
+        (lower.includes('dip') && lower.includes('boya')) ||
+        (lower.includes('saç') && (lower.includes('boyandı') || lower.includes('boyadık') || lower.includes('cila')))
+      );
+    },
+    baslik: 'Dip Boya & Renk Koruma Takvimi',
+    ikon: '✂️',
+    renk: '#FCE7F3',
+    varsayilanZaman: '4 Hafta Sonra Dip Tazeleme',
+    hazirlikZamani: '48 Saat Renk Kilitleme',
+    hazirlikSaatOncesi: 48,
+    akilliFisilti: '✂️ Boya pigmentlerinin kilitlenmesi için ilk 48 saat sıcak sudan kaçınılmalı, 4 hafta sonrasına dip tazeleme planlanmalıdır.',
+    oncedenYapilacaklar: [
+      'İlk 48 saat aşırı sıcak su ve agresif sülfatlı şampuan kullanımından kaçınma uyarısı yap',
+      'Renk pigmenti solmasını önlemek için asidik renk koruyucu saç bakım kremi tavsiye et',
+      'Dip çıkış periyoduna göre 4-5 hafta sonrasına dip boya tazeleme randevusunu oluştur',
+      'Saç derisinde olası boya hassasiyeti ve alerji takibini sağla'
+    ]
+  },
+  {
+    id: 'kuafor_brezilya_fonu_keratin',
+    category: 'kisisel_yasam',
+    domain: 'KUAFOR',
+    keywords: [
+      'brezilya fönü', 'brezilya fonu', 'kalıcı fön', 'keratin düzleştirme',
+      'düzleştirici keratin', 'keratin yükleme', 'keratin botoks'
+    ],
+    matcher: (lower: string) => {
+      return (
+        lower.includes('brezilya fön') ||
+        lower.includes('brezilya fon') ||
+        lower.includes('kalıcı fön') ||
+        lower.includes('kalici fon') ||
+        (lower.includes('keratin') && (lower.includes('düzleştir') || lower.includes('botoks') || lower.includes('yükleme')))
+      );
+    },
+    baslik: 'Brezilya Fönü & Keratin Sabitleme',
+    ikon: '✂️',
+    renk: '#FCE7F3',
+    varsayilanZaman: '72 Saat Toka & Islanma Yasağı',
+    hazirlikZamani: '3 Gün Sonra Sabitleme Yıkaması',
+    hazirlikSaatOncesi: 72,
+    akilliFisilti: '✂️ Brezilya fönü sonrası ilk 72 saat saç kesinlikle ıslanmamalı, toka takılmamalı ve kulak arkası yapılmamalıdır.',
+    oncedenYapilacaklar: [
+      'İlk 72 saat saça toka, mandal takılmaması ve kulak arkasına atılmaması kuralını ilet',
+      'Nem, terleme veya temas durumunda hemen kurutulup titanyum presle geçilmesini hatırlat',
+      'İlk yıkamayı 72 saat sonra sülfatsız ve tuzsuz şampuan ile salonda uygula',
+      '4-6 ay pürüzsüzlük koruması için haftalık ev devam maskesi takvimi oluştur'
+    ]
+  },
+  {
+    id: 'kuafor_lazer_epilasyon_cilt',
+    category: 'kisisel_yasam',
+    domain: 'KUAFOR',
+    keywords: [
+      'lazer epilasyon', 'lazer yapıldı', 'lazer yaptık', 'epilasyon seansı',
+      'cilt bakımı', 'hydrafacial', 'dermapen', 'altın iğne', 'iğneli epilasyon'
+    ],
+    matcher: (lower: string) => {
+      return (
+        lower.includes('lazer') ||
+        lower.includes('epilasyon') ||
+        lower.includes('hydrafacial') ||
+        lower.includes('dermapen') ||
+        lower.includes('cilt bakımı') ||
+        lower.includes('cilt bakimi')
+      );
+    },
+    baslik: 'Lazer & Cilt Koruma Protokolü',
+    ikon: '✨',
+    renk: '#FCE7F3',
+    varsayilanZaman: '24 Saat Sıcak Duş Yasağı',
+    hazirlikZamani: '4-6 Hafta Sonraki Seans',
+    hazirlikSaatOncesi: 672,
+    akilliFisilti: '✨ Lazer ve derin cilt bakımı sonrası 24 saat sıcak su ve kese yasaktır; leke kalmaması için SPF 50+ güneş kremi zorunludur.',
+    oncedenYapilacaklar: [
+      'İlk 24 saat sıcak duş, sauna, terletici spor ve kese uygulamasından kesinlikle kaçın',
+      'Hiperpigmentasyon ve güneş lekesi oluşmaması için SPF 50+ koruyucu kremi her 3 saatte bir tazele',
+      'Cilt bariyerini onarmak için yatıştırıcı panthenol veya centella jel kullan',
+      'Kıl kökü veya cilt hücre yenilenme periyoduna göre 4-6 hafta sonrasına sonraki seansı takvimle'
+    ]
+  },
+  {
+    id: 'gumruk_tahliye_ordino_demuraj',
+    category: 'is_kariyer',
+    domain: 'GUMRUK',
+    keywords: ['gemi limana yanaştı', 'tahliye başladı', 'konşimento geldi', 'ordino teslimi'],
+    baslik: 'Gemi Tahliyesi, Ordino & Demuraj Sayacı',
+    ikon: '📦',
+    renk: '#E0E7FF',
+    varsayilanZaman: 'Serbest Süre (Demurrage: 7 Gün)',
+    hazirlikZamani: 'Serbest Süre Bitimine 2 Gün Kala',
+    hazirlikSaatOncesi: 48,
+    akilliFisilti: '📦 Konteyner serbest süresi aşıldığında armatör tarafından günlük yüksek dövizli Demurrage faturası kesilir.',
+    oncedenYapilacaklar: [
+      'Acenteden ordino belgesini al ve konşimento asıllarını ciro ettir',
+      'Serbest süre (Free Time) bitiş tarihini takvime işle ve geri sayım başlat',
+      'Gümrük beyannamesini tescil ettirip supalan muayene veya antrepo kaydını aç',
+      'Liman ardiye ve terminal ücretleri dekontunu sisteme yükleyerek çıkış kapı fişi al'
+    ]
+  },
+  {
+    id: 'ev_kurban_et_dinlendirme',
+    category: 'ev_teknik',
+    domain: 'GENEL',
+    keywords: ['kurban eti', 'et geldi', 'kurban payı', 'et doğrandı', 'eti poşetledik'],
+    baslik: 'Et Dinlendirme & Dondurucu Porsiyonlama',
+    ikon: '🥩',
+    renk: '#FEE2E2',
+    varsayilanZaman: '24 Saat Dinlendirme (+4°C)',
+    hazirlikZamani: '24 Saat Sonra',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '🥩 Sıcak et asla hemen poşetlenip dondurucuya atılmaz; yeşillenmemesi için +4°C\'de 24 saat dinlendirilmelidir.',
+    oncedenYapilacaklar: [
+      'Etleri sıcakken poşetleme; tepsilere yayarak serin yerde veya dolapta (+4°C) 24 saat dinlendir',
+      'Ölüm sertliği (Rigor Mortis) geçtikten sonra kıyma, kuşbaşı ve kemikli olarak porsiyonla',
+      'Hava almayacak kilitli buzdolabı poşetlerine tarih ve porsiyon etiketi yapıştır',
+      'Derin dondurucuya (-18°C) tek sıra halinde yerleştirerek hızlı şoklama sağla'
+    ]
+  },
+  {
+    id: 'yasam_yurtdisi_seyahat_hazirlik',
+    category: 'kisisel_yasam',
+    domain: 'GENEL',
+    keywords: ['yurtdışına uçuş', 'roma bileti', 'avrupa seyahati', 'yurtdışına seyahat'],
+    baslik: 'Yurtdışı Seyahat & Ev Güvenlik Kontrolü',
+    ikon: '✈️',
+    renk: '#E0E7FF',
+    varsayilanZaman: 'Uçuş Günü',
+    hazirlikZamani: 'Uçuştan 48 Saat Önce',
+    hazirlikSaatOncesi: 48,
+    akilliFisilti: '✈️ Pasaport geçerlilik süresi 6 aydan az ise birçok ülke ülkeye giriş izni vermez.',
+    oncedenYapilacaklar: [
+      'Pasaport geçerlilik süresinin en az 6 ay olduğunu ve vize tarihlerini doğrula',
+      'İnteraktif Vergi Dairesi üzerinden yurtdışı çıkış harç pulunu online öde',
+      'Operatörden yurtdışı / roaming internet paketini aktif et',
+      'Evden çıkarken ana su vanasını kapat, prizleri çek ve kombiyi yaz moduna al'
+    ]
+  },
+
+  // ==========================================
+  // DENİZCİLİK & GEMİ İDARESİ SENARYOLARI (MARITIME & NAUTICAL SUITE)
+  // ==========================================
+  {
+    id: 'denizcilik_psc_denetim',
+    category: 'resmi',
+    domain: 'DENIZCILIK',
+    keywords: ['psc denetimi', 'psc kontrolü', 'liman devleti denetimi', 'paris mou', 'med mou', 'psc müfettişi', 'psc teftiş', 'psc tutulma'],
+    baslik: 'PSC Liman Devleti Denetimi & Paris MoU',
+    ikon: '⚓',
+    renk: '#CFFAFE',
+    varsayilanZaman: 'Varışta / Denetim Saati',
+    hazirlikZamani: 'Liman Öncesi 24 Saat (Gemi İçi Denetim)',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '⚓ Paris MoU ve Akdeniz MoU denetimlerinde filika indirme, yangın tatbikatı ve 15 PPM OWS arızası doğrudan geminin tutulmasına (detention) yol açar.',
+    oncedenYapilacaklar: [
+      'Can filikaları indirme donanımı, motor çalıştırma ve acil durum dümen tatbikatını icra et',
+      '15 PPM sintine separatörü (OWS) 3 yollu vana alarm ve otomatik durdurma testini doğrula',
+      'Yağ Kayıt Jurnali (ORB Part I) ve Çöp Kayıt Jurnalini (Garbage Log) Başmühendis ve Kaptan imzalı hazırla',
+      'Yangın damperleri, manyetik pusula deviasyon kartı, acil durum yangın pompası ve navigasyon fenerlerini test et',
+      'Gemi adamları STCW ehliyetleri, MLC 2006 çalışma sözleşmeleri ve gemi klas sertifikalarını denetim masasına aç'
+    ]
+  },
+  {
+    id: 'denizcilik_draft_survey',
+    category: 'ev_teknik',
+    domain: 'DENIZCILIK',
+    keywords: ['draft survey', 'draft okuma', 'draft hesabı', 'yük hesabı', 'gemiye yük alıyoruz', 'tahliye draftı', 'densimetre', 'hidrometre'],
+    baslik: 'Draft Survey & Yükleme Balans Hesabı',
+    ikon: '🚢',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Yükleme Öncesi / Bitiminde',
+    hazirlikZamani: 'Ölçümden 1 Saat Önce',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '🚢 Draft survey hesaplarında deniz suyu yoğunluğu (SG) densimetre ile yerinde ölçülmeden yapılan ağırlık hesabı binlerce tonluk navlun ihtilafına sebep olur.',
+    oncedenYapilacaklar: [
+      'Baş, kıç ve vasat (Forward, Aft, Midship) sancak/iskele draft değerlerini draft iskelesi veya botla oku',
+      'Borda iskelesinden numune alarak kalibre densimetre ile deniz suyu yoğunluğunu (Specific Gravity) ölç',
+      'Tüm balast, tatlı su, yakıt (FO/DO) ve sintine tanklarının iskandillerini (sounding) alarak tank tablolarıyla hacmi belirle',
+      'Hogging/sagging omurga sehimi düzeltmesini uygulayarak gemi net deplasmanını ve yük miktarını hesapla',
+      'Yükleyici/tahliye sörveyörü ile müşterek draft survey tutanağını (Survey Report) karşılıklı imza altına al'
+    ]
+  },
+  {
+    id: 'denizcilik_bwm_balast_jurnali',
+    category: 'resmi',
+    domain: 'DENIZCILIK',
+    keywords: ['balast jurnali', 'bwm', 'balast basma', 'balast tahliyesi', 'balast değişimi', 'ballast water', 'bwts'],
+    baslik: 'Balast Suyu Yönetimi & BWM Jurnali',
+    ikon: '🌊',
+    renk: '#CFFAFE',
+    varsayilanZaman: 'Operasyon Saati',
+    hazirlikZamani: 'Operasyon Öncesi (D-2 Standart Testi)',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '🌊 IMO BWM Sözleşmesi uyarınca açık denizde derin su balast değişimi en az 200 mil açıkta ve 200 metre derinlikte yapılmalıdır.',
+    oncedenYapilacaklar: [
+      'BWM D-2 arıtma sistemi (BWTS) UV lambaları ve filtrasyon basınç farkını operasyon öncesi test et',
+      'Açık deniz derin su balast değişimini (Ballast Exchange) kıyıdan en az 200 deniz mili açıkta ve 200 metre derinlikte tamamla',
+      'Balast Kayıt Jurnaline (BWRB) başlangıç/bitiş koordinatları, tank numaraları ve metreküp hacmini eksiksiz işle',
+      'Pompa emiş ve basma basınçlarını sürekli izleyerek tank taşması veya havalık (air pipe) tıkanıklığını engelle',
+      'Liman otoritesine ve PSC müfettişine ibraz edilmek üzere güncel Balast Su Bildirim Formunu (BW Reporting Form) hazırla'
+    ]
+  },
+  {
+    id: 'denizcilik_ows_sintine_orb',
+    category: 'ev_teknik',
+    domain: 'DENIZCILIK',
+    keywords: ['ows', 'sintine basılacak', 'sintine separatörü', '15 ppm', 'yağ jurnali', 'oil record book', 'orb', 'sludge yakımı'],
+    baslik: 'OWS 15 PPM & Yağ Jurnali (ORB)',
+    ikon: '⚓',
+    renk: '#E2E8F0',
+    varsayilanZaman: 'Açık Deniz Seyrinde',
+    hazirlikZamani: 'T-30 Dk (Sintine Seviye & Kalibrasyon)',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '⚠️ MARPOL Annex I uyarınca özel alanlarda (Akdeniz, Karadeniz) ve 15 PPM üzeri sintine basılması uluslararası çevre suçudur ve gemiye el konulma nedenidir.',
+    oncedenYapilacaklar: [
+      '15 PPM sintine alarm ünitesi (OCM) temiz su sıfırlamasını ve 3 yollu geri dönüş vanası solenoid testini tamamla',
+      'Geminin özel alan dışında (Outside Special Area), seyir halinde (en route) ve hızının en az 4 knot olduğunu teyit et',
+      'Yağ Kayıt Jurnali Part I içine Code D (Sintine tahliyesi) veya Code C (Sludge toplama/yakma) kayıtlarını hatasız işle',
+      'İşlem bitiminde separatör sintine basma valfini kapatıp asma kilitle emniyete al ve sayaç değerini kaydet',
+      'Her sayfa bitiminde jurnali Başmühendis ve Gemi Kaptanına ıslak imzayla mühürlet'
+    ]
+  },
+  {
+    id: 'denizcilik_passage_plan_kalkis',
+    category: 'ev_teknik',
+    domain: 'DENIZCILIK',
+    keywords: ['passage plan', 'sefer planı', 'kalkış hazırlığı', 'seyre kalkış', 'köprüüstü çeklist', 'dümen testi', 'ecdis rota'],
+    baslik: 'Passage Plan & Kalkış Seyir Çeklisti',
+    ikon: '🧭',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Kalkıştan 2 Saat Önce',
+    hazirlikZamani: 'T-2 Saat (Köprüüstü Kontrolü)',
+    hazirlikSaatOncesi: 2,
+    akilliFisilti: '🧭 SOLAS Chapter V uyarınca kalkıştan en geç 12 saat önce acil durum dümen donanımı ve telsiz teçhizatı bizzat test edilmelidir.',
+    oncedenYapilacaklar: [
+      'Berthing to Berthing (Rıhtımdan rıhtıma) ECDIS rota planını, No-Go Area ve Squat derinlik paylarını onayla',
+      'SOLAS kuralı: Dümen motorları (Steering Gear) ana/acil durum geçişini, tele-motor ve dümen açısı müşirini test et',
+      'Manyetik pusula ve Gyro pusula repeater eşitlemesini yap; seyir fenerleri ve sesli sis düdüğünü dene',
+      'VHF, GMDSS Navtex, EPIRB ve SART cihazlarının batarya ve alıcı testlerini gerçekleştir',
+      'Liman kontrol (VTS) ile irtibata geçerek kalkış izni (Departure Clearance) ve römorkör/palamar koordinasyonunu sağla'
+    ]
+  },
+  {
+    id: 'denizcilik_pilot_carmıh_mpx',
+    category: 'ev_teknik',
+    domain: 'DENIZCILIK',
+    keywords: ['pilot çarmıhı', 'pilot alacağız', 'kılavuz kaptan', 'pilot ladder', 'boğaz geçişi', 'mpx', 'pilot card'],
+    baslik: 'Kılavuz Kaptan (Pilot) & Çarmıh Emniyeti',
+    ikon: '🧑‍✈️',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Pilot İstasyonuna Varışta',
+    hazirlikZamani: 'Varıştan 45 Dk Önce (Çarmıh Donatma)',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '🧑‍✈️ SOLAS Reg V/23 ve IMPA standardına aykırı bağlanan çarmıhlar kılavuz kaptanın gemiye çıkışını reddetmesine ve boğaz sıra kaybına yol açar.',
+    oncedenYapilacaklar: [
+      'Pilot çarmıhını SOLAS ve IMPA kurallarına göre su seviyesinden istenen yükseklikte (genellikle 1.5 - 2m) donat',
+      'Çarmıh başında ışıklı ve kendinden duman kandilli can simidi, heman halatları ve güverte zabiti bulundur',
+      'Gemi draft, boy, makine gücü ve manevra özelliklerini içeren Pilot Card föyünü hazırla',
+      'Köprüüstünde Kaptan-Kılavuz Kaptan Bilgi Değişimi (MPX) formunu doldur ve rota/akıntı brifingini al',
+      'VHF Kanal 16 ve yerel sektör kanalından VTS/Pilot botu ile sürekli telsiz temasını sürdür'
+    ]
+  },
+  {
+    id: 'denizcilik_bunkering_yakit',
+    category: 'ev_teknik',
+    domain: 'DENIZCILIK',
+    keywords: ['bunkering', 'bunker alacağız', 'yakıt ikmali', 'barçtan yakıt', 'marpol bdn', 'bunker checklist'],
+    baslik: 'Bunkering Yakıt İkmali & MARPOL BDN',
+    ikon: '⛽',
+    renk: '#FED7AA',
+    varsayilanZaman: 'Bunker Barç Yanaşmasında',
+    hazirlikZamani: 'T-1 Saat (Scupper & İSG Kontrolü)',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '⛽ Yakıt ikmalinde güvertedeki tüm frengi (scupper) delikleri mekanik tapalarla tıkanmalı, taşma tepsilerinde yangın söndürücüler hazır tutulmalıdır.',
+    oncedenYapilacaklar: [
+      'Gemi ve barç arasında Ship-Shore Safety Checklist (SSSCL) formunu müştereken imzala',
+      'Güverte frengi deliklerini (scupper) plastik/mekanik tapalarla kapat ve yakıt manifoldu taşma tavasını denetle',
+      'Manifold flanş civatalarını tam sıkıp topraklama kablosunu bağla; acil stop (Emergency Stop) butonunu test et',
+      'Manifold damlama vanasından sürekli akışla mühürlü MARPOL şahit yakıt numunesi (Drip Sample) al',
+      'BDN (Bunker Delivery Note) üzerindeki kükürt oranını (%0.50 VLSFO veya ECA %0.10 ULSFO) ve yoğunluğu teyit et'
+    ]
+  },
+  {
+    id: 'denizcilik_solas_tatbikat_filika',
+    category: 'resmi',
+    domain: 'DENIZCILIK',
+    keywords: ['filika tatbikatı', 'yangın tatbikatı', 'boat drill', 'terk-i sefine', 'abandon ship', 'solas tatbikat'],
+    baslik: 'SOLAS Terk & Yangın Tatbikatı',
+    ikon: '🛟',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Aylık Zorunlu Emniyet Saati',
+    hazirlikZamani: 'Tatbikattan 30 Dk Önce',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '🛟 SOLAS Chapter III uyarınca mürettebatın en az %25’i değiştiğinde liman kalkışını takip eden 24 saat içinde terk-i sefine ve yangın tatbikatı zorunludur.',
+    oncedenYapilacaklar: [
+      'Genel alarmı (General Emergency Alarm: 7 kısa 1 uzun düdük) çal ve toplanma mahallinde (Muster Station) yoklama al',
+      'Can filikası indirme mekanizmasını (davit) çalıştır, filikayı su seviyesine indir ve filika motorunu test et',
+      'Yangın timi solunum cihazlarını (SCBA/BA set) ve acil durum yangın pompasını (Emergency Fire Pump) iki koldan basınçla dene',
+      'Denize adam düştü (MOB) can simidi, duman kandili ve kurtarma botu (Rescue Boat) acil indirme simülasyonunu yap',
+      'Tatbikat başlangıç, bitiş saatlerini ve tespit edilen eksiklikleri Gemi Seyir Jurnaline (Deck Log Book) kaydet'
+    ]
+  },
+  {
+    id: 'denizcilik_kapali_mahal_hotwork',
+    category: 'ev_teknik',
+    domain: 'DENIZCILIK',
+    keywords: ['kapalı mahal', 'tanka girilecek', 'enclosed space', 'sıcak çalışma', 'hot work', 'gaz ölçümü', 'tank temizliği'],
+    baslik: 'Kapalı Mahal Girişi & Sıcak Çalışma',
+    ikon: '🦺',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Giriş Öncesi (İSG İzni)',
+    hazirlikZamani: 'T-2 Saat (Cebri Havalandırma)',
+    hazirlikSaatOncesi: 2,
+    akilliFisilti: '⚠️ Kapalı mahallerde (tank, zincirlik, çifte dip) oksijen oranı %20.9 ve patlayıcı gaz %0 LEL seviyesine gelmeden içeriye tek bir adım dahi atılamaz.',
+    oncedenYapilacaklar: [
+      'Mahalli en az 24 saat boyunca cebri mekanik fanlarla havalandır ve boru devrelerini kör flanşla izole et',
+      'Kalibre 4 gaz dedektörü ile dip, orta ve üst seviyelerden Oksijen (%20.9), LEL (%0), H2S (0 ppm) ve CO ölçümü yap',
+      'Kapalı Mahal Giriş İznini (Enclosed Space Entry Permit) Başmühendis ve Kaptana onaylat',
+      'Giriş kapısında can halatı, acil kaçış solunum seti (EEBD) ve telsizli nöbetçi personel (Standby person) konuşlandır',
+      'Sıcak çalışma varsa 10 metre çapındaki yanıcı malzemeleri uzaklaştır ve yangın devresini basınçlandır'
+    ]
+  },
+  {
+    id: 'denizcilik_demirleme_anchor_watch',
+    category: 'ev_teknik',
+    domain: 'DENIZCILIK',
+    keywords: ['demir atacağız', 'demirleme', 'anchor watch', 'demir nöbeti', 'zincir kaloma', 'demir tarama', 'demir mevkii'],
+    baslik: 'Demirleme & Demir Nöbeti (Anchor Watch)',
+    ikon: '⚓',
+    renk: '#CFFAFE',
+    varsayilanZaman: 'Demir Mevkiine Varışta',
+    hazirlikZamani: 'T-30 Dk (Irgat & Başüstü Hazırlığı)',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '⚓ Demir taraması ani karaya oturma riskidir; radar guard zone ve GPS anchor watch alarmı köprüüstünde sürekli aktif tutulmalıdır.',
+    oncedenYapilacaklar: [
+      'Başüstü ırgat hidrolik/elektrik gücünü devreye al, feneri aç ve loça kapağını sök',
+      'Derinliğin en az 5-7 katı kadar zincir kalomasını (kilit adedini) su derinliği ve hava koşullarına göre fundala',
+      'Irgat frenini sıkıp bosa donanımını (chain stopper) bağla ve demirin tuttuğunu (bitter end) teyit et',
+      'ECDIS ve radarda çapa alarmını (Anchor Watch Guard Zone) kur; sahil fenerlerinden transit kerteriz al',
+      'VHF Kanal 16 ve yerel VTS kanalından demir atılan mevkiyi (enlem/boylam) ve demirleme saatini raporla'
+    ]
+  },
+  {
+    id: 'denizcilik_isps_gangway_guvenlik',
+    category: 'resmi',
+    domain: 'DENIZCILIK',
+    keywords: ['isps', 'güvenlik seviyesi', 'gangway nöbeti', 'borda iskelesi', 'ziyaretçi defteri', 'gemi güvenliği', 'security level'],
+    baslik: 'ISPS Gemi Güvenliği & Gangway Nöbeti',
+    ikon: '🛡️',
+    renk: '#E0E7FF',
+    varsayilanZaman: 'Liman Boyunca (7/24 Nöbet)',
+    hazirlikZamani: 'Rıhtıma Yanaşmada',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '🛡️ ISPS Kodu gereği borda iskelesinde (Gangway) kimlik kontrolü yapılmadan ve ziyaretçi kartı verilmeden hiç kimse gemiye kabul edilemez.',
+    oncedenYapilacaklar: [
+      'Borda iskelesi altına can kurtarma güvenlik ağını (Safety Net) usulüne uygun ger',
+      'Gangway nöbetçi kulübesinde kimlik kontrol föyü, ziyaretçi giriş-çıkış defteri ve metal el dedektörünü hazırla',
+      'Geminin aktif ISPS Güvenlik Seviyesine (Security Level 1/2/3) uygun borda aydınlatması ve giriş kapısı kilitlerini denetle',
+      'Gemi Güvenlik Zabiti (SSO) ile Liman Güvenlik Zabiti (PFSO) arasında Güvenlik Deklarasyonu (DoS) imzala',
+      'Kaçak yolcu (Stowaway) taramasını kalkış öncesi ambarlar, makine dairesi ve filikalarda tamamla'
+    ]
+  },
+  {
+    id: 'denizcilik_liman_ordino_pratique',
+    category: 'resmi',
+    domain: 'DENIZCILIK',
+    keywords: ['free pratique', 'sağlık bildirimi', 'gemi acentesi', 'crew list', 'liman çıkış belgesi', 'deniz sağlık beyanı', 'gümrük muhafaza gemi'],
+    baslik: 'Liman Giriş-Çıkış & Free Pratique Evrakı',
+    ikon: '📑',
+    renk: '#F1F5F9',
+    varsayilanZaman: 'Varış / Kalkış Saati',
+    hazirlikZamani: 'Varıştan 24 Saat Önce (ETA Bildirimi)',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '📑 Gemiye sarı karantina sancağı (Q Flag) çekilip Free Pratique (Serbest Pratika) onayı alınmadan rıhtımdan kimse gemiye çıkamaz, temas kurulamaz.',
+    oncedenYapilacaklar: [
+      'Sağlık Denetleme Merkezine Deniz Sağlık Bildirimini (Maritime Declaration of Health) ve aşı listesini ilet',
+      'Mürettebat Listesi (Crew List), Yolcu Listesi ve Son 10 Liman Listesini (Last 10 Ports of Call) kaşe-imzalı hazırla',
+      'Gümrük Muhafaza için Gemi Mağazası (Ship Stores - alkol/sigara kilit altına alma) ve Personel Eşya Beyanını düzenle',
+      'Liman Başkanlığına varış öncesi ISPS Pre-Arrival Formunu ve yük manifestosunu acente kanalıyla ulaştır',
+      'Tüm liman harçları ve kontroller bitiminde Yola Elverişlilik Belgesini (Port Clearance) teslim al'
     ]
   }
 ];

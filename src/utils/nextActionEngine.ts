@@ -190,5 +190,89 @@ export function generateNextActionSuggestion(noteTitle: string, noteCategory?: s
     };
   }
 
+  // 12. Hukuk: Tensip Zaptı -> Delil & Masraf Avansı Vezne Görevi
+  if (text.includes('tensip') || text.includes('cevap dilekçesi')) {
+    return {
+      id: `next-law-tensip-${Date.now()}`,
+      title: 'Delil & Gider Avansı Yatırma Görevi',
+      description: 'Mahkeme veznesine gider avansı ve delil listesi sunum alarmı aç.',
+      actionType: 'CREATE_FOLLOWUP',
+      icon: '⚖️',
+      payload: {
+        followupTitle: 'Mahkeme Veznesine Gider Avansı Yatırma',
+        followupZaman: '3 Gün İçinde',
+        followupOffsetDays: 3,
+        followupIkon: '🏛️'
+      }
+    };
+  }
+
+  // 13. Maliye / SMMM: Şirket Kuruluşu -> E-Yoklama Takibi
+  if (text.includes('şirket kuruluşu') || text.includes('mersis') || text.includes('tescil')) {
+    return {
+      id: `next-smmm-yoklama-${Date.now()}`,
+      title: 'Vergi Dairesi E-Yoklama Randevusu',
+      description: 'İnteraktif Vergi Dairesi üzerinden yoklama memuru randevu takibi kur.',
+      actionType: 'CREATE_FOLLOWUP',
+      icon: '📊',
+      payload: {
+        followupTitle: 'Vergi Dairesi E-Yoklama & İmza Sirküleri',
+        followupZaman: '2 İş Günü Sonra',
+        followupOffsetDays: 2,
+        followupIkon: '📝'
+      }
+    };
+  }
+
+  // 14. Emlak: Kiracı Tahliyesi -> Depozito İade Mutabakatı
+  if (text.includes('kiracı') || text.includes('tahliye') || text.includes('anahtar')) {
+    return {
+      id: `next-re-deposit-${Date.now()}`,
+      title: 'Depozito Mahsup & İade Mesajı',
+      description: 'Sayaç endeksleri ve hasar tespit dökümünü içeren mutabakat metni hazırla.',
+      actionType: 'DRAFT_MESSAGE',
+      icon: '🏢',
+      payload: {
+        recipient: 'Eski Kiracı',
+        channel: 'whatsapp',
+        messageBody: `Merhaba, daire tahliyesi ve sayaç okuma tutanağınız incelenmiştir. Son fatura borçları ve hasar mahsubu düşüldükten sonra kalan depozito bakiyeniz belirttiğiniz IBAN hesabına iade edilecektir.`
+      }
+    };
+  }
+
+  // 15. Ziraat & Tarım: Ekim / Budama -> 15 Gün Sonra Ot ve Hastalık Kontrolü
+  if (text.includes('ektik') || text.includes('ekim') || text.includes('budadık') || text.includes('bordo bulamacı')) {
+    return {
+      id: `next-farm-check-${Date.now()}`,
+      title: '15 Gün Sonra Saha Ot/Mantar Teftişi',
+      description: 'Çimlenme, toprak tavı ve herbisit ihtiyacı için arazi teftiş alarmı planla.',
+      actionType: 'CREATE_FOLLOWUP',
+      icon: '🌾',
+      payload: {
+        followupTitle: 'Tarla Ot & Gelişim Kontrolü',
+        followupZaman: '15 Gün Sonra 09:00',
+        followupOffsetDays: 15,
+        followupIkon: '🌱'
+      }
+    };
+  }
+
+  // 16. Kuaför: Ombre / Açıcı -> 3 Hafta Sonra Keratin Seansı
+  if (text.includes('ombre') || text.includes('açıcı') || text.includes('platin') || text.includes('röfle')) {
+    return {
+      id: `next-hair-keratin-${Date.now()}`,
+      title: '3 Hafta Sonra Keratin Randevusu',
+      description: 'Müşteriye saç nem ve bağ güçlendirici seansı için hatırlatma aç.',
+      actionType: 'CREATE_FOLLOWUP',
+      icon: '✂️',
+      payload: {
+        followupTitle: 'Müşteri Keratin & Nem Yükleme Seansı',
+        followupZaman: '21 Gün Sonra 14:00',
+        followupOffsetDays: 21,
+        followupIkon: '💆‍♀️'
+      }
+    };
+  }
+
   return null;
 }
