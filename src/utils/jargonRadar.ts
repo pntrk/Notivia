@@ -582,6 +582,473 @@ const DOMAIN_RULES: DomainRule[] = [
       { keyword: 'prime time', hour: 19, minute: 30 },
       { keyword: 'youtube', hour: 18, minute: 0 }
     ]
+  },
+
+  // =========================================================================
+  // MYK RESMÎ 27 SEKTÖR STANDARDI RADAR KURALLARI
+  // =========================================================================
+  {
+    domain: 'ADALET_GUVENLIK',
+    defaultIcon: '⚖️',
+    defaultColor: '#E0E7FF',
+    exclusiveKeywords: [
+      'uets', 'mazeret dilekçesi', 'tensip', 'celse', 'icra takibi', '89/1',
+      'gerekçeli karar', 'bilirkişi raporu', 'arabuluculuk', 'uzlaştırma',
+      'kıymet takdiri', 'haciz ihbarnamesi', 'cmk 100', 'cmk 101', 'kyok',
+      'takipsizlik kararı', 'segbis', 'istintak', 'gözaltı süresi', 'nezarethane',
+      'savcılık fezlekesi', 'adli emanet', 'doldur-boşalt', 'scba', '5188 sayılı'
+    ],
+    supportingKeywords: [
+      'uyap', 'duruşma', 'adliye', 'mahkeme', 'savcı', 'hakim', 'avukat',
+      'polis', 'asker', 'itfaiye', 'emniyet', 'jandarma', 'güvenlik', 'tutanak'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'duruşma', hour: 9, minute: 30 },
+      { keyword: 'uyap', hour: 16, minute: 0 },
+      { keyword: 'gözaltı', hour: 8, minute: 0 },
+      { keyword: 'devriye', hour: 20, minute: 0 }
+    ]
+  },
+  {
+    domain: 'AGAC_KAGIT',
+    defaultIcon: '🪵',
+    defaultColor: '#FEF3C7',
+    exclusiveKeywords: [
+      'ebatlama', 'kesim planı', 'pvc kenar bant', 'kenar bantlama', 'mdf lam',
+      'sunta lam', 'kontrplak', 'ahşap nemi', 'nem ölçer', 'planya', 'freze',
+      'zıvana', 'marangoz', 'oluklu mukavva', 'fleksografik', 'bobin kağıt',
+      'masura', 'kağıt hamuru', 'kraft kağıt'
+    ],
+    supportingKeywords: [
+      'ahşap', 'mobilya', 'kereste', 'tomruk', 'tutkal', 'vernik', 'lake',
+      'zımpara', 'kağıt', 'koli', 'ambalaj', 'kutu', 'palet'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'ebatlama', hour: 9, minute: 0 },
+      { keyword: 'kesim', hour: 10, minute: 30 },
+      { keyword: 'nem', hour: 14, minute: 0 }
+    ]
+  },
+  {
+    domain: 'BILISIM',
+    defaultIcon: '💻',
+    defaultColor: '#E0F2FE',
+    exclusiveKeywords: [
+      'prod deploy', 'production deploy', 'staging deploy', 'hotfix', 'semver',
+      'pull request', 'pr review', 'db migration', 'database migration',
+      'api endpoint', 'graphql query', 'rest api', 'docker container',
+      'kubernetes pod', 'ci/cd pipeline', 'penetrasyon testi', 'firewall kuralı',
+      'redis cache', 'postgresql query', 'mongodb aggregation'
+    ],
+    supportingKeywords: [
+      'yazılım', 'kod', 'developer', 'yazılımcı', 'sunucu', 'server', 'deploy',
+      'commit', 'branch', 'merge', 'frontend', 'backend', 'devops', 'cloud', 'aws', 'bug'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'deploy', hour: 10, minute: 0 },
+      { keyword: 'pr review', hour: 14, minute: 0 },
+      { keyword: 'standup', hour: 9, minute: 30 }
+    ]
+  },
+  {
+    domain: 'CAM_CIMENTO_TOPRAK',
+    defaultIcon: '🧱',
+    defaultColor: '#E2E8F0',
+    exclusiveKeywords: [
+      'klinker', 'hazır beton', 'slump testi', 'klinker fırını', 'refrakter tuğla',
+      'tavlama fırını', 'temperli cam', 'lamine cam', 'düzcam kesim', 'basınç dayanımı',
+      'seramik sır', 'karo seramik', 'porselen çamuru', 'agregat elek'
+    ],
+    supportingKeywords: [
+      'çimento', 'beton', 'cam', 'seramik', 'fayans', 'tuğla', 'kiremit',
+      'fırın', 'harç', 'toprak', 'kil', 'agrega', 'kum'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'slump', hour: 8, minute: 30 },
+      { keyword: 'fırın', hour: 7, minute: 0 },
+      { keyword: 'döküm', hour: 9, minute: 0 }
+    ]
+  },
+  {
+    domain: 'CEVRE',
+    defaultIcon: '♻️',
+    defaultColor: '#D1FAE5',
+    exclusiveKeywords: [
+      'çed raporu', 'çed gerekli değildir', 'motat', 'tehlikeli atık beyanı',
+      'arıtma tesisi', 'atıksu deşarj', 'emisyon ölçümü', 'baca gazı analizi',
+      'koi ölçümü', 'boi analizi', 'sıfır atık belgesi', 'çevre izin lisans',
+      'karbon ayak izi', 'sera gazı doğrulama'
+    ],
+    supportingKeywords: [
+      'çevre', 'atık', 'arıtma', 'geri dönüşüm', 'filtre', 'emisyon',
+      'baca', 'numune', 'çevre mühendisi', 'koku', 'deşarj'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'numune', hour: 9, minute: 30 },
+      { keyword: 'emisyon', hour: 11, minute: 0 },
+      { keyword: 'motat', hour: 15, minute: 0 }
+    ]
+  },
+  {
+    domain: 'ELEKTRIK_ELEKTRONIK',
+    defaultIcon: '⚡',
+    defaultColor: '#FEF08A',
+    exclusiveKeywords: [
+      'loto', '30ma kaçak akım', '300ma yangın koruma', 'kompanzasyon panosu',
+      'kondansatör kademesi', 'meger testi', 'yalıtım direnci', 'kontaktör bobini',
+      'termik röle', 'plc panosu', 'scada ekranı', 'trafo hücresi', 'trafo buşingi'
+    ],
+    supportingKeywords: [
+      'elektrik', 'pano', 'şalter', 'voltaj', 'amper', 'topraklama', 'kablo',
+      'sigorta', 'röle', 'inverter', 'motor sürücü', 'akım', 'gerilim'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'loto', hour: 8, minute: 0 },
+      { keyword: 'sayaç', hour: 9, minute: 0 },
+      { keyword: 'trafo', hour: 13, minute: 30 }
+    ]
+  },
+  {
+    domain: 'ENERJI',
+    defaultIcon: '🔋',
+    defaultColor: '#CFFAFE',
+    exclusiveKeywords: [
+      'epiaş göp', 'gün öncesi piyasası', 'dengelenme güç piyasası', 'ges santrali',
+      'res rüzgar türbini', 'fotovoltaik panel', 'invertör arızası', 'trafo yağı dga',
+      'reaktif güç cezası', 'fider açması', 'kombine çevrim santrali'
+    ],
+    supportingKeywords: [
+      'enerji', 'elektrik üretim', 'santral', 'türbin', 'güneş', 'rüzgar',
+      'megavat', 'mwh', 'şebeke', 'trafo', 'dağıtım', 'üretim'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'epiaş', hour: 11, minute: 30 },
+      { keyword: 'göp', hour: 11, minute: 0 },
+      { keyword: 'üretim', hour: 8, minute: 0 }
+    ]
+  },
+  {
+    domain: 'GIDA',
+    defaultIcon: '🌾',
+    defaultColor: '#ECFCCB',
+    exclusiveKeywords: [
+      'haccp', 'kritik kontrol noktası', 'ccp1', 'ccp2', 'parti no takibi',
+      'lot izlenebilirlik', 'pastörizasyon sıcaklığı', 'pastörizatör', 'aflatoksin testi',
+      'tett kontrolü', 'stt kontrolü', 'gıda hijyen tetkiki', 'soğuk zincir kırılması'
+    ],
+    supportingKeywords: [
+      'gıda', 'üretim', 'numune', 'laboratuvar', 'soğuk oda', 'depo',
+      'hijyen', 'kalite güvence', 'ambalaj', 'tadım', 'tarih'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'haccp', hour: 9, minute: 0 },
+      { keyword: 'sıcaklık', hour: 8, minute: 30 },
+      { keyword: 'numune', hour: 11, minute: 0 }
+    ]
+  },
+  {
+    domain: 'INSAAT',
+    defaultIcon: '🏗️',
+    defaultColor: '#FEF3C7',
+    exclusiveKeywords: [
+      '7 günlük kırım', '28 günlük kırım', 'küp numune etiketleme', 'slump deneyi',
+      'demir donatı teslimi', 'paspayı kontrolü', 'yeşil defter metraj', 'ataşman faturası',
+      'hakediş raporu', 'iskele periyodik kontrol', 'zemin etüdü spt', 'fore kazık donatı'
+    ],
+    supportingKeywords: [
+      'inşaat', 'şantiye', 'beton', 'demir', 'kalıp', 'mimar', 'şef',
+      'proje', 'statik', 'harç', 'döküm', 'iskele', 'tuğla'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'beton', hour: 8, minute: 0 },
+      { keyword: 'döküm', hour: 8, minute: 30 },
+      { keyword: 'kırım', hour: 10, minute: 0 },
+      { keyword: 'hakediş', hour: 16, minute: 0 }
+    ]
+  },
+  {
+    domain: 'IS_YONETIM',
+    defaultIcon: '🗂️',
+    defaultColor: '#F1F5F9',
+    exclusiveKeywords: [
+      'sgk işe giriş', 'sgk işten çıkış', 'özlük dosyası denetimi', 'ik bordro',
+      'iso 9001 döf', 'iç tetkik soru listesi', 'yönetim kurulu karar defteri',
+      'hazirun cetveli', 'pmp sprint review', 'okr çeyrek değerlendirme'
+    ],
+    supportingKeywords: [
+      'yönetim', 'şirket', 'toplantı', 'ik', 'insan kaynakları', 'personel',
+      'bordro', 'izin', 'performans', 'proje', 'süreç', 'rapor'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'toplantı', hour: 10, minute: 0 },
+      { keyword: 'bordro', hour: 16, minute: 0 },
+      { keyword: 'mülakat', hour: 14, minute: 0 }
+    ]
+  },
+  {
+    domain: 'KIMYA_PETROL_PLASTIK',
+    defaultIcon: '🧪',
+    defaultColor: '#CCFBF1',
+    exclusiveKeywords: [
+      'güvenlik bilgi formu gbf', 'msds formu', 'plastik enjeksiyon kalıp',
+      'ekstrüzyon hattı', 'polietilen granül', 'masterbatch boya', 'parlama noktası tayini',
+      'vulkanizasyon presi', 'petrokimya rafineri', 'solvent buharı', 'statik topraklama pensesi'
+    ],
+    supportingKeywords: [
+      'kimya', 'petrol', 'plastik', 'hammadde', 'reaktör', 'kazan',
+      'enjeksiyon', 'kalıp', 'çözücü', 'kauçuk', 'varil', 'tank'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'kalıp', hour: 8, minute: 30 },
+      { keyword: 'enjeksiyon', hour: 9, minute: 0 },
+      { keyword: 'numune', hour: 14, minute: 0 }
+    ]
+  },
+  {
+    domain: 'KULTUR_SANAT_TASARIM',
+    defaultIcon: '🎨',
+    defaultColor: '#FCE7F3',
+    exclusiveKeywords: [
+      '5846 fsek telif', 'telif devir sözleşmesi', 'tasarım paftası', '3d render sahnesi',
+      'vernisaj kokteyli', 'küratör sergi metni', 'fine art baskı onayı', 'pantone renk kodu',
+      'koleksiyon lookbook', 'defile prova'
+    ],
+    supportingKeywords: [
+      'tasarım', 'sanat', 'sergi', 'galeri', 'çizim', 'maket', 'moda',
+      'grafik', 'illüstrasyon', 'tablo', 'sanatçı', 'ressam'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'vernisaj', hour: 18, minute: 30 },
+      { keyword: 'render', hour: 19, minute: 0 },
+      { keyword: 'sergi', hour: 17, minute: 0 }
+    ]
+  },
+  {
+    domain: 'MADEN',
+    defaultIcon: '⛏️',
+    defaultColor: '#E4E4E7',
+    exclusiveKeywords: [
+      'metan gazı ch4', 'karbonmonoksit co', 'tavan tahkimatı', 'maden aynası',
+      'patlatma emniyet sahası', 'anfo şarjı', 'desandre inişi', 'sondör karot',
+      'cevher flotasyonu', 'ocak çavuşu teftiş'
+    ],
+    supportingKeywords: [
+      'maden', 'ocak', 'galeri', 'tahkimat', 'gaz', 'ölçüm', 'patlatma',
+      'sondaj', 'kömür', 'cevher', 'kuyu', 'vardiya'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'gaz', hour: 7, minute: 30 },
+      { keyword: 'patlatma', hour: 16, minute: 30 },
+      { keyword: 'vardiya', hour: 8, minute: 0 }
+    ]
+  },
+  {
+    domain: 'MAKINE',
+    defaultIcon: '⚙️',
+    defaultColor: '#E2E8F0',
+    exclusiveKeywords: [
+      'hidrostatik basınç testi', 'vibrasyon analizi', 'rulman boşluğu',
+      'cnc takım boyu sıfırlama', 'hidrolik yağ viskozite', 'pnömatik valf arızası',
+      'kompresör periyodik test', 'buhar kazanı emniyet ventili', 'redüktör dişli boşluğu'
+    ],
+    supportingKeywords: [
+      'makine', 'cnc', 'torna', 'freze', 'bakım', 'motor', 'yağlama',
+      'rulman', 'hidrolik', 'pnömatik', 'kayış', 'basınç'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'bakım', hour: 8, minute: 30 },
+      { keyword: 'test', hour: 10, minute: 0 },
+      { keyword: 'cnc', hour: 9, minute: 0 }
+    ]
+  },
+  {
+    domain: 'MEDYA_ILETISIM_YAYIN',
+    defaultIcon: '🎬',
+    defaultColor: '#FFE4E6',
+    exclusiveKeywords: [
+      'call sheet planı', '-23 lufs yayın standardı', 'basın bülteni ambargosu',
+      'liveu canlı yayın', 'reji akış formu', 'rundown program akışı', 'prompter metni',
+      'montaj kurgu teslimi', 'ajans basın duyurusu'
+    ],
+    supportingKeywords: [
+      'medya', 'haber', 'yayın', 'gazete', 'stüdyo', 'kamera', 'bülten',
+      'röportaj', 'muhabir', 'reji', 'canlı yayın', 'spiker'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'bülten', hour: 9, minute: 30 },
+      { keyword: 'canlı', hour: 19, minute: 0 },
+      { keyword: 'çekim', hour: 7, minute: 0 }
+    ]
+  },
+  {
+    domain: 'METAL',
+    defaultIcon: '🔩',
+    defaultColor: '#E4E4E7',
+    exclusiveKeywords: [
+      'wps kaynak prosedürü', 'pqr kaynak onay', 'ndt tahribatsız muayene',
+      'ultrasonik kaynak testi', 'manyetik partikül çatlak', 'indüksiyon ergitme ocağı',
+      'ısıl işlem fırını sertlik', 'rockwell sertlik hrc', 'haddehane paso ayarı'
+    ],
+    supportingKeywords: [
+      'metal', 'çelik', 'demir', 'kaynak', 'döküm', 'ısıl işlem', 'sac',
+      'profil', 'torna', 'alev', 'elektrot', 'gazaltı'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'kaynak', hour: 8, minute: 30 },
+      { keyword: 'döküm', hour: 10, minute: 0 },
+      { keyword: 'muayene', hour: 14, minute: 0 }
+    ]
+  },
+  {
+    domain: 'OTOMOTIV',
+    defaultIcon: '🚗',
+    defaultColor: '#FFEDD5',
+    exclusiveKeywords: [
+      'obd arıza kodu', 'obd hata silme', 'bijon torklama', 'rot balans ayarı',
+      'tüvtürk muayene randevu', 'amortisör patlağı', 'baskı balata debriyaj',
+      'triger kayışı değişimi', 'motor yağ filtre bakımı', 'ekspertiz boya mikron'
+    ],
+    supportingKeywords: [
+      'araba', 'araç', 'oto', 'tamir', 'servis', 'fren', 'lastik', 'motor',
+      'akü', 'bakım', 'muayene', 'balata', 'yağ'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'bakım', hour: 9, minute: 0 },
+      { keyword: 'teslimat', hour: 17, minute: 0 },
+      { keyword: 'muayene', hour: 10, minute: 30 }
+    ]
+  },
+  {
+    domain: 'SAGLIK_SOSYAL',
+    defaultIcon: '🩺',
+    defaultColor: '#CCFBF1',
+    exclusiveKeywords: [
+      'sbar vardiya devri', 'aydınlatılmış onam imzası', '2-8°c aşı dolabı',
+      'medula sut provizyon', 'kırmızı reçete its', 'triyaj acil değerlendirme',
+      'cross-match kan uyumu', 'dekübitus pozisyon değişimi', 'epikriz çıkış özeti'
+    ],
+    supportingKeywords: [
+      'hasta', 'doktor', 'hemşire', 'ilaç', 'tedavi', 'hastane', 'klinik',
+      'pansuman', 'enjeksiyon', 'serum', 'ameliyat', 'vizit', 'nöbet'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'devir', hour: 7, minute: 30 },
+      { keyword: 'vizit', hour: 9, minute: 0 },
+      { keyword: 'pansuman', hour: 10, minute: 30 }
+    ]
+  },
+  {
+    domain: 'SPOR_REKREASYON',
+    defaultIcon: '⚽',
+    defaultColor: '#D1FAE5',
+    exclusiveKeywords: [
+      'yıllık periyodizasyon', 'laktat eşiği testi', 'vo2max ölçümü',
+      'müsabaka esame listesi', 'hakem raporu tanzimi', 'sporcu lisans vize',
+      'kondisyon antrenman nabzı', 'doping kontrol prosedürü'
+    ],
+    supportingKeywords: [
+      'spor', 'antrenman', 'maç', 'turnuva', 'futbol', 'basketbol', 'fitness',
+      'hoca', 'antrenör', 'takım', 'kulüp', 'koşu', 'idman'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'antrenman', hour: 10, minute: 0 },
+      { keyword: 'maç', hour: 15, minute: 0 },
+      { keyword: 'idman', hour: 17, minute: 30 }
+    ]
+  },
+  {
+    domain: 'TARIM_AV_BALIK',
+    defaultIcon: '🌿',
+    defaultColor: '#ECFCCB',
+    exclusiveKeywords: [
+      'çks kayıt güncelleme', 'tarsim zirai don ihbarı', 'damlama sulama gübreleme',
+      'phi hasat bekleme süresi', 'güneş kuralı sulama', 'bordo bulamacı ilaçlama',
+      'av yasağı trol kontrolü', 'balıkçı ağ bakım'
+    ],
+    supportingKeywords: [
+      'tarım', 'çiftçi', 'tarla', 'hasat', 'tohum', 'gübre', 'ilaçlama',
+      'bahçe', 'sera', 'traktör', 'balık', 'tekne', 'avcılık'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'sulama', hour: 19, minute: 30 },
+      { keyword: 'hasat', hour: 6, minute: 30 },
+      { keyword: 'ilaçlama', hour: 7, minute: 0 }
+    ]
+  },
+  {
+    domain: 'TEKSTIL_GIYIM_DERI',
+    defaultIcon: '🧵',
+    defaultColor: '#FCE7F3',
+    exclusiveKeywords: [
+      'pastal planı kumaş', 'kumaş fire hesabı', 'yıkama çekmezlik testi',
+      'proto numune onayı', 'modelist kalıp serileme', 'overlok dikiş ayarı',
+      'iplik kopma mukavemeti', 'deri finisaj kontrolü'
+    ],
+    supportingKeywords: [
+      'tekstil', 'kumaş', 'dikiş', 'iplik', 'kesim', 'konfeksiyon', 'giyim',
+      'numune', 'model', 'astar', 'ütü', 'paket'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'pastal', hour: 8, minute: 30 },
+      { keyword: 'numune', hour: 11, minute: 0 },
+      { keyword: 'kesim', hour: 9, minute: 30 }
+    ]
+  },
+  {
+    domain: 'TOPLUMSAL_KISISEL',
+    defaultIcon: '✂️',
+    defaultColor: '#EDE9FE',
+    exclusiveKeywords: [
+      'oryal saç açma süresi', 'otoklav alet sterilizasyonu', 'kuru temizleme leke çıkarma',
+      'dip boya bekletme', 'keratin saç botoksu', 'cilt bakım protokolü'
+    ],
+    supportingKeywords: [
+      'kuaför', 'berber', 'güzellik', 'saç', 'boya', 'fön', 'manikür',
+      'pedikür', 'cilt', 'kuru temizleme', 'terzi', 'ütü'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'oryal', hour: 10, minute: 0 },
+      { keyword: 'randevu', hour: 11, minute: 0 },
+      { keyword: 'boya', hour: 14, minute: 0 }
+    ]
+  },
+  {
+    domain: 'TURIZM_KONAKLAMA_YIYECEK',
+    defaultIcon: '👨‍🍳',
+    defaultColor: '#FFEDD5',
+    exclusiveKeywords: [
+      'mise en place hazırlık', 'haccp soğuk oda sıcaklık', 'otel overbooking kontrolü',
+      'housekeeping oda teftişi', 'minibar folyo kontrolü', 'alakart servis tadımı',
+      'front office check-in'
+    ],
+    supportingKeywords: [
+      'otel', 'restoran', 'şef', 'aşçı', 'yemek', 'mutfak', 'resepsiyon',
+      'oda', 'servis', 'menü', 'rezervasyon', 'misafir', 'tatil'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'mise en place', hour: 15, minute: 30 },
+      { keyword: 'servis', hour: 18, minute: 30 },
+      { keyword: 'check-in', hour: 14, minute: 0 }
+    ]
+  },
+  {
+    domain: 'ULASTIRMA_LOJISTIK',
+    defaultIcon: '🚛',
+    defaultColor: '#FEF3C7',
+    exclusiveKeywords: [
+      '4.5 saat aetr takograf', 'takograf mola denetimi', 'cmr hasar rezervi',
+      'kantar tartım fişi', 'pre-trip lastik ve king-pin', 'psc denetimi liman',
+      'draft survey yük hesabı', 'uçuş dispatch ofp'
+    ],
+    supportingKeywords: [
+      'tır', 'kamyon', 'şoför', 'lojistik', 'sevk', 'irsaliye', 'yük',
+      'kargo', 'kurye', 'gemi', 'kaptan', 'uçak', 'pilot', 'nakliye'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'kalkış', hour: 6, minute: 0 },
+      { keyword: 'mola', hour: 12, minute: 0 },
+      { keyword: 'teslimat', hour: 16, minute: 0 }
+    ]
   }
 ];
 

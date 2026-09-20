@@ -1,18 +1,45 @@
 export type ProfessionDomain =
+  // Özel & Genel Modlar
   | 'SADE'
   | 'GENEL'
   | 'OGRENCI'
   | 'CALISMIYORUM'
-  | 'HUKUK'
+  // MYK Resmî 27 Sektör Motoru
+  | 'ADALET_GUVENLIK'
+  | 'AGAC_KAGIT'
+  | 'BILISIM'
+  | 'CAM_CIMENTO_TOPRAK'
+  | 'CEVRE'
+  | 'EGITIM'
+  | 'ELEKTRIK_ELEKTRONIK'
+  | 'ENERJI'
   | 'FINANS'
+  | 'GIDA'
+  | 'INSAAT'
+  | 'IS_YONETIM'
+  | 'KIMYA_PETROL_PLASTIK'
+  | 'KULTUR_SANAT_TASARIM'
+  | 'MADEN'
+  | 'MAKINE'
+  | 'MEDYA_ILETISIM_YAYIN'
+  | 'METAL'
+  | 'OTOMOTIV'
+  | 'SAGLIK_SOSYAL'
+  | 'SPOR_REKREASYON'
+  | 'TARIM_AV_BALIK'
+  | 'TEKSTIL_GIYIM_DERI'
+  | 'TICARET'
+  | 'TOPLUMSAL_KISISEL'
+  | 'TURIZM_KONAKLAMA_YIYECEK'
+  | 'ULASTIRMA_LOJISTIK'
+  // Geriye Dönük Uyumluluk (Legacy Aliases)
+  | 'HUKUK'
   | 'MALIYE'
   | 'SAGLIK'
-  | 'EGITIM'
   | 'TEKNIK'
   | 'MUHENDISLIK'
   | 'SAVUNMA'
   | 'LOJISTIK'
-  | 'TICARET'
   | 'GASTRONOMI'
   | 'KUAFOR'
   | 'HAVACILIK'
@@ -463,6 +490,396 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
     ]
   },
 
+  // =========================================================================
+  // MYK RESMÎ 27 SEKTÖR STANDARDI (Mesleki Yeterlilik Kurumu)
+  // =========================================================================
+
+  ADALET_GUVENLIK: {
+    domain: 'ADALET_GUVENLIK',
+    displayName: 'Adalet ve Güvenlik',
+    bgCard: 'bg-indigo-50/70 border-indigo-200',
+    borderAccent: 'border-l-indigo-600',
+    badgeBg: 'bg-indigo-100',
+    badgeText: 'text-indigo-800',
+    btnPrimaryBg: 'bg-indigo-600 hover:bg-indigo-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'uets_calc', label: 'UETS 7/a Süre Hesabı', icon: '⚖️', actionType: 'COPY_TEMPLATE' },
+      { id: 'mazeret_draft', label: 'Mazeret Dilekçesi', icon: '📄', actionType: 'COPY_TEMPLATE' },
+      { id: 'court_nav', label: 'Adliye / Duruşma', icon: '🏛️', actionType: 'NAVIGATE' },
+      { id: 'gozalti_sayac', label: '24s Gözaltı Fezleke', icon: '⏱️', actionType: 'TIMER' }
+    ]
+  },
+
+  AGAC_KAGIT: {
+    domain: 'AGAC_KAGIT',
+    displayName: 'Ağaç İşleri, Kağıt ve Kağıt Ürünleri',
+    bgCard: 'bg-amber-50/75 border-amber-200',
+    borderAccent: 'border-l-amber-700',
+    badgeBg: 'bg-amber-100',
+    badgeText: 'text-amber-900',
+    btnPrimaryBg: 'bg-amber-800 hover:bg-amber-900',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'ebatlama_list', label: 'Ebatlama & Kesim Planı', icon: '🪵', actionType: 'COPY_TEMPLATE' },
+      { id: 'nem_olcum', label: '%8-12 Ahşap Nem Testi', icon: '💧', actionType: 'LOTO_CHECK' },
+      { id: 'kenar_bant', label: 'PVC Kenar Bantlama', icon: '📏', actionType: 'CHECKLIST' }
+    ]
+  },
+
+  BILISIM: {
+    domain: 'BILISIM',
+    displayName: 'Bilişim Teknolojileri',
+    bgCard: 'bg-sky-50/70 border-sky-200',
+    borderAccent: 'border-l-sky-600',
+    badgeBg: 'bg-sky-100',
+    badgeText: 'text-sky-900',
+    btnPrimaryBg: 'bg-sky-600 hover:bg-sky-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'deploy_check', label: 'Prod Deploy & Rollback', icon: '🚀', actionType: 'LOTO_CHECK' },
+      { id: 'pr_review', label: 'PR Review & SemVer', icon: '💻', actionType: 'CHECKLIST' },
+      { id: 'db_migration', label: 'DB Migration Yedek', icon: '🗄️', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
+
+  CAM_CIMENTO_TOPRAK: {
+    domain: 'CAM_CIMENTO_TOPRAK',
+    displayName: 'Cam, Çimento ve Toprak',
+    bgCard: 'bg-stone-100/80 border-stone-300',
+    borderAccent: 'border-l-stone-600',
+    badgeBg: 'bg-stone-200',
+    badgeText: 'text-stone-900',
+    btnPrimaryBg: 'bg-stone-700 hover:bg-stone-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'firin_sicaklik', label: 'Klinker Fırın Isı Logu', icon: '🔥', actionType: 'LOTO_CHECK' },
+      { id: 'basinc_test', label: 'Basınç Dayanımı Kontrolü', icon: '🧱', actionType: 'COPY_TEMPLATE' },
+      { id: 'tavlama_gerilme', label: 'Cam Tavlama Gerilim Testi', icon: '🪟', actionType: 'CHECKLIST' }
+    ]
+  },
+
+  CEVRE: {
+    domain: 'CEVRE',
+    displayName: 'Çevre',
+    bgCard: 'bg-emerald-50/75 border-emerald-200',
+    borderAccent: 'border-l-emerald-600',
+    badgeBg: 'bg-emerald-100',
+    badgeText: 'text-emerald-900',
+    btnPrimaryBg: 'bg-emerald-600 hover:bg-emerald-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'ced_takip', label: 'ÇED & Emisyon İzin Süreci', icon: '📋', actionType: 'TIMER' },
+      { id: 'atik_motat', label: 'MoTAT Atık Taşıma Formu', icon: '♻️', actionType: 'COPY_TEMPLATE' },
+      { id: 'aritma_debi', label: 'Arıtma Çıkış pH/KOİ Analizi', icon: '🧪', actionType: 'LOTO_CHECK' }
+    ]
+  },
+
+  ELEKTRIK_ELEKTRONIK: {
+    domain: 'ELEKTRIK_ELEKTRONIK',
+    displayName: 'Elektrik ve Elektronik',
+    bgCard: 'bg-yellow-50/75 border-yellow-200',
+    borderAccent: 'border-l-yellow-600',
+    badgeBg: 'bg-yellow-100',
+    badgeText: 'text-yellow-900',
+    btnPrimaryBg: 'bg-yellow-600 hover:bg-yellow-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'loto_lock', label: 'LOTO Enerji İzolasyonu', icon: '🔒', actionType: 'LOTO_CHECK' },
+      { id: 'kacak_akim', label: '30mA Kaçak Akım Testi', icon: '⚡', actionType: 'CHECKLIST' },
+      { id: 'kompanzasyon_sayac', label: 'Endüktif/Kapasitif Sayaç', icon: '📊', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
+
+  ENERJI: {
+    domain: 'ENERJI',
+    displayName: 'Enerji',
+    bgCard: 'bg-cyan-50/75 border-cyan-200',
+    borderAccent: 'border-l-cyan-600',
+    badgeBg: 'bg-cyan-100',
+    badgeText: 'text-cyan-900',
+    btnPrimaryBg: 'bg-cyan-600 hover:bg-cyan-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'epias_gop', label: 'EPİAŞ GÖP Teklif Girişi', icon: '⚡', actionType: 'TIMER' },
+      { id: 'trafo_bakim', label: 'Trafo İzolasyon Yağ Testi', icon: '🔋', actionType: 'LOTO_CHECK' },
+      { id: 'ges_inverter', label: 'İnvertör & Üretim İzleme', icon: '☀️', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
+
+  GIDA: {
+    domain: 'GIDA',
+    displayName: 'Gıda',
+    bgCard: 'bg-lime-50/75 border-lime-200',
+    borderAccent: 'border-l-lime-600',
+    badgeBg: 'bg-lime-100',
+    badgeText: 'text-lime-900',
+    btnPrimaryBg: 'bg-lime-600 hover:bg-lime-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'haccp_ccp', label: 'HACCP Kritik Kontrol (CCP)', icon: '🌡️', actionType: 'LOTO_CHECK' },
+      { id: 'parti_lot', label: 'Parti/Lot İzlenebilirlik', icon: '🌾', actionType: 'COPY_TEMPLATE' },
+      { id: 'soguk_oda_log', label: '+4°C / -18°C Isı Çizelgesi', icon: '❄️', actionType: 'CHECKLIST' }
+    ]
+  },
+
+  INSAAT: {
+    domain: 'INSAAT',
+    displayName: 'İnşaat',
+    bgCard: 'bg-amber-50/75 border-amber-200',
+    borderAccent: 'border-l-amber-600',
+    badgeBg: 'bg-amber-100',
+    badgeText: 'text-amber-900',
+    btnPrimaryBg: 'bg-amber-600 hover:bg-amber-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'beton_kirim', label: '7 & 28 Gün Kırım Testi', icon: '🏗️', actionType: 'TIMER' },
+      { id: 'donati_teslim', label: 'Demir Donatı & Paspayı', icon: '📐', actionType: 'CHECKLIST' },
+      { id: 'hakedis_metraj', label: 'Metraj & Yeşil Defter', icon: '📑', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
+
+  IS_YONETIM: {
+    domain: 'IS_YONETIM',
+    displayName: 'İş ve Yönetim',
+    bgCard: 'bg-slate-50/80 border-slate-200',
+    borderAccent: 'border-l-slate-600',
+    badgeBg: 'bg-slate-100',
+    badgeText: 'text-slate-900',
+    btnPrimaryBg: 'bg-slate-700 hover:bg-slate-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'ik_bordro', label: 'SGK İşe Giriş / Çıkış Bildirimi', icon: '👥', actionType: 'COPY_TEMPLATE' },
+      { id: 'yonetim_kurul', label: 'Karar Defteri & Hazirun', icon: '🗂️', actionType: 'COPY_TEMPLATE' },
+      { id: 'iso9001_dof', label: 'DÖF & İç Tetkik Takibi', icon: '📈', actionType: 'TIMER' }
+    ]
+  },
+
+  KIMYA_PETROL_PLASTIK: {
+    domain: 'KIMYA_PETROL_PLASTIK',
+    displayName: 'Kimya, Petrol, Lastik ve Plastik',
+    bgCard: 'bg-teal-50/75 border-teal-200',
+    borderAccent: 'border-l-teal-600',
+    badgeBg: 'bg-teal-100',
+    badgeText: 'text-teal-900',
+    btnPrimaryBg: 'bg-teal-600 hover:bg-teal-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'msds_kontrol', label: 'MSDS / Güvenlik Bilgi Formu', icon: '🧪', actionType: 'LOTO_CHECK' },
+      { id: 'parlama_noktasi', label: 'Parlama & Statik Topraklama', icon: '⚠️', actionType: 'CHECKLIST' },
+      { id: 'enjeksiyon_parametre', label: 'Enjeksiyon Kalıp Sıcaklık Logu', icon: '🛢️', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
+
+  KULTUR_SANAT_TASARIM: {
+    domain: 'KULTUR_SANAT_TASARIM',
+    displayName: 'Kültür, Sanat ve Tasarım',
+    bgCard: 'bg-fuchsia-50/75 border-fuchsia-200',
+    borderAccent: 'border-l-fuchsia-600',
+    badgeBg: 'bg-fuchsia-100',
+    badgeText: 'text-fuchsia-900',
+    btnPrimaryBg: 'bg-fuchsia-600 hover:bg-fuchsia-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'fsek_telif', label: '5846 FSEK Telif Devir Sözleşmesi', icon: '📜', actionType: 'COPY_TEMPLATE' },
+      { id: 'tasarim_pafta', label: 'Tasarım Pafta & Render Onayı', icon: '🎨', actionType: 'CHECKLIST' },
+      { id: 'sergi_vernisaj', label: 'Sergi / Vernisaj Takvimi', icon: '🖼️', actionType: 'TIMER' }
+    ]
+  },
+
+  MADEN: {
+    domain: 'MADEN',
+    displayName: 'Maden',
+    bgCard: 'bg-zinc-100/80 border-zinc-300',
+    borderAccent: 'border-l-zinc-700',
+    badgeBg: 'bg-zinc-200',
+    badgeText: 'text-zinc-900',
+    btnPrimaryBg: 'bg-zinc-800 hover:bg-zinc-900',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'metan_gaz_olcum', label: 'CH4 / CO Gaz Ölçüm Defteri', icon: '⛏️', actionType: 'LOTO_CHECK' },
+      { id: 'tahkimat_kontrol', label: 'Ayna & Tavan Tahkimat Denetimi', icon: '🛡️', actionType: 'CHECKLIST' },
+      { id: 'patlatma_guvenlik', label: 'Patlatma Öncesi Emniyet Şeridi', icon: '💥', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
+
+  MAKINE: {
+    domain: 'MAKINE',
+    displayName: 'Makine',
+    bgCard: 'bg-slate-100/80 border-slate-300',
+    borderAccent: 'border-l-slate-600',
+    badgeBg: 'bg-slate-200',
+    badgeText: 'text-slate-900',
+    btnPrimaryBg: 'bg-slate-700 hover:bg-slate-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'hidrostatik_test', label: 'Kazan Hidrostatik Basınç Testi', icon: '⚙️', actionType: 'LOTO_CHECK' },
+      { id: 'vibrasyon_yag', label: 'Vibrasyon & Yağ Analizi', icon: '🔧', actionType: 'COPY_TEMPLATE' },
+      { id: 'cnc_sifirlama', label: 'CNC Takım Boyu Sıfırlama', icon: '📐', actionType: 'CHECKLIST' }
+    ]
+  },
+
+  MEDYA_ILETISIM_YAYIN: {
+    domain: 'MEDYA_ILETISIM_YAYIN',
+    displayName: 'Medya, İletişim ve Yayıncılık',
+    bgCard: 'bg-rose-50/70 border-rose-200',
+    borderAccent: 'border-l-rose-500',
+    badgeBg: 'bg-rose-100',
+    badgeText: 'text-rose-900',
+    btnPrimaryBg: 'bg-rose-600 hover:bg-rose-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'call_sheet', label: 'Call Sheet & Set Planı', icon: '🎬', actionType: 'COPY_TEMPLATE' },
+      { id: 'lufs_master', label: '-23 LUFS Yayın Standardı', icon: '🎙️', actionType: 'LOTO_CHECK' },
+      { id: 'basin_ambargo', label: 'Basın Bülteni & Ambargo', icon: '📰', actionType: 'TIMER' }
+    ]
+  },
+
+  METAL: {
+    domain: 'METAL',
+    displayName: 'Metal',
+    bgCard: 'bg-zinc-100 border-zinc-300',
+    borderAccent: 'border-l-zinc-600',
+    badgeBg: 'bg-zinc-200',
+    badgeText: 'text-zinc-900',
+    btnPrimaryBg: 'bg-zinc-700 hover:bg-zinc-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'wps_kaynak', label: 'WPS / PQR Kaynak Onay Formu', icon: '🔩', actionType: 'COPY_TEMPLATE' },
+      { id: 'ndt_muayene', label: 'NDT Tahribatsız Muayene Raporu', icon: '🔬', actionType: 'LOTO_CHECK' },
+      { id: 'isil_islem', label: 'Isıl İşlem Sertlik Çizelgesi', icon: '🔥', actionType: 'CHECKLIST' }
+    ]
+  },
+
+  OTOMOTIV: {
+    domain: 'OTOMOTIV',
+    displayName: 'Otomotiv',
+    bgCard: 'bg-orange-50/75 border-orange-200',
+    borderAccent: 'border-l-orange-600',
+    badgeBg: 'bg-orange-100',
+    badgeText: 'text-orange-900',
+    btnPrimaryBg: 'bg-orange-600 hover:bg-orange-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'obd_ariza', label: 'OBD Hata Kodu Silme & Test', icon: '🚗', actionType: 'LOTO_CHECK' },
+      { id: 'tork_kontrol', label: 'Bijon & Aks Torklama Kontrolü', icon: '🔧', actionType: 'CHECKLIST' },
+      { id: 'tuvturk_sayac', label: 'TÜVTÜRK Periyodik Muayene', icon: '⏱️', actionType: 'TIMER' }
+    ]
+  },
+
+  SAGLIK_SOSYAL: {
+    domain: 'SAGLIK_SOSYAL',
+    displayName: 'Sağlık ve Sosyal Hizmetler',
+    bgCard: 'bg-teal-50/70 border-teal-200',
+    borderAccent: 'border-l-teal-600',
+    badgeBg: 'bg-teal-100',
+    badgeText: 'text-teal-900',
+    btnPrimaryBg: 'bg-teal-600 hover:bg-teal-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'sbar_devir', label: 'SBAR Vardiya / Nöbet Devri', icon: '📋', actionType: 'COPY_TEMPLATE' },
+      { id: 'aydinlatilmis_onam', label: 'Aydınlatılmış Onam Formu', icon: '🩺', actionType: 'CHECKLIST' },
+      { id: 'soguk_zincir_ilac', label: '2-8°C Aşı & İlaç Soğuk Zincir', icon: '❄️', actionType: 'LOTO_CHECK' }
+    ]
+  },
+
+  SPOR_REKREASYON: {
+    domain: 'SPOR_REKREASYON',
+    displayName: 'Spor ve Rekreasyon',
+    bgCard: 'bg-emerald-50/75 border-emerald-200',
+    borderAccent: 'border-l-emerald-600',
+    badgeBg: 'bg-emerald-100',
+    badgeText: 'text-emerald-900',
+    btnPrimaryBg: 'bg-emerald-600 hover:bg-emerald-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'antrenman_periyot', label: 'Yıllık Periyodizasyon Planı', icon: '⚽', actionType: 'COPY_TEMPLATE' },
+      { id: 'laktat_nabiz', label: 'Laktat Eşiği & Nabız Bölgeleri', icon: '⏱️', actionType: 'TIMER' },
+      { id: 'mac_esame', label: 'Müsabaka Esame Listesi & Rapor', icon: '📋', actionType: 'CHECKLIST' }
+    ]
+  },
+
+  TARIM_AV_BALIK: {
+    domain: 'TARIM_AV_BALIK',
+    displayName: 'Tarım, Avcılık ve Balıkçılık',
+    bgCard: 'bg-lime-50/75 border-lime-200',
+    borderAccent: 'border-l-lime-600',
+    badgeBg: 'bg-lime-100',
+    badgeText: 'text-lime-900',
+    btnPrimaryBg: 'bg-lime-700 hover:bg-lime-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'gunes_sulama', label: 'Güneş Kuralı (19:30 Sulama)', icon: '🌿', actionType: 'TIMER' },
+      { id: 'zirai_don', label: 'Zirai Don & TARSİM Alarmı', icon: '❄️', actionType: 'LOTO_CHECK' },
+      { id: 'phi_hasat', label: 'İlaç PHI Hasat Bekleme Süresi', icon: '🌾', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
+
+  TEKSTIL_GIYIM_DERI: {
+    domain: 'TEKSTIL_GIYIM_DERI',
+    displayName: 'Tekstil, Hazır Giyim, Deri',
+    bgCard: 'bg-pink-50/75 border-pink-200',
+    borderAccent: 'border-l-pink-600',
+    badgeBg: 'bg-pink-100',
+    badgeText: 'text-pink-900',
+    btnPrimaryBg: 'bg-pink-600 hover:bg-pink-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'pastal_plani', label: 'Pastal Planı & Kumaş Fire Hesabı', icon: '🧵', actionType: 'COPY_TEMPLATE' },
+      { id: 'cekmezlik_test', label: 'Yıkama & Çekmezlik Testi', icon: '📏', actionType: 'LOTO_CHECK' },
+      { id: 'numune_onay', label: 'İlk Numune (Proto) Onayı', icon: '👗', actionType: 'CHECKLIST' }
+    ]
+  },
+
+  TOPLUMSAL_KISISEL: {
+    domain: 'TOPLUMSAL_KISISEL',
+    displayName: 'Toplumsal ve Kişisel Hizmetler',
+    bgCard: 'bg-violet-50/75 border-violet-200',
+    borderAccent: 'border-l-violet-600',
+    badgeBg: 'bg-violet-100',
+    badgeText: 'text-violet-900',
+    btnPrimaryBg: 'bg-violet-600 hover:bg-violet-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'oryal_sac_acma', label: 'Oryal Açma Süre Sayacı (45dk)', icon: '⏱️', actionType: 'TIMER' },
+      { id: 'otoklav_steril', label: 'Otoklav & Alet Sterilizasyonu', icon: '✂️', actionType: 'LOTO_CHECK' },
+      { id: 'leke_mudahale', label: 'Kuru Temizleme Leke Çözümü', icon: '🧺', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
+
+  TURIZM_KONAKLAMA_YIYECEK: {
+    domain: 'TURIZM_KONAKLAMA_YIYECEK',
+    displayName: 'Turizm, Konaklama, Yiyecek-İçecek Hizmetleri',
+    bgCard: 'bg-orange-50/75 border-orange-200',
+    borderAccent: 'border-l-orange-500',
+    badgeBg: 'bg-orange-100',
+    badgeText: 'text-orange-900',
+    btnPrimaryBg: 'bg-orange-600 hover:bg-orange-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'mise_en_place', label: 'Mise en Place & Servis Hazırlığı', icon: '👨‍🍳', actionType: 'CHECKLIST' },
+      { id: 'haccp_sicaklik', label: 'HACCP Soğuk Oda & Şoklama', icon: '❄️', actionType: 'LOTO_CHECK' },
+      { id: 'housekeeping_check', label: 'Oda Teftiş Föyü & Minibar', icon: '🏨', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
+
+  ULASTIRMA_LOJISTIK: {
+    domain: 'ULASTIRMA_LOJISTIK',
+    displayName: 'Ulaştırma, Lojistik ve Haberleşme',
+    bgCard: 'bg-amber-50/75 border-amber-200',
+    borderAccent: 'border-l-amber-600',
+    badgeBg: 'bg-amber-100',
+    badgeText: 'text-amber-900',
+    btnPrimaryBg: 'bg-amber-700 hover:bg-amber-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'aetr_takograf', label: '4.5s AETR Mola & Takograf', icon: '⏱️', actionType: 'TIMER' },
+      { id: 'cmr_irsaliye', label: 'CMR & Hasar Rezerv Tutanağı', icon: '🚛', actionType: 'COPY_TEMPLATE' },
+      { id: 'pretrip_kontrol', label: 'Pre-Trip Lastik & King-Pin Kilidi', icon: '🔍', actionType: 'LOTO_CHECK' },
+      { id: 'psc_survey', label: 'PSC & Draft Survey', icon: '⚓', actionType: 'CHECKLIST' }
+    ]
+  },
+
   GENEL: {
     domain: 'GENEL',
     displayName: 'Genel',
@@ -490,55 +907,75 @@ export interface WorkDomainOption {
 }
 
 export const WORK_DOMAIN_OPTIONS: WorkDomainOption[] = [
+  // Özel & Genel Modlar
   { id: 'SADE', label: 'Sade Not (Motorsuz)', sublabel: 'Bilişsel motorlar kapalı; yalnızca söylediğiniz ham metni doğrudan not olarak kaydeder', icon: '📝', category: 'ozel' },
   { id: 'GENEL', label: 'Genel Yaşam', sublabel: 'Kişisel yaşam, ev, fatura & kira, abonelikler, alışveriş ve günlük rutinler', icon: '🏠', category: 'ozel' },
   { id: 'OGRENCI', label: 'Öğrenci', sublabel: 'Vize/final sınavları, ders kaydı, ödev teslimi, burs/KYK', icon: '🎓', category: 'ozel' },
-  { id: 'DENIZCILIK', label: 'Denizcilik & Gemi İdaresi', sublabel: 'Kaptan, Gemi Zabitleri (PSC denetimi, ISM, draft survey, balast jurnali)', icon: '⚓', category: 'meslek' },
-  { id: 'ECZACILIK', label: 'Eczacılık & Medula SUT', sublabel: 'Eczacı, Eczane Teknikeri (Soğuk zincir 2-8°C, Medula SUT, kırmızı reçete İTS, majistral)', icon: '💊', category: 'meslek' },
-  { id: 'EGITIM', label: 'Eğitim & Okul Yönetimi', sublabel: 'Öğretmen, Müdür, Akademisyen (e-Okul, BEP, TEFBİS, sınav okuma, KBS)', icon: '📚', category: 'meslek' },
-  { id: 'GASTRONOMI', label: 'Gastronomi & Mutfak', sublabel: 'Şef, Aşçı, Mutfak Ekibi (Mise en place, HACCP, soğuk oda, tadım)', icon: '👨‍🍳', category: 'meslek' },
-  { id: 'EMLAK', label: 'Gayrimenkul & Emlak', sublabel: 'Emlak Danışmanı (Yetki belgesi, Web-Tapu harç, DASK, ipotek fek)', icon: '🏢', category: 'meslek' },
-  { id: 'GUMRUK', label: 'Gümrük & Dış Ticaret', sublabel: 'Gümrük Müşaviri (Kırmızı hat muayene, ATR, konşimento, ordino teslim)', icon: '📦', category: 'meslek' },
-  { id: 'HAVACILIK', label: 'Havacılık & Kokpit', sublabel: 'Pilot, Uçuş Operasyon (OFP, METAR, FDP dinlenme)', icon: '✈️', category: 'meslek' },
-  { id: 'HUKUK', label: 'Hukuk & Adalet', sublabel: 'Avukat, Hakim, Noter, Arabulucu (UYAP, duruşma, 89/1, tebligat öncelikli)', icon: '⚖️', category: 'meslek' },
-  { id: 'ISG', label: 'İş Sağlığı ve Güvenliği (İSG)', sublabel: 'İSG Uzmanı, İşyeri Hekimi (İBYS eğitimi, periyodik muayene, ramak kala, 6331 risk)', icon: '🦺', category: 'meslek' },
-  { id: 'KAMU', label: 'Kamu & Kurumsal Ofis', sublabel: 'Devlet Memuru, İK, Bürokrasi (EBYS, CİMER, doğrudan temin 22/d)', icon: '🗂️', category: 'meslek' },
-  { id: 'KUAFOR', label: 'Kuaför & Güzellik', sublabel: 'Saç Tasarım, Kuaför, Renk Uzmanı (Dip açma, keratin, oryal)', icon: '✂️', category: 'meslek' },
-  { id: 'LOJISTIK', label: 'Lojistik & Otomotiv', sublabel: 'Ağır Vasıta Şoförü, Oto Tamircisi (Takograf, muayene, CMR, akü)', icon: '🚛', category: 'meslek' },
-  { id: 'FINANS', label: 'Mali Müşavir & Finans', sublabel: 'SMMM, Muhasebe (KDV tevkifatı, VUK 33, SGK, e-Defter, beyanname)', icon: '📊', category: 'meslek' },
-  { id: 'TEKNIK', label: 'Mühendislik & Şantiye', sublabel: 'İnşaat, Elektrik, Makine, Yazılım (SPT zemin, 30mA kaçak akım, LOTO, deploy)', icon: '🏗️', category: 'meslek' },
-  { id: 'SAGLIK', label: 'Sağlık, Klinik & Tıp', sublabel: 'Doktor, Hemşire, Eczacı (SBAR, aydınlatılmış onam, kan transfüzyon)', icon: '🩺', category: 'meslek' },
-  { id: 'SANAT_MEDYA', label: 'Sanat, Medya & Prodüksiyon', sublabel: 'Yönetmen, Kurgucu, Fotoğrafçı, Ses Mühendisi, Gazeteci, Sosyal Medya Yöneticisi & İçerik Üreticisi (Reels/TikTok kanca, #işbirliği, call sheet, -23 LUFS render, FSEK telif, meta ads)', icon: '🎬', category: 'meslek' },
-  { id: 'SAVUNMA', label: 'Savunma, Emniyet & Askeriye', sublabel: 'Polis, Jandarma, Asker, İtfaiye, Özel Güvenlik (CMK 91 gözaltı, fezleke, OYİ, içtima, silahlık, SCBA, 5188 ÖGG)', icon: '👮', category: 'meslek' },
-  { id: 'TICARET', label: 'Ticaret, Satış & Esnaf', sublabel: 'Satış Danışmanı, Kasiyer, Dükkan Sahibi (Teklif, kasa, Z raporu)', icon: '💼', category: 'meslek' },
-  { id: 'VETERINER', label: 'Veteriner & Hayvan Sağlığı', sublabel: 'Klinik Hekim (Petvet mikroçip, kuduz titrasyon, aşı takvimi, post-op)', icon: '🐾', category: 'meslek' },
-  { id: 'ZIRAAT', label: 'Ziraat & Botanik', sublabel: 'Bahçıvan, Peyzaj, Çiçekçi (Güneş kuralı, sulama serinliği)', icon: '🌿', category: 'meslek' },
+
+  // MYK Resmî 27 Sektör Motoru (A'dan Z'ye Tam Sıralı)
+  { id: 'ADALET_GUVENLIK', label: 'Adalet ve Güvenlik', sublabel: 'Avukat, Hakim, Savcı, Polis, Asker, İtfaiye, Özel Güvenlik (UYAP, duruşma, fezleke, SCBA, CMK)', icon: '⚖️', category: 'meslek' },
+  { id: 'AGAC_KAGIT', label: 'Ağaç İşleri, Kağıt ve Kağıt Ürünleri', sublabel: 'Ahşap Mobilya, Doğrama, Kağıt & Ambalaj (Ebatlama, kesim planı, %8-12 ahşap nemi, kenar bantlama)', icon: '🪵', category: 'meslek' },
+  { id: 'BILISIM', label: 'Bilişim Teknolojileri', sublabel: 'Yazılım Geliştirici, Sistem/Ağ, Siber Güvenlik, DevOps (Prod deploy, PR, SemVer, DB migration, API)', icon: '💻', category: 'meslek' },
+  { id: 'CAM_CIMENTO_TOPRAK', label: 'Cam, Çimento ve Toprak', sublabel: 'Çimento, Hazır Beton, Seramik, Karo, Cam Sanayi (Klinker fırını, basınç dayanımı, tavlama)', icon: '🧱', category: 'meslek' },
+  { id: 'CEVRE', label: 'Çevre', sublabel: 'Çevre Mühendisi, Atık Yönetimi, Arıtma Tesisi (ÇED raporu, emisyon ölçümü, MoTAT, sıfır atık)', icon: '♻️', category: 'meslek' },
+  { id: 'EGITIM', label: 'Eğitim', sublabel: 'Öğretmen, Okul Müdürü, Akademisyen (e-Okul, MEBBİS, KBS ek ders, BEP, TEFBİS, sınav okuma)', icon: '📚', category: 'meslek' },
+  { id: 'ELEKTRIK_ELEKTRONIK', label: 'Elektrik ve Elektronik', sublabel: 'Elektrik Mühendisi, Teknisyen, Pano Montörü (LOTO, 30mA kaçak akım, kompanzasyon, PLC, trafo)', icon: '⚡', category: 'meslek' },
+  { id: 'ENERJI', label: 'Enerji', sublabel: 'GES, RES, HES, Doğalgaz, Şebeke Dağıtım (EPİAŞ GÖP, trafo izolasyon, enversör, megavat)', icon: '🔋', category: 'meslek' },
+  { id: 'FINANS', label: 'Finans', sublabel: 'Mali Müşavir (SMMM), Muhasebeci, Denetçi, Bankacı (KDV, MUHSGK, e-Defter, tevkifat, VUK 33, SGK)', icon: '📊', category: 'meslek' },
+  { id: 'GIDA', label: 'Gıda', sublabel: 'Gıda Mühendisi, Kalite Güvence, Üretim Operatörü (HACCP, CCP, parti/lot takibi, pastörizasyon, soğuk zincir)', icon: '🌾', category: 'meslek' },
+  { id: 'INSAAT', label: 'İnşaat', sublabel: 'İnşaat Mühendisi, Şantiye Şefi, Mimar (Beton dökümü, 7/28 gün kırım testi, donatı, metraj, hakediş)', icon: '🏗️', category: 'meslek' },
+  { id: 'IS_YONETIM', label: 'İş ve Yönetim', sublabel: 'Yönetici, İK Uzmanı, Proje Yöneticisi, Bordro (PMP, sprint, SGK işe giriş/çıkış, ISO 9001, DÖF)', icon: '🗂️', category: 'meslek' },
+  { id: 'KIMYA_PETROL_PLASTIK', label: 'Kimya, Petrol, Lastik ve Plastik', sublabel: 'Kimyager, Rafineri, Plastik Enjeksiyon, Kauçuk (MSDS/GBF, parlama noktası, polimerizasyon, ekstrüzyon)', icon: '🧪', category: 'meslek' },
+  { id: 'KULTUR_SANAT_TASARIM', label: 'Kültür, Sanat ve Tasarım', sublabel: 'Grafik Tasarımcı, Ressam, Mimar, Moda Tasarımcısı (5846 FSEK telif, pafta, render, vernisaj)', icon: '🎨', category: 'meslek' },
+  { id: 'MADEN', label: 'Maden', sublabel: 'Maden Mühendisi, Ocak Çavuşu, Sondör (Metan/karbonmonoksit gaz ölçümü, tahkimat, patlatma emniyeti)', icon: '⛏️', category: 'meslek' },
+  { id: 'MAKINE', label: 'Makine', sublabel: 'Makine Mühendisi, CNC Operatörü, Mekanik Bakımcı (Hidrostatik basınç testi, vibrasyon analizi, hidrolik)', icon: '⚙️', category: 'meslek' },
+  { id: 'MEDYA_ILETISIM_YAYIN', label: 'Medya, İletişim ve Yayıncılık', sublabel: 'Gazeteci, Yönetmen, Kurgucu, İçerik Üreticisi (Call sheet, -23 LUFS, basın bülteni, ambargo, reji)', icon: '🎬', category: 'meslek' },
+  { id: 'METAL', label: 'Metal', sublabel: 'Metalurji Mühendisi, Kaynakçı, Dökümcü (WPS/PQR kaynak onayı, NDT tahribatsız muayene, ısıl işlem)', icon: '🔩', category: 'meslek' },
+  { id: 'OTOMOTIV', label: 'Otomotiv', sublabel: 'Oto Tamircisi, Servis Danışmanı, Ekspertiz (OBD arıza kodu silme, rot-balans, torklama, TÜVTÜRK)', icon: '🚗', category: 'meslek' },
+  { id: 'SAGLIK_SOSYAL', label: 'Sağlık ve Sosyal Hizmetler', sublabel: 'Doktor, Hemşire, Eczacı, Diş Hekimi (SBAR devir, aydınlatılmış onam, Medula SUT, 2-8°C soğuk zincir)', icon: '🩺', category: 'meslek' },
+  { id: 'SPOR_REKREASYON', label: 'Spor ve Rekreasyon', sublabel: 'Antrenör, Fitness Eğitmeni, Hakem, Tesis Yöneticisi (Periyodizasyon, laktat eşiği, esame listesi)', icon: '⚽', category: 'meslek' },
+  { id: 'TARIM_AV_BALIK', label: 'Tarım, Avcılık ve Balıkçılık', sublabel: 'Ziraat Mühendisi, Çiftçi, Balıkçı (ÇKS, TARSİM zirai don, damlama sulama, güneş kuralı 19:30)', icon: '🌿', category: 'meslek' },
+  { id: 'TEKSTIL_GIYIM_DERI', label: 'Tekstil, Hazır Giyim, Deri', sublabel: 'Modelist, Konfeksiyon, Kumaş & Deri Üretimi (Pastal planı, çekmezlik testi, numune/proto onayı)', icon: '🧵', category: 'meslek' },
+  { id: 'TICARET', label: 'Ticaret (Satış ve Pazarlama)', sublabel: 'Satış Danışmanı, Kasiyer, Dükkan Sahibi, Pazarlamacı (Teklif takibi, Z raporu, kasa mutabakatı)', icon: '💼', category: 'meslek' },
+  { id: 'TOPLUMSAL_KISISEL', label: 'Toplumsal ve Kişisel Hizmetler', sublabel: 'Kuaför, Berber, Güzellik Uzmanı, Kuru Temizleme (Oryal saç açma, otoklav sterilizasyon, leke çözümü)', icon: '✂️', category: 'meslek' },
+  { id: 'TURIZM_KONAKLAMA_YIYECEK', label: 'Turizm, Konaklama, Yiyecek-İçecek Hizmetleri', sublabel: 'Şef, Aşçı, Garson, Otel/Resepsiyon (Mise en place, HACCP soğuk oda, overbooking, oda teftiş föyü)', icon: '👨‍🍳', category: 'meslek' },
+  { id: 'ULASTIRMA_LOJISTIK', label: 'Ulaştırma, Lojistik ve Haberleşme', sublabel: 'Ağır Vasıta Şoförü, Kaptan, Pilot, Kurye, Telekom (Takograf 4.5s mola, CMR, kantar, PSC, METAR)', icon: '🚛', category: 'meslek' },
 ];
 
 export const WORK_DOMAIN_OPTIONS_EN: WorkDomainOption[] = [
+  // Special & General Modes
   { id: 'SADE', label: 'Plain Note (No Engine)', sublabel: 'Cognitive engines disabled; directly saves your exact spoken or typed text', icon: '📝', category: 'ozel' },
   { id: 'GENEL', label: 'General Life', sublabel: 'Personal life, home, bills & rent, subscriptions, shopping, and daily routines', icon: '🏠', category: 'ozel' },
   { id: 'OGRENCI', label: 'Student & Academic', sublabel: 'Midterms/finals, course registration, homework submissions, scholarships', icon: '🎓', category: 'ozel' },
-  { id: 'ZIRAAT', label: 'Agriculture & Horticulture', sublabel: 'Gardener, Landscaper, Florist (Sun rule, cool evening watering, fertilizing)', icon: '🌿', category: 'meslek' },
-  { id: 'SANAT_MEDYA', label: 'Art, Media & Content Production', sublabel: 'Director, Video Editor, Photographer, Creator (Call sheets, hook timing, audio LUFS, copyright)', icon: '🎬', category: 'meslek' },
-  { id: 'HAVACILIK', label: 'Aviation & Cockpit Operations', sublabel: 'Pilot, Flight Operations (OFP, METAR/TAF, FDP crew rest limits)', icon: '✈️', category: 'meslek' },
-  { id: 'KAMU', label: 'Civil Service & Corporate Office', sublabel: 'Civil Servant, HR, Public Administration (Official decrees, petitions, direct procurement)', icon: '🗂️', category: 'meslek' },
-  { id: 'TICARET', label: 'Commerce, Sales & Retail', sublabel: 'Sales Advisor, Cashier, Shop Owner (Client quotes, register balance, Z-report)', icon: '💼', category: 'meslek' },
-  { id: 'GUMRUK', label: 'Customs & International Trade', sublabel: 'Customs Broker (Red lane inspection, ATR, bill of lading, delivery order)', icon: '📦', category: 'meslek' },
-  { id: 'SAVUNMA', label: 'Defense, Police & Military', sublabel: 'Police, Gendarmerie, Soldier, Firefighter, Security (Detention timer, roll call, SCBA, X-ray)', icon: '👮', category: 'meslek' },
-  { id: 'EGITIM', label: 'Education & School Administration', sublabel: 'Teacher, Principal, Academic (Exam grading, lesson plans, payroll, proctoring)', icon: '📚', category: 'meslek' },
-  { id: 'TEKNIK', label: 'Engineering & Construction Site', sublabel: 'Civil, Electrical, Mechanical, Software (Soil tests, 30mA leakage, LOTO, deployment)', icon: '🏗️', category: 'meslek' },
-  { id: 'FINANS', label: 'Finance & CPA / Accounting', sublabel: 'CPA, Accountant, Auditor (VAT withholding, tax declarations, social security, e-Ledger)', icon: '📊', category: 'meslek' },
-  { id: 'GASTRONOMI', label: 'Gastronomy & Culinary Arts', sublabel: 'Chef, Line Cook, Kitchen Staff (Mise en place, HACCP, cold storage, tasting briefing)', icon: '👨‍🍳', category: 'meslek' },
-  { id: 'KUAFOR', label: 'Hair & Beauty Salon', sublabel: 'Hair Stylist, Colorist (Bleaching timer, keratin, autoclave sterilization)', icon: '✂️', category: 'meslek' },
-  { id: 'SAGLIK', label: 'Healthcare & Clinical Medicine', sublabel: 'Doctor, Nurse, Pharmacist, Dentist (SBAR handover, informed consent, transfusions)', icon: '🩺', category: 'meslek' },
-  { id: 'HUKUK', label: 'Law & Justice', sublabel: 'Lawyer, Judge, Notary, Mediator (Legal notifications, hearings, writs, appeals)', icon: '⚖️', category: 'meslek' },
-  { id: 'LOJISTIK', label: 'Logistics & Fleet Transport', sublabel: 'Heavy Vehicle Driver, Fleet Dispatch, Auto Repair (Tachograph, pre-trip inspection, CMR, battery)', icon: '🚛', category: 'meslek' },
-  { id: 'DENIZCILIK', label: 'Maritime & Ship Management', sublabel: 'Captain, Deck & Engine Officers (PSC audit, ISM, draft survey, ballast log)', icon: '⚓', category: 'meslek' },
-  { id: 'ISG', label: 'Occupational Health & Safety (OHS)', sublabel: 'OHS Specialist, Occupational Doctor (Safety training, near-miss report, hot work permit)', icon: '🦺', category: 'meslek' },
-  { id: 'ECZACILIK', label: 'Pharmacy & Drug Dispensing', sublabel: 'Pharmacist, Pharmacy Tech (Cold chain 2-8°C, prescription claim, serial verification)', icon: '💊', category: 'meslek' },
-  { id: 'EMLAK', label: 'Real Estate & Property', sublabel: 'Realtor, Broker (Title deed, property tax, earthquake insurance, mortgage release)', icon: '🏢', category: 'meslek' },
-  { id: 'VETERINER', label: 'Veterinary & Animal Health', sublabel: 'Veterinary Clinic (Microchip, rabies titer, vaccination schedule, post-op suture)', icon: '🐾', category: 'meslek' },
+
+  // Official 27 MYK Sectors (Alphabetical in EN)
+  { id: 'TARIM_AV_BALIK', label: 'Agriculture, Hunting & Fisheries', sublabel: 'Agronomist, Farmer, Fisher (Crop registration, hail insurance, drip irrigation, sun rule)', icon: '🌿', category: 'meslek' },
+  { id: 'OTOMOTIV', label: 'Automotive & Vehicle Service', sublabel: 'Auto Mechanic, Service Advisor (OBD fault clearing, wheel alignment, torque specs, inspection)', icon: '🚗', category: 'meslek' },
+  { id: 'IS_YONETIM', label: 'Business & Corporate Management', sublabel: 'Manager, HR Specialist, Project Manager (PMP, sprint, onboarding/offboarding, ISO 9001)', icon: '🗂️', category: 'meslek' },
+  { id: 'KIMYA_PETROL_PLASTIK', label: 'Chemical, Petroleum, Rubber & Plastics', sublabel: 'Chemist, Refinery, Injection Molding (MSDS/SDS, flash point, polymerization, extrusion)', icon: '🧪', category: 'meslek' },
+  { id: 'TICARET', label: 'Commerce (Sales & Marketing)', sublabel: 'Sales Advisor, Cashier, Merchant (Quote follow-up, Z-report, cash reconciliation, stock count)', icon: '💼', category: 'meslek' },
+  { id: 'TOPLUMSAL_KISISEL', label: 'Community & Personal Services', sublabel: 'Hairdresser, Barber, Esthetician, Dry Cleaning (Bleaching timer, autoclave sterilizer, stain removal)', icon: '✂️', category: 'meslek' },
+  { id: 'INSAAT', label: 'Construction & Civil Engineering', sublabel: 'Civil Engineer, Site Chief, Architect (Concrete pour, 7/28 day break test, rebar inspection, progress billing)', icon: '🏗️', category: 'meslek' },
+  { id: 'KULTUR_SANAT_TASARIM', label: 'Culture, Arts & Design', sublabel: 'Graphic Designer, Artist, Architect, Fashion Designer (Copyright law, portfolio renders, exhibitions)', icon: '🎨', category: 'meslek' },
+  { id: 'EGITIM', label: 'Education', sublabel: 'Teacher, School Principal, Academic (Grading portal, lesson plans, payroll, IEP, exam evaluation)', icon: '📚', category: 'meslek' },
+  { id: 'ELEKTRIK_ELEKTRONIK', label: 'Electrical & Electronics', sublabel: 'Electrical Engineer, Technician, Panel Builder (LOTO lock, 30mA residual current, compensation, PLC)', icon: '⚡', category: 'meslek' },
+  { id: 'ENERJI', label: 'Energy & Power Systems', sublabel: 'Solar, Wind, Hydro, Natural Gas, Grid (Market bid submission, transformer oil test, inverters)', icon: '🔋', category: 'meslek' },
+  { id: 'CEVRE', label: 'Environment & Waste Management', sublabel: 'Environmental Engineer, Waste Management (EIA report, emission test, waste transfer forms)', icon: '♻️', category: 'meslek' },
+  { id: 'FINANS', label: 'Finance & Accounting', sublabel: 'CPA, Accountant, Auditor, Banker (VAT, payroll taxes, e-Ledger, withholding, tax audit)', icon: '📊', category: 'meslek' },
+  { id: 'GIDA', label: 'Food Processing & Production', sublabel: 'Food Engineer, Quality Assurance, Production (HACCP, CCP, batch/lot tracking, cold chain)', icon: '🌾', category: 'meslek' },
+  { id: 'CAM_CIMENTO_TOPRAK', label: 'Glass, Cement & Earth', sublabel: 'Cement, Ready-Mix, Ceramics, Glass Industry (Clinker kiln temperature, compressive strength)', icon: '🧱', category: 'meslek' },
+  { id: 'SAGLIK_SOSYAL', label: 'Healthcare & Social Services', sublabel: 'Doctor, Nurse, Pharmacist, Dentist (SBAR handover, informed consent, medication claim, 2-8°C cold chain)', icon: '🩺', category: 'meslek' },
+  { id: 'BILISIM', label: 'Information Technologies (IT)', sublabel: 'Software Engineer, DevOps, Cybersecurity (Prod deploy, PR review, SemVer, DB migration, API)', icon: '💻', category: 'meslek' },
+  { id: 'ADALET_GUVENLIK', label: 'Justice & Security', sublabel: 'Lawyer, Judge, Police, Military, Firefighter, Security (Notifications, hearings, detention timer, SCBA)', icon: '⚖️', category: 'meslek' },
+  { id: 'MAKINE', label: 'Machinery & Mechanical Engineering', sublabel: 'Mechanical Engineer, CNC Machinist, Maintenance (Hydrostatic pressure test, vibration analysis)', icon: '⚙️', category: 'meslek' },
+  { id: 'MEDYA_ILETISIM_YAYIN', label: 'Media, Communications & Publishing', sublabel: 'Journalist, Director, Video Editor, Creator (Call sheet, -23 LUFS broadcast standard, press embargo)', icon: '🎬', category: 'meslek' },
+  { id: 'METAL', label: 'Metal & Metallurgy', sublabel: 'Metallurgical Engineer, Welder, Foundryman (WPS/PQR weld procedure, NDT non-destructive testing)', icon: '🔩', category: 'meslek' },
+  { id: 'MADEN', label: 'Mining & Mineral Extraction', sublabel: 'Mining Engineer, Quarry Foreman, Driller (CH4/CO gas testing, roof support, blasting safety)', icon: '⛏️', category: 'meslek' },
+  { id: 'SPOR_REKREASYON', label: 'Sports & Recreation', sublabel: 'Coach, Fitness Trainer, Referee, Facility Manager (Periodization, lactate threshold, roster report)', icon: '⚽', category: 'meslek' },
+  { id: 'TEKSTIL_GIYIM_DERI', label: 'Textiles, Apparel & Leather', sublabel: 'Pattern Maker, Garment, Fabric & Leather (Marker planning, shrinkage test, proto sample approval)', icon: '🧵', category: 'meslek' },
+  { id: 'TURIZM_KONAKLAMA_YIYECEK', label: 'Tourism, Hospitality & Food Services', sublabel: 'Executive Chef, Cook, Hotel Staff (Mise en place, HACCP cold room, room inspection checklist)', icon: '👨‍🍳', category: 'meslek' },
+  { id: 'ULASTIRMA_LOJISTIK', label: 'Transportation, Logistics & Communications', sublabel: 'Heavy Vehicle Driver, Captain, Pilot, Courier (Tachograph 4.5h break, CMR, weighbridge, PSC, METAR)', icon: '🚛', category: 'meslek' },
+  { id: 'AGAC_KAGIT', label: 'Woodworking, Paper & Paper Products', sublabel: 'Furniture Maker, Millwork, Paper & Packaging (Panel sizing, cutting plan, %8-12 wood moisture)', icon: '🪵', category: 'meslek' },
 ];
 
 export function getLocalizedWorkDomainOptions(language: string = 'tr'): WorkDomainOption[] {
