@@ -3817,6 +3817,162 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
       'Liman Başkanlığına varış öncesi ISPS Pre-Arrival Formunu ve yük manifestosunu acente kanalıyla ulaştır',
       'Tüm liman harçları ve kontroller bitiminde Yola Elverişlilik Belgesini (Port Clearance) teslim al'
     ]
+  },
+  // ECZACILIK & MEDULA SUT SENARYOLARI
+  {
+    id: 'eczacilik_soguk_zincir_takip',
+    category: 'saglik',
+    domain: 'ECZACILIK',
+    keywords: ['soğuk zincir', 'soguk zincir', 'aşı dolabı', 'asi dolabi', '2-8 derece', 'ısı takip çizelgesi', 'data logger'],
+    baslik: '2-8°C Soğuk Zincir & Isı Takip Kaydı',
+    ikon: '❄️',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Sabah (09:00) & Akşam (18:00)',
+    hazirlikZamani: 'Mesai Başlangıcı',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '❄️ Aşı ve insülinlerin bozulmaması için sıcaklık 2-8°C aralığında olmalı, günde 2 kez çizelgeye ıslak imza atılmalıdır.',
+    oncedenYapilacaklar: [
+      'Buzdolabının dijital data-logger ve termometresini oku (2-8°C aralığı kontrolü)',
+      'Sabah ve akşam sıcaklık/nem değerlerini İlçe Sağlık takip formuna işle',
+      'Olası elektrik kesintisi için akü ve SMS uyarı mekanizmasını test et',
+      'İlaçların buzdolabı iç duvarlarına ve dondurucu kanallarına değmediğini kontrol et'
+    ]
+  },
+  {
+    id: 'eczacilik_medula_fatura_kolileme',
+    category: 'finans',
+    domain: 'ECZACILIK',
+    keywords: ['medula', 'sut provizyon', 'sgk fatura', 'reçete kolisi', 'fatura sonlandırma', 'a grubu reçete', 'b grubu reçete'],
+    baslik: 'Medula SGK Fatura Sonlandırma & Reçete Kolisi',
+    ikon: '📑',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Ayın 1-15 Takvimi (17:00)',
+    hazirlikZamani: 'Teslimden 1 Gün Önce',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '📑 SUT kuralları gereği katılım payı muafiyeti, doktor kaşesi ve ICD-10 teşhis kodu kontrol edilmeden koli kapatılamaz.',
+    oncedenYapilacaklar: [
+      'Medula sisteminden A, B ve C grubu döküm listesi ve fatura çıktısını al',
+      'Reçeteler üzerindeki doktor kaşesi, ıslak imza veya e-Reçete onayını doğrula',
+      'Raporlu ilaçlarda SUT EK-4/D katılım payı muafiyet kodlarını kontrol et',
+      'e-Faturayı SGK Sağlık Sosyal Güvenlik Merkezine hitaben düzenle',
+      'Reçeteleri koliye yerleştirip koli teslim föyünü imzala'
+    ]
+  },
+  {
+    id: 'eczacilik_renkli_recete_its',
+    category: 'resmi',
+    domain: 'ECZACILIK',
+    keywords: ['kırmızı reçete', 'kirmizi recete', 'yeşil reçete', 'yesil recete', 'renkli reçete', 'rrs', 'narkotik ilaç', 'kontrole tabi'],
+    baslik: 'Renkli Reçete (RRS) & İTS Satış Onayı',
+    ikon: '💊',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Anlık İşlem (RRS)',
+    hazirlikZamani: 'Derhal',
+    akilliFisilti: '💊 Uyuşturucu ve psikotrop ilaçlar kilitli çelik kasada saklanmalı; RRS onayı ve kimlik tespiti yapılmadan teslim edilemez.',
+    oncedenYapilacaklar: [
+      'Renkli Reçete Sisteminde (RRS) e-Reçete doğrulaması yap',
+      'Teslim alan kişinin T.C. Kimlik Numarasını ve imzasını sisteme kaydet',
+      'İTS (İlaç Takip Sistemi) üzerinden karekod satış bildirimini sonlandır',
+      'İlacı kilitli çelik ecza dolabından çıkarıp Uyuşturucu Defterine kaydet'
+    ]
+  },
+  {
+    id: 'eczacilik_majistral_laboratuvar',
+    category: 'saglik',
+    domain: 'ECZACILIK',
+    keywords: ['majistral', 'havan', 'laboratuvar defteri', 'merhem hazırla', 'salisilik asit', 'pomad', 'bud süresi'],
+    baslik: 'Majistral Formül Hazırlığı & Defter Kaydı',
+    ikon: '⚗️',
+    renk: '#EDE9FE',
+    varsayilanZaman: 'Hazırlık Önceliği (13:30)',
+    hazirlikZamani: '30 dk önce',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '⚗️ Türk Farmakopesine göre hazırlanan formül Majistral Defterine işlenmeli, dahili kırmızı veya harici beyaz etiket yapıştırılmalıdır.',
+    oncedenYapilacaklar: [
+      'Hassas terazi kalibrasyonunu kontrol et ve laboratuvarı sterilize et',
+      'Hammaddelerin analiz sertifikası ve miad uygunluğunu doğrula',
+      'Maksimum tek ve günlük doz Farmakope kontrollerini yap',
+      'Majistral Kayıt Defterine reçete no, doktor, hasta ve bileşenleri işle',
+      'Dahili veya Harici etiketi yapıştırıp BUD tüketim tarihini yaz'
+    ]
+  },
+  // İSG (İŞ SAĞLIĞI VE GÜVENLİĞİ) SENARYOLARI
+  {
+    id: 'isg_ibys_egitim_bildirimi',
+    category: 'resmi',
+    domain: 'ISG',
+    keywords: ['ibys', 'isg eğitimi', 'is güvenliği eğitimi', 'çalışan eğitimi bildirimi', '16 saat eğitim', 'temel isg'],
+    baslik: 'İBYS Çalışan Eğitimi & Yasal Bildirim',
+    ikon: '🦺',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Eğitim Bildirim Süresi (17:00)',
+    hazirlikZamani: 'Eğitimden 1 Gün Önce',
+    hazirlikSaatOncesi: 24,
+    akilliFisilti: '🦺 Çok Tehlikeli sınıfta yılda 16 saat, Tehlikeli sınıfta 12 saat, Az Tehlikeli sınıfta 8 saat eğitim tamamlanıp İBYS\'ye bildirilmelidir.',
+    oncedenYapilacaklar: [
+      'Tehlike sınıfına uygun eğitim sunumu ve müfredatını hazırla',
+      'Katılımcıların ıslak imzalı Eğitim Katılım Tutanaklarını tanzim et',
+      'Ölçme-değerlendirme sınavı uygulayarak puanları kaydet',
+      'İSG-KATİP / İBYS sistemine T.C. Kimlik Numaraları ile eğitim bildirimini yap'
+    ]
+  },
+  {
+    id: 'isg_ramak_kala_dof',
+    category: 'resmi',
+    domain: 'ISG',
+    keywords: ['ramak kala', 'ramakkala', 'ucuz atlattık', 'kaza tehlikesi', 'döf formu', 'kök neden analizi'],
+    baslik: 'Ramak Kala Olay Tutanağı & DÖF Başlatma',
+    ikon: '⚠️',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Aynı Gün İçinde (İvedi)',
+    hazirlikZamani: 'Derhal',
+    akilliFisilti: '⚠️ Ramak kala olayları gelecekteki ölümcül iş kazalarının habercisidir; olay yeri fotoğraflanmalı ve 5 Neden analiziyle DÖF açılmalıdır.',
+    oncedenYapilacaklar: [
+      'Olay yerini fotoğrafla ve tanık çalışanların ifadelerini al',
+      'Ramak Kala Olay Bildirim Tutanağını düzenle',
+      '5 Neden (5 Why) yöntemiyle kök neden analizini yap',
+      'Düzeltici ve Önleyici Faaliyet (DÖF) açıp termin tarihi belirle',
+      'İSG Onaylı Defterine ve Kurul gündemine kaydet'
+    ]
+  },
+  {
+    id: 'isg_is_kazasi_sgk_bildirimi',
+    category: 'resmi',
+    domain: 'ISG',
+    keywords: ['iş kazası', 'is kazasi', 'sgk kaza bildirimi', '3 iş günü kuralı', 'kaza tahkikat'],
+    baslik: 'SGK İş Kazası Bildirimi (Kritik 3 İş Günü)',
+    ikon: '⏱️',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Son Tarih: 3 İş Günü (17:00)',
+    hazirlikZamani: 'Kaza Anında Derhal',
+    akilliFisilti: '⏱️ 5510 sayılı Kanun gereği iş kazası kolluğa derhal, SGK\'ya en geç 3 iş günü içinde bildirilmelidir; aksi halde ağır para cezası uygulanır.',
+    oncedenYapilacaklar: [
+      'İlk yardım uygulayıp 112 ile hastaneye sevk et; adli vakada kolluğa haber ver',
+      'Kaza mahallini muhafaza edip Kaza İnceleme Tutanağını tanzim et',
+      'SGK e-Bildirge portalından İş Kazası Bildirim Formunu onaylat',
+      'İşyeri hekimi ile istirahat rapor sürecini takip et',
+      'Tespit ve Öneri Defterine kazayı ve önlemleri işle'
+    ]
+  },
+  {
+    id: 'isg_sicak_is_kapali_alan_izni',
+    category: 'ev_teknik',
+    domain: 'ISG',
+    keywords: ['sıcak iş', 'sicak is', 'kaynak izni', 'kapalı alan', 'gaz ölçümü', 'çalışma izni', 'ptw'],
+    baslik: 'Sıcak İş & Kapalı Alan İzni (PTW)',
+    ikon: '🔥',
+    renk: '#FECACA',
+    varsayilanZaman: 'Çalışma Başlangıcı (Ön Onay)',
+    hazirlikZamani: 'Çalışmadan 45 dk Önce',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '🔥 Kaynak öncesi 15 metredeki yanıcılar temizlenmeli; kapalı alanda gaz ölçümü yapılmadan ve yangın gözcüsü olmadan girilemez.',
+    oncedenYapilacaklar: [
+      '15 m yarıçaptaki yanıcı maddeleri kaldır ve yangın battaniyesi ser',
+      'Çoklu gaz dedektörü ile Oksijen (%19.5-23.5) ve LEL (<%10) ölçümü yap',
+      'En az 2 adet 6 kg ABC KKT yangın söndürücü ve yangın gözcüsü yerleştir',
+      'Paraşüt tipi emniyet kemeri ve kurtarma tripodu vinç bağlantısını test et',
+      'Sıcak İş İzin Belgesini (PTW) imzalayıp çalışma noktasına as'
+    ]
   }
 ];
 

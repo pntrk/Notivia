@@ -36,6 +36,12 @@ export interface PredictiveInference {
  */
 export function getDomainTheme(domain: string): { ikon: string; renk: string } {
   const d = domain.toLowerCase();
+  if (d.includes('eczacilik') || d.includes('eczane') || d.includes('medula') || d.includes('sut') || d.includes('majistral') || d.includes('rrs')) {
+    return { ikon: '💊', renk: '#FEE2E2' };
+  }
+  if (d.includes('isg') || d.includes('is_sagligi') || d.includes('is_guvenligi') || d.includes('ibys') || d.includes('ramak_kala') || d.includes('kkd')) {
+    return { ikon: '🦺', renk: '#FEF3C7' };
+  }
   if (d.includes('klinik') || d.includes('hemsire') || d.includes('doktor') || d.includes('cerrahi') || d.includes('preop') || d.includes('postop') || d.includes('hbys') || d.includes('order')) {
     let ikon = '🩺';
     if (d.includes('hemsire') || d.includes('tedavi') || d.includes('enjeksiyon') || d.includes('tetkik') || d.includes('order')) ikon = '💉';
@@ -260,7 +266,7 @@ export function getDomainTheme(domain: string): { ikon: string; renk: string } {
     let ikon = '🌿';
     let renk = '#DCFCE7';
     if (d.includes('orkide') || d.includes('petunya')) {
-      ikon = '🌸';
+      ikon = '������';
       renk = '#FDF2F8';
     } else if (d.includes('sardunya') || d.includes('baris_cicegi') || d.includes('cicek') || d.includes('çiçek')) {
       ikon = '🌺';

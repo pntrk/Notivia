@@ -21,7 +21,9 @@ export type ProfessionDomain =
   | 'VETERINER'
   | 'EMLAK'
   | 'DENIZCILIK'
-  | 'GUMRUK';
+  | 'GUMRUK'
+  | 'ECZACILIK'
+  | 'ISG';
 
 export interface ActionButtonConfig {
   id: string;
@@ -405,6 +407,40 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
     ]
   },
 
+  ECZACILIK: {
+    domain: 'ECZACILIK',
+    displayName: 'Eczacılık & Medula SUT',
+    bgCard: 'bg-rose-50/70 border-rose-200',
+    borderAccent: 'border-l-rose-600',
+    badgeBg: 'bg-rose-100',
+    badgeText: 'text-rose-900',
+    btnPrimaryBg: 'bg-rose-600 hover:bg-rose-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'cold_chain_check', label: '2-8°C Soğuk Zincir', icon: '❄️', actionType: 'LOTO_CHECK' },
+      { id: 'medula_claim', label: 'Medula Provizyon & SUT', icon: '📑', actionType: 'COPY_TEMPLATE' },
+      { id: 'rrs_red_rx', label: 'Renkli Reçete (RRS) & İTS', icon: '💊', actionType: 'TIMER' },
+      { id: 'magistral_record', label: 'Majistral Formül Defteri', icon: '⚗️', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
+
+  ISG: {
+    domain: 'ISG',
+    displayName: 'İş Sağlığı ve Güvenliği (İSG)',
+    bgCard: 'bg-amber-50/80 border-amber-300',
+    borderAccent: 'border-l-amber-600',
+    badgeBg: 'bg-amber-100',
+    badgeText: 'text-amber-900',
+    btnPrimaryBg: 'bg-amber-700 hover:bg-amber-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'ibys_training_rec', label: 'İBYS Eğitim Bildirimi', icon: '🦺', actionType: 'COPY_TEMPLATE' },
+      { id: 'near_miss_dof', label: 'Ramak Kala & DÖF Tutanağı', icon: '⚠️', actionType: 'COPY_TEMPLATE' },
+      { id: 'accident_3day', label: '3 Gün SGK Kaza Bildirimi', icon: '⏱️', actionType: 'TIMER' },
+      { id: 'hot_work_permit', label: 'Sıcak İş & Kapalı Alan İzni', icon: '🔥', actionType: 'LOTO_CHECK' }
+    ]
+  },
+
   GENEL: {
     domain: 'GENEL',
     displayName: 'Genel',
@@ -452,6 +488,8 @@ export const WORK_DOMAIN_OPTIONS: WorkDomainOption[] = [
   { id: 'HAVACILIK', label: 'Havacılık & Kokpit', sublabel: 'Pilot, Uçuş Operasyon (OFP, METAR, FDP dinlenme)', icon: '✈️', category: 'meslek' },
   { id: 'KAMU', label: 'Kamu & Kurumsal Ofis', sublabel: 'Devlet Memuru, İK, Bürokrasi (EBYS, CİMER, doğrudan temin 22/d)', icon: '🗂️', category: 'meslek' },
   { id: 'ZIRAAT', label: 'Ziraat & Botanik', sublabel: 'Bahçıvan, Peyzaj, Çiçekçi (Güneş kuralı, sulama serinliği)', icon: '🌿', category: 'meslek' },
+  { id: 'ECZACILIK', label: 'Eczacılık & Medula SUT', sublabel: 'Eczacı, Eczane Teknikeri (Soğuk zincir 2-8°C, Medula SUT, kırmızı reçete İTS, majistral)', icon: '💊', category: 'meslek' },
+  { id: 'ISG', label: 'İş Sağlığı ve Güvenliği (İSG)', sublabel: 'İSG Uzmanı, İşyeri Hekimi (İBYS eğitimi, periyodik muayene, ramak kala, 6331 risk)', icon: '🦺', category: 'meslek' },
 ];
 
 export function detectDomainFromNote(note: { ikon?: string; baslik?: string; anomali_notu?: string | null; teshis_notu?: string | null; renk?: string }): ProfessionDomain {
@@ -460,6 +498,29 @@ export function detectDomainFromNote(note: { ikon?: string; baslik?: string; ano
 
   if (icon === '📝' && !note.anomali_notu && !note.teshis_notu) {
     return 'SADE';
+  }
+
+  if (
+    icon === '💊' || icon === '⚗️' ||
+    text.includes('eczane') || text.includes('eczacı') || text.includes('medula') ||
+    text.includes('sut provizyon') || text.includes('kırmızı reçete') || text.includes('kirmizi recete') ||
+    text.includes('yeşil reçete') || text.includes('renkli reçete') || text.includes('rrs') ||
+    text.includes('majistral') || text.includes('its karekod') || text.includes('soğuk zincir') ||
+    text.includes('soguk zincir') || text.includes('aşı dolabı') || text.includes('miad')
+  ) {
+    return 'ECZACILIK';
+  }
+
+  if (
+    icon === '🦺' ||
+    text.includes('isg') || text.includes('iş sağlığı') || text.includes('is sagligi') ||
+    text.includes('iş güvenliği') || text.includes('is guvenligi') || text.includes('ibys') ||
+    text.includes('ramak kala') || text.includes('ramakkala') || text.includes('6331') ||
+    text.includes('onaylı defter') || text.includes('risk değerlendirmesi') || text.includes('risk analizi') ||
+    text.includes('kkd') || text.includes('periyodik muayene') || text.includes('sıcak iş') ||
+    text.includes('kapalı alan') || text.includes('kaza bildirimi') || text.includes('iş kazası')
+  ) {
+    return 'ISG';
   }
 
   if (icon === '🐾' || text.includes('petvet') || text.includes('mikroçip') || text.includes('kuduz titrasyon') || text.includes('veteriner') || text.includes('kedi aşı') || text.includes('köpek aşı') || text.includes('parazit')) {

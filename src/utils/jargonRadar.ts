@@ -486,6 +486,52 @@ const DOMAIN_RULES: DomainRule[] = [
       { keyword: 'ordino', hour: 14, minute: 0 },
       { keyword: 'kırmızı hat', hour: 13, minute: 30 }
     ]
+  },
+  {
+    domain: 'ECZACILIK',
+    defaultIcon: '💊',
+    defaultColor: '#FEE2E2',
+    exclusiveKeywords: [
+      'medula', 'sut provizyon', 'renkli reçete', 'kırmızı reçete', 'yeşil reçete',
+      'mor reçete', 'turuncu reçete', 'rrs', 'majistral', 'its karekod',
+      'karekod sonlandırma', 'soğuk zincir', 'aşı dolabı', 'data logger',
+      'miadı dolan', 'ilaç imha', 'ecza deposu', 'ssgm', 'katılım payı muafiyet',
+      'uyuşturucu defteri', 'farmakope', 'nöbetçi eczane', 'bud kullanım süresi'
+    ],
+    supportingKeywords: [
+      'eczane', 'eczacı', 'reçete', 'ilaç', 'muadil', 'provizyon', 'kupür',
+      'rapor', 'kronik', 'etken madde', 'doz', 'şurup', 'merhem', 'damla'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'soğuk zincir', hour: 9, minute: 0 },
+      { keyword: 'medula', hour: 17, minute: 0 },
+      { keyword: 'majistral', hour: 13, minute: 30 },
+      { keyword: 'nöbet', hour: 18, minute: 30 }
+    ]
+  },
+  {
+    domain: 'ISG',
+    defaultIcon: '🦺',
+    defaultColor: '#FEF3C7',
+    exclusiveKeywords: [
+      'ibys', 'isg-katip', 'ramak kala', 'ramakkala', '6331', 'onaylı defter',
+      'risk değerlendirmesi', 'fine-kinney', 'l matris', 'periyodik muayene',
+      'odyometri', 'solunum fonksiyon', 'sft testi', 'akciğer grafisi',
+      'iş kazası bildirimi', 'kkd zimmet', 'sıcak iş izni', 'ptw',
+      'kapalı alan çalışma', 'isg kurulu', 'tahliye tatbikatı', 'yangın tüpü basınç'
+    ],
+    supportingKeywords: [
+      'isg', 'iş güvenliği', 'iş sağlığı', 'işyeri hekimi', 'isg uzmanı',
+      'iş güvenliği uzmanı', 'baret', 'emniyet kemeri', 'tatbikat', 'döf',
+      'kaza', 'tehlike', 'risk'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'eğitim', hour: 17, minute: 0 },
+      { keyword: 'ramak kala', hour: 11, minute: 0 },
+      { keyword: 'kurul', hour: 14, minute: 0 },
+      { keyword: 'tatbikat', hour: 11, minute: 0 },
+      { keyword: 'kaza', hour: 17, minute: 0 }
+    ]
   }
 ];
 

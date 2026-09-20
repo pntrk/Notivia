@@ -1,3 +1,20 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  html, body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
+/* Mobile Touch & Ergonomics Enhancements */
+.card-swipe-container {
+  touch-action: pan-y pinch-zoom;
+  -webkit-touch-callout: none;
+}
+
+/* Smooth rubber-band and gesture transitions */
+.swipe-transition {
+  transition: transform 0.26s cubic-bezier(0.2, 0.85, 0.32, 1.05);
+}

@@ -647,13 +647,11 @@ export function parseVeterinaryIntent(
   // 18. VETBİS, İLAÇ TAKİP SİSTEMİ (İTS) & TIBBİ ATIK YÖNETİMİ
   if (
     text.includes('vetbis') ||
-    text.includes('ilaç takip sistemi') ||
     text.includes('its veteriner') ||
-    text.includes('kırmızı reçete') ||
-    text.includes('yeşil reçete') ||
     text.includes('ketamin') ||
     text.includes('tıbbi atık veteriner') ||
-    text.includes('otoklav')
+    (userDomain === 'VETERINER' && (text.includes('kırmızı reçete') || text.includes('yeşil reçete') || text.includes('ilaç takip sistemi'))) ||
+    (text.includes('veteriner') && (text.includes('kırmızı reçete') || text.includes('yeşil reçete') || text.includes('ilaç takip sistemi')))
   ) {
     return {
       id: `vet_vetbis_${Date.now()}`,

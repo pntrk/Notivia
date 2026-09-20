@@ -35,6 +35,14 @@ import {
   type VeterinaryTask
 } from '../services/veterinaryEngine.ts';
 import {
+  parsePharmacyIntent,
+  type PharmacyTask
+} from '../services/pharmacyEngine.ts';
+import {
+  parseOccupationalSafetyIntent,
+  type OccupationalSafetyTask
+} from '../services/occupationalSafetyEngine.ts';
+import {
   parseAdvancedProfessionIntent,
   type AdvancedProfessionTask
 } from '../services/advancedProfessionEngine.ts';
@@ -51,6 +59,14 @@ export {
   parseVeterinaryIntent,
   type VeterinaryTask
 } from '../services/veterinaryEngine.ts';
+export {
+  parsePharmacyIntent,
+  type PharmacyTask
+} from '../services/pharmacyEngine.ts';
+export {
+  parseOccupationalSafetyIntent,
+  type OccupationalSafetyTask
+} from '../services/occupationalSafetyEngine.ts';
 export { splitCompoundUtterance } from '../services/engine/sentenceSplitter.ts';
 export {
   resolveContextualTime,
@@ -5574,11 +5590,18 @@ export function detectDailyLifeCoreOrSingleAlarm(cleanInput: string, baseDate: D
     const isDentist = lower.includes('diş') || lower.includes('dis');
     const baslik = isDentist ? 'Diş Hekimi Randevusu' : 'Doktor Randevusu';
     const ikon = isDentist ? '🦷' : '🩺';
+    const isMissingTime = !appointmentIso;
+    const netlestirmeSorusu = isDentist
+      ? 'Hangi gün ve saatte diş hekiminde olacaksınız?'
+      : 'Hangi gün ve saatte doktor randevunuz var?';
 
     return {
       baslik,
-      zaman: zamanDisplay,
+      zaman: isMissingTime ? 'Tarih Belirlenmedi (Randevu)' : zamanDisplay,
       tarih_iso: appointmentIso,
+      eksik_bilgi: isMissingTime ? true : undefined,
+      netlestirme_sorusu: isMissingTime ? netlestirmeSorusu : undefined,
+      soru: isMissingTime ? netlestirmeSorusu : undefined,
       hazirlik_zamani: '30 Dk Önce Yola Çıkış',
       hazirlik_iso: prepIso,
       action_items: [], // KESİNLİKLE BOŞ! (Yapay alt adımlar üretilmez)
@@ -5587,7 +5610,9 @@ export function detectDailyLifeCoreOrSingleAlarm(cleanInput: string, baseDate: D
       isMicroTask: true,
       deviceNotificationEnabled: true,
       anomali_notu: '🚗 30 dakika önce yola çıkış hatırlatılacaktır.',
-      sesli_fisilti: `${baslik} ${zamanDisplay} için kaydedildi. 30 dakika önce yola çıkış hatırlatılacak.`
+      sesli_fisilti: isMissingTime
+        ? netlestirmeSorusu
+        : `${baslik} ${zamanDisplay} için kaydedildi. 30 dakika önce yola çıkış hatırlatılacak.`
     };
   }
 
@@ -5658,6 +5683,40 @@ export function extractSimpleNoteFromText(
       anomali_notu: vetResult.mevzuat_notu,
       sesli_fisilti: vetResult.sesli_geribildirim
     }, cleanInput, userDomain);
+  }
+
+  // 0.006 ÖNCELİK: ECZACILIK, MEDULA SUT, SOĞUK ZİNCİR & MAJİSTRAL PROTOKOLÜ (PHARMACY ENGINE)
+  // (2-8°C Soğuk Zincir/Aşı Dolabı, Medula Fatura/Reçete Kolisi, Renkli Reçete RRS/İTS, Miad İadesi, Majistral Formül)
+  const pharmacyResult = parsePharmacyIntent(cleanInput, baseDate, userDomain);
+  if (pharmacyResult) {
+    return enrichWithPredictiveGraph({
+      baslik: pharmacyResult.baslik,
+      zaman: pharmacyResult.zaman_etiketi,
+      tarih_iso: pharmacyResult.tarih_iso,
+      hazirlik_zamani: pharmacyResult.hazirlik_zamani,
+      action_items: pharmacyResult.action_items,
+      ikon: pharmacyResult.ikon,
+      renk: pharmacyResult.renk,
+      anomali_notu: pharmacyResult.mevzuat_notu,
+      sesli_fisilti: pharmacyResult.sesli_geribildirim
+    }, cleanInput, userDomain || 'ECZACILIK');
+  }
+
+  // 0.007 ÖNCELİK: İŞ SAĞLIĞI VE GÜVENLİĞİ PROTOKOLÜ (OCCUPATIONAL SAFETY & HEALTH ENGINE)
+  // (İBYS Eğitim Bildirimi, Ramak Kala Olayı & DÖF, SGK İş Kazası 3 İş Günü, Periyodik Muayene, İSG Kurulu, Sıcak İş İzni PTW)
+  const isgResult = parseOccupationalSafetyIntent(cleanInput, baseDate, userDomain);
+  if (isgResult) {
+    return enrichWithPredictiveGraph({
+      baslik: isgResult.baslik,
+      zaman: isgResult.zaman_etiketi,
+      tarih_iso: isgResult.tarih_iso,
+      hazirlik_zamani: isgResult.hazirlik_zamani,
+      action_items: isgResult.action_items,
+      ikon: isgResult.ikon,
+      renk: isgResult.renk,
+      anomali_notu: isgResult.mevzuat_notu,
+      sesli_fisilti: isgResult.sesli_geribildirim
+    }, cleanInput, userDomain || 'ISG');
   }
 
   // 0.01 ÖNCELİK: DERİNLEŞTİRİLMİŞ MESLEKİ & KURUMSAL SENARYO MOTORU (ADVANCED PROFESSION ENGINE)
@@ -5782,10 +5841,22 @@ export function extractSimpleNoteFromText(
       ? shortScenario.oncedenYapilacaklar.map(task => ({ task, is_completed: false }))
       : [];
 
+    const hasExplicitTime = !!(periodicIso || tarih_iso);
+    const isCourtClarification = !hasExplicitTime && (
+      shortScenario.id === 'hukuk_durusma_adliye' ||
+      lower.includes('duruşma') || lower.includes('durusma')
+    );
+    const netlestirmeSorusu = isCourtClarification
+      ? 'Hangi gün ve saatte adliyede olacaksınız?'
+      : undefined;
+
     return enrichWithPredictiveGraph({
       baslik: shortScenario.baslik,
-      zaman: periodicZaman || zaman || shortScenario.varsayilanZaman,
+      zaman: isCourtClarification ? 'Tarih Belirlenmedi (Adliye)' : (periodicZaman || zaman || shortScenario.varsayilanZaman),
       tarih_iso: periodicIso || tarih_iso,
+      eksik_bilgi: isCourtClarification ? true : undefined,
+      netlestirme_sorusu: isCourtClarification ? netlestirmeSorusu : undefined,
+      soru: isCourtClarification ? netlestirmeSorusu : undefined,
       action_items: actionItems,
       ikon: shortScenario.ikon,
       renk: shortScenario.renk,
@@ -5797,7 +5868,7 @@ export function extractSimpleNoteFromText(
       periyodik,
       anomali_notu: shortScenario.akilliFisilti,
       hazirlik_zamani: shortScenario.hazirlikZamani,
-      sesli_fisilti: shortScenario.akilliFisilti ? `${shortScenario.baslik} planlandı. ${shortScenario.akilliFisilti}` : undefined,
+      sesli_fisilti: isCourtClarification ? netlestirmeSorusu : (shortScenario.akilliFisilti ? `${shortScenario.baslik} planlandı. ${shortScenario.akilliFisilti}` : undefined),
     }, cleanInput, activeDomain);
   }
 
@@ -5906,6 +5977,36 @@ export function extractSimpleNoteFromText(
           renk: vetResult.renk,
           anomali_notu: vetResult.mevzuat_notu,
           sesli_fisilti: vetResult.sesli_geribildirim
+        }, cleanInput, activeDomain);
+      }
+    } else if (activeDomain === 'ECZACILIK') {
+      const pharmaResult = parsePharmacyIntent(cleanInput, baseDate, activeDomain);
+      if (pharmaResult) {
+        return enrichWithPredictiveGraph({
+          baslik: pharmaResult.baslik,
+          zaman: pharmaResult.zaman_etiketi,
+          tarih_iso: pharmaResult.tarih_iso,
+          hazirlik_zamani: pharmaResult.hazirlik_zamani,
+          action_items: pharmaResult.action_items,
+          ikon: pharmaResult.ikon,
+          renk: pharmaResult.renk,
+          anomali_notu: pharmaResult.mevzuat_notu,
+          sesli_fisilti: pharmaResult.sesli_geribildirim
+        }, cleanInput, activeDomain);
+      }
+    } else if (activeDomain === 'ISG') {
+      const isgResult = parseOccupationalSafetyIntent(cleanInput, baseDate, activeDomain);
+      if (isgResult) {
+        return enrichWithPredictiveGraph({
+          baslik: isgResult.baslik,
+          zaman: isgResult.zaman_etiketi,
+          tarih_iso: isgResult.tarih_iso,
+          hazirlik_zamani: isgResult.hazirlik_zamani,
+          action_items: isgResult.action_items,
+          ikon: isgResult.ikon,
+          renk: isgResult.renk,
+          anomali_notu: isgResult.mevzuat_notu,
+          sesli_fisilti: isgResult.sesli_geribildirim
         }, cleanInput, activeDomain);
       }
     } else if (activeDomain === 'KUAFOR' || activeDomain === 'GUZELLIK' || activeDomain === 'MUTFAK') {
@@ -6029,6 +6130,8 @@ export function extractSimpleNoteFromText(
     lower.includes('toplantı') || lower.includes('toplanti') ||
     lower.includes('görüşme') || lower.includes('gorusme') ||
     lower.includes('mülakat') || lower.includes('buluşma') ||
+    lower.includes('buluş') || lower.includes('bulus') ||
+    lower.includes('randevu') ||
     lower.includes('kurul') ||
     (lower.includes('müdür') && !lower.includes('tl') && !lower.includes('lira') && !lower.includes('borç') && !lower.includes('öde'));
 
@@ -6072,19 +6175,26 @@ export function extractSimpleNoteFromText(
     }
 
     const hasExplicitTime = !!(periodicIso || tarih_iso);
-    const isClarificationNeeded = !hasExplicitTime && (lower.includes('randevu') || lower.includes('görüşme') || lower.includes('gorusme') || lower.includes('buluşma') || lower.includes('toplantı') || lower.includes('toplanti'));
+    const isClarificationNeeded = !hasExplicitTime && (
+      lower.includes('randevu') || lower.includes('görüş') || lower.includes('gorus') ||
+      lower.includes('buluş') || lower.includes('bulus') || lower.includes('toplantı') || lower.includes('toplanti')
+    );
+    const meetingQuestion = (lower.includes('buluş') || lower.includes('bulus'))
+      ? 'Hangi gün ve saatte buluşacaksınız?'
+      : 'Hangi gün ve saatte planlayalım?';
 
     return enrichWithPredictiveGraph({
       baslik: baslik.slice(0, 32),
-      zaman: isClarificationNeeded ? null : (periodicZaman || zaman || 'Planlanan Toplantı'),
+      zaman: isClarificationNeeded ? 'Tarih Belirlenmedi (Buluşma/Toplantı)' : (periodicZaman || zaman || 'Planlanan Toplantı'),
       tarih_iso: isClarificationNeeded ? null : (periodicIso || tarih_iso),
       eksik_bilgi: isClarificationNeeded ? true : undefined,
-      soru: isClarificationNeeded ? 'Hangi gün ve saatte planlayalım?' : undefined,
+      netlestirme_sorusu: isClarificationNeeded ? meetingQuestion : undefined,
+      soru: isClarificationNeeded ? meetingQuestion : undefined,
       ikon,
       renk,
       tetikleyici,
       periyodik,
-      sesli_fisilti: isClarificationNeeded ? 'Hangi gün ve saatte planlayalım?' : undefined,
+      sesli_fisilti: isClarificationNeeded ? meetingQuestion : undefined,
     }, cleanInput);
   }
 

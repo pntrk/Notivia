@@ -26,6 +26,8 @@ export const DOMAIN_KEYWORDS: Record<ProfessionDomain, RegExp> = {
   EMLAK: /(taşınmaz ticareti|web-tapu|webtapu|dask|ipotek fek|rayiç bedel|tapu harcı|cayma akçesi|emlak|gayrimenkul|tahliye taahhüt|yer gösterme|kat irtifakı|kat mülkiyeti|iskan|takyidat|güvenli tapu|taputakas|kira sözleşmesi|kira kontratı|kiracı tahliyesi|depozito mahsubu)/i,
   DENIZCILIK: /(psc denetim|port state control|ism kodu|draft survey|sintine|balast|oow|seyir vardiyası|kaptan|gemi|denizcilik)/i,
   GUMRUK: /(atr dolaşım|menşe şahadetnamesi|antrepo|supalan|kırmızı hat|sarı hat|konşimento|bill of lading|ordino|gümrük müşavir)/i,
+  ECZACILIK: /(eczane|eczacı|medula|sut provizyon|kırmızı reçete|kirmizi recete|yeşil reçete|yesil recete|renkli reçete|rrs|majistral|its karekod|karekod sonlandırma|soğuk zincir|soguk zincir|aşı dolabı|asi dolabi|miadı dolan|ilaç imha|depo iade)/i,
+  ISG: /(isg|iş sağlığı|is sagligi|iş güvenliği|is guvenligi|ibys|ramak kala|ramakkala|6331|onaylı defter|risk değerlendirmesi|risk analizi|kkd|periyodik muayene|sıcak iş|kapalı alan|kaza bildirimi|iş kazası|is kazasi|fine kinney|l matris)/i,
   GENEL: /(taahhüt|abonelik|gss|işkur|su arıtma|kombi bakımı|derin dondurucu|ecza dolabı|kira|aidat|iş başvurusu|mülakat|cv güncelle|özgeçmiş|emekli|günlük rutin|fatura)/i
 };
 

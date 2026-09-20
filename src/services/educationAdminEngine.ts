@@ -67,9 +67,29 @@ export function parseSchoolAdminIntent(
 
   const isEduDomain = userDomain === 'EGITIM';
 
+  // İSG (İş Sağlığı ve Güvenliği) ve Ramak Kala gibi spesifik saha durumları eğitim motoruna takılmamalıdır
+  const isOccupationalSafetyQuery =
+    text.includes('ramak kala') ||
+    text.includes('ibys') ||
+    text.includes('iş güvenliği') ||
+    text.includes('is güvenligi') ||
+    text.includes('iş sağlığı') ||
+    text.includes('is sagligi') ||
+    text.includes('iş kazası') ||
+    text.includes('is kazasi') ||
+    text.includes('çalışan eğitimi') ||
+    text.includes('calisan egitimi') ||
+    text.includes('döf formu') ||
+    text.includes('sıcak iş izni') ||
+    text.includes('kapalı alan izni');
+
+  if (!isEduDomain && isOccupationalSafetyQuery) {
+    return null;
+  }
+
   const isEducationContext =
     isEduDomain ||
-    text.includes('okul') || text.includes('eğitim') || text.includes('egitim') ||
+    text.includes('okul') || (text.includes('eğitim') && !text.includes('iş güvenliği') && !text.includes('çalışan')) || text.includes('egitim') ||
     text.includes('öğretmen') || text.includes('ogretmen') || text.includes('müdür') || text.includes('mudur') ||
     text.includes('sınav') || text.includes('sinav') || text.includes('e-okul') || text.includes('eokul') ||
     text.includes('not giriş') || text.includes('not giris') || text.includes('kazanım analizi') || text.includes('barem') ||
@@ -84,8 +104,8 @@ export function parseSchoolAdminIntent(
     text.includes('ek ders') || text.includes('kbs') || text.includes('puantaj') || text.includes('dyk') ||
     text.includes('taşımalı') || text.includes('tasimali') || text.includes('yemek numune') || text.includes('servis denetim') ||
     text.includes('devamsızlık') || text.includes('devamsizlik') || text.includes('disiplin') || text.includes('öddk') || text.includes('oddk') ||
-    text.includes('tatbikat') || text.includes('tahliye tatbikatı') || text.includes('yangın tatbikatı') || text.includes('ziyaretçi defteri') ||
-    text.includes('destek eğitim') || text.includes('destek egitim') || text.includes('bep') || text.includes('ram') ||
+    text.includes('tahliye tatbikatı') || text.includes('yangın tatbikatı') || text.includes('ziyaretçi defteri') ||
+    text.includes('destek eğitim') || text.includes('destek egitim') || text.includes('bep') || /\bram\b/i.test(text) ||
     text.includes('pdr') || text.includes('rehberlik') || text.includes('tefbis') || text.includes('kantin kira') || text.includes('okul aile birliği');
 
   if (!isEducationContext) return null;

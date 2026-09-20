@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Mic } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
@@ -86,6 +86,7 @@ import { resolveInstitutionalReference } from './utils/institutionalCalendar.ts'
 import { parseDailyLifeTime, type ParsedTimeResult } from './utils/date.ts';
 import { sanitizeSpokenText, sanitizeCardTitle } from './utils/speechSanitizer.ts';
 import { detectDomainFromJargon } from './utils/jargonRadar.ts';
+import { detectIntentRoute, getQuickClarificationOptions, INSTANT_JARGON_CHIPS, type ClarificationOption, type IntentRouteResult } from './utils/interactiveIvr.ts';
 export { parseDailyLifeTime, type ParsedTimeResult };
 
 export interface SimpleCardItem {
@@ -358,6 +359,7 @@ export default function App() {
   const [isListening, setIsListening] = useState<boolean>(false);
   const [showTextInput, setShowTextInput] = useState<boolean>(false);
   const [textInput, setTextInput] = useState<string>('');
+  const [liveSpeechTranscript, setLiveSpeechTranscript] = useState<string>('');
   const [showSearch, setShowSearch] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [modalImgSrc, setModalImgSrc] = useState<string | null>(null);
@@ -402,6 +404,17 @@ export default function App() {
   const isDraggingActiveRef = useRef<boolean>(false);
   const dragTriggerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragTargetIdRef = useRef<string | null>(null);
+
+  // Mobil Sola Kaydırma (Swipe-to-Reveal Actions: Alarm, Düzenle, Sil) State & Ref'leri
+  const [swipedCardId, setSwipedCardId] = useState<string | null>(null);
+  const [swipeOffsets, setSwipeOffsets] = useState<{ [cardId: string]: number }>({});
+  const isSwipingCardRef = useRef<boolean>(false);
+  const swipeStartXRef = useRef<number>(0);
+  const swipeStartYRef = useRef<number>(0);
+  const activeSwipingCardIdRef = useRef<string | null>(null);
+
+  // Not Silme Öncesi Güvenli Onay Modalı (Delete Confirmation Dialog)
+  const [deleteConfirmNote, setDeleteConfirmNote] = useState<SimpleCardItem | null>(null);
 
   // Geri alma state'i
   const [undoToast, setUndoToast] = useState<{
@@ -500,6 +513,25 @@ export default function App() {
       // ignore
     }
   };
+
+  // 1. Görsel "Sesli Yanıt / Hızlı Niyet Sezici" (Live Intent Waveform & Jargon Radar)
+  const activeInputForRadar = isListening
+    ? (liveSpeechTranscript || (statusText !== 'Söyle, çek ya da yaz' && statusText !== 'Dinleniyor...' ? statusText : ''))
+    : textInput;
+
+  const liveIntentRoute = useMemo(() => {
+    return detectIntentRoute(activeInputForRadar, workDomain);
+  }, [activeInputForRadar, workDomain]);
+
+  // 2 Kelimelik Akıllı Tamamlayıcı Çipler (Instant Jargon Chips)
+  const sortedInstantJargonChips = useMemo(() => {
+    if (!workDomain || workDomain === 'GENEL' || workDomain === 'SADE') {
+      return INSTANT_JARGON_CHIPS;
+    }
+    const matching = INSTANT_JARGON_CHIPS.filter((c) => c.domain === workDomain);
+    const others = INSTANT_JARGON_CHIPS.filter((c) => c.domain !== workDomain);
+    return [...matching, ...others];
+  }, [workDomain]);
 
   // Ekran üstü anlık asistan bildirim bildirici (Push Banner)
   const [activeBannerNotification, setActiveBannerNotification] = useState<{
@@ -1025,6 +1057,7 @@ export default function App() {
           setIsListening(true);
           isSubmitted = false;
           currentTranscript = '';
+          setLiveSpeechTranscript('');
           playMicListeningChime();
           if (pendingCapturedImageRef.current) {
             setStatusText(language === 'en' ? 'Image ready. Listening...' : 'Görsel hazır. Dinleniyor...');
@@ -1040,6 +1073,7 @@ export default function App() {
           for (let i = 0; i < event.results.length; i++) {
             currentTranscript += event.results[i][0].transcript + ' ';
           }
+          setLiveSpeechTranscript(currentTranscript.trim());
 
           setStatusText(
             language === 'en' 
@@ -1093,6 +1127,7 @@ export default function App() {
   const resetMicUI = () => {
     setIsListening(false);
     setStatusText('Söyle, çek ya da yaz');
+    setLiveSpeechTranscript('');
   };
 
   // Butona basıldığında hızlı yapay zeka metin giriş alanını aç/kapa
@@ -2182,9 +2217,156 @@ export default function App() {
     isDraggingActiveRef.current = false;
   };
 
-  // Kart tıklandığında çoklu seçim modundaysa seçimi aç/kapat
+  // Mobil Sola Kaydırma (Swipe-to-Reveal: Alarm, Düzenle, Sil) Yöneticileri
+  const handleCardTouchStart = (cardId: string, e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+
+    if (swipedCardId && swipedCardId !== cardId) {
+      setSwipedCardId(null);
+      setSwipeOffsets({});
+    }
+
+    swipeStartXRef.current = touch.clientX;
+    swipeStartYRef.current = touch.clientY;
+    isSwipingCardRef.current = false;
+    activeSwipingCardIdRef.current = cardId;
+
+    startLongPress(cardId, touch.clientX, touch.clientY, e.target);
+  };
+
+  const handleCardTouchMove = (cardId: string, e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (!touch || activeSwipingCardIdRef.current !== cardId) return;
+
+    const dx = touch.clientX - swipeStartXRef.current;
+    const dy = touch.clientY - swipeStartYRef.current;
+
+    if (!isSwipingCardRef.current) {
+      if (Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+        isSwipingCardRef.current = true;
+        cancelLongPress();
+      } else if (Math.abs(dy) > 10) {
+        cancelLongPress(touch.clientX, touch.clientY, true);
+        return;
+      }
+    }
+
+    if (isSwipingCardRef.current) {
+      const isCurrentlyOpen = swipedCardId === cardId;
+      const baseOffset = isCurrentlyOpen ? -192 : 0;
+      const targetOffset = Math.min(0, Math.max(-210, baseOffset + dx));
+      setSwipeOffsets((prev) => ({ ...prev, [cardId]: targetOffset }));
+    }
+  };
+
+  const handleCardTouchEnd = (cardId: string) => {
+    cancelLongPress();
+    if (activeSwipingCardIdRef.current === cardId && isSwipingCardRef.current) {
+      const currentOffset = swipeOffsets[cardId] ?? (swipedCardId === cardId ? -192 : 0);
+      const isCurrentlyOpen = swipedCardId === cardId;
+
+      if (!isCurrentlyOpen) {
+        if (currentOffset < -55) {
+          setSwipedCardId(cardId);
+          setSwipeOffsets((prev) => ({ ...prev, [cardId]: -192 }));
+          if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            try { navigator.vibrate(25); } catch {}
+          }
+        } else {
+          setSwipedCardId(null);
+          setSwipeOffsets((prev) => ({ ...prev, [cardId]: 0 }));
+        }
+      } else {
+        if (currentOffset > -140) {
+          setSwipedCardId(null);
+          setSwipeOffsets((prev) => ({ ...prev, [cardId]: 0 }));
+        } else {
+          setSwipedCardId(cardId);
+          setSwipeOffsets((prev) => ({ ...prev, [cardId]: -192 }));
+        }
+      }
+    }
+    isSwipingCardRef.current = false;
+    activeSwipingCardIdRef.current = null;
+  };
+
+  const handleCardMouseDown = (cardId: string, e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    if (e.target instanceof HTMLElement && e.target.closest('button, input, textarea, a, [contenteditable="true"]')) {
+      return;
+    }
+    if (swipedCardId && swipedCardId !== cardId) {
+      setSwipedCardId(null);
+      setSwipeOffsets({});
+    }
+    swipeStartXRef.current = e.clientX;
+    swipeStartYRef.current = e.clientY;
+    isSwipingCardRef.current = false;
+    activeSwipingCardIdRef.current = cardId;
+    startLongPress(cardId, e.clientX, e.clientY, e.target);
+  };
+
+  const handleCardMouseMove = (cardId: string, e: React.MouseEvent) => {
+    if (activeSwipingCardIdRef.current !== cardId) return;
+    const dx = e.clientX - swipeStartXRef.current;
+    const dy = e.clientY - swipeStartYRef.current;
+
+    if (!isSwipingCardRef.current) {
+      if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) {
+        isSwipingCardRef.current = true;
+        cancelLongPress();
+      }
+    }
+
+    if (isSwipingCardRef.current) {
+      const isCurrentlyOpen = swipedCardId === cardId;
+      const baseOffset = isCurrentlyOpen ? -192 : 0;
+      const targetOffset = Math.min(0, Math.max(-210, baseOffset + dx));
+      setSwipeOffsets((prev) => ({ ...prev, [cardId]: targetOffset }));
+    }
+  };
+
+  const handleCardMouseUp = (cardId: string) => {
+    cancelLongPress();
+    if (activeSwipingCardIdRef.current === cardId && isSwipingCardRef.current) {
+      const currentOffset = swipeOffsets[cardId] ?? (swipedCardId === cardId ? -192 : 0);
+      const isCurrentlyOpen = swipedCardId === cardId;
+
+      if (!isCurrentlyOpen) {
+        if (currentOffset < -55) {
+          setSwipedCardId(cardId);
+          setSwipeOffsets((prev) => ({ ...prev, [cardId]: -192 }));
+        } else {
+          setSwipedCardId(null);
+          setSwipeOffsets((prev) => ({ ...prev, [cardId]: 0 }));
+        }
+      } else {
+        if (currentOffset > -140) {
+          setSwipedCardId(null);
+          setSwipeOffsets((prev) => ({ ...prev, [cardId]: 0 }));
+        } else {
+          setSwipedCardId(cardId);
+          setSwipeOffsets((prev) => ({ ...prev, [cardId]: -192 }));
+        }
+      }
+    }
+    isSwipingCardRef.current = false;
+    activeSwipingCardIdRef.current = null;
+  };
+
+  // Kart tıklandığında çoklu seçim modundaysa seçimi aç/kapat, swipe açıksa kapat
   const handleCardClick = (cardId: string, e: React.MouseEvent) => {
-    if (isLongPressFiredRef.current) {
+    if (isLongPressFiredRef.current || isSwipingCardRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+
+    // Açık olan swipe çekmecesini tek tıkla kapat
+    if (swipedCardId) {
+      setSwipedCardId(null);
+      setSwipeOffsets({});
       e.preventDefault();
       e.stopPropagation();
       return;
@@ -2385,6 +2567,18 @@ export default function App() {
         : (language === 'tr' ? 'Hatırlatıcı kaldırıldı' : 'Reminder removed')
     );
     setTimeout(() => setStatusText(t.speakOrWrite), 2500);
+  };
+
+  // 2. Eksik Bilgi Netleştirme Yanıtı (Interactive IVR Clarification)
+  const handleResolveClarification = (cardId: string, option: ClarificationOption) => {
+    updateNoteReminder(cardId, option.dateIso, option.displayZaman, true);
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        const u = new SpeechSynthesisUtterance(`${option.displayZaman} olarak planlandı.`);
+        u.lang = language === 'en' ? 'en-US' : 'tr-TR';
+        window.speechSynthesis.speak(u);
+      } catch {}
+    }
   };
 
   // Kartı Doğrudan Cihaz Takvimine (Google Takvim / Apple Takvim) Otomatik ve Dosyasız Aktarma
@@ -3307,6 +3501,12 @@ export default function App() {
                 const cardBgColor = isWeatherTriggered ? '#FEE2E2' : (item.guncel_renk || item.renk || getCardColor(item.id, item.baslik));
                 const isSelected = selectedCardIds.includes(item.id);
 
+                // Mobil Sola Kaydırma (Swipe-to-Reveal: Alarm, Düzenle, Sil) Durumu
+                const isSwipedOpen = swipedCardId === item.id;
+                const isDraggingThis = activeSwipingCardIdRef.current === item.id && isSwipingCardRef.current;
+                const currentDragOffset = swipeOffsets[item.id];
+                const cardOffset = currentDragOffset !== undefined ? currentDragOffset : (isSwipedOpen ? -192 : 0);
+
                 return (
                   <React.Fragment key={item.id}>
                     {/* Yukarıya Yerleştirme Göstergesi (Drop Indicator Before) */}
@@ -3320,71 +3520,128 @@ export default function App() {
                       </div>
                     )}
 
+                    {/* Sola Kaydırılabilir Kart Dış Kapsayıcısı */}
                     <div
+                      className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl group/swipe select-none card-swipe-container"
                       data-card-id={item.id}
-                      draggable={!isSelectMode}
-                      onDragStart={(e) => handleDesktopDragStart(e, item.id)}
-                      onDragOver={(e) => handleDesktopDragOver(e, item.id)}
-                      onDragLeave={(e) => handleDesktopDragLeave(e, item.id)}
-                      onDrop={(e) => handleDesktopDrop(e, item.id)}
-                      onDragEnd={handleDesktopDragEnd}
-                      onTouchStart={(e) => {
-                        const touch = e.touches[0];
-                        if (touch) {
-                          startLongPress(item.id, touch.clientX, touch.clientY, e.target);
-                        }
-                      }}
-                      onTouchMove={(e) => {
-                        const touch = e.touches[0];
-                        if (touch) {
-                          cancelLongPress(touch.clientX, touch.clientY, true);
-                        }
-                      }}
-                      onTouchEnd={() => cancelLongPress()}
-                      onTouchCancel={() => cancelLongPress()}
-                      onMouseDown={(e) => {
-                        if (e.button === 0) {
-                          startLongPress(item.id, e.clientX, e.clientY, e.target);
-                        }
-                      }}
-                      onMouseMove={(e) => {
-                        cancelLongPress(e.clientX, e.clientY, true);
-                      }}
-                      onMouseUp={() => cancelLongPress()}
-                      onMouseLeave={() => cancelLongPress()}
-                      onContextMenu={(e) => {
-                        if (isLongPressFiredRef.current || isSelectMode) {
-                          e.preventDefault();
-                        }
-                      }}
-                      onClick={(e) => handleCardClick(item.id, e)}
-                      className={`card w-full max-w-full overflow-hidden flex flex-col transition-all duration-300 hover:shadow-md ${
-                        viewMode === 'grid'
-                          ? 'p-2 sm:p-3 rounded-xl sm:rounded-2xl gap-1.5'
-                          : 'p-3.5 sm:p-4 rounded-2xl gap-2 sm:gap-2.5'
-                      } ${
-                        item.isRemoving ? 'scale-95 opacity-0' : 'scale-100'
-                      } ${
-                        draggingCardId === item.id
-                          ? 'opacity-40 scale-[0.98] ring-2 ring-indigo-500 shadow-xl z-20'
-                          : ''
-                      } ${
-                        isWeatherTriggered
-                          ? 'ring-2 ring-red-500 bg-red-50 animate-pulse'
-                          : isCompleted
-                          ? 'opacity-70 saturate-50 border-solid border-stone-300/80 shadow-none'
-                          : isExpired 
-                          ? 'opacity-95 border-dashed border-amber-300/80 shadow-xs' 
-                          : 'opacity-100 border-solid border-black/8 dark:border-white/10 shadow-xs'
-                      } ${isSelected ? 'ring-2 ring-stone-800 dark:ring-stone-200' : ''} ${
-                        isSelectMode ? 'cursor-pointer select-none active:scale-[0.99]' : ''
-                      }`}
-                      style={{
-                        backgroundColor: cardBgColor,
-                        borderWidth: '1px',
-                        WebkitTouchCallout: 'none',
-                      }}
                     >
+                      {/* Sola Çekince Açılan Mobil Aksiyon Çekmecesi (Alarm Kur, Düzenle, Sil) */}
+                      <div className="absolute inset-y-0 right-0 flex items-stretch z-0 bg-stone-900 dark:bg-stone-950 rounded-xl sm:rounded-2xl overflow-hidden shadow-inner">
+                        {/* 1. Alarm Kur / Takvim */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveReminderEditCardId(item.id);
+                            setSwipedCardId(null);
+                            setSwipeOffsets({});
+                            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                              try { navigator.vibrate(25); } catch {}
+                            }
+                          }}
+                          className="w-16 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer px-1 text-center select-none"
+                          title={language === 'tr' ? 'Alarm & Hatırlatıcı Kur' : 'Set Alarm'}
+                        >
+                          <span className="text-lg sm:text-xl">🔔</span>
+                          <span className="text-[10px] sm:text-[11px] font-bold tracking-tight">
+                            {language === 'tr' ? 'Alarm' : 'Alarm'}
+                          </span>
+                        </button>
+
+                        {/* 2. Düzenle */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingNote(item);
+                            setSwipedCardId(null);
+                            setSwipeOffsets({});
+                            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                              try { navigator.vibrate(25); } catch {}
+                            }
+                          }}
+                          className="w-16 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer px-1 text-center select-none"
+                          title={language === 'tr' ? 'Kartı Düzenle' : 'Edit'}
+                        >
+                          <span className="text-lg sm:text-xl">✏️</span>
+                          <span className="text-[10px] sm:text-[11px] font-bold tracking-tight">
+                            {language === 'tr' ? 'Düzenle' : 'Edit'}
+                          </span>
+                        </button>
+
+                        {/* 3. Sil (Öncesinde Onay İster) */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteConfirmNote(item);
+                            setSwipedCardId(null);
+                            setSwipeOffsets({});
+                            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                              try { navigator.vibrate(30); } catch {}
+                            }
+                          }}
+                          className="w-16 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer px-1 text-center select-none"
+                          title={language === 'tr' ? 'Notu Sil' : 'Delete'}
+                        >
+                          <span className="text-lg sm:text-xl">🗑️</span>
+                          <span className="text-[10px] sm:text-[11px] font-bold tracking-tight">
+                            {language === 'tr' ? 'Sil' : 'Delete'}
+                          </span>
+                        </button>
+                      </div>
+
+                      {/* Ön Plandaki Kaydırılabilir Not Kartı */}
+                      <div
+                        draggable={!isSelectMode}
+                        onDragStart={(e) => handleDesktopDragStart(e, item.id)}
+                        onDragOver={(e) => handleDesktopDragOver(e, item.id)}
+                        onDragLeave={(e) => handleDesktopDragLeave(e, item.id)}
+                        onDrop={(e) => handleDesktopDrop(e, item.id)}
+                        onDragEnd={handleDesktopDragEnd}
+                        onTouchStart={(e) => handleCardTouchStart(item.id, e)}
+                        onTouchMove={(e) => handleCardTouchMove(item.id, e)}
+                        onTouchEnd={() => handleCardTouchEnd(item.id)}
+                        onTouchCancel={() => handleCardTouchEnd(item.id)}
+                        onMouseDown={(e) => handleCardMouseDown(item.id, e)}
+                        onMouseMove={(e) => handleCardMouseMove(item.id, e)}
+                        onMouseUp={() => handleCardMouseUp(item.id)}
+                        onMouseLeave={() => handleCardMouseUp(item.id)}
+                        onContextMenu={(e) => {
+                          if (isLongPressFiredRef.current || isSelectMode) {
+                            e.preventDefault();
+                          }
+                        }}
+                        onClick={(e) => handleCardClick(item.id, e)}
+                        className={`card relative z-10 w-full max-w-full overflow-hidden flex flex-col transition-all duration-300 hover:shadow-md ${
+                          viewMode === 'grid'
+                            ? 'p-2.5 sm:p-3 rounded-xl sm:rounded-2xl gap-1.5'
+                            : 'p-3.5 sm:p-4 rounded-2xl gap-2 sm:gap-2.5'
+                        } ${
+                          item.isRemoving ? 'scale-95 opacity-0' : 'scale-100'
+                        } ${
+                          draggingCardId === item.id
+                            ? 'opacity-40 scale-[0.98] ring-2 ring-indigo-500 shadow-xl z-20'
+                            : ''
+                        } ${
+                          isWeatherTriggered
+                            ? 'ring-2 ring-red-500 bg-red-50 animate-pulse'
+                            : isCompleted
+                            ? 'opacity-70 saturate-50 border-solid border-stone-300/80 shadow-none'
+                            : isExpired 
+                            ? 'opacity-95 border-dashed border-amber-300/80 shadow-xs' 
+                            : 'opacity-100 border-solid border-black/8 dark:border-white/10 shadow-xs'
+                        } ${isSelected ? 'ring-2 ring-stone-800 dark:ring-stone-200' : ''} ${
+                          isSelectMode ? 'cursor-pointer select-none active:scale-[0.99]' : ''
+                        }`}
+                        style={{
+                          backgroundColor: cardBgColor,
+                          borderWidth: '1px',
+                          transform: `translateX(${cardOffset}px)`,
+                          transition: isDraggingThis ? 'none' : 'transform 0.28s cubic-bezier(0.2, 0.85, 0.32, 1.05)',
+                          WebkitTouchCallout: 'none',
+                        }}
+                      >
                     {/* Üst Kısım: Başlık, İkon ve Hızlı İşlem Araç Çubuğu (Mobil Optimize Edilmiş Düzen) */}
                     <div className={viewMode === 'grid' ? 'flex flex-col items-start gap-1 w-full' : 'flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-2.5 w-full'}>
                       {/* Başlık, İkon ve Mobilde Hızlı Tamamlama Butonu */}
@@ -3603,14 +3860,17 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Direkt Silme Butonu (Çöp Kutusu) */}
+                        {/* Silme Butonu (Çöp Kutusu - Güvenli Onay İsteyen) */}
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            directDeleteNote(item.id);
+                            setDeleteConfirmNote(item);
+                            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                              try { navigator.vibrate(20); } catch {}
+                            }
                           }}
-                          className={`${viewMode === 'grid' ? 'w-5.5 h-5.5' : 'w-7.5 h-7.5'} rounded-md sm:rounded-lg flex items-center justify-center text-stone-500 hover:text-red-600 hover:bg-red-50 active:scale-90 transition-all cursor-pointer`}
+                          className={`${viewMode === 'grid' ? 'w-6 h-6' : 'w-8 h-8 sm:w-7.5 sm:h-7.5'} rounded-lg flex items-center justify-center text-stone-500 hover:text-red-600 hover:bg-red-50 active:scale-90 transition-all cursor-pointer`}
                           title={t.deleteNoteTitle}
                         >
                           <svg className={viewMode === 'grid' ? 'w-2.5 h-2.5' : 'w-3.5 h-3.5'} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3802,13 +4062,48 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* Netleştirme Sorusu / Eksik Bilgi Uyarısı */}
+                    {/* Netleştirme Sorusu / Eksik Bilgi Uyarısı - İnteraktif IVR Clarification Bubble */}
                     {(item.eksik_bilgi || item.netlestirme_sorusu || item.soru) && (
-                      <div className={`flex items-start gap-1 bg-sky-500/10 text-sky-950 border border-sky-500/20 rounded-lg leading-tight break-words ${
-                        viewMode === 'grid' ? 'text-[10px] p-1.5' : 'text-xs px-2.5 py-1.5'
+                      <div className={`rounded-xl bg-amber-500/10 dark:bg-amber-400/10 border border-amber-500/30 text-stone-900 dark:text-stone-100 flex flex-col gap-2 shadow-xs transition-all animate-in fade-in slide-in-from-top-1 duration-200 ${
+                        viewMode === 'grid' ? 'p-2 text-[10px]' : 'p-2.5 sm:p-3 text-xs'
                       }`}>
-                        <span className="shrink-0 mt-0.5">❓</span>
-                        <span className="font-medium">{item.netlestirme_sorusu || item.soru || 'Zaman bilgisi eksik'}</span>
+                        <div className="flex items-start gap-2">
+                          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0 text-xs font-bold mt-0.5">
+                            🎙️
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                                {language === 'en' ? 'Voice Clarification' : 'Sesli Netleştirme'}
+                              </span>
+                              <span className="text-[8.5px] px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 font-semibold font-mono">
+                                IVR
+                              </span>
+                            </div>
+                            <p className="font-semibold text-stone-900 dark:text-stone-100 leading-snug">
+                              {item.netlestirme_sorusu || item.soru || (language === 'en' ? 'Which day and time should we plan for?' : 'Hangi gün ve saat için planlayalım?')}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Tek dokunuşluk interaktif hızlı yanıt butonları */}
+                        <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-amber-500/20">
+                          {getQuickClarificationOptions().map((opt, optIdx) => (
+                            <button
+                              key={optIdx}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleResolveClarification(item.id, opt);
+                              }}
+                              className="inline-flex items-center gap-1 text-[10.5px] sm:text-[11px] font-medium px-2.5 py-1 rounded-lg bg-white/90 dark:bg-stone-900/90 text-stone-800 dark:text-stone-200 hover:bg-amber-100 dark:hover:bg-amber-950/70 border border-stone-200 dark:border-stone-700 hover:border-amber-400 active:scale-95 transition-all shadow-2xs cursor-pointer"
+                              title={`${opt.label} olarak kaydet`}
+                            >
+                              <span>{opt.icon}</span>
+                              <span className="whitespace-nowrap">{opt.label}</span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     )}
 
@@ -3979,6 +4274,7 @@ export default function App() {
                     })()}
                   </div>
                 </div>
+              </div>
 
                 {/* Aşağıya Yerleştirme Göstergesi (Drop Indicator After) */}
                 {dragOverCardId === item.id && dragPosition === 'after' && (
@@ -4069,6 +4365,64 @@ export default function App() {
                   : 'bg-white border-stone-200 text-stone-900'
               }`}
             >
+              {/* 1. Canlı Niyet Radar Barı (Live Intent Waveform) */}
+              {liveIntentRoute.hasActiveMatch && (
+                <div
+                  className="mb-2 px-3 py-1.5 rounded-xl border flex items-center justify-between gap-2 shadow-xs transition-all animate-in fade-in duration-200"
+                  style={{
+                    backgroundColor: `${liveIntentRoute.color}20`,
+                    borderColor: `${liveIntentRoute.color}60`
+                  }}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="flex items-end gap-0.5 h-3 px-0.5 shrink-0">
+                      <span className="w-1 bg-stone-800 dark:bg-stone-200 rounded-full animate-pulse h-2" style={{ animationDuration: '400ms' }} />
+                      <span className="w-1 bg-stone-800 dark:bg-stone-200 rounded-full animate-pulse h-3" style={{ animationDuration: '600ms', animationDelay: '150ms' }} />
+                      <span className="w-1 bg-stone-800 dark:bg-stone-200 rounded-full animate-pulse h-2" style={{ animationDuration: '450ms', animationDelay: '300ms' }} />
+                    </div>
+                    <span className="text-base shrink-0">{liveIntentRoute.icon}</span>
+                    <div className="min-w-0 flex items-center gap-1.5 truncate">
+                      <span className="text-[11px] font-bold text-stone-900 dark:text-stone-100 truncate">
+                        {liveIntentRoute.domainLabel}:
+                      </span>
+                      <span className="text-[11px] font-medium text-stone-700 dark:text-stone-300 truncate">
+                        {liveIntentRoute.routeTitle}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="hidden sm:inline-block text-[9.5px] font-medium bg-white/80 dark:bg-stone-800/80 px-2 py-0.5 rounded-full border border-black/5 dark:border-white/10 text-stone-600 dark:text-stone-300">
+                      🏛️ {liveIntentRoute.institution}
+                    </span>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-stone-900/10 dark:bg-white/10 text-stone-800 dark:text-stone-200">
+                      %{Math.round(liveIntentRoute.confidence * 100)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* 2 Kelimelik Akıllı Tamamlayıcı Çipler (Instant Jargon Chips) */}
+              <div className="flex items-center gap-1.5 overflow-x-auto py-1 mb-2 scrollbar-none -mx-1 px-1">
+                <span className="text-[10px] uppercase font-bold text-stone-400 dark:text-stone-500 tracking-wider shrink-0 flex items-center gap-1 mr-0.5">
+                  <span>⚡</span>
+                  <span>{language === 'en' ? 'Quick:' : 'Hızlı:'}</span>
+                </span>
+                {sortedInstantJargonChips.slice(0, 8).map((chip, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      setTextInput(chip.fullPrompt || chip.prompt || chip.label);
+                      setTimeout(() => manualTextInputRef.current?.focus(), 50);
+                    }}
+                    className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full whitespace-nowrap bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700 transition-all active:scale-95 shadow-2xs cursor-pointer"
+                  >
+                    <span>{chip.icon}</span>
+                    <span>{chip.label || chip.chipText}</span>
+                  </button>
+                ))}
+              </div>
+
               <textarea
                 id="manual-text-input"
                 ref={manualTextInputRef}
@@ -4120,12 +4474,46 @@ export default function App() {
             </form>
           )}
 
+          {/* Mikrofon açıkken Canlı Niyet Radar Barı (Live Intent Waveform) */}
+          {isListening && liveIntentRoute.hasActiveMatch && (
+            <div
+              className="mb-2 px-3 py-1.5 rounded-2xl border flex items-center justify-between gap-2 shadow-sm backdrop-blur-md transition-all animate-in fade-in slide-in-from-bottom-1 max-w-lg mx-auto w-full"
+              style={{
+                backgroundColor: `${liveIntentRoute.color}25`,
+                borderColor: `${liveIntentRoute.color}70`
+              }}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-end gap-0.5 h-3.5 px-0.5 shrink-0">
+                  <span className="w-1 bg-red-600 dark:bg-red-400 rounded-full animate-pulse h-2" style={{ animationDuration: '400ms' }} />
+                  <span className="w-1 bg-red-600 dark:bg-red-400 rounded-full animate-pulse h-3.5" style={{ animationDuration: '550ms', animationDelay: '120ms' }} />
+                  <span className="w-1 bg-red-600 dark:bg-red-400 rounded-full animate-pulse h-2.5" style={{ animationDuration: '480ms', animationDelay: '250ms' }} />
+                  <span className="w-1 bg-red-600 dark:bg-red-400 rounded-full animate-pulse h-3" style={{ animationDuration: '520ms', animationDelay: '60ms' }} />
+                </div>
+                <span className="text-base shrink-0">{liveIntentRoute.icon}</span>
+                <div className="min-w-0 flex items-center gap-1.5 truncate">
+                  <span className="text-[11.5px] font-bold text-stone-900 dark:text-stone-100 truncate">
+                    {liveIntentRoute.domainLabel}:
+                  </span>
+                  <span className="text-[11.5px] font-semibold text-stone-800 dark:text-stone-200 truncate">
+                    {liveIntentRoute.routeTitle}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-[10px] font-medium text-stone-700 dark:text-stone-300 bg-white/80 dark:bg-stone-900/80 px-2 py-0.5 rounded-full border border-black/5 dark:border-white/10 shadow-2xs">
+                  🏛️ {liveIntentRoute.institution}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Sesli Asistan Durum ve Dalga Göstergesi */}
           {isListening ? (
             <div className="mb-3 px-3.5 py-1.5 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800/80 rounded-full flex items-center gap-2.5 shadow-sm animate-in fade-in duration-200">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
               <span className="text-xs font-semibold text-red-600 dark:text-red-400 tracking-tight">
-                {statusText || 'Dinliyorum...'}
+                {liveSpeechTranscript ? `"${liveSpeechTranscript}"` : (statusText || 'Dinliyorum...')}
               </span>
               <div className="flex items-center gap-0.5 ml-1">
                 <span className="w-0.5 h-2 bg-red-500 rounded-full animate-pulse" style={{ animationDuration: '600ms', animationDelay: '0ms' }} />
@@ -4611,6 +4999,69 @@ export default function App() {
         viewMode={viewMode}
         onToggleViewMode={toggleViewMode}
       />
+
+      {/* Not Silme Onay Modalı (Mobil Ergonomik ve Güvenli Onay Penceresi) */}
+      {deleteConfirmNote && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={() => setDeleteConfirmNote(null)}
+        >
+          <div
+            className="w-full sm:max-w-md bg-white dark:bg-stone-900 rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 shadow-2xl border border-stone-200 dark:border-stone-800 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 select-none"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Mobil Çekme Çizgisi */}
+            <div className="w-12 h-1.5 bg-stone-300 dark:bg-stone-700 rounded-full mx-auto mb-4 sm:hidden" />
+
+            <div className="flex items-start gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 text-2xl shadow-xs">
+                🗑️
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base sm:text-lg font-bold text-stone-900 dark:text-white leading-snug">
+                  {language === 'tr' ? 'Bu notu silmek istiyor musunuz?' : 'Delete this note?'}
+                </h3>
+                <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mt-1 line-clamp-2">
+                  <span className="font-semibold text-stone-800 dark:text-stone-200">
+                    {deleteConfirmNote.ikon || '📌'} {deleteConfirmNote.baslik}
+                  </span>
+                  {language === 'tr' 
+                    ? ' başlıklı not ve varsa içindeki tüm alt görevler kalıcı olarak silinecektir.' 
+                    : ' and all its sub-tasks will be permanently deleted.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Butonlar: Mobil Ergonomik ve Kolay Dokunulabilir */}
+            <div className="mt-6 flex flex-col-reverse sm:flex-row items-center gap-2.5 sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmNote(null)}
+                className="w-full sm:w-auto px-5 py-3 rounded-xl border border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-200 font-medium text-sm hover:bg-stone-100 dark:hover:bg-stone-800 active:scale-95 transition-all cursor-pointer text-center"
+              >
+                {language === 'tr' ? 'Vazgeç' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const idToDelete = deleteConfirmNote.id;
+                  setDeleteConfirmNote(null);
+                  directDeleteNote(idToDelete);
+                  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                    try { navigator.vibrate([20, 50, 20]); } catch {}
+                  }
+                }}
+                className="w-full sm:w-auto px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold text-sm shadow-md shadow-red-600/20 active:scale-95 transition-all cursor-pointer text-center flex items-center justify-center gap-2"
+              >
+                <span>🗑️</span>
+                <span>{language === 'tr' ? 'Evet, Sil' : 'Yes, Delete'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
