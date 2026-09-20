@@ -1,6 +1,7 @@
 // src/services/educationAdminEngine.ts
 
 import { matchShortScenario } from '../utils/scenarioDatabase.ts';
+import { parseTemporalAndCleanLabel } from '../utils/date.ts';
 
 export interface SchoolAdminTask {
   id: string;
@@ -41,127 +42,27 @@ export interface ExtractedDateTime {
 }
 
 export function parseEduDateTime(rawText: string, now: Date = new Date(), defaultHour = 8, defaultMinute = 20): ExtractedDateTime {
-  const lower = rawText.toLowerCase().trim();
+  const parsed = parseTemporalAndCleanLabel(rawText, now);
+
+  const hour = parsed.hour !== null ? parsed.hour : defaultHour;
+  const minute = parsed.hour !== null ? parsed.minute : defaultMinute;
+  const dayLabel = parsed.dayLabel;
+
   const targetDate = new Date(now);
-
-  let dayOffset = 0;
-  let dayLabel = 'Bugün';
-
-  if (lower.includes('yarın') || lower.includes('yarin') || lower.includes('ertesi gün') || lower.includes('ertesi gun')) {
-    dayOffset = 1;
-    dayLabel = 'Yarın';
-  } else if (lower.includes('pazartesi')) {
-    const day = targetDate.getDay();
-    const diff = day === 1 ? 7 : (1 + 7 - day) % 7;
-    dayOffset = diff || 7;
-    dayLabel = 'Pazartesi';
-  } else if (lower.includes('cuma')) {
-    const day = targetDate.getDay();
-    const diff = day === 5 ? 7 : (5 + 7 - day) % 7;
-    dayOffset = diff || 7;
-    dayLabel = 'Cuma';
+  if (parsed.tarih_iso) {
+    const d = new Date(parsed.tarih_iso);
+    targetDate.setFullYear(d.getFullYear(), d.getMonth(), d.getDate());
+  } else if (dayLabel === 'Yarın') {
+    targetDate.setDate(targetDate.getDate() + 1);
   }
-
-  targetDate.setDate(targetDate.getDate() + dayOffset);
-
-  let hour: number | null = null;
-  let minute: number | null = null;
-
-  // 1. Digital time match: "08:20", "8.20", "08.20", "8:20", "8.20'de", etc.
-  const digitalMatch = lower.match(/\b(\d{1,2})[:.](\d{2})(?:'?(?:de|da|te|ta|ye|ya))?\b/);
-  if (digitalMatch) {
-    hour = parseInt(digitalMatch[1], 10);
-    minute = parseInt(digitalMatch[2], 10);
-  }
-
-  // 2. Textual time match (e.g. "sekiz yirmide", "sekiz yirmi", "sekiz buçukta", "dokuz ellide")
-  if (hour === null) {
-    const hourWords: [string, number][] = [
-      ['on iki', 12], ['oniki', 12], ['on bir', 11], ['onbir', 11], ['on', 10],
-      ['dokuz', 9], ['sekiz', 8], ['yedi', 7], ['altı', 6], ['alti', 6],
-      ['beş', 5], ['bes', 5], ['dört', 4], ['dort', 4], ['üç', 3], ['uc', 3],
-      ['iki', 2], ['bir', 1]
-    ];
-
-    const tensWords: [string, number][] = [
-      ['elli', 50], ['kırk', 40], ['kirk', 40], ['otuz', 30], ['yirmi', 20], ['on', 10]
-    ];
-
-    const onesWords: [string, number][] = [
-      ['dokuz', 9], ['sekiz', 8], ['yedi', 7], ['altı', 6], ['alti', 6],
-      ['beş', 5], ['bes', 5], ['dört', 4], ['dort', 4], ['üç', 3], ['uc', 3],
-      ['iki', 2], ['bir', 1]
-    ];
-
-    for (const [hWord, hVal] of hourWords) {
-      if (new RegExp(`\\b(?:saat\\s*)?${hWord}\\b`, 'i').test(lower)) {
-        hour = hVal;
-
-        if (new RegExp(`\\b${hWord}\\s+(?:buçuk|bucuk)\\b`, 'i').test(lower)) {
-          minute = 30;
-        } else if (new RegExp(`\\b${hWord}\\s+(?:çeyrek|ceyrek)\\b`, 'i').test(lower)) {
-          minute = 15;
-        } else {
-          for (const [tWord, tVal] of tensWords) {
-            if (new RegExp(`\\b${hWord}\\s+${tWord}\\b`, 'i').test(lower)) {
-              minute = tVal;
-              for (const [oWord, oVal] of onesWords) {
-                if (new RegExp(`\\b${hWord}\\s+${tWord}\\s+${oWord}\\b`, 'i').test(lower)) {
-                  minute += oVal;
-                  break;
-                }
-              }
-              break;
-            }
-          }
-        }
-        break;
-      }
-    }
-  }
-
-  // 3. Simple hour match (e.g. "8'de", "sekizde")
-  if (hour === null) {
-    const digitHourMatch = lower.match(/(?:saat\s*)?(\d{1,2})(?:\s*['’]?(?:da|de|ta|te|ye|ya))?\b/i);
-    if (digitHourMatch) {
-      const parsed = parseInt(digitHourMatch[1], 10);
-      if (parsed >= 0 && parsed <= 23) {
-        hour = parsed;
-        minute = 0;
-      }
-    }
-  }
-
-  if (hour === null) hour = defaultHour;
-  if (minute === null) minute = defaultMinute;
-
-  // AM / PM adjustment
-  if (lower.includes('akşam') || lower.includes('aksam') || lower.includes('gece')) {
-    if (hour < 12) hour += 12;
-  } else if (lower.includes('sabah')) {
-    if (hour === 12) hour = 0;
-  }
-
   targetDate.setHours(hour, minute, 0, 0);
 
   const pad = (n: number) => String(n).padStart(2, '0');
   const tarih_iso = formatLocalISO(targetDate);
   const timeLabel = `${dayLabel} ${pad(hour)}:${pad(minute)}`;
 
-  // Clean title
-  let cleanedTitle = rawText
-    .replace(/\byarın\b|\byarin\b|\bertesi gün\b|\bertesi gun\b|\bbugün\b|\bbugun\b|\bpazartesi\b|\bcuma\b/gi, '')
-    .replace(/\bsabah\b|\bakşam\b|\baksam\b|\bgece\b|\bsaat\b/gi, '')
-    .replace(/\bsekiz yirmide\b|\bsekiz yirmiye\b|\bsekiz yirmi\b|\b08:20\b|\b08\.20\b|\b8:20\b|\b8\.20\b/gi, '')
-    .replace(/\b\d{1,2}[:.]\d{2}(?:'?(?:de|da|te|ta|ye|ya))?\b/gi, '')
-    .replace(/\b(?:de|da|te|ta|'de|'da|'te|'ta)\b/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  // Capitalize title
-  if (cleanedTitle) {
-    cleanedTitle = cleanedTitle.charAt(0).toLocaleUpperCase('tr-TR') + cleanedTitle.slice(1);
-  } else {
+  let cleanedTitle = parsed.cleanLabel;
+  if (!cleanedTitle || cleanedTitle === 'Yeni Hatırlatıcı' || cleanedTitle === 'Sabah Uyanış Alarmı') {
     cleanedTitle = 'İstiklal Marşı & Bayrak Töreni';
   }
 

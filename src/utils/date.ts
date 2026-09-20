@@ -61,11 +61,95 @@ export function getCurrentIsoLocal(): string {
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}${offsetSign}${offsetHours}:${offsetMinutes}`;
 }
 
-export function extractDateTimeFromTurkish(
-  text: string,
+export interface TemporalResolutionResult {
+  hasTemporal: boolean;
+  zaman: string | null;
+  tarih_iso: string | null;
+  dayLabel: string;
+  hour: number | null;
+  minute: number;
+  isRecurring: boolean;
+  recurringDayName: string | null;
+  cleanLabel: string;
+  isSpecificTime: boolean;
+}
+
+/**
+ * Metinden tüm zamansal ifadeleri (günler, saatler, süreler, periyotlar) ve
+ * komut gürültülerini ayıklar; geriye sadece saf konu/etiket metnini bırakır.
+ */
+export function stripTemporalFromText(text: string): string {
+  if (!text || typeof text !== 'string') return '';
+  let clean = text;
+
+  // 1. Dijital saat formatları (Örn: "08:20", "8.20'de", "saat 14:30")
+  clean = clean.replace(/\b(?:saat\s*)?\d{1,2}[:.]\d{2}(?:\s*['’]?(?:da|de|ta|te|ye|ya|e|a))?\b/gi, ' ');
+
+  // 2. Sayısal ve sözel bağıl süreler ("20 dakika sonra", "3 saat sonra", "yarım saat sonra")
+  clean = clean.replace(/\b\d+\s*(?:dakika|dk|saat|gün|gun|hafta|ay|yıl|yil)\s*sonra\b/gi, ' ');
+  clean = clean.replace(/\b(?:bir|iki|üç|dört|beş|alti|yedi|sekiz|dokuz|on)\s*(?:dakika|dk|saat|gün|gun|hafta|ay)\s*sonra\b/gi, ' ');
+  clean = clean.replace(/\b(?:yarım|buçuk|çeyrek)\s*saat\s*sonra\b/gi, ' ');
+  clean = clean.replace(/\bbir\s*buçuk\s*saat\s*sonra\b/gi, ' ');
+
+  // 3. Birleşik Türkçe saat ve dakika kalıpları (Örn: "sekiz yirmide", "dokuz buçukta", "on bir kırk beşte", "saat sekiz buçuk")
+  clean = clean.replace(/\b(?:saat\s*)?(?:on\s*iki|oniki|on\s*bir|onbir|yirmi\s*üç|yirmi\s*iki|yirmi\s*bir|yirmi|on\s*dokuz|on\s*sekiz|on\s*yedi|on\s*altı|on\s*alti|on\s*beş|on\s*bes|on\s*dört|on\s*dort|on\s*üç|on\s*uc|on|dokuz|sekiz|yedi|altı|alti|beş|bes|dört|dort|üç|uc|iki|bir)\s+(?:buçukta|bucukta|buçuk|bucuk|çeyrekte|ceyrekte|çeyrek|ceyrek|elli\s*beşte|elli\s*beş|ellide|elli|kırk\s*beşte|kırk\s*beş|kırkta|kırk|otuz\s*beşte|otuz\s*beş|otuzda|otuz|yirmi\s*beşte|yirmi\s*beş|yirmide|yirmiye|yirmi|on\s*beşte|on\s*beş|onda|on)(?:\s*['’]?(?:da|de|ta|te|ye|ya))?\b/gi, ' ');
+
+  // 4. Tekil saat ifadeleri (Örn: "saat 8'de", "8'de", "sekizde", "dokuzda", "saat onda", "on birde")
+  clean = clean.replace(/\b(?:saat\s*)?\d{1,2}(?:\s*['’]?(?:da|de|ta|te|ye|ya|e|a))\b/gi, ' ');
+  clean = clean.replace(/\b(?:saat\s*)?(?:on\s*iki|oniki|on\s*bir|onbir|on|dokuz|sekiz|yedi|altı|alti|beş|bes|dört|dort|üç|uc|iki|bir)(?:\s*['’]?(?:de|da|te|ta|ye|ya|e|a))\b/gi, ' ');
+  clean = clean.replace(/\bsaat\s+\d{1,2}\b/gi, ' ');
+
+  // 5. Haftanın günleri ve ekleri (Örn: "her pazartesi", "çarşamba günü", "cuma günkü", "salıya")
+  clean = clean.replace(/\bher\s+(?:pazartesi|salı|sali|çarşamba|carsamba|perşembe|persembe|cuma|cumartesi|pazar)(?:\s*günü)?\b/gi, ' ');
+  clean = clean.replace(/\b(?:pazartesi|salı|sali|çarşamba|carsamba|perşembe|persembe|cuma|cumartesi|pazar)(?:\s+günü|\s+günleri|\s+günkü)?(?:\s*['’]?(?:ye|ya|e|a|de|da|te|ta))?\b/gi, ' ');
+
+  // 6. Bağıl günler (Örn: "yarınki", "yarın", "ertesi gün", "öbür gün", "bugün", "dün", "haftaya", "gelecek hafta")
+  clean = clean.replace(/\b(?:yarınki|yarinki|yarın|yarin|ertesi\s+gün|ertesi\s+gun|öbür\s+gün|obur\s+gun|bugünkü|bugunku|bugün|bugun|bu\s+gün|dünkü|dunku|dün|dun|haftaya|gelecek\s+hafta|önümüzdeki\s+hafta|bu\s+hafta)\b/gi, ' ');
+
+  // 7. Günün vakitleri (Örn: "sabah", "öğlen", "öğleden sonra", "akşam", "gece")
+  clean = clean.replace(/\b(?:sabahleyin|sabahında|sabahı|sabaha|sabah|öğleden\s+sonra|ogleden\s+sonra|öğleyin|öğle\s+vakti|öğlen|oglen|öğle|ogle|ikindi\s+vakti|ikindileyin|ikindi|akşamleyin|akşamında|akşamı|aksami|akşama|aksama|akşam|aksam|geceleyin|gecesi|geceye|gece)\b/gi, ' ');
+
+  // 8. Zamanla ilişkili edatlar ve kalıntılar (Örn: "itibarıyla", "itibariyle")
+  clean = clean.replace(/\b(?:itibarıyla|itibariyle)\b/gi, ' ');
+
+  // 9. Komut ve ses kalıntıları (Örn: "alarm kur", "beni kaldır", "hatırlat", "için alarm kur")
+  clean = clean.replace(/\b(?:için\s+)?(?:alarm(?:\s*kur|\s*kurar\s*mısın|\s*ayarla|\s*oluştur)?|alarmını\s*kur|alarmi\s*kur)\b/gi, ' ');
+  clean = clean.replace(/\b(?:için\s+)?(?:beni\s*kaldır|kaldır|uyandır)\b/gi, ' ');
+  clean = clean.replace(/\b(?:için\s+)?(?:hatırlat(?:ıcı)?(?:\s*kur)?|hatırlatır\s*mısın|hatirlat)\b/gi, ' ');
+  clean = clean.replace(/\b(?:için\s+)?(?:not\s+al|not\s+et|kaydet|ajandaya\s+yaz|takvime\s+ekle|ayarla)\b/gi, ' ');
+  clean = clean.replace(/\b(?:için|icin)\s*$/gi, ' ');
+
+  // 10. Yetim ekler ve noktalama işaretleri
+  clean = clean
+    .replace(/\b(?:['’]?(?:de|da|te|ta|ye|ya))\b/gi, ' ')
+    .replace(/[\s\t\n]+/g, ' ')
+    .replace(/^[.,;:!?\-–—\s]+/, '')
+    .replace(/[.,;:!?\-–—\s]+$/, '')
+    .trim();
+
+  return clean;
+}
+
+/**
+ * Doğal dil metnindeki zamansal komutları (tarih, saat, periyot) ve etiket metnini (başlık)
+ * birbirinden tamamen bağımsız ve doğru şekilde çözümler.
+ */
+export function parseTemporalAndCleanLabel(
+  rawText: string,
   baseDate: Date | string = new Date()
-): { zaman: string | null; tarih_iso: string | null } {
-  const lower = text.toLowerCase();
+): TemporalResolutionResult {
+  const lower = (rawText || '').toLowerCase().trim();
+  const now = typeof baseDate === 'string' ? new Date(baseDate) : new Date(baseDate.getTime());
+  const validNow = isNaN(now.getTime()) ? new Date() : now;
+
+  let targetDate = new Date(validNow);
+  let hasDate = false;
+  let hasTime = false;
+  let isExplicitTime = false;
+  let isRecurring = false;
+  let recurringDayName: string | null = null;
+  let dayLabel = 'Bugün';
+
   const days: Record<string, number> = {
     pazar: 0,
     pazartesi: 1,
@@ -92,171 +176,313 @@ export function extractDateTimeFromTurkish(
     cumartesi: 'Cumartesi',
   };
 
-  let targetDate = new Date(baseDate);
-  let hasDate = false;
-  let matchedDayLabel: string | null = null;
-
-  // 1. Gün Tespiti
-  for (const [dayName, dayIndex] of Object.entries(days)) {
-    if (lower.includes(dayName)) {
+  // 1. Döngüsel Gün Kontrolü ("her pazartesi", "her cuma")
+  const recurringMatch = lower.match(/\bher\s+(pazartesi|salı|sali|çarşamba|carsamba|perşembe|persembe|cuma|cumartesi|pazar)(?:\s*günü)?\b/i);
+  if (recurringMatch) {
+    isRecurring = true;
+    const dName = recurringMatch[1].toLowerCase();
+    recurringDayName = dayDisplay[dName] || dName;
+    const dayIndex = days[dName];
+    if (dayIndex !== undefined) {
       const currentDay = targetDate.getDay();
       let diff = dayIndex - currentDay;
-      if (diff <= 0) diff += 7; // Önümüzdeki ilk ilgili gün
+      if (diff <= 0) diff += 7;
       targetDate.setDate(targetDate.getDate() + diff);
       hasDate = true;
-      matchedDayLabel = dayDisplay[dayName];
-      break;
+      dayLabel = `Her ${recurringDayName}`;
     }
   }
 
-  if (lower.includes("yarın") || lower.includes("yarin")) {
-    targetDate.setDate(targetDate.getDate() + 1);
-    hasDate = true;
-    matchedDayLabel = 'Yarın';
-  } else if (lower.includes("bugün") || lower.includes("bugun")) {
-    hasDate = true;
-    matchedDayLabel = 'Bugün';
-  }
-
-  // 2. Saat / Vakit Tespiti (Sayısal veya metinsel)
-  let hour: number | null = null;
-  let minute = 0;
-  let isExplicitTime = false;
-
-  // Türkçe sayı kelimeleri
-  const numberWords: Record<string, number> = {
-    'bir': 1, 'iki': 2, 'üç': 3, 'uc': 3, 'dört': 4, 'dort': 4,
-    'beş': 5, 'bes': 5, 'altı': 6, 'alti': 6, 'yedi': 7, 'sekiz': 8,
-    'dokuz': 9, 'on': 10, 'on bir': 11, 'onbir': 11, 'on iki': 12, 'oniki': 12,
-    'on üç': 13, 'on dört': 14, 'on beş': 15, 'on altı': 16, 'on yedi': 17,
-    'on sekiz': 18, 'on dokuz': 19, 'yirmi': 20, 'yirmi bir': 21, 'yirmibir': 21,
-    'yirmi iki': 22, 'yirmi üç': 23, 'yirmi dört': 24
-  };
-
-  // Zaman dilimi etiketleri
-  const isEvening = /akşam|aksam/i.test(lower);
-  const isNight = /gece/i.test(lower);
-  const isAfternoon = /öğleden sonra|ogleden sonra/i.test(lower);
-  const isMorning = /sabah/i.test(lower);
-  const isNoon = /öğlen|oglen|öğle|ogle/i.test(lower);
-
-  // Sayısal saat formatları (21:00, 21.00, 9:30, 8.20'de, 08:20de vb.)
-  const colonMatch = lower.match(/\b(\d{1,2})[:.](\d{2})(?:'?(?:de|da|te|ta|ye|ya))?\b/);
-  if (colonMatch) {
-    hour = parseInt(colonMatch[1], 10);
-    minute = parseInt(colonMatch[2], 10);
-    isExplicitTime = true;
-  }
-
-  // Metinsel saat + dakika (sekiz yirmide, sekiz yirmi, dokuz ellide)
-  if (hour === null) {
-    const tensMap: Record<string, number> = { 'yirmi': 20, 'otuz': 30, 'kırk': 40, 'kirk': 40, 'elli': 50, 'on': 10 };
-    const onesMap: Record<string, number> = { 'bir': 1, 'iki': 2, 'üç': 3, 'uc': 3, 'dört': 4, 'dort': 4, 'beş': 5, 'bes': 5, 'altı': 6, 'alti': 6, 'yedi': 7, 'sekiz': 8, 'dokuz': 9 };
-
-    for (const [word, val] of Object.entries(numberWords)) {
-      const reg = new RegExp(`\\b(?:saat\\s*)?${word}\\b`, 'i');
-      if (reg.test(lower)) {
-        hour = val;
-        isExplicitTime = true;
-
-        for (const [tWord, tVal] of Object.entries(tensMap)) {
-          if (new RegExp(`\\b${word}\\s+${tWord}`, 'i').test(lower)) {
-            minute = tVal;
-            for (const [oWord, oVal] of Object.entries(onesMap)) {
-              if (new RegExp(`\\b${word}\\s+${tWord}\\s+${oWord}`, 'i').test(lower)) {
-                minute += oVal;
-                break;
-              }
-            }
-            break;
-          }
+  // 2. Bağıl Günler ("yarın", "bugün", "ertesi gün", "öbür gün", "3 gün sonra")
+  if (!hasDate) {
+    if (/\b(?:yarınki|yarinki|yarın|yarin|ertesi\s+gün|ertesi\s+gun)\b/i.test(lower)) {
+      targetDate.setDate(targetDate.getDate() + 1);
+      hasDate = true;
+      dayLabel = 'Yarın';
+    } else if (/\b(?:öbür\s+gün|obur\s+gun)\b/i.test(lower)) {
+      targetDate.setDate(targetDate.getDate() + 2);
+      hasDate = true;
+      dayLabel = 'Öbür Gün';
+    } else if (/\b(?:bugünkü|bugunku|bugün|bugun|bu\s+gün)\b/i.test(lower)) {
+      hasDate = true;
+      dayLabel = 'Bugün';
+    } else if (/\b(?:dünkü|dunku|dün|dun)\b/i.test(lower)) {
+      targetDate.setDate(targetDate.getDate() - 1);
+      hasDate = true;
+      dayLabel = 'Dün';
+    } else {
+      const daysLater = lower.match(/\b(\d+)\s*gün\s*sonra\b/i);
+      if (daysLater) {
+        const d = parseInt(daysLater[1], 10);
+        targetDate.setDate(targetDate.getDate() + d);
+        hasDate = true;
+        dayLabel = `${d} Gün Sonra`;
+      } else {
+        const weeksLater = lower.match(/\b(\d+)\s*hafta\s*sonra\b/i);
+        if (weeksLater) {
+          const w = parseInt(weeksLater[1], 10);
+          targetDate.setDate(targetDate.getDate() + w * 7);
+          hasDate = true;
+          dayLabel = `${w} Hafta Sonra`;
+        } else if (/\b(?:haftaya|gelecek\s+hafta|önümüzdeki\s+hafta)\b/i.test(lower)) {
+          targetDate.setDate(targetDate.getDate() + 7);
+          hasDate = true;
+          dayLabel = 'Haftaya';
         }
+      }
+    }
+  }
+
+  // 3. Belirli Gün İsimleri ("pazartesi", "çarşamba günü" vb.)
+  if (!hasDate) {
+    for (const [dayName, dayIndex] of Object.entries(days)) {
+      const reg = new RegExp(`\\b${dayName}(?:\\s+günü|\\s+günleri|\\s+günkü)?(?:['’]?(?:ye|ya|e|a|de|da|te|ta))?\\b`, 'i');
+      if (reg.test(lower)) {
+        const currentDay = targetDate.getDay();
+        let diff = dayIndex - currentDay;
+        if (diff <= 0) diff += 7;
+        targetDate.setDate(targetDate.getDate() + diff);
+        hasDate = true;
+        dayLabel = dayDisplay[dayName] || dayName;
         break;
       }
     }
   }
 
-  // "saat 9", "9da", "9'da", "9 da", "akşam 9"
-  if (hour === null) {
-    const digitMatch = lower.match(/(?:saat\s*|akşam\s*|aksam\s*|sabah\s*|gece\s*|öğlen\s*)(\d{1,2})(?:\s*['’]?(?:da|de|ta|te|ye|ya))?/i) ||
-      lower.match(/\b(\d{1,2})\s*['’]?(?:da|de|ta|te|ye|ya)\b/i);
-    if (digitMatch) {
-      hour = parseInt(digitMatch[1], 10);
+  // 4. Vakit / Zaman Dilimi Göstergeleri
+  const isMorning = /\b(?:sabahleyin|sabahında|sabahı|sabaha|sabah)\b/i.test(lower);
+  const isNoon = /\b(?:öğleyin|öğle\s+vakti|öğlen|oglen|öğle|ogle)\b/i.test(lower);
+  const isAfternoon = /\b(?:öğleden\s+sonra|ogleden\s+sonra|ikindi\s+vakti|ikindileyin|ikindi)\b/i.test(lower);
+  const isEvening = /\b(?:akşamleyin|akşamında|akşamı|aksami|akşama|aksama|akşam|aksam)\b/i.test(lower);
+  const isNight = /\b(?:geceleyin|gecesi|geceye|gece)\b/i.test(lower);
+
+  // 5. Bağıl Dakika / Saat Geri Sayımı ("40 dakika sonra", "1 saat sonra")
+  const minsLater = lower.match(/\b(\d+)\s*(?:dakika|dk)\s*sonra\b/i);
+  const hoursLater = lower.match(/\b(\d+)\s*saat\s*sonra\b/i);
+  if (minsLater) {
+    const mins = parseInt(minsLater[1], 10);
+    targetDate = new Date(validNow.getTime() + mins * 60000);
+    hasDate = true;
+    hasTime = true;
+    isExplicitTime = true;
+    dayLabel = 'Bugün';
+  } else if (hoursLater) {
+    const hrs = parseInt(hoursLater[1], 10);
+    targetDate = new Date(validNow.getTime() + hrs * 3600000);
+    hasDate = true;
+    hasTime = true;
+    isExplicitTime = true;
+    dayLabel = 'Bugün';
+  }
+
+  let hour: number | null = hasTime ? targetDate.getHours() : null;
+  let minute: number = hasTime ? targetDate.getMinutes() : 0;
+
+  // 6. Sayısal Saat Çözümleme (Örn: "08:20", "8.20'de", "saat 14:00")
+  if (!hasTime) {
+    const colonMatch = lower.match(/\b(?:saat\s*)?(\d{1,2})[:.](\d{2})(?:\s*['’]?(?:da|de|ta|te|ye|ya|e|a))?\b/i);
+    if (colonMatch) {
+      hour = parseInt(colonMatch[1], 10);
+      minute = parseInt(colonMatch[2], 10);
+      hasTime = true;
       isExplicitTime = true;
     }
   }
 
-  // Metinsel saat (dokuzda, sekizde, on birde)
-  if (hour === null) {
-    for (const [word, val] of Object.entries(numberWords)) {
-      const reg = new RegExp(`\\b(?:saat\\s*)?${word}(?:['’]?(?:da|de|ta|te|ye|ya))?\\b`, 'i');
+  // 7. Türkçe Sözcüklerle Saat + Dakika Çözümleme
+  // Örn: "sekiz yirmide", "sekiz buçukta", "dokuz ellide", "on bir kırk beşte", "saat on iki buçuk"
+  if (!hasTime) {
+    const hourWords: [string, number][] = [
+      ['on iki', 12], ['oniki', 12], ['on bir', 11], ['onbir', 11],
+      ['yirmi dört', 24], ['yirmi üç', 23], ['yirmi iki', 22], ['yirmi bir', 21],
+      ['yirmi', 20], ['on dokuz', 19], ['on sekiz', 18], ['on yedi', 17],
+      ['on altı', 16], ['on alti', 16], ['on beş', 15], ['on bes', 15],
+      ['on dört', 14], ['on dort', 14], ['on üç', 13], ['on uc', 13],
+      ['on', 10], ['dokuz', 9], ['sekiz', 8], ['yedi', 7], ['altı', 6], ['alti', 6],
+      ['beş', 5], ['bes', 5], ['dört', 4], ['dort', 4], ['üç', 3], ['uc', 3],
+      ['iki', 2], ['bir', 1]
+    ];
+
+    const minuteWords: [string, number][] = [
+      ['elli beş', 55], ['elli bes', 55], ['elli', 50],
+      ['kırk beş', 45], ['kirk bes', 45], ['kırk', 40], ['kirk', 40],
+      ['otuz beş', 35], ['otuz bes', 35], ['otuz', 30], ['buçuk', 30], ['bucuk', 30],
+      ['yirmi beş', 25], ['yirmi bes', 25], ['yirmi', 20],
+      ['on beş', 15], ['on bes', 15], ['çeyrek', 15], ['ceyrek', 15],
+      ['on', 10], ['dokuz', 9], ['sekiz', 8], ['yedi', 7], ['altı', 6], ['alti', 6],
+      ['beş', 5], ['bes', 5], ['dört', 4], ['dort', 4], ['üç', 3], ['uc', 3],
+      ['iki', 2], ['bir', 1]
+    ];
+
+    for (const [hWord, hVal] of hourWords) {
+      for (const [mWord, mVal] of minuteWords) {
+        const reg = new RegExp(`\\b(?:saat\s*)?${hWord}\\s+${mWord}(?:ta|te|da|de|ya|ye)?\\b`, 'i');
+        if (reg.test(lower)) {
+          hour = hVal;
+          minute = mVal;
+          hasTime = true;
+          isExplicitTime = true;
+          break;
+        }
+      }
+      if (hasTime) break;
+    }
+  }
+
+  // 8. Tekil Saat Çözümleme ("saat 8'de", "8'de", "sekizde", "dokuzda", "saat onda", "on birde")
+  if (!hasTime) {
+    const digitHour = lower.match(/(?:saat\s*|akşam\s*|aksam\s*|sabah\s*|gece\s*|öğlen\s*)(\d{1,2})(?:\s*['’]?(?:da|de|ta|te|ye|ya|e|a))?/i) ||
+      lower.match(/\b(\d{1,2})\s*['’]?(?:da|de|ta|te|ye|ya|e|a)\b/i);
+    if (digitHour) {
+      hour = parseInt(digitHour[1], 10);
+      minute = 0;
+      hasTime = true;
+      isExplicitTime = true;
+    }
+  }
+
+  if (!hasTime) {
+    const hourWordsSingle: [string, number][] = [
+      ['on iki', 12], ['oniki', 12], ['on bir', 11], ['onbir', 11],
+      ['on', 10], ['dokuz', 9], ['sekiz', 8], ['yedi', 7], ['altı', 6], ['alti', 6],
+      ['beş', 5], ['bes', 5], ['dört', 4], ['dort', 4], ['üç', 3], ['uc', 3],
+      ['iki', 2], ['bir', 1]
+    ];
+    for (const [word, val] of hourWordsSingle) {
+      const reg = new RegExp(`\\b(?:saat\s*)?${word}(?:['’]?(?:de|da|te|ta|ye|ya|e|a))\\b`, 'i');
       if (reg.test(lower)) {
         hour = val;
+        minute = 0;
+        hasTime = true;
         isExplicitTime = true;
         break;
       }
     }
   }
 
-  // Buçuk ve çeyrek tespiti
-  if (minute === null) {
-    if (lower.includes('buçuk') || lower.includes('bucuk')) {
-      minute = 30;
-    } else if (lower.includes('çeyrek') || lower.includes('ceyrek')) {
-      minute = 15;
-    }
-  }
-
-  // Saat 12 saat formatından 24 saat formatına dönüştürme (Akşam 9 = 21:00)
+  // 9. 12 Saat Formatından 24 Saat Formatına Dönüştürme
   if (hour !== null) {
-    if (isEvening) {
-      if (hour < 12) hour += 12; // 9 -> 21, 8 -> 20, vb.
-    } else if (isAfternoon) {
-      if (hour < 12) hour += 12; // 3 -> 15, vb.
+    if (isEvening && hour < 12) {
+      hour += 12; // Örn: Akşam 8 -> 20, Akşam 9 -> 21
+    } else if (isAfternoon && hour < 12) {
+      hour += 12; // Örn: Öğleden sonra 2 -> 14, 3 -> 15
     } else if (isNight) {
-      if (hour >= 9 && hour <= 11) hour += 12; // 10 -> 22, 11 -> 23
+      if (hour >= 9 && hour <= 11) hour += 12; // Gece 10 -> 22, 11 -> 23
       else if (hour === 12) hour = 0;
     } else if (isNoon) {
-      if (hour >= 1 && hour <= 3) hour += 12; // öğlen 1 -> 13, öğlen 2 -> 14
+      if (hour >= 1 && hour <= 3) hour += 12; // Öğlen 1 -> 13, 2 -> 14
+    } else if (isMorning && hour === 12) {
+      hour = 0;
     }
   } else {
-    // Sayı belirtilmemişse bağlamsal varsayılanlar
-    if (isNoon) { hour = 13; minute = 0; }
-    else if (isEvening) { hour = 21; minute = 0; } // Akşam varsayılan 21:00
+    // Saat belirtilmediyse vakit bağlamına göre varsayılanlar
+    if (isMorning) { hour = 8; minute = 0; }
+    else if (isNoon) { hour = 12; minute = 30; }
+    else if (isAfternoon) { hour = 14; minute = 30; }
+    else if (isEvening) { hour = 19; minute = 30; }
     else if (isNight) { hour = 22; minute = 0; }
-    else if (isMorning) { hour = 9; minute = 0; }
-    else { hour = 9; minute = 0; }
   }
 
-  // Sınır koruması
-  if (hour < 0) hour = 0;
-  if (hour > 23) hour = 23;
+  // Saat sınır koruması
+  if (hour !== null) {
+    if (hour < 0) hour = 0;
+    if (hour > 23) hour = 23;
+  }
   if (minute < 0) minute = 0;
   if (minute > 59) minute = 59;
 
-  targetDate.setHours(hour, minute, 0, 0);
-
-  // Gün belirtilmediyse ve hesaplanan saat bugün için çoktan geçmişse yarına yuvarla
-  const nowMs = new Date(baseDate).getTime();
-  if (!hasDate && targetDate.getTime() <= nowMs) {
-    targetDate.setDate(targetDate.getDate() + 1);
-    hasDate = true;
-    matchedDayLabel = 'Yarın';
+  // Hedef tarihe saati uygula
+  if (hour !== null) {
+    targetDate.setHours(hour, minute, 0, 0);
+    // Gün belirtilmediyse ve hesaplanan saat bugünün şu anki vaktinden önceyse yarına al
+    if (!hasDate && targetDate.getTime() <= validNow.getTime()) {
+      targetDate.setDate(targetDate.getDate() + 1);
+      hasDate = true;
+      dayLabel = 'Yarın';
+    }
   }
 
-  // ISO Formatı (YYYY-MM-DDTHH:mm:ss)
+  const hasTemporal = hasDate || hasTime || isExplicitTime || isEvening || isMorning || isNoon || isNight || isAfternoon;
+
+  // 10. ISO Formatı ve Zaman Etiketi
   const pad = (n: number | string) => String(n).padStart(2, '0');
-  const iso = `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-${pad(targetDate.getDate())}T${pad(hour)}:${pad(minute)}:00`;
+  const hDisplay = hour !== null ? hour : 9;
+  const mDisplay = minute;
+  const iso = `${targetDate.getFullYear()}-${pad(targetDate.getMonth() + 1)}-${pad(targetDate.getDate())}T${pad(hDisplay)}:${pad(mDisplay)}:00`;
 
-  const timeDisplay = `${pad(hour)}:${pad(minute)}`;
-  const labelPrefix = matchedDayLabel || (isEvening ? 'Akşam' : isMorning ? 'Sabah' : 'Bugün');
+  let zaman: string | null = null;
+  if (hasTemporal) {
+    const timeStr = `${pad(hDisplay)}:${pad(mDisplay)}`;
+    if (isRecurring && recurringDayName) {
+      zaman = `Her ${recurringDayName} ${timeStr}`;
+    } else if (dayLabel === 'Bugün') {
+      const prefix = isEvening ? 'Bu Akşam' : isMorning ? 'Bu Sabah' : 'Bugün';
+      zaman = `${prefix} ${timeStr}`;
+    } else if (dayLabel === 'Yarın') {
+      const prefix = isEvening ? 'Yarın Akşam' : isMorning ? 'Yarın Sabah' : 'Yarın';
+      zaman = `${prefix} ${timeStr}`;
+    } else {
+      zaman = `${dayLabel} ${timeStr}`;
+    }
+  }
 
-  return (hasDate || isExplicitTime || isEvening || isMorning || isNoon || isNight)
-    ? {
-        zaman: `${labelPrefix} ${timeDisplay}`,
-        tarih_iso: iso,
-      }
-    : { zaman: null, tarih_iso: null };
+  // 11. Bağımsız Etiket / Başlık Metni Çıkarımı (Tarih ve zaman ifadelerinden tamamen arındırılmış)
+  let cleanLabel = stripTemporalFromText(rawText);
+
+  // Başlık boş kalmışsa (Örn: Sadece "yarın sabah sekiz yirmide beni kaldır" denmişse)
+  if (!cleanLabel || cleanLabel.length < 2) {
+    if (isMorning) cleanLabel = 'Sabah Uyanış Alarmı';
+    else if (isEvening) cleanLabel = 'Akşam Alarmı';
+    else if (hasTime) cleanLabel = 'Alarm & Hatırlatıcı';
+    else cleanLabel = 'Yeni Hatırlatıcı';
+  } else {
+    // Kelimelerin ilk harflerini düzgün Türkçe kurallarıyla büyüt
+    cleanLabel = cleanLabel
+      .split(' ')
+      .map(w => w.charAt(0).toLocaleUpperCase('tr-TR') + w.slice(1))
+      .join(' ');
+  }
+
+  return {
+    hasTemporal,
+    zaman,
+    tarih_iso: hasTemporal ? iso : null,
+    dayLabel,
+    hour,
+    minute,
+    isRecurring,
+    recurringDayName,
+    cleanLabel,
+    isSpecificTime: isExplicitTime
+  };
+}
+
+/**
+ * Geriye dönük uyumluluk wrapper'ı. Hem zaman ve tarih_iso hem de yeni bağımsız
+ * cleanLabel ve çözümlenmiş bileşenleri döndürür.
+ */
+export function extractDateTimeFromTurkish(
+  text: string,
+  baseDate: Date | string = new Date()
+): {
+  zaman: string | null;
+  tarih_iso: string | null;
+  cleanLabel: string;
+  hour: number | null;
+  minute: number;
+  dayLabel: string;
+  hasTemporal: boolean;
+} {
+  const res = parseTemporalAndCleanLabel(text, baseDate);
+  return {
+    zaman: res.zaman,
+    tarih_iso: res.tarih_iso,
+    cleanLabel: res.cleanLabel,
+    hour: res.hour,
+    minute: res.minute,
+    dayLabel: res.dayLabel,
+    hasTemporal: res.hasTemporal
+  };
 }
 
 // Global window binding

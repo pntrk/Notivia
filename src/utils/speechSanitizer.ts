@@ -10,6 +10,8 @@
  * - Kart başlığı "Şey yarın DYS yazısı" yerine doğrudan "DYS Yazısı" olur.
  */
 
+import { stripTemporalFromText } from './date.ts';
+
 // Tereddüt sesleri ve mırıldanmalar (Vowel elongations & hesitation gutturals)
 const HESITATION_SOUNDS_REGEX = /(?:^|\s+)(?:[ıiIİ]{2,}|[eEéÉ]{2,}|[hH][ıiIİ]m+|[hH]m+|öhm|öh|ıh|ıhm|kem\s+küm|öfff+|pff+)(?=\s+|$|[.,!?])/gi;
 
@@ -83,8 +85,8 @@ export function sanitizeCardTitle(rawTitle: string): string {
   // Başta yer alan dolgu kelimeleri ve seslenmeleri at
   clean = clean.replace(/^(?:şey|yani|hani|işte|hocam(?:\s+(?:bir|bi)\s+de)?|ııı+|eee+|hmm+|öhm)[,:\s]+/gi, '');
 
-  // Başta yapışık kalmış zaman zarflarını temizle (zaman zaten ayrı bir alanda tutulur)
-  clean = clean.replace(/^(?:yarın|yarin|bugün|bugun|akşam|aksam|sabah|öğlen|oglen|gece)\s+/gi, '');
+  // Zamansal ifadeleri (saatler, günler, periyotlar) başlıktan tamamen ayıkla (zaman ve etiket bağımsızdır)
+  clean = stripTemporalFromText(clean);
 
   // Sonda kalan dolguları at
   clean = clean.replace(/[,:\s]+(?:falan|filan|falan filan|yani|yahu)$/gi, '');

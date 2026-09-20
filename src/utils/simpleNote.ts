@@ -11,6 +11,8 @@ import {
   calculateUetsDeadline,
   getTaxCalendarDeadlines,
   parseDailyLifeTime,
+  parseTemporalAndCleanLabel,
+  stripTemporalFromText,
   type ParsedTimeResult
 } from './date.ts';
 import { inferPredictiveActions } from './predictiveGraph.ts';
@@ -5073,20 +5075,9 @@ interface TemporalParseResult {
   recurringDayName: string | null;
   hour: number;
   minute: number;
+  cleanLabel: string;
+  hasTemporal: boolean;
 }
-
-const DAYS_MAP: Record<string, number> = {
-  pazar: 0,
-  pazartesi: 1,
-  salı: 2,
-  sali: 2,
-  çarşamba: 3,
-  carsamba: 3,
-  perşembe: 4,
-  persembe: 4,
-  cuma: 5,
-  cumartesi: 6,
-};
 
 const DAYS_DISPLAY: Record<string, string> = {
   pazar: 'Pazar',
@@ -5102,188 +5093,16 @@ const DAYS_DISPLAY: Record<string, string> = {
 };
 
 function parseTurkishTemporal(text: string, baseDate: Date): TemporalParseResult {
-  const lower = text.toLowerCase();
-
-  // 0. "X dakika / saat sonra", "Sabah 9", "Akşam 8'de kaldır / alarm" doğrudan tespiti
-  const dailyLife = parseDailyLifeTime(text);
-  if (dailyLife) {
-    const targetDate = new Date(dailyLife.isoString);
-    const hour = targetDate.getHours();
-    const minute = targetDate.getMinutes();
-    return {
-      zaman: dailyLife.displayZaman,
-      tarih_iso: dailyLife.isoString,
-      isRecurringDay: false,
-      recurringDayName: null,
-      hour,
-      minute,
-    };
-  }
-
-  const target = new Date(baseDate.getTime());
-  let hasDate = false;
-
-  // "her cuma", "her pazartesi" döngü tespiti
-  let isRecurringDay = false;
-  let recurringDayName: string | null = null;
-  const recurringDayMatch = lower.match(/\bher\s+(pazartesi|salı|sali|çarşamba|carsamba|perşembe|persembe|cuma|cumartesi|pazar)\b/i);
-  if (recurringDayMatch) {
-    isRecurringDay = true;
-    recurringDayName = recurringDayMatch[1].toLowerCase();
-  }
-
-  let matchedDayKey: string | null = recurringDayName;
-  if (!matchedDayKey) {
-    for (const dKey of Object.keys(DAYS_MAP)) {
-      if (new RegExp(`\\b${dKey}\\b`, 'i').test(lower)) {
-        matchedDayKey = dKey;
-        break;
-      }
-    }
-  }
-
-  if (matchedDayKey && DAYS_MAP[matchedDayKey] !== undefined) {
-    const current = target.getDay();
-    const targetIdx = DAYS_MAP[matchedDayKey];
-    let diff = targetIdx - current;
-    if (diff <= 0) diff += 7;
-    target.setDate(target.getDate() + diff);
-    hasDate = true;
-  }
-
-  if (lower.includes('yarın') || lower.includes('yarin')) {
-    target.setDate(target.getDate() + 1);
-    hasDate = true;
-  } else if (lower.includes('öbür gün') || lower.includes('obur gun')) {
-    target.setDate(target.getDate() + 2);
-    hasDate = true;
-  }
-
-  const gunMatch = lower.match(/(\d+)\s*gün\s*sonra/);
-  const ayMatch = lower.match(/(\d+)\s*ay\s*sonra/);
-  if (gunMatch) {
-    target.setDate(target.getDate() + parseInt(gunMatch[1], 10));
-    hasDate = true;
-  } else if (ayMatch) {
-    target.setMonth(target.getMonth() + parseInt(ayMatch[1], 10));
-    hasDate = true;
-  }
-
-  // 2. Saat / Vakit Tespiti (Sayısal veya metinsel)
-  let hour: number | null = null;
-  let minute = 0;
-  let hasSpecificTime = false;
-
-  // Zaman dilimi etiketleri
-  const isEvening = /akşam|aksam/i.test(lower);
-  const isNight = /gece/i.test(lower);
-  const isAfternoon = /öğleden sonra|ogleden sonra/i.test(lower);
-  const isMorning = /sabah/i.test(lower);
-  const isNoon = /öğlen|oglen|öğle|ogle/i.test(lower);
-
-  // Türkçe sayı kelimeleri
-  const numberWords: Record<string, number> = {
-    'bir': 1, 'iki': 2, 'üç': 3, 'uc': 3, 'dört': 4, 'dort': 4,
-    'beş': 5, 'bes': 5, 'altı': 6, 'alti': 6, 'yedi': 7, 'sekiz': 8,
-    'dokuz': 9, 'on': 10, 'on bir': 11, 'onbir': 11, 'on iki': 12, 'oniki': 12,
-    'yirmi': 20, 'yirmi bir': 21, 'yirmibir': 21, 'yirmi iki': 22, 'yirmi üç': 23
-  };
-
-  // Format: "21:00", "21.00", "9:30"
-  const colonMatch = lower.match(/\b(\d{1,2})[:.](\d{2})\b/);
-  if (colonMatch) {
-    hour = parseInt(colonMatch[1], 10);
-    minute = parseInt(colonMatch[2], 10);
-    hasSpecificTime = true;
-    hasDate = true;
-  }
-
-  // Format: "akşam 9", "saat 9", "9da", "9'da", "9 da"
-  if (hour === null) {
-    const digitMatch = lower.match(/(?:saat\s*|akşam\s*|aksam\s*|sabah\s*|gece\s*|öğlen\s*)(\d{1,2})(?:\s*['’]?(?:da|de|ta|te))?/i) ||
-      lower.match(/\b(\d{1,2})\s*(?:['’]?(?:da|de|ta|te))\b/i);
-    if (digitMatch) {
-      hour = parseInt(digitMatch[1], 10);
-      hasSpecificTime = true;
-      hasDate = true;
-    }
-  }
-
-  // Format: Metinsel saat (dokuzda, sekizde, on birde)
-  if (hour === null) {
-    for (const [word, val] of Object.entries(numberWords)) {
-      const reg = new RegExp(`\\b(?:saat\\s*)?${word}(?:['’]?(?:da|de|ta|te))?\\b`, 'i');
-      if (reg.test(lower)) {
-        hour = val;
-        hasSpecificTime = true;
-        hasDate = true;
-        break;
-      }
-    }
-  }
-
-  // 12 saat formatından 24 saat formatına kesin dönüşüm (Akşam 9 = 21:00)
-  if (hour !== null) {
-    if (isEvening) {
-      if (hour < 12) hour += 12; // 9 -> 21, 8 -> 20
-    } else if (isAfternoon) {
-      if (hour < 12) hour += 12; // 3 -> 15
-    } else if (isNight) {
-      if (hour >= 9 && hour <= 11) hour += 12; // 10 -> 22
-      else if (hour === 12) hour = 0;
-    } else if (isNoon) {
-      if (hour >= 1 && hour <= 3) hour += 12;
-    }
-  } else {
-    // Sayı verilmemişse bağlamsal varsayılan saat ata
-    if (isEvening) { hour = 21; minute = 0; hasSpecificTime = true; }
-    else if (isNoon) { hour = 13; minute = 0; hasSpecificTime = true; }
-    else if (isNight) { hour = 22; minute = 0; hasSpecificTime = true; }
-    else if (isMorning) { hour = 9; minute = 0; hasSpecificTime = true; }
-    else { hour = 9; minute = 0; }
-  }
-
-  // Sınır koruması
-  if (hour < 0) hour = 0;
-  if (hour > 23) hour = 23;
-  if (minute < 0) minute = 0;
-  if (minute > 59) minute = 59;
-
-  target.setHours(hour, minute, 0, 0);
-
-  // Gün açıkça belirtilmemişse ve hedef saat bugün için geçmişse yarına yuvarla
-  const nowMs = baseDate.getTime();
-  if (!hasDate && target.getTime() <= nowMs) {
-    target.setDate(target.getDate() + 1);
-    hasDate = true;
-  }
-
-  const pad = (n: number) => String(n).padStart(2, '0');
-  const iso = `${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}T${pad(hour)}:${pad(minute)}:00`;
-  const gunIsimleri = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
-
-  const isToday = target.toDateString() === baseDate.toDateString();
-  const tomorrow = new Date(baseDate);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const isTomorrow = target.toDateString() === tomorrow.toDateString();
-
-  const labelPrefix = isToday
-    ? (isEvening ? 'Bu Akşam' : isMorning ? 'Bu Sabah' : 'Bugün')
-    : isTomorrow
-    ? (isEvening ? 'Yarın Akşam' : isMorning ? 'Yarın Sabah' : 'Yarın')
-    : gunIsimleri[target.getDay()];
-
-  const zamanStr = (hasDate || hasSpecificTime || isEvening || isMorning || isNoon || isNight)
-    ? `${labelPrefix} ${pad(hour)}:${pad(minute)}`
-    : null;
-
+  const res = parseTemporalAndCleanLabel(text, baseDate);
   return {
-    zaman: zamanStr,
-    tarih_iso: hasDate || hasSpecificTime || isEvening || isMorning || isNoon || isNight ? iso : null,
-    isRecurringDay,
-    recurringDayName,
-    hour,
-    minute,
+    zaman: res.hasTemporal ? res.zaman : null,
+    tarih_iso: res.tarih_iso,
+    isRecurringDay: res.isRecurring,
+    recurringDayName: res.recurringDayName,
+    hour: res.hour !== null ? res.hour : 9,
+    minute: res.minute,
+    cleanLabel: res.cleanLabel,
+    hasTemporal: res.hasTemporal
   };
 }
 
@@ -6817,15 +6636,14 @@ function _extractSimpleNoteFromTextInternal(
   }
 
   // G. GENEL DÜŞÜŞ (Fallback)
-  let cleanTitle = cleanInput
-    .replace(/\b(?:akşam|aksam|sabah|öğlen|oglen|gece|yarın|yarin|bugün|bugun)\b/gi, '')
-    .replace(/\b(?:saat\s*)?\d{1,2}(?:[:.]\d{2})?(?:\s*['’]?(?:da|de|ta|te))?\b/gi, '')
-    .replace(/\b(?:dokuzda|sekizde|yedide|altıda|beşte|dörtte|üçte|ikide|birde|onda)\b/gi, '')
-    .trim();
+  let cleanTitle = temporal.cleanLabel;
+  if (!cleanTitle || cleanTitle === 'Yeni Hatırlatıcı' || cleanTitle.length < 2) {
+    cleanTitle = stripTemporalFromText(cleanInput);
+  }
   if (cleanTitle.length < 2) cleanTitle = cleanInput;
   cleanTitle = cleanTitle.charAt(0).toLocaleUpperCase('tr-TR') + cleanTitle.slice(1);
   const titleWords = cleanTitle.split(/\s+/);
-  if (titleWords.length > 4) cleanTitle = titleWords.slice(0, 4).join(' ');
+  if (titleWords.length > 5) cleanTitle = titleWords.slice(0, 5).join(' ');
 
   const baseResult: NotiviaSimpleNote = {
     baslik: cleanTitle || 'Not',

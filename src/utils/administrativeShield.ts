@@ -58,7 +58,15 @@ export const ADMINISTRATIVE_SHIELD = [
   'öğretmenler kurulu',
   'ogretmenler kurulu',
   'okul idaresi',
-  'okul müdür'
+  'okul müdür',
+  'istiklal marşı',
+  'istiklal marsi',
+  'bayrak töreni',
+  'bayrak toreni',
+  'saygı duruşu',
+  'saygi durusu',
+  'tören',
+  'toreni'
 ];
 
 /**
