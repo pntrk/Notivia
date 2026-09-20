@@ -5,6 +5,7 @@ export * from './domainThemes.ts';
 
 export const DOMAIN_KEYWORDS: Record<ProfessionDomain, RegExp> = {
   SADE: /(?!.*)/, // Sade modda otomatik yakalama yapmaz
+  OTOMATIK_JARGON: /(?!.*)/, // Otomatik Jargon modunda tüm sektörler jargon radarından taranır
   OGRENCI: /(vize|final|bütünleme|büt|ödev teslim|lab raporu|kyk|burs|ders kaydı|üniversite|obs|kampüs|turnitin|intihal|gano)/i,
   CALISMIYORUM: /(taahhüt|abonelik|gss|işkur|su arıtma|kombi bakımı|derin dondurucu|ecza dolabı|kira|aidat|iş başvurusu|mülakat|cv güncelle|özgeçmiş|emekli|günlük rutin)/i,
   HUKUK: /(uyap|duruşma|istinaf|tebligat|müvekkil|hâkim|hakim|savcı|icra|haciz|ihtarname|mahkeme|89\/1|89\/2|haciz ihbarnamesi|arabuluculuk|arabulucu|cmk 100|cmk 101|kyok|takipsizlik|segbis|istintak|kıymet takdiri)/i,
@@ -63,22 +64,24 @@ export const DOMAIN_KEYWORDS: Record<ProfessionDomain, RegExp> = {
 
 export function detectDomainFromText(text: string, fallback: ProfessionDomain = 'GENEL'): ProfessionDomain {
   if (fallback === 'SADE') return 'SADE';
-  if (!text || text.trim().length === 0) return fallback;
+  if (!text || text.trim().length === 0) return fallback === 'OTOMATIK_JARGON' ? 'GENEL' : fallback;
 
   // 1. Öncelikli 0ms Jargon Radar kontrolü (exclusive + supporting puanlama)
   const radar = detectDomainFromJargon(text, fallback);
-  if (radar.confidence >= 0.4 && radar.detectedDomain !== 'GENEL') {
+  const minConfidence = fallback === 'OTOMATIK_JARGON' ? 0.2 : 0.4;
+  if (radar.confidence >= minConfidence && radar.detectedDomain !== 'GENEL' && radar.detectedDomain !== 'OTOMATIK_JARGON') {
     return radar.detectedDomain === 'CALISMIYORUM' ? 'GENEL' : radar.detectedDomain;
   }
 
   // 2. Yedek regex taraması
   for (const [domain, regex] of Object.entries(DOMAIN_KEYWORDS)) {
-    if (domain !== 'GENEL' && regex.test(text)) {
+    if (domain !== 'GENEL' && domain !== 'OTOMATIK_JARGON' && regex.test(text)) {
       const res = domain as ProfessionDomain;
       return res === 'CALISMIYORUM' ? 'GENEL' : res;
     }
   }
 
   const detected = radar.detectedDomain || fallback;
+  if (detected === 'OTOMATIK_JARGON') return 'GENEL';
   return detected === 'CALISMIYORUM' ? 'GENEL' : detected;
 }

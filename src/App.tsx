@@ -565,7 +565,7 @@ export default function App() {
 
   // 2 Kelimelik Akıllı Tamamlayıcı Çipler (Instant Jargon Chips)
   const sortedInstantJargonChips = useMemo(() => {
-    if (!workDomain || workDomain === 'GENEL' || workDomain === 'SADE') {
+    if (!workDomain || workDomain === 'GENEL' || workDomain === 'SADE' || workDomain === 'OTOMATIK_JARGON') {
       return INSTANT_JARGON_CHIPS;
     }
     const matching = INSTANT_JARGON_CHIPS.filter((c) => c.domain === workDomain);

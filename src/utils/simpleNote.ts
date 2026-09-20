@@ -17,6 +17,7 @@ import {
 } from './date.ts';
 import { inferPredictiveActions } from './predictiveGraph.ts';
 import { matchShortScenario } from './scenarioDatabase.ts';
+import { detectDomainFromJargon } from './jargonRadar.ts';
 import { getCardColor } from './cardColors.ts';
 import {
   findFermentationRecipe,
@@ -5784,7 +5785,13 @@ function _extractSimpleNoteFromTextInternal(
   }
 
   // 0. ÖNCELİK: KISA SENARYO EŞLEŞTİRME ("Leb Demeden Leblebiyi Anlama" - 2-3 Kelimelik Doğrudan Eşleme)
-  const activeDomain = userDomain || (typeof window !== 'undefined' ? (localStorage.getItem('notivia_work_domain') as any) || undefined : undefined);
+  let activeDomain = userDomain || (typeof window !== 'undefined' ? (localStorage.getItem('notivia_work_domain') as any) || undefined : undefined);
+  if (activeDomain === 'OTOMATIK_JARGON') {
+    const radar = detectDomainFromJargon(cleanInput, 'OTOMATIK_JARGON');
+    if (radar.confidence >= 0.2 && radar.detectedDomain !== 'GENEL' && radar.detectedDomain !== 'OTOMATIK_JARGON') {
+      activeDomain = radar.detectedDomain;
+    }
+  }
   const shortScenario = matchShortScenario(cleanInput, activeDomain);
   if (shortScenario) {
     const actionItems = (shortScenario.oncedenYapilacaklar && shortScenario.oncedenYapilacaklar.length > 0)

@@ -837,6 +837,13 @@ const DOMAIN_INSTITUTIONS: Record<string, { label: string; institution: string; 
     badgeHex: '#FEF9C3',
     defaultRoute: 'EBYS Resmi Yazışma & Onay'
   },
+  OTOMATIK_JARGON: {
+    label: 'Otomatik Jargon',
+    institution: 'Notivia Global Jargon Radarı',
+    icon: '🎯',
+    badgeHex: '#D1FAE5',
+    defaultRoute: 'Tüm Sektörler Otomatik Aktif'
+  },
   GENEL: {
     label: 'Bilişsel Asistan',
     institution: 'Notivia Akıllı Yönlendirici',
@@ -879,13 +886,16 @@ export function detectIntentRoute(
   }
 
   // 2. Jargon Radar Taraması
-  const radar = detectDomainFromJargon(clean);
+  const radar = detectDomainFromJargon(clean, currentDomain);
+  const minConf = currentDomain === 'OTOMATIK_JARGON' ? 0.2 : 0.4;
   const effectiveDomain: ProfessionDomain = 
-    radar.confidence >= 0.4 ? radar.detectedDomain : (currentDomain && currentDomain !== 'GENEL' && currentDomain !== 'SADE' ? currentDomain : 'GENEL');
+    (radar.confidence >= minConf && radar.detectedDomain !== 'GENEL' && radar.detectedDomain !== 'OTOMATIK_JARGON')
+      ? radar.detectedDomain
+      : (currentDomain && currentDomain !== 'GENEL' && currentDomain !== 'SADE' && currentDomain !== 'OTOMATIK_JARGON' ? currentDomain : 'GENEL');
   
   const domInfo = DOMAIN_INSTITUTIONS[effectiveDomain] || DOMAIN_INSTITUTIONS.GENEL;
 
-  if (radar.confidence >= 0.4 && radar.matchedKeywords.length > 0) {
+  if (radar.confidence >= minConf && radar.matchedKeywords.length > 0) {
     const kw = radar.matchedKeywords[0];
     const capitalizedKw = kw.charAt(0).toLocaleUpperCase('tr-TR') + kw.slice(1);
     return {

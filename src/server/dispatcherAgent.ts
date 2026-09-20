@@ -435,7 +435,10 @@ export function dispatchDeterministic(
   // 3. KANAL: BİLİŞSEL EYLEM & NOT OLUŞTURUCU (create_note_or_event)
   const isEn = language === 'en';
   const radar = detectDomainFromJargon(sanitizedInput, (userDomain as any) || 'GENEL');
-  const simpleNote = extractSimpleNoteFromText(sanitizedInput, currentDatetime, undefined, userDomain, language);
+  const effectiveUserDomain = (userDomain === 'OTOMATIK_JARGON' && radar.confidence >= 0.2 && radar.detectedDomain !== 'GENEL')
+    ? radar.detectedDomain
+    : userDomain;
+  const simpleNote = extractSimpleNoteFromText(sanitizedInput, currentDatetime, undefined, effectiveUserDomain, language);
 
   // Başlık maksimum 4 kelime kuralı ve dolgu sözcüklerden arındırma
   let baslik = sanitizeCardTitle(simpleNote.baslik);
@@ -447,7 +450,8 @@ export function dispatchDeterministic(
   // İsmin halleri finansal kontrol: "-den/-dan" alacak (🟢), "-e/-a" borç/ödeme (🔴)
   let icon = simpleNote.ikon;
   let color = simpleNote.renk;
-  if (radar.confidence >= 0.4) {
+  const minRadarConf = userDomain === 'OTOMATIK_JARGON' ? 0.2 : 0.4;
+  if (radar.confidence >= minRadarConf) {
     if (!icon || icon === '📌') icon = radar.suggestedIcon;
     if (!color || color === '#FEF3C7') color = radar.suggestedColor;
   }
@@ -549,7 +553,11 @@ export async function dispatchWithGemini(
   // 1. ÖNCELİK: YEREL VE BİLİŞSEL KURAL MOTORU KONTROLÜ
   // 2-3 kelimelik kısa senaryolar, tekil alarmlar, sayaçlar veya belirgin kurumsal/mesleki kalıplar varsa
   // API'ye gitmeden anında, sıfır gecikmeyle ve sıfır maliyetle yerel motoru çalıştırır.
-  const shortScenario = matchShortScenario(cleanInput, userDomain);
+  const radarForScenario = userDomain === 'OTOMATIK_JARGON' ? detectDomainFromJargon(cleanInput, 'OTOMATIK_JARGON') : null;
+  const effectiveDomainForScenario = (radarForScenario && radarForScenario.confidence >= 0.2 && radarForScenario.detectedDomain !== 'GENEL' && radarForScenario.detectedDomain !== 'OTOMATIK_JARGON')
+    ? radarForScenario.detectedDomain
+    : userDomain;
+  const shortScenario = matchShortScenario(cleanInput, effectiveDomainForScenario);
   const isDirectCalendar = lower.includes('neyim var') || lower.includes('programım nasıl') || lower.includes('müsait miyim') || lower.includes('ajandam');
   const isDirectMessage = lower.includes('mesajı hazırla') || lower.includes('mail taslağı') || lower.includes('gelemeyeceğimi söyle');
   const isMicroTaskFast =
@@ -587,7 +595,11 @@ export async function dispatchWithGemini(
       ? `\nCRITICAL LANGUAGE INSTRUCTION: The user interface and speaking/writing language is ENGLISH ('en'). You MUST output all function call arguments ('baslik', 'zaman', 'action_items', 'sesli_fisilti', 'netlestirme_sorusu', 'anomali_notu', 'message_body') in fluent, natural ENGLISH.`
       : '';
 
-    const userPrompt = `Kullanıcı Girdisi: "${input}"\nCURRENT_DATETIME: ${currentDatetime}${userDomain && userDomain !== 'GENEL' ? `\nKULLANICININ ÇALIŞMA / UZMANLIK ALANI ODAĞI: ${userDomain}` : ''}${langInstruction}`;
+    const domainPromptPart = (userDomain && userDomain !== 'GENEL' && userDomain !== 'OTOMATIK_JARGON')
+      ? `\nKULLANICININ ÇALIŞMA / UZMANLIK ALANI ODAĞI: ${userDomain}`
+      : (userDomain === 'OTOMATIK_JARGON' ? '\nKULLANICI MODU: Otomatik Jargon (Tüm mesleki ve kurumsal jargonları otomatik tanı)' : '');
+
+    const userPrompt = `Kullanıcı Girdisi: "${input}"\nCURRENT_DATETIME: ${currentDatetime}${domainPromptPart}${langInstruction}`;
 
     let functionCalls: any[] | undefined;
     let usedModel = 'gemini-2.5-flash';

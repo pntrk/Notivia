@@ -3017,7 +3017,7 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
     id: 'muhendislik_elektrik_loto_guvenlik',
     category: 'is_kariyer',
     domain: 'TEKNIK',
-    keywords: ['loto prosedürü', 'trafo bakımı', 'pano bakımı', 'yüksek gerilim müdahale', 'kilitleme etiketleme', 'loto', 'enerji kesme'],
+    keywords: ['loto güvenlik prosedürleri', 'loto güvenlik', 'loto prosedürleri', 'loto prosedürü', 'trafo bakımı', 'pano bakımı', 'yüksek gerilim müdahale', 'kilitleme etiketleme', 'loto', 'enerji kesme'],
     baslik: 'Pano/Trafo Bakımı & LOTO Güvenliği',
     ikon: '⚡',
     renk: '#FEE2E2',
@@ -3030,6 +3030,25 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
       'Gerilim kontrol kalemi ile baralarda 0V olduğunu doğrula ve seyyar topraklama donanımını tak',
       'Termal kamera ile bara bağlantıları, kontaktör ve klemenslerde aşırı ısınma/gevşeklik taraması yap',
       'Bakım bitiminde megger mego metre ile izolasyon direnci testi ve teslim tutanağını imzala'
+    ]
+  },
+  {
+    id: 'turizm_otel_overbooking',
+    category: 'is_kariyer',
+    domain: 'TURIZM_KONAKLAMA_YIYECEK',
+    keywords: ['overbooking', 'overbooking oldu', 'otel overbooking', 'çifte rezervasyon', 'fazla rezervasyon', 'oda kapasitesi aşıldı', 'overbooking çözümü'],
+    baslik: 'Otel Overbooking & Çözüm Protokolü',
+    ikon: '🏨',
+    renk: '#FFEDD5',
+    varsayilanZaman: 'Bugün (Acil Operasyon)',
+    hazirlikZamani: 'T-30 Dk (Tesis Koordinasyonu)',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '🛎️ Overbooking durumunda misafire derhal eşdeğer/üst segment alternatif tesis ve VIP transfer organize edilmelidir.',
+    oncedenYapilacaklar: [
+      'Giriş yapacak misafir listesini ve no-show olasılıklarını PMS üzerinden denetle',
+      'Anlaşmalı kardeş otellerle irtibata geçip müsait eşdeğer/üst oda blokajı yap',
+      'Misafire durumu nazikçe izah edip ücretsiz transfer ve tesis içi ikram sağla',
+      'Acenta/OTA (Booking/Expedia) ile iletişime geçerek rezervasyon statüsünü güncelle'
     ]
   },
   {
@@ -4771,7 +4790,7 @@ export function matchShortScenario(text: string, userDomain?: ProfessionDomain |
     return null;
   }
 
-  const hasDomainPriority = userDomain && userDomain !== 'GENEL';
+  const hasDomainPriority = userDomain && userDomain !== 'GENEL' && userDomain !== 'OTOMATIK_JARGON';
 
   const matchesKeywordPrecisely = (kw: string): boolean => {
     const trimmedKw = kw.trim();

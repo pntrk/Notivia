@@ -1,6 +1,7 @@
 export type ProfessionDomain =
   // Özel & Genel Modlar
   | 'SADE'
+  | 'OTOMATIK_JARGON'
   | 'GENEL'
   | 'OGRENCI'
   | 'CALISMIYORUM'
@@ -85,6 +86,21 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
     btnPrimaryText: 'text-white',
     actions: [
       { id: 'share', label: 'Paylaş', icon: '↗️', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
+
+  OTOMATIK_JARGON: {
+    domain: 'OTOMATIK_JARGON',
+    displayName: 'Otomatik Jargon',
+    bgCard: 'bg-emerald-50/70 border-emerald-200',
+    borderAccent: 'border-l-emerald-500',
+    badgeBg: 'bg-emerald-100',
+    badgeText: 'text-emerald-900',
+    btnPrimaryBg: 'bg-emerald-600 hover:bg-emerald-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'radar_all', label: 'Tüm Sektörler Açık', icon: '🎯', actionType: 'COPY_TEMPLATE' },
+      { id: 'smart_dispatch', label: 'Akıllı Yönlendirici', icon: '⚡', actionType: 'CHECKLIST' }
     ]
   },
 
@@ -908,7 +924,8 @@ export interface WorkDomainOption {
 
 export const WORK_DOMAIN_OPTIONS: WorkDomainOption[] = [
   // Özel & Genel Modlar
-  { id: 'SADE', label: 'Sade Not (Motorsuz)', sublabel: 'Bilişsel motorlar kapalı; yalnızca söylediğiniz ham metni doğrudan not olarak kaydeder', icon: '📝', category: 'ozel' },
+  { id: 'SADE', label: 'Çalışmıyorum', sublabel: 'Bilişsel motorlar kapalı; yalnızca söylediğiniz ham metni doğrudan not olarak kaydeder', icon: '📝', category: 'ozel' },
+  { id: 'OTOMATIK_JARGON', label: 'Otomatik Jargon', sublabel: 'Tüm mesleki jargonlar açık; çks, overbooking, LOTO gibi tüm sektörel terimleri otomatik tanır', icon: '🎯', category: 'ozel' },
   { id: 'GENEL', label: 'Genel Yaşam', sublabel: 'Kişisel yaşam, ev, fatura & kira, abonelikler, alışveriş ve günlük rutinler', icon: '🏠', category: 'ozel' },
   { id: 'OGRENCI', label: 'Öğrenci', sublabel: 'Vize/final sınavları, ders kaydı, ödev teslimi, burs/KYK', icon: '🎓', category: 'ozel' },
 
@@ -944,7 +961,8 @@ export const WORK_DOMAIN_OPTIONS: WorkDomainOption[] = [
 
 export const WORK_DOMAIN_OPTIONS_EN: WorkDomainOption[] = [
   // Special & General Modes
-  { id: 'SADE', label: 'Plain Note (No Engine)', sublabel: 'Cognitive engines disabled; directly saves your exact spoken or typed text', icon: '📝', category: 'ozel' },
+  { id: 'SADE', label: 'Not Working', sublabel: 'Cognitive engines disabled; directly saves your exact spoken or typed text', icon: '📝', category: 'ozel' },
+  { id: 'OTOMATIK_JARGON', label: 'Auto Jargon', sublabel: 'All industry jargons active; automatically identifies any vocational terms globally', icon: '🎯', category: 'ozel' },
   { id: 'GENEL', label: 'General Life', sublabel: 'Personal life, home, bills & rent, subscriptions, shopping, and daily routines', icon: '🏠', category: 'ozel' },
   { id: 'OGRENCI', label: 'Student & Academic', sublabel: 'Midterms/finals, course registration, homework submissions, scholarships', icon: '🎓', category: 'ozel' },
 

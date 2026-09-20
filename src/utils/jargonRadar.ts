@@ -694,7 +694,8 @@ const DOMAIN_RULES: DomainRule[] = [
     defaultIcon: '⚡',
     defaultColor: '#FEF08A',
     exclusiveKeywords: [
-      'loto', '30ma kaçak akım', '300ma yangın koruma', 'kompanzasyon panosu',
+      'loto', 'loto güvenlik prosedürleri', 'loto prosedürü', 'loto prosedürleri', 'kilitleme etiketleme', 'loto güvenlik',
+      '30ma kaçak akım', '300ma yangın koruma', 'kompanzasyon panosu',
       'kondansatör kademesi', 'meger testi', 'yalıtım direnci', 'kontaktör bobini',
       'termik röle', 'plc panosu', 'scada ekranı', 'trafo hücresi', 'trafo buşingi'
     ],
@@ -961,6 +962,7 @@ const DOMAIN_RULES: DomainRule[] = [
     defaultIcon: '🌿',
     defaultColor: '#ECFCCB',
     exclusiveKeywords: [
+      'çks', 'cks', 'çks kaydı', 'çks güncelleme', 'çks belgesi', 'çiftçi kayıt sistemi',
       'çks kayıt güncelleme', 'tarsim zirai don ihbarı', 'damlama sulama gübreleme',
       'phi hasat bekleme süresi', 'güneş kuralı sulama', 'bordo bulamacı ilaçlama',
       'av yasağı trol kontrolü', 'balıkçı ağ bakım'
@@ -1017,7 +1019,8 @@ const DOMAIN_RULES: DomainRule[] = [
     defaultIcon: '👨‍🍳',
     defaultColor: '#FFEDD5',
     exclusiveKeywords: [
-      'mise en place hazırlık', 'haccp soğuk oda sıcaklık', 'otel overbooking kontrolü',
+      'overbooking', 'otel overbooking', 'overbooking kontrolü', 'çifte rezervasyon', 'mise en place', 'haccp',
+      'mise en place hazırlık', 'haccp soğuk oda sıcaklık',
       'housekeeping oda teftişi', 'minibar folyo kontrolü', 'alakart servis tadımı',
       'front office check-in'
     ],
@@ -1102,7 +1105,7 @@ export function detectDomainFromJargon(
     };
   }
 
-  let bestDomain: ProfessionDomain = fallbackDomain;
+  let bestDomain: ProfessionDomain = fallbackDomain === 'OTOMATIK_JARGON' ? 'GENEL' : fallbackDomain;
   let highestScore = 0;
   let bestMatches: string[] = [];
   let matchedRule: DomainRule | null = null;
@@ -1113,7 +1116,8 @@ export function detectDomainFromJargon(
 
     // 1. Kesin terimler kontrolü (Exclusive: Her biri 65 puan)
     for (const kw of rule.exclusiveKeywords) {
-      const regex = new RegExp(`(^|\\s)${kw.replace('-', '[- ]?')}($|\\s)`, 'i');
+      const escaped = kw.replace('-', '[- ]?').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(^|\\s)${escaped}(?:yi|ye|ya|yu|yı|da|de|ta|te|dan|den|nin|nın|nun|nün|si|sı|su|sü)?($|\\s)`, 'i');
       if (regex.test(normalized)) {
         currentScore += 65;
         currentMatches.push(kw);
@@ -1122,15 +1126,16 @@ export function detectDomainFromJargon(
 
     // 2. Destekleyici terimler kontrolü (Supporting: Her biri 20 puan)
     for (const kw of rule.supportingKeywords) {
-      const regex = new RegExp(`(^|\\s)${kw}($|\\s)`, 'i');
+      const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(^|\\s)${escaped}(?:yi|ye|ya|yu|yı|da|de|ta|te|dan|den|nin|nın|nun|nün|si|sı|su|sü)?($|\\s)`, 'i');
       if (regex.test(normalized)) {
         currentScore += 20;
         currentMatches.push(kw);
       }
     }
 
-    // Kullanıcının mevcut seçili profiline hafif ağırlık (+15)
-    if (rule.domain === fallbackDomain && fallbackDomain !== 'GENEL') {
+    // Kullanıcının mevcut seçili profiline hafif ağırlık (+15) (Otomatik Jargon modunda tüm sektörler tarafsız ve eşit taranır)
+    if (rule.domain === fallbackDomain && fallbackDomain !== 'GENEL' && fallbackDomain !== 'OTOMATIK_JARGON') {
       currentScore += 15;
     }
 
@@ -1142,8 +1147,9 @@ export function detectDomainFromJargon(
     }
   }
 
-  // Eşik: En az bir kesin terim (65) veya 2 destekleyici terim (40)
-  if (highestScore >= 40 && matchedRule) {
+  // Eşik: Otomatik Jargon modunda herhangi bir sektörel terim (20+), diğer modlarda 40+
+  const threshold = fallbackDomain === 'OTOMATIK_JARGON' ? 20 : 40;
+  if (highestScore >= threshold && matchedRule) {
     let implicitHour: number | undefined;
     let implicitMinute: number | undefined;
 
@@ -1167,16 +1173,19 @@ export function detectDomainFromJargon(
       suggestedColor: matchedRule.defaultColor,
       implicitHour,
       implicitMinute,
-      reason: `Tespit edilen sektörel jargon: ${bestMatches.join(', ')}`,
+      reason: fallbackDomain === 'OTOMATIK_JARGON'
+        ? `Otomatik Jargon: ${bestMatches.join(', ')} (${bestDomain})`
+        : `Tespit edilen sektörel jargon: ${bestMatches.join(', ')}`,
     };
   }
 
   // Eşik aşılmadıysa fallback'i koru
   return {
-    detectedDomain: fallbackDomain,
+    detectedDomain: fallbackDomain === 'OTOMATIK_JARGON' ? 'GENEL' : fallbackDomain,
     confidence: 0.1,
     matchedKeywords: [],
-    suggestedIcon: '📌',
+    suggestedIcon: fallbackDomain === 'OTOMATIK_JARGON' ? '🎯' : '📌',
     suggestedColor: '#FEF3C7',
+    reason: fallbackDomain === 'OTOMATIK_JARGON' ? 'Otomatik Jargon (Genel mod)' : undefined,
   };
 }
