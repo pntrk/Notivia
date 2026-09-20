@@ -25,6 +25,149 @@ export interface SchoolAdminTask {
   sesli_geribildirim: string;
 }
 
+export function formatLocalISO(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+}
+
+export interface ExtractedDateTime {
+  targetDate: Date;
+  dayLabel: string;
+  hour: number;
+  minute: number;
+  tarih_iso: string;
+  timeLabel: string;
+  cleanedTitle: string;
+}
+
+export function parseEduDateTime(rawText: string, now: Date = new Date(), defaultHour = 8, defaultMinute = 20): ExtractedDateTime {
+  const lower = rawText.toLowerCase().trim();
+  const targetDate = new Date(now);
+
+  let dayOffset = 0;
+  let dayLabel = 'Bugün';
+
+  if (lower.includes('yarın') || lower.includes('yarin') || lower.includes('ertesi gün') || lower.includes('ertesi gun')) {
+    dayOffset = 1;
+    dayLabel = 'Yarın';
+  } else if (lower.includes('pazartesi')) {
+    const day = targetDate.getDay();
+    const diff = day === 1 ? 7 : (1 + 7 - day) % 7;
+    dayOffset = diff || 7;
+    dayLabel = 'Pazartesi';
+  } else if (lower.includes('cuma')) {
+    const day = targetDate.getDay();
+    const diff = day === 5 ? 7 : (5 + 7 - day) % 7;
+    dayOffset = diff || 7;
+    dayLabel = 'Cuma';
+  }
+
+  targetDate.setDate(targetDate.getDate() + dayOffset);
+
+  let hour: number | null = null;
+  let minute: number | null = null;
+
+  // 1. Digital time match: "08:20", "8.20", "08.20", "8:20", "8.20'de", etc.
+  const digitalMatch = lower.match(/\b(\d{1,2})[:.](\d{2})(?:'?(?:de|da|te|ta|ye|ya))?\b/);
+  if (digitalMatch) {
+    hour = parseInt(digitalMatch[1], 10);
+    minute = parseInt(digitalMatch[2], 10);
+  }
+
+  // 2. Textual time match (e.g. "sekiz yirmide", "sekiz yirmi", "sekiz buçukta", "dokuz ellide")
+  if (hour === null) {
+    const hourWords: [string, number][] = [
+      ['on iki', 12], ['oniki', 12], ['on bir', 11], ['onbir', 11], ['on', 10],
+      ['dokuz', 9], ['sekiz', 8], ['yedi', 7], ['altı', 6], ['alti', 6],
+      ['beş', 5], ['bes', 5], ['dört', 4], ['dort', 4], ['üç', 3], ['uc', 3],
+      ['iki', 2], ['bir', 1]
+    ];
+
+    const tensWords: [string, number][] = [
+      ['elli', 50], ['kırk', 40], ['kirk', 40], ['otuz', 30], ['yirmi', 20], ['on', 10]
+    ];
+
+    const onesWords: [string, number][] = [
+      ['dokuz', 9], ['sekiz', 8], ['yedi', 7], ['altı', 6], ['alti', 6],
+      ['beş', 5], ['bes', 5], ['dört', 4], ['dort', 4], ['üç', 3], ['uc', 3],
+      ['iki', 2], ['bir', 1]
+    ];
+
+    for (const [hWord, hVal] of hourWords) {
+      if (new RegExp(`\\b(?:saat\\s*)?${hWord}\\b`, 'i').test(lower)) {
+        hour = hVal;
+
+        if (new RegExp(`\\b${hWord}\\s+(?:buçuk|bucuk)\\b`, 'i').test(lower)) {
+          minute = 30;
+        } else if (new RegExp(`\\b${hWord}\\s+(?:çeyrek|ceyrek)\\b`, 'i').test(lower)) {
+          minute = 15;
+        } else {
+          for (const [tWord, tVal] of tensWords) {
+            if (new RegExp(`\\b${hWord}\\s+${tWord}\\b`, 'i').test(lower)) {
+              minute = tVal;
+              for (const [oWord, oVal] of onesWords) {
+                if (new RegExp(`\\b${hWord}\\s+${tWord}\\s+${oWord}\\b`, 'i').test(lower)) {
+                  minute += oVal;
+                  break;
+                }
+              }
+              break;
+            }
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  // 3. Simple hour match (e.g. "8'de", "sekizde")
+  if (hour === null) {
+    const digitHourMatch = lower.match(/(?:saat\s*)?(\d{1,2})(?:\s*['’]?(?:da|de|ta|te|ye|ya))?\b/i);
+    if (digitHourMatch) {
+      const parsed = parseInt(digitHourMatch[1], 10);
+      if (parsed >= 0 && parsed <= 23) {
+        hour = parsed;
+        minute = 0;
+      }
+    }
+  }
+
+  if (hour === null) hour = defaultHour;
+  if (minute === null) minute = defaultMinute;
+
+  // AM / PM adjustment
+  if (lower.includes('akşam') || lower.includes('aksam') || lower.includes('gece')) {
+    if (hour < 12) hour += 12;
+  } else if (lower.includes('sabah')) {
+    if (hour === 12) hour = 0;
+  }
+
+  targetDate.setHours(hour, minute, 0, 0);
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const tarih_iso = formatLocalISO(targetDate);
+  const timeLabel = `${dayLabel} ${pad(hour)}:${pad(minute)}`;
+
+  // Clean title
+  let cleanedTitle = rawText
+    .replace(/\byarın\b|\byarin\b|\bertesi gün\b|\bertesi gun\b|\bbugün\b|\bbugun\b|\bpazartesi\b|\bcuma\b/gi, '')
+    .replace(/\bsabah\b|\bakşam\b|\baksam\b|\bgece\b|\bsaat\b/gi, '')
+    .replace(/\bsekiz yirmide\b|\bsekiz yirmiye\b|\bsekiz yirmi\b|\b08:20\b|\b08\.20\b|\b8:20\b|\b8\.20\b/gi, '')
+    .replace(/\b\d{1,2}[:.]\d{2}(?:'?(?:de|da|te|ta|ye|ya))?\b/gi, '')
+    .replace(/\b(?:de|da|te|ta|'de|'da|'te|'ta)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Capitalize title
+  if (cleanedTitle) {
+    cleanedTitle = cleanedTitle.charAt(0).toLocaleUpperCase('tr-TR') + cleanedTitle.slice(1);
+  } else {
+    cleanedTitle = 'İstiklal Marşı & Bayrak Töreni';
+  }
+
+  return { targetDate, dayLabel, hour, minute, tarih_iso, timeLabel, cleanedTitle };
+}
+
 function addBusinessDays(baseDate: Date, count: number): Date {
   const result = new Date(baseDate);
   let added = 0;
@@ -106,9 +249,46 @@ export function parseSchoolAdminIntent(
     text.includes('devamsızlık') || text.includes('devamsizlik') || text.includes('disiplin') || text.includes('öddk') || text.includes('oddk') ||
     text.includes('tahliye tatbikatı') || text.includes('yangın tatbikatı') || text.includes('ziyaretçi defteri') ||
     text.includes('destek eğitim') || text.includes('destek egitim') || text.includes('bep') || /\bram\b/i.test(text) ||
-    text.includes('pdr') || text.includes('rehberlik') || text.includes('tefbis') || text.includes('kantin kira') || text.includes('okul aile birliği');
+    text.includes('pdr') || text.includes('rehberlik') || text.includes('tefbis') || text.includes('kantin kira') || text.includes('okul aile birliği') ||
+    text.includes('istiklal') || text.includes('bayrak') || text.includes('tören') || text.includes('toreni');
 
   if (!isEducationContext) return null;
+
+  // 0.1 İSTİKLAL MARŞI & BAYRAK TÖRENİ PROTOKOLÜ
+  if (
+    text.includes('istiklal') ||
+    text.includes('bayrak töreni') ||
+    text.includes('bayrak toreni') ||
+    text.includes('tören') ||
+    text.includes('toreni') ||
+    text.includes('saygı duruşu') ||
+    text.includes('saygi durusu')
+  ) {
+    const dt = parseEduDateTime(rawText, now, 8, 20);
+    const prepDate = new Date(dt.targetDate);
+    prepDate.setMinutes(prepDate.getMinutes() - 10);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const prepTimeLabel = `${dt.dayLabel} ${pad(prepDate.getHours())}:${pad(prepDate.getMinutes())} (Ses & Düzen Kontrolü)`;
+
+    return {
+      id: `edu_toren_${Date.now()}`,
+      baslik: dt.cleanedTitle || 'İstiklal Marşı & Bayrak Töreni',
+      kategori: 'Taşımalı & Sosyal',
+      mevzuat_notu: 'MEB Bayrak Törenleri Yönergesi uyarınca okul açılış (Pazartesi) ve kapanış (Cuma) törenlerinde İstiklal Marşı tam kadro ve kat emniyeti ile icra edilir.',
+      action_items: [
+        { task: 'Tören alanının (okul bahçesi/salon), ses düzeninin ve bayrak direğinin fiziki kontrolünü sağla', is_completed: false },
+        { task: 'İstiklal Marşı ses kaydını veya bando/müzik ekipmanını test et', is_completed: false },
+        { task: 'Öğrenci ve öğretmenlerin tören düzenine (sınıf bazlı hiza) geçmesini koordine et', is_completed: false },
+        { task: 'Bayrak çekme görevlisi öğrencileri ve tören sunucusunu hazır et', is_completed: false }
+      ],
+      zaman_etiketi: `${dt.dayLabel} ${pad(dt.hour)}:${pad(dt.minute)}`,
+      tarih_iso: dt.tarih_iso,
+      hazirlik_zamani: prepTimeLabel,
+      ikon: '🇹🇷',
+      renk: '#FEE2E2',
+      sesli_geribildirim: `İstiklal Marşı töreni için ${dt.dayLabel.toLowerCase()} saat ${pad(dt.hour)}:${pad(dt.minute)}ye alarm kuruldu.`
+    };
+  }
 
   // 1. KBS & EK DERS ONAY TAKVİMİ (AYIN 20-27'Sİ ARASI)
   if (

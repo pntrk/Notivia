@@ -140,18 +140,46 @@ export function extractDateTimeFromTurkish(
   const isMorning = /sabah/i.test(lower);
   const isNoon = /öğlen|oglen|öğle|ogle/i.test(lower);
 
-  // Sayısal saat formatları (21:00, 21.00, 9:30 vb.)
-  const colonMatch = lower.match(/\b(\d{1,2})[:.](\d{2})\b/);
+  // Sayısal saat formatları (21:00, 21.00, 9:30, 8.20'de, 08:20de vb.)
+  const colonMatch = lower.match(/\b(\d{1,2})[:.](\d{2})(?:'?(?:de|da|te|ta|ye|ya))?\b/);
   if (colonMatch) {
     hour = parseInt(colonMatch[1], 10);
     minute = parseInt(colonMatch[2], 10);
     isExplicitTime = true;
   }
 
+  // Metinsel saat + dakika (sekiz yirmide, sekiz yirmi, dokuz ellide)
+  if (hour === null) {
+    const tensMap: Record<string, number> = { 'yirmi': 20, 'otuz': 30, 'kırk': 40, 'kirk': 40, 'elli': 50, 'on': 10 };
+    const onesMap: Record<string, number> = { 'bir': 1, 'iki': 2, 'üç': 3, 'uc': 3, 'dört': 4, 'dort': 4, 'beş': 5, 'bes': 5, 'altı': 6, 'alti': 6, 'yedi': 7, 'sekiz': 8, 'dokuz': 9 };
+
+    for (const [word, val] of Object.entries(numberWords)) {
+      const reg = new RegExp(`\\b(?:saat\\s*)?${word}\\b`, 'i');
+      if (reg.test(lower)) {
+        hour = val;
+        isExplicitTime = true;
+
+        for (const [tWord, tVal] of Object.entries(tensMap)) {
+          if (new RegExp(`\\b${word}\\s+${tWord}`, 'i').test(lower)) {
+            minute = tVal;
+            for (const [oWord, oVal] of Object.entries(onesMap)) {
+              if (new RegExp(`\\b${word}\\s+${tWord}\\s+${oWord}`, 'i').test(lower)) {
+                minute += oVal;
+                break;
+              }
+            }
+            break;
+          }
+        }
+        break;
+      }
+    }
+  }
+
   // "saat 9", "9da", "9'da", "9 da", "akşam 9"
   if (hour === null) {
-    const digitMatch = lower.match(/(?:saat\s*|akşam\s*|aksam\s*|sabah\s*|gece\s*|öğlen\s*)(\d{1,2})(?:\s*['’]?(?:da|de|ta|te))?/i) ||
-      lower.match(/\b(\d{1,2})\s*['’]?(?:da|de|ta|te)\b/i);
+    const digitMatch = lower.match(/(?:saat\s*|akşam\s*|aksam\s*|sabah\s*|gece\s*|öğlen\s*)(\d{1,2})(?:\s*['’]?(?:da|de|ta|te|ye|ya))?/i) ||
+      lower.match(/\b(\d{1,2})\s*['’]?(?:da|de|ta|te|ye|ya)\b/i);
     if (digitMatch) {
       hour = parseInt(digitMatch[1], 10);
       isExplicitTime = true;
@@ -161,7 +189,7 @@ export function extractDateTimeFromTurkish(
   // Metinsel saat (dokuzda, sekizde, on birde)
   if (hour === null) {
     for (const [word, val] of Object.entries(numberWords)) {
-      const reg = new RegExp(`\\b(?:saat\\s*)?${word}(?:['’]?(?:da|de|ta|te))?\\b`, 'i');
+      const reg = new RegExp(`\\b(?:saat\\s*)?${word}(?:['’]?(?:da|de|ta|te|ye|ya))?\\b`, 'i');
       if (reg.test(lower)) {
         hour = val;
         isExplicitTime = true;
@@ -171,10 +199,12 @@ export function extractDateTimeFromTurkish(
   }
 
   // Buçuk ve çeyrek tespiti
-  if (lower.includes('buçuk') || lower.includes('bucuk')) {
-    minute = 30;
-  } else if (lower.includes('çeyrek') || lower.includes('ceyrek')) {
-    minute = 15;
+  if (minute === null) {
+    if (lower.includes('buçuk') || lower.includes('bucuk')) {
+      minute = 30;
+    } else if (lower.includes('çeyrek') || lower.includes('ceyrek')) {
+      minute = 15;
+    }
   }
 
   // Saat 12 saat formatından 24 saat formatına dönüştürme (Akşam 9 = 21:00)
