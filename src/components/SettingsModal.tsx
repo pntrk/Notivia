@@ -264,11 +264,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       ))}
                     </optgroup>
                     <optgroup label="Meslek & Uzmanlık Grupları">
-                      {localizedDomainOptions.filter((o) => o.category === 'meslek').map((opt) => (
-                        <option key={opt.id} value={opt.id}>
-                          {opt.icon} {opt.label}
-                        </option>
-                      ))}
+                      {localizedDomainOptions
+                        .filter((o) => o.category === 'meslek')
+                        .sort((a, b) => a.label.localeCompare(b.label, language === 'tr' ? 'tr-TR' : 'en'))
+                        .map((opt) => (
+                          <option key={opt.id} value={opt.id}>
+                            {opt.icon} {opt.label}
+                          </option>
+                        ))}
                     </optgroup>
                   </>
                 )}
