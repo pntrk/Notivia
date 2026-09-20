@@ -1607,6 +1607,11 @@ export default function App() {
       bir_sonraki_tarih_iso?: string;
     } | null;
     isManualEntry?: boolean;
+    isAlarm?: boolean;
+    isAlarmActive?: boolean;
+    isMicroTask?: boolean;
+    sureDakika?: number;
+    deviceNotificationEnabled?: boolean;
   }) => {
     if (!noteData.isManualEntry) {
       // Check reactive triggers against existing cards
@@ -1730,8 +1735,12 @@ export default function App() {
       setStatusText(`Not eklendi (Çakışma: ${conflictWith})`);
     } else if (noteData.periyodik) {
       setStatusText('Periyodik hatırlatıcı kuruldu 🔄🔔');
-    } else if (noteData.tarih_iso) {
+    } else if (noteData.isAlarm) {
+      setStatusText('Alarm kuruldu ⏰');
+    } else if (noteData.tarih_iso && new Date(noteData.tarih_iso).getTime() > Date.now() + 60000) {
       setStatusText('Cihaz hatırlatıcısı kuruldu ⏰');
+    } else {
+      setStatusText('Not kaydedildi 📝');
     }
 
     const payload = {
