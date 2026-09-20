@@ -29,7 +29,7 @@ export interface ActionButtonConfig {
   id: string;
   label: string;
   icon: string;
-  actionType: 'WHATSAPP' | 'TIMER' | 'LOTO_CHECK' | 'NAVIGATE' | 'COPY_TEMPLATE';
+  actionType: 'WHATSAPP' | 'TIMER' | 'LOTO_CHECK' | 'NAVIGATE' | 'COPY_TEMPLATE' | 'CHECKLIST';
   payload?: string;
 }
 
@@ -206,7 +206,7 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
 
   SAVUNMA: {
     domain: 'SAVUNMA',
-    displayName: 'Savunma & Emniyet',
+    displayName: 'Savunma, Emniyet & Askeriye',
     bgCard: 'bg-blue-50/70 border-blue-200',
     borderAccent: 'border-l-blue-700',
     badgeBg: 'bg-blue-100',
@@ -215,7 +215,11 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
     btnPrimaryText: 'text-white',
     actions: [
       { id: 'cmk_timer', label: '24s Gözaltı Sayacı', icon: '⏱️', actionType: 'TIMER' },
-      { id: 'fezleke', label: 'Fezleke Başlığı Al', icon: '📂', actionType: 'COPY_TEMPLATE' }
+      { id: 'silahlik_sayim', label: 'Silahlık & Doldur-Boşalt', icon: '🛡️', actionType: 'COPY_TEMPLATE' },
+      { id: 'fezleke', label: 'Fezleke & Adli Emanet', icon: '📂', actionType: 'COPY_TEMPLATE' },
+      { id: 'scba_check', label: 'SCBA 300 Bar & Arazöz', icon: '🚒', actionType: 'CHECKLIST' },
+      { id: 'ictima_tekmil', label: 'İçtima & Künye Sayımı', icon: '🪖', actionType: 'CHECKLIST' },
+      { id: 'xray_5188', label: '5188 ÖGG & X-Ray Testi', icon: '🔍', actionType: 'CHECKLIST' }
     ]
   },
 
@@ -480,7 +484,7 @@ export const WORK_DOMAIN_OPTIONS: WorkDomainOption[] = [
   { id: 'EMLAK', label: 'Gayrimenkul & Emlak', sublabel: 'Emlak Danışmanı (Yetki belgesi, Web-Tapu harç, DASK, ipotek fek)', icon: '🏢', category: 'meslek' },
   { id: 'GUMRUK', label: 'Gümrük & Dış Ticaret', sublabel: 'Gümrük Müşaviri (Kırmızı hat muayene, ATR, konşimento, ordino teslim)', icon: '📦', category: 'meslek' },
   { id: 'DENIZCILIK', label: 'Denizcilik & Gemi İdaresi', sublabel: 'Kaptan, Gemi Zabitleri (PSC denetimi, ISM, draft survey, balast jurnali)', icon: '⚓', category: 'meslek' },
-  { id: 'SAVUNMA', label: 'Savunma & Emniyet', sublabel: 'Polis, İtfaiye, Asker (Gözaltı fezleke, SCBA, içtima, tekmil)', icon: '👮', category: 'meslek' },
+  { id: 'SAVUNMA', label: 'Savunma, Emniyet & Askeriye', sublabel: 'Polis, Jandarma, Asker, İtfaiye, Özel Güvenlik (CMK 91 gözaltı, fezleke, OYİ, içtima, silahlık, SCBA, 5188 ÖGG)', icon: '👮', category: 'meslek' },
   { id: 'LOJISTIK', label: 'Lojistik & Otomotiv', sublabel: 'Ağır Vasıta Şoförü, Oto Tamircisi (Takograf, muayene, CMR, akü)', icon: '🚛', category: 'meslek' },
   { id: 'TICARET', label: 'Ticaret, Satış & Esnaf', sublabel: 'Satış Danışmanı, Kasiyer, Dükkan Sahibi (Teklif, kasa, Z raporu)', icon: '💼', category: 'meslek' },
   { id: 'GASTRONOMI', label: 'Gastronomi & Mutfak', sublabel: 'Şef, Aşçı, Mutfak Ekibi (Mise en place, HACCP, soğuk oda, tadım)', icon: '👨‍🍳', category: 'meslek' },
@@ -587,7 +591,16 @@ export function detectDomainFromNote(note: { ikon?: string; baslik?: string; ano
   if (icon === '🔧' || icon === '🛠️' || icon === '⚡' || icon === '⚙️' || icon === '📐' || icon === '💻' || text.includes('loto') || text.includes('arıza') || text.includes('bakım') || text.includes('şantiye') || text.includes('mimar') || text.includes('teknik') || text.includes('tamir') || text.includes('spt') || text.includes('kaçak akım')) {
     return 'TEKNIK';
   }
-  if (icon === '👮' || icon === '🪖' || icon === '🛡️' || icon === '🎯' || text.includes('gözaltı') || text.includes('fezleke') || text.includes('polis') || text.includes('asker') || text.includes('emniyet') || text.includes('nöbet') || text.includes('savunma')) {
+  if (
+    icon === '👮' || icon === '🪖' || icon === '🛡️' || icon === '🎯' || icon === '🚒' ||
+    text.includes('gözaltı') || text.includes('gozalti') || text.includes('fezleke') ||
+    text.includes('nezarethane') || text.includes('polis') || text.includes('asker') ||
+    text.includes('emniyet') || text.includes('jandarma') || text.includes('itfaiye') ||
+    text.includes('scba') || text.includes('içtima') || text.includes('tekmil') ||
+    text.includes('silahlık') || text.includes('doldur-boşalt') || text.includes('doldur boşalt') ||
+    text.includes('özel güvenlik') || text.includes('5188') || text.includes('x-ray') ||
+    text.includes('olay yeri inceleme') || text.includes('adli emanet') || text.includes('savunma')
+  ) {
     return 'SAVUNMA';
   }
   if (

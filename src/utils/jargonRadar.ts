@@ -337,19 +337,23 @@ const DOMAIN_RULES: DomainRule[] = [
   },
   {
     domain: 'SAVUNMA',
-    defaultIcon: '🪖',
-    defaultColor: '#E2E8D5',
+    defaultIcon: '👮',
+    defaultColor: '#BFDBFE',
     exclusiveKeywords: [
-      'içtima', 'tekmil', 'doldur-boşalt', 'mühimmat sandığı', 'silahlık sayımı',
-      'nöbetçi subayı', 'nöbetçi astsubayı', 'asayiş fezlekesi', 'adli emanet bürosu'
+      'içtima', 'tekmil', 'doldur-boşalt', 'doldur boşalt', 'mühimmat sandığı', 'silahlık sayımı',
+      'nöbetçi subayı', 'nöbetçi astsubayı', 'asayiş fezlekesi', 'adli emanet bürosu',
+      'olay yeri inceleme', 'cmk 91', 'nezarethane defteri', 'scba solunum', '5188 sayılı',
+      'x-ray bagaj', 'balistik kovan', 'parola-işaret', 'hazır kıta', 'arazöz su'
     ],
     supportingKeywords: [
       'bölük', 'tabur', 'takım', 'karakol', 'polis', 'asker',
-      'devriye', 'gözaltı', 'atış', 'tatbikat'
+      'devriye', 'gözaltı', 'atış', 'tatbikat', 'emniyet', 'jandarma',
+      'itfaiye', 'ögg', 'özel güvenlik', 'çelik yelek', 'gbt sorgu', 'yol kontrol'
     ],
     implicitTimeHooks: [
       { keyword: 'içtima', hour: 7, minute: 40 },
-      { keyword: 'devir-teslim', hour: 8, minute: 30 },
+      { keyword: 'devir-teslim', hour: 8, minute: 0 },
+      { keyword: 'gözaltı', hour: 14, minute: 0 },
     ]
   },
   {

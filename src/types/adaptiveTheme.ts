@@ -14,7 +14,7 @@ export const DOMAIN_KEYWORDS: Record<ProfessionDomain, RegExp> = {
   EGITIM: /(okul|öğretmen|ogretmen|müdür|mudur|kbs|ek ders|dys|devamsızlık|devamsizlik|taşımalı|tasimali|zümre|zumre|e-okul|eokul|tatbikat|disiplin|veli|bep|tefbis|ram yönlendirme)/i,
   TEKNIK: /(arıza|şalter|loto|voltaj|manometre|parça|salıncak|tork|fren|amortisör|klima|vrf|motor|beton|deploy|mühendis|spt|zemin etüdü|kaçak akım|meger)/i,
   MUHENDISLIK: /(beton dökümü|kırım testi|küp numune|loto|kompanzasyon|trafo|pano|hidrostatik test|prod deploy|staging|hotfix|semver|pull request|db migration|geoteknik|spt|kaçak akım|30ma|300ma|meger|ataşman|hakediş|owasp)/i,
-  SAVUNMA: /(gözaltı|şüpheli|nezarethane|fezleke|tutanak|asayiş|devriye|adli rapor|arama kararı|içtima|scba|polis|asker|emniyet|itfaiye)/i,
+  SAVUNMA: /(gözaltı|gozalti|şüpheli|nezarethane|nezaret|fezleke|tutanak|asayiş|devriye|adli rapor|adli muayene|arama kararı|adli arama|suç eşyası|adli emanet|içtima|tekmil|silahlık|doldur-boşalt|doldur boşalt|mühimmat|poligon|atış hattı|scba|arazöz|yangın uygunluk|polis|asker|emniyet|itfaiye|jandarma|karakol|nöbetçi subayı|nöbetçi astsubayı|kompozit başlık|hücum yeleği|özel güvenlik|5188|x-ray|kapı dedektörü|üst arama|olay yeri inceleme|oyi|kriminal|çelik yelek|gbt sorgu|yol kontrol)/i,
   LOJISTIK: /(takograf|dorse|sevk|irsaliye|rampa|kantar|şoför|yükleme|tır|kamyon|mola|lojistik|cmr|aetr)/i,
   TICARET: /(satış teklif|teklif sıcak takip|kasa avans|z raporu|pos gün sonu|veresiye|deftere yaz|açık hesap|toptancı|mal kabul|irsaliye|çek ödemesi|senet|esnaf|kasiyer|dükkan|stok sayım|fiyat etiketi)/i,
   GASTRONOMI: /(mise en place|servis|haccp|benmari|soğuk oda|stok|şef|garnitür|tadım|aşçı|mutfak)/i,

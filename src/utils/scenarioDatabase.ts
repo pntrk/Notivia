@@ -1312,22 +1312,151 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
     ]
   },
 
-  // 19. ASKERİYE & TEKMİL (İÇTİMA, NÖBET, SİLAHLIK)
+  // 19. SAVUNMA, ASKERİYE & EMNİYET (CMK 91, OYİ, İÇTİMA, SİLAHLIK, SCBA, 5188)
   {
-    id: 'askeriye_ictima_nobet',
+    id: 'savunma_cmk_gozalti_fezleke',
     category: 'resmi',
-    keywords: ['içtima', 'tekmil', 'silahlık sayımı', 'doldur boşalt', 'nöbet devir teslim askeriye'],
-    baslik: 'Askeri İçtima & Silahlık Devri',
+    domain: 'SAVUNMA',
+    keywords: ['gözaltı', 'gozalti', 'nezarethane', 'nezaret', 'fezleke', 'yakalama', 'şüpheli hakları', 'cmk 91', 'savcılık sevk'],
+    baslik: 'CMK 91 Gözaltı & Savcılık Fezlekesi',
+    ikon: '👮',
+    renk: '#BFDBFE',
+    varsayilanZaman: '24 Saat Yasal Süre (Toplu 48s)',
+    hazirlikZamani: 'Bitime 6 Saat Kala (Fezleke)',
+    akilliFisilti: '👮 CMK 91 uyarınca gözaltı süresi 24 saattir; süre bitimine 6 saat kala fezleke savcılığa sunulmalı, çıkış raporu alınmalıdır.',
+    oncedenYapilacaklar: [
+      'Giriş adli muayene (darp-cebir yokluğu) raporunu sağlık kuruluşundan al',
+      'Şüpheli hakları formunu (CMK 147) tebliğ edip Yakalama-Gözaltı Defterine kaydet',
+      'Müdafi (Baro/OCAS) istemini veya SEGBİS bağlantı hazırlığını tamamla',
+      'Süre bitimine 6 saat kala fezlekeyi Cumhuriyet Savcılığına sun',
+      'Savcılık sevki öncesi çıkış doktor raporunu eksiksiz temin et'
+    ]
+  },
+  {
+    id: 'savunma_olay_yeri_inceleme',
+    category: 'resmi',
+    domain: 'SAVUNMA',
+    keywords: ['olay yeri inceleme', 'olay yeri', 'oyi', 'delil numaralandırma', 'balistik', 'kovan', 'daktiloskopi', 'svap'],
+    baslik: 'Olay Yeri İnceleme & Delil Güvenliği',
+    ikon: '🔍',
+    renk: '#BFDBFE',
+    varsayilanZaman: 'Olay İntikal Anı',
+    hazirlikZamani: 'İlk Kordon Kurulumu',
+    akilliFisilti: '🔍 Delil zincirinin bozulmaması için olay yeri en az 50 metre kordon altına alınmalı, steril delil torbaları kullanılmalıdır.',
+    oncedenYapilacaklar: [
+      'Olay yerini güvenlik şeridiyle en az 50 metre kordon altına al ve girişi sınırla',
+      'Sarı numarataj plaketleriyle kovan, mermi çekirdeği ve biyolojik bulguları etiketle',
+      'Parmak izi (daktiloskopi) ve DNA swap örneklerini mühürlü delil torbasına koy',
+      'Olay Yeri Teslim-Tesellüm Tutanağını düzenleyip Kriminal Polis Laboratuvarına sevk et'
+    ]
+  },
+  {
+    id: 'savunma_adli_arama_tutanak',
+    category: 'resmi',
+    domain: 'SAVUNMA',
+    keywords: ['arama kararı', 'adli arama', 'üst arama', 'konut arama', 'suç eşyası', 'adli emanet', 'pvsk 4/a', 'cmk 116'],
+    baslik: 'Adli Arama & Suç Eşyası Emanet',
+    ikon: '📑',
+    renk: '#BFDBFE',
+    varsayilanZaman: 'Arama Başlangıç Saati',
+    hazirlikZamani: 'Arama Öncesi Karar Teyidi',
+    akilliFisilti: '📑 Hakim kararı veya savcı yazılı emri şarttır; konut aramasında en az 2 ihtiyar heyeti veya komşu hazır bulunmalıdır.',
+    oncedenYapilacaklar: [
+      'Sulh Ceza Hakimliği arama kararını veya savcılık yazılı emrini kontrol et',
+      'Konut aramasında ihtiyar heyetinden 2 aza veya 2 komşu tanık hazır bulundur',
+      'Ele geçen suç eşyasını Suç Eşyası Teslim ve Adli Emanet Tutanağına seri no ile yaz',
+      'Arama tutanağı ve teslim makbuzunun bir suretini imza karşılığı şahsa ver'
+    ]
+  },
+  {
+    id: 'savunma_askeriye_ictima_tekmil',
+    category: 'resmi',
+    domain: 'SAVUNMA',
+    keywords: ['içtima', 'tekmil', 'birlik içtima', 'tabur içtima', 'bölük içtima', 'künye sayımı'],
+    baslik: 'Birlik İçtiması & Tekmil Hazırlığı',
     ikon: '🪖',
     renk: '#E2E8D5',
     varsayilanZaman: 'İçtima Öncesi (20 Dk Önce)',
     hazirlikZamani: 'Faaliyetten 25 Dk Önce',
-    akilliFisilti: '🪖 İçtima saatinden 20 dakika önce mevcut ve künye sayımı tamamlanmalı, doldur-boşalt bizzat denetlenmelidir.',
+    akilliFisilti: '🪖 Birlik içtimasından en az 20 dakika önce takım mevcutları alınmalı, teçhizat ve kılık-kıyafet denetimi tamamlanmalıdır.',
     oncedenYapilacaklar: [
       'Mevcut ve künye kontrolü yap (Raporlu, izinli, nöbetçi personeli tespit et)',
-      'Kompozit başlık, hücum yeleği ve teçhizat denetimini sağla',
-      'Silahlık sayım cetvelini ve mühimmat sandığı kurşun mühürlerini fiziki say',
-      'Doldur-boşalt istasyonunda doldur-boşalt emniyetini bizzat denetle'
+      'Kompozit başlık, hücum yeleği, bot ve kılık-kıyafet intizam denetimini sağla',
+      'Bölük/Tabur komutanına sunulacak mevcut tekmil kartını doldur',
+      'İçtima alanında hiza, istikamet ve sessizlik disiplinini sağla'
+    ]
+  },
+  {
+    id: 'savunma_silahlik_doldur_bosalt',
+    category: 'resmi',
+    domain: 'SAVUNMA',
+    keywords: ['silahlık sayımı', 'silahlık', 'mühimmat sandığı', 'kurşun mühür', 'doldur boşalt', 'doldur-boşalt', 'nöbet devir teslim askeriye'],
+    baslik: 'Silahlık Sayımı & Doldur-Boşalt',
+    ikon: '🛡️',
+    renk: '#E2E8D5',
+    varsayilanZaman: 'Nöbet Devir-Teslim Saati',
+    hazirlikZamani: 'Devirden 15 Dk Önce',
+    akilliFisilti: '🛡️ Silahlık sayım cetveli ıslak imzayla fiziki sayılmalı, mühimmat sandığı kurşun mühürleri kontrol edilip doldur-boşalt yapılmalıdır.',
+    oncedenYapilacaklar: [
+      'Silahlık sayım cetvelindeki piyade tüfeği ve tabancaların seri numaralarını fiziki say',
+      'Mühimmat sandıklarının kurşun mühürlerini ve mühür pensi izlerini denetle',
+      'Doldur-boşalt istasyonunda şarjör çıkar, kurma kolu çek, namlu kontrolü yap ve tetiği düşür',
+      'Nöbet Defterine vukuat kaydını (silah ve mühimmat tam) düşerek devir-teslimi imzala'
+    ]
+  },
+  {
+    id: 'savunma_poligon_atis_tatbikat',
+    category: 'resmi',
+    domain: 'SAVUNMA',
+    keywords: ['atış', 'atis', 'poligon', 'tatbikat', 'atış hattı', 'kovan sayımı', 'mühimmat sarfiyat'],
+    baslik: 'Poligon Atış & Arazi Tatbikatı',
+    ikon: '🎯',
+    renk: '#E2E8D5',
+    varsayilanZaman: 'Atış Öncesi Hazırlık',
+    hazirlikZamani: 'Atıştan 30 Dk Önce (Sıhhiye)',
+    akilliFisilti: '🎯 Poligonda nöbetçi tabip ve sıhhiye ambulansı hazır bulunmadan, emniyet flaması çekilmeden atış yapılamaz.',
+    oncedenYapilacaklar: [
+      'Poligon emniyet subayı, flama ve kule nöbetçilerini yerleştir; kırmızı flama çek',
+      'Nöbetçi tabip ve tam donanımlı sıhhiye ambulansının poligonda yerini aldığını teyit et',
+      'Atıcılara kulaklık ve balistik gözlük KKD denetimi yap',
+      'Atış sonu boş kovanları toplatıp mermi-kovan mutabakatını yap ve Sarfiyat Tutanağını imzala'
+    ]
+  },
+  {
+    id: 'savunma_itfaiye_scba_devir',
+    category: 'resmi',
+    domain: 'SAVUNMA',
+    keywords: ['itfaiye', 'scba', 'solunum tüpü', 'arazöz', 'hidrolik kesici', 'yangın nöbeti'],
+    baslik: 'İtfaiye SCBA 300 Bar & Arazöz Devri',
+    ikon: '🚒',
+    renk: '#FECACA',
+    varsayilanZaman: 'Vardiya Devri (08:00)',
+    hazirlikZamani: 'Devirden 15 Dk Önce',
+    akilliFisilti: '🚒 SCBA temiz hava tüpleri 300 Bar altında olmamalıdır; arazöz su-köpük ve hidrolik kesici kontrolleri 1. sıradadır.',
+    oncedenYapilacaklar: [
+      'SCBA temiz hava solunum tüplerinin 300 Bar basınç ve maske sızdırmazlık testini yap',
+      'Arazöz su ve köpük tank seviyeleri ile motopomp basınç vanalarını kontrol et',
+      'Hidrolik kesici/ayırıcı batarya ve hortum sızdırmazlık muayenesini tamamla',
+      'Vardiya Defterine araç ve teçhizat durumunu işleyerek devir-teslimi imzala'
+    ]
+  },
+  {
+    id: 'savunma_5188_ozel_guvenlik',
+    category: 'resmi',
+    domain: 'SAVUNMA',
+    keywords: ['özel güvenlik', '5188', 'ögg', 'x-ray', 'kapı dedektörü', 'devriye tur kalemi', 'tom kalemi'],
+    baslik: '5188 Özel Güvenlik & X-Ray Kontrolü',
+    ikon: '🛡️',
+    renk: '#BFDBFE',
+    varsayilanZaman: 'Vardiya Başlangıcı',
+    hazirlikZamani: 'Vardiyadan 15 Dk Önce',
+    akilliFisilti: '🛡️ 5188 sayılı Kanun gereği kimlik kartı görünür takılmalı, X-Ray STP test çantası ve kapı dedektörü kalibrasyonu yapılmalıdır.',
+    oncedenYapilacaklar: [
+      'ÖGG kimlik kartı ve üniforma kontrolü yap; kimliksiz nöbete izin verme',
+      'X-Ray bagaj arama cihazını C-10 test çantasıyla (STP) ve kapı dedektörünü test et',
+      'Ziyaretçi kimlik kayıt defterini ve emanet eşya teslim makbuzlarını eksiksiz tut',
+      'Kamera odası (CCTV) 24 saat kesintisiz kayıt ve yangın paneli durumunu teyit et',
+      'RFID devriye tur kalemiyle belirlenen saatlerde kontrol noktalarını tara'
     ]
   },
 

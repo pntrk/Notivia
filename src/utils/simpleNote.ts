@@ -46,6 +46,10 @@ import {
   parseAdvancedProfessionIntent,
   type AdvancedProfessionTask
 } from '../services/advancedProfessionEngine.ts';
+import {
+  parseDefenseSecurityIntent,
+  type DefenseSecurityTask
+} from '../services/defenseSecurityEngine.ts';
 import { resolveInstitutionalReference } from './institutionalCalendar.ts';
 import { estimateCognitiveLoad } from './cognitiveLoadEstimator.ts';
 export { resolveInstitutionalReference } from './institutionalCalendar.ts';
@@ -375,6 +379,28 @@ export function dispatchDomainRule(
   ) {
     const logisticsResult = parseLogisticsSupplyChainNote(text, targetIso ? new Date(targetIso) : new Date(), domain);
     if (logisticsResult) return logisticsResult;
+  }
+
+  // Savunma, Emniyet & Askeriye Tespiti
+  if (
+    domain === 'SAVUNMA' ||
+    domain === 'EMNIYET' ||
+    /(içtima|ictima|tekmil|silahlık|silahlik|doldur-boşalt|doldur bosalt|mühimmat sandığı|muhimmat sandigi|poligon|atış tatbikatı|atis tatbikati|kule nöbeti|kule nobeti|parola-işaret|parola isaret|kademe|zırhlı araç|zirhli arac|asayiş devriyesi|asayis devriyesi|gözaltı|gozalti|nezarethane|cmk 91|fezleke|adli muayene|olay yeri inceleme|oyi\b|kriminal delil|delil torbası|adli arama|suç eşyası|suc esyasi|yol kontrol|asayiş uygulama|5188|özel güvenlik|ozel guvenlik|x-ray|kapı dedektörü|itfaiye|scba|solunum tüpü|arazöz|arazoz|yangın uygunluk|baca denetimi)/i.test(text)
+  ) {
+    const defenseResult = parseDefenseSecurityIntent(text, targetIso ? new Date(targetIso) : new Date(), domain);
+    if (defenseResult) {
+      return {
+        baslik: defenseResult.baslik,
+        zaman: targetDateText || defenseResult.zaman_etiketi,
+        tarih_iso: targetIso || defenseResult.tarih_iso,
+        hazirlik_zamani: defenseResult.hazirlik_zamani,
+        action_items: defenseResult.action_items,
+        ikon: defenseResult.ikon,
+        renk: defenseResult.renk,
+        anomali_notu: defenseResult.mevzuat_notu,
+        sesli_fisilti: defenseResult.sesli_geribildirim
+      };
+    }
   }
 
   return null;
@@ -5719,6 +5745,25 @@ export function extractSimpleNoteFromText(
     }, cleanInput, userDomain || 'ISG');
   }
 
+  // 0.008 ÖNCELİK: SAVUNMA, ASKERİYE, POLİS & EMNİYET PROTOKOLÜ (DEFENSE & SECURITY ENGINE)
+  // (CMK 91 Gözaltı & Fezleke, OYİ Kriminal Delil Zinciri, Adli Arama, Birlik İçtima & Tekmil,
+  // Silahlık Sayımı & Doldur-Boşalt, Poligon Atış & Sıhhiye Ambulans, Kule Nöbeti & Parola-İşaret,
+  // Kademe Zırhlı Araç, Jandarma Asayiş Timi, SCBA 300 Bar İtfaiye, 5188 Özel Güvenlik X-Ray)
+  const defenseResult = parseDefenseSecurityIntent(cleanInput, baseDate, userDomain);
+  if (defenseResult) {
+    return enrichWithPredictiveGraph({
+      baslik: defenseResult.baslik,
+      zaman: defenseResult.zaman_etiketi,
+      tarih_iso: defenseResult.tarih_iso,
+      hazirlik_zamani: defenseResult.hazirlik_zamani,
+      action_items: defenseResult.action_items,
+      ikon: defenseResult.ikon,
+      renk: defenseResult.renk,
+      anomali_notu: defenseResult.mevzuat_notu,
+      sesli_fisilti: defenseResult.sesli_geribildirim
+    }, cleanInput, userDomain || 'SAVUNMA');
+  }
+
   // 0.01 ÖNCELİK: DERİNLEŞTİRİLMİŞ MESLEKİ & KURUMSAL SENARYO MOTORU (ADVANCED PROFESSION ENGINE)
   // (TEFBİS, LGS/YKS Komisyonu, ASM Gebe-Bebek İzlem, 112 Nöbet/Narkotik, Arabuluculuk 3+1 Hafta,
   // İcra Kıymet Takdiri, YMM KDV İadesi/Karşıt İnceleme, Bağımsız Denetim KGK, ÇKS/TARSİM, TÜRKVET/Aşı, İSG İBYS, Yapı Denetim Demir Vizesi)
@@ -5919,7 +5964,23 @@ export function extractSimpleNoteFromText(
       if (clinicalResult) return enrichWithPredictiveGraph(clinicalResult, cleanInput);
       const multiMedResult = parseMultiMedicationNote(cleanInput, baseDate);
       if (multiMedResult) return enrichWithPredictiveGraph(multiMedResult, cleanInput);
-    } else if (activeDomain === 'EMNIYET') {
+    } else if (activeDomain === 'EMNIYET' || activeDomain === 'SAVUNMA') {
+      const domainRuleResult = dispatchDomainRule(activeDomain, cleanInput, zaman, tarih_iso);
+      if (domainRuleResult) return enrichWithPredictiveGraph(domainRuleResult, cleanInput, activeDomain);
+      const defRes = parseDefenseSecurityIntent(cleanInput, baseDate, activeDomain);
+      if (defRes) {
+        return enrichWithPredictiveGraph({
+          baslik: defRes.baslik,
+          zaman: defRes.zaman_etiketi,
+          tarih_iso: defRes.tarih_iso,
+          hazirlik_zamani: defRes.hazirlik_zamani,
+          action_items: defRes.action_items,
+          ikon: defRes.ikon,
+          renk: defRes.renk,
+          anomali_notu: defRes.mevzuat_notu,
+          sesli_fisilti: defRes.sesli_geribildirim
+        }, cleanInput, activeDomain);
+      }
       const opResult = parseOperationSafetyEmergencyNote(cleanInput, baseDate);
       if (opResult) return enrichWithPredictiveGraph(opResult, cleanInput);
       const militaryResult = parseMilitaryCommanderNote(cleanInput, baseDate);

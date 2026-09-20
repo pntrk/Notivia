@@ -449,6 +449,48 @@ const ROUTE_PATTERNS: RoutePattern[] = [
     domain: 'TEKNIK',
     icon: '🔧',
     badgeHex: '#FEF3C7'
+  },
+
+  // Savunma & Emniyet
+  {
+    keywords: ['gözaltı', 'gozalti', 'fezleke', 'nezarethane', 'cmk 91', 'yakalama'],
+    routeTitle: 'CMK 91 Gözaltı (24s) & Savcılık Fezlekesi',
+    institution: 'Emniyet Genel Müdürlüğü / Adalet Bakanlığı',
+    domain: 'SAVUNMA',
+    icon: '👮',
+    badgeHex: '#BFDBFE'
+  },
+  {
+    keywords: ['olay yeri', 'oyi', 'balistik', 'delil torbası', 'parmak izi'],
+    routeTitle: 'Olay Yeri İnceleme & Delil Güvenliği',
+    institution: 'Kriminal Polis Laboratuvarı (KPL)',
+    domain: 'SAVUNMA',
+    icon: '🔍',
+    badgeHex: '#BFDBFE'
+  },
+  {
+    keywords: ['içtima', 'tekmil', 'silahlık', 'doldur boşalt', 'mühimmat'],
+    routeTitle: 'Askeri İçtima & Silahlık Devir-Teslim',
+    institution: 'Milli Savunma Bakanlığı (TSK)',
+    domain: 'SAVUNMA',
+    icon: '🪖',
+    badgeHex: '#E2E8D5'
+  },
+  {
+    keywords: ['scba', 'arazöz', 'yangın nöbeti', 'itfaiye'],
+    routeTitle: 'İtfaiye SCBA 300 Bar & Arazöz Nöbet Devri',
+    institution: 'İtfaiye Daire Başkanlığı',
+    domain: 'SAVUNMA',
+    icon: '🚒',
+    badgeHex: '#FECACA'
+  },
+  {
+    keywords: ['5188', 'özel güvenlik', 'x-ray', 'kapı dedektörü'],
+    routeTitle: '5188 ÖGG Kontrol & X-Ray Güvenlik',
+    institution: 'Özel Güvenlik Denetleme Başkanlığı',
+    domain: 'SAVUNMA',
+    icon: '🛡️',
+    badgeHex: '#BFDBFE'
   }
 ];
 
@@ -524,11 +566,11 @@ const DOMAIN_INSTITUTIONS: Record<string, { label: string; institution: string; 
     defaultRoute: 'Periyodik Bakım & Test Süreci'
   },
   SAVUNMA: {
-    label: 'Askeri / Savunma',
-    institution: 'Milli Savunma Bakanlığı',
-    icon: '🪖',
-    badgeHex: '#E2E8D5',
-    defaultRoute: 'İçtima & Askeri Birlik Güvenliği'
+    label: 'Savunma, Emniyet & Askeriye',
+    institution: 'İçişleri (EGM/JGK) / MSB (TSK)',
+    icon: '👮',
+    badgeHex: '#BFDBFE',
+    defaultRoute: 'Asayiş, Savunma & Operasyonel Protokol'
   },
   KAMU: {
     label: 'Kamu & Resmi Kurum',
