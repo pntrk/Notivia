@@ -185,3 +185,9 @@ export interface ParseResponsePayload {
     source: 'gemini-3.8-flash' | 'cognitive-fallback' | 'json-import';
   };
 }
+
+export interface TrashNoteItem {
+  item: any; // SimpleCardItem
+  deletedAt: string; // ISO-8601 timestamp
+  originalIndex?: number;
+}

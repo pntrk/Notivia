@@ -447,6 +447,233 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
       'DASK poliçe numarasını temin et (Elektrik/Gaz zorunluluğu)'
     ]
   },
+  // 5.1 FİNANS, MUHASEBE & SERMAYE PİYASALARI
+  {
+    id: 'finans_kdv_muhsgk',
+    category: 'finans',
+    domain: 'FINANS',
+    keywords: ['kdv', 'muhsgk', 'muhtasar', 'kdv beyannamesi', 'ayın 26', 'ayin 26'],
+    baslik: 'KDV-1/2 & MUHSGK Beyannamesi',
+    ikon: '📊',
+    renk: '#DCFCE7',
+    varsayilanZaman: "Her Ayın 26'sı 23:59",
+    hazirlikZamani: "Ayın 20'sinden İtibaren Kontrol",
+    hazirlikSaatOncesi: 144,
+    akilliFisilti: '📊 KDV ve MUHSGK her ayın 26. günü saat 23:59’a kadar onaylanmalıdır.',
+    oncedenYapilacaklar: [
+      'Z raporları, POS ekstreleri ve alış/satış faturalarını Luca/Zirve/Logo sistemine işle',
+      'KDV-1 ve KDV-2 tevkifat matrah mutabakatını sağla, indirilecek KDV listesini doğrula',
+      'MUHSGK çalışan SGK prim bildirgeleri ve stopaj gelir vergisi kesintilerini bağdaştır',
+      'GİB e-Beyanname portalına yükleyip tahakkuk fişlerini mükelleflere ilet'
+    ]
+  },
+  {
+    id: 'finans_edefter_berat',
+    category: 'finans',
+    domain: 'FINANS',
+    keywords: ['e-defter', 'edefter', 'berat', 'berat yükleme', 'berat yukleme', 'yevmiye beratı'],
+    baslik: 'e-Defter Yevmiye/Kebir Beratı',
+    ikon: '📈',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Dönem Sonu 23:59',
+    hazirlikZamani: 'Ay Sonundan 3 Gün Önce',
+    hazirlikSaatOncesi: 72,
+    akilliFisilti: '📈 Berat yüklenmeyen e-Defterler hukuken geçersiz sayılır; ikincil saklama zorunludur.',
+    oncedenYapilacaklar: [
+      'Yevmiye ve kebir kayıtlarının borç-alacak dengesini ve fiş no sırasını denetle',
+      'Mali mühür / e-İmza ile XML defter dosyalarını oluştur ve şema testinden geçir',
+      'GİB e-Defter portalından Yevmiye ve Kebir beratlarını yükleyip GİB onaylı beratları indir',
+      'Defter ve beratları ikincil saklama (GİB Saklama Programı) sistemine yedekle'
+    ]
+  },
+  {
+    id: 'finans_gecici_vergi',
+    category: 'finans',
+    domain: 'FINANS',
+    keywords: ['geçici vergi', 'gecici vergi', 'peşin vergi', 'smm maliyet', 'amortisman'],
+    baslik: 'Geçici Vergi Beyannamesi (3 Aylık)',
+    ikon: '💼',
+    renk: '#DCFCE7',
+    varsayilanZaman: "İlgili Dönem Ayının 17'si 23:59",
+    hazirlikZamani: 'Ayın 10’undan İtibaren Bilanço Kontrolü',
+    hazirlikSaatOncesi: 168,
+    akilliFisilti: '💼 %10’u aşan yanılma payı tespitinde eksik beyan edilen kısım için cezalı tarhiyat uygulanır.',
+    oncedenYapilacaklar: [
+      'Dönem sonu fiili/kaydi stok sayım mutabakatını yap ve satılan malın maliyetini (SMM) kaydet',
+      'Sabit kıymet amortisman listelerini ve KKEG dökümünü çıkar',
+      'Kambiyo kâr/zararı reeskont ve değerleme işlemlerini tamamla',
+      'Önceki dönemlerde ödenen geçici vergileri mahsup ederek net tahakkuk oluştur'
+    ]
+  },
+  {
+    id: 'finans_ymm_kdv_iade',
+    category: 'finans',
+    domain: 'FINANS',
+    keywords: ['ymm', 'kdv iadesi', 'kdv iade', 'karşıt inceleme', 'karsit inceleme', 'geksis'],
+    baslik: 'YMM KDV İadesi & Karşıt İnceleme',
+    ikon: '📑',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'İade Dosya Süreci',
+    hazirlikZamani: 'Faturadan Sonraki 10 Gün',
+    hazirlikSaatOncesi: 240,
+    akilliFisilti: '📑 GEKSİS risk analiz raporundaki segment hataları çözülmeden KDV iadesi onaylanmaz.',
+    oncedenYapilacaklar: [
+      'İhracat gümrük beyannameleri (GÇB) intaç tarihleri ve İndirilecek/Yüklenilen KDV listesini hazırla',
+      'Alt tedarikçilere Karşıt İnceleme Tutanağı (KİT) göndererek teyitleri topla',
+      'İnternet Vergi Dairesi üzerinden GEKSİS raporunu çalıştır ve uyumsuzlukları gider',
+      'YMM KDV İadesi Tasdik Raporunu hazırlayıp Vergi Dairesi Müdürlüğü’ne sun'
+    ]
+  },
+  {
+    id: 'finans_cek_provizyon',
+    category: 'finans',
+    domain: 'FINANS',
+    keywords: ['çek', 'cek', 'senet', 'çek provizyonu', 'karşılıksız çek', 'senet protesto', 'takas saati'],
+    baslik: 'Çek / Senet Provizyonu & Takas',
+    ikon: '💸',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Takas Günü 11:00',
+    hazirlikZamani: 'Sabah 09:30 Bakiye Kontrolü',
+    hazirlikSaatOncesi: 2,
+    akilliFisilti: '💸 Saat 11:00 takas saatinde bakiye yoksa karşılıksız işlemi ve çek yasağı doğar.',
+    oncedenYapilacaklar: [
+      'Takas saati (11:00) öncesinde banka hesabında çek tutarı kadar nakit provizyon sağla',
+      'Hesapta bakiye yetersizse rotatif kredi (BCH) veya grup virmanını devreye al',
+      'Alacaklı toptancı/müşteri ile çek vadesi ve cari hesap mutabakatını teyit et',
+      'Takastan çıkan çekin ödendi dekontunu muhasebe ERP sistemine işle'
+    ]
+  },
+  {
+    id: 'finans_hazine_nakit',
+    category: 'finans',
+    domain: 'FINANS',
+    keywords: ['nakit akışı', 'nakit akisi', 'cash flow', 'hazine', 'likidite', 'gecelik repo', 'overnight'],
+    baslik: 'Günlük Hazine & Nakit Akışı Yönetimi',
+    ikon: '💰',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Gün Boyu (16:30 Nemalandırma)',
+    hazirlikZamani: 'Sabah 09:15 Bakiye Konsolidasyonu',
+    hazirlikSaatOncesi: 8,
+    akilliFisilti: '💰 Gün içi nakit fazlası saat 16:30 öncesinde gecelik repoda değerlendirilmelidir.',
+    oncedenYapilacaklar: [
+      'Sabah 09:15: Tüm banka hesap bakiyelerini konsolide nakit tablosuna çek',
+      'Gün içi zorunlu ödemeleri (Maaş, vergi, çek, hammadde) nakit çıkış tablosu ile eşleştir',
+      'Beklenen müşteri tahsilatlarını teyit et, gecikenler için finans takibi başlat',
+      'Saat 16:30 itibarıyla fazla kalan nakdi gecelik (O/N) mevduat veya fonlara bağla'
+    ]
+  },
+  {
+    id: 'finans_bordro_maas',
+    category: 'finans',
+    domain: 'FINANS',
+    keywords: ['maaş', 'maas', 'bordro', 'sgk prim', 'otomatik bes', 'ücret pusulası', 'ucret pusulasi'],
+    baslik: 'Personel Bordro, Maaş & SGK Prim',
+    ikon: '💳',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Ayın 5’i 10:00',
+    hazirlikZamani: 'Ayın 1’i Puantaj Kapanışı',
+    hazirlikSaatOncesi: 96,
+    akilliFisilti: '💳 5 ve üzeri çalışanda ücretler bankadan ödenmeli; %3 BES kesintisi aktarılmalıdır.',
+    oncedenYapilacaklar: [
+      'Aylık puantaj dökümünü (Mesai, rapor, izin, prim) doğrula ve bordroyu hesapla',
+      '%3 Bireysel Emeklilik (BES) kesintilerini emeklilik şirketinin portalına aktar',
+      'Banka maaş ödeme dosyasını (disketi) banka kurumsal ekranından onaya sun',
+      'İmzalı/elektronik ücret hesap pusulalarını (e-Bordro) çalışanlara tebliğ et'
+    ]
+  },
+  {
+    id: 'finans_viop_margin',
+    category: 'finans',
+    domain: 'FINANS',
+    keywords: ['viop', 'margin call', 'teminat tamamlama', 'viop teminat', 'stop out'],
+    baslik: 'VİOP Margin Call & Teminat (14:30)',
+    ikon: '⚠️',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Bugün 14:30 (Kritik Son Saat)',
+    hazirlikZamani: '14:00 Öncesi Nakit Aktarımı',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '⚠️ Saat 14:30’a kadar tamamlanmayan teminatlarda Takasbank resen pozisyon kapatır.',
+    oncedenYapilacaklar: [
+      'Saat 14:00 öncesi Takasbank teminat açığı (Margin Call) tutarını kontrol et',
+      'Aracı kurum VİOP hesabına EFT/FAST ile nakit teminat aktar veya ters pozisyon al',
+      'Saat 14:30’da teminat tamamlama teyidini alarak otomatik likidasyon riskini önle'
+    ]
+  },
+  {
+    id: 'finans_halka_arz',
+    category: 'finans',
+    domain: 'FINANS',
+    keywords: ['halka arz', 'ipo', 'talep toplama', 'halka arz talep'],
+    baslik: 'Halka Arz (IPO) Talep Toplama',
+    ikon: '🚀',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Talep Toplama 10:30-13:00',
+    hazirlikZamani: 'Sabah 10:00 Portföy Kontrolü',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '🚀 Halka arz talep saatlerinde T1-T2 bakiye uygunluğu kontrol edilmelidir.',
+    oncedenYapilacaklar: [
+      'SPK onaylı izahname, dağıtım yöntemi (Eşit/Oransal) ve fon kullanım raporunu incele',
+      'Yatırım hesabındaki nakit veya T1-T2 bakiye durumunu talep toplama saatine göre ayarla',
+      'Saat 10:30-13:00 arasında halka arz talep girişini aracı kurum/banka üzerinden yap'
+    ]
+  },
+  {
+    id: 'finans_kap_bildirim',
+    category: 'finans',
+    domain: 'FINANS',
+    keywords: ['kap', 'kamuyu aydınlatma', 'özel durum açıklaması', 'içeriden öğrenenler'],
+    baslik: 'KAP Özel Durum Açıklaması & SPK',
+    ikon: '📢',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Derhal / Seans Öncesi-Sonrası',
+    hazirlikZamani: 'Duyuru Öncesi e-İmza Teyidi',
+    hazirlikSaatOncesi: 1,
+    akilliFisilti: '📢 Yatırımcı kararını etkileyebilecek her türlü önemli gelişme derhal KAP’a bildirilmelidir.',
+    oncedenYapilacaklar: [
+      'Özel Durum Açıklaması taslağını hukuk ve yatırımcı ilişkileri ile doğrula',
+      'İçeriden Öğrenenler Listesine (Insider List) yeni bilgiyi öğrenen kişileri MKK’ya ekle',
+      'Seans saatleri içinde açıklama yapılacaksa Borsa Başkanlığı ile koordinasyon sağla',
+      'e-İmza ile KAP bildirim portalına şablonu yükle ve yayını doğrula'
+    ]
+  },
+  {
+    id: 'finans_babs_red',
+    category: 'finans',
+    domain: 'FINANS',
+    keywords: ['ba-bs', 'babs', 'mutabakat', 'e-fatura red', 'fatura itiraz', '7 gün'],
+    baslik: 'Ba-Bs Mutabakatı & e-Fatura Red (7 Gün)',
+    ikon: '📑',
+    renk: '#FEF3C7',
+    varsayilanZaman: '7 Gün İçinde İtiraz',
+    hazirlikZamani: 'Fatura Tarihinden İtibaren 48 Saat',
+    hazirlikSaatOncesi: 48,
+    akilliFisilti: '📑 Ticari e-Faturalara 7 gün içinde itiraz edilmezse fatura içeriği aynen kabul edilmiş sayılır.',
+    oncedenYapilacaklar: [
+      'Gelen ticari e-Faturaların irsaliye, miktar ve birim fiyat kontrollerini 7 gün dolmadan tamamla',
+      'Hatalı/ihtilaflı faturalar için e-Fatura portalından "RED" yanıtı dön veya KEP ile itiraz et',
+      'Aylık Ba-Bs mutabakat mektuplarını tedarikçi ve müşterilere gönder',
+      '5.000 TL üzerindeki faturalarda adet ve KDV hariç tutar farklarını eşitle'
+    ]
+  },
+  {
+    id: 'finans_findeks_kredi',
+    category: 'finans',
+    domain: 'FINANS',
+    keywords: ['kredi kartı', 'kredi karti', 'hesap kesim', 'asgari ödeme', 'findeks', 'kredi notu'],
+    baslik: 'Kredi Kartı & Findeks Skoru Koruması',
+    ikon: '💳',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Son Ödeme Günü',
+    hazirlikZamani: 'Son Ödemeden 2 Gün Önce',
+    hazirlikSaatOncesi: 48,
+    akilliFisilti: '💳 En az asgari tutar ödenmezse gecikme faizi işler ve Findeks kredi notu hasar alır.',
+    oncedenYapilacaklar: [
+      'Hesap kesim ekstresindeki dönem borcu ve asgari ödeme tutarını doğrula',
+      'Son ödeme gününden önce otomatik ödeme talimatı veya vadesiz hesap bakiyesini kontrol et',
+      'Faiz maliyetine girmemek için borcun tamamını, değilse en az asgarisini yatır',
+      'Findeks raporu üzerinden kart limit doluluk oranının %70 altında olduğunu teyit et'
+    ]
+  },
   {
     id: 'dogum_gunu_hediye',
     category: 'sosyal',

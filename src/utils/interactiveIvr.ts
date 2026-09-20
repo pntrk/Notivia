@@ -136,7 +136,7 @@ export const INSTANT_JARGON_CHIPS: JargonChip[] = [
   // Mali Müşavir / Finans
   {
     label: 'KDV beyannamesi',
-    domain: 'MALIYE',
+    domain: 'FINANS',
     icon: '📊',
     routeTitle: 'KDV & MUHSGK Beyanname Onayı',
     institution: 'Gelir İdaresi Başkanlığı (GİB)',
@@ -144,11 +144,43 @@ export const INSTANT_JARGON_CHIPS: JargonChip[] = [
   },
   {
     label: 'e-Defter beratı',
-    domain: 'MALIYE',
+    domain: 'FINANS',
     icon: '📈',
     routeTitle: 'e-Defter Berat Yüklemesi',
     institution: 'Gelir İdaresi Başkanlığı (GİB)',
     fullPrompt: 'e-Defter beratı onay ve yükleme'
+  },
+  {
+    label: 'Çek provizyonu',
+    domain: 'FINANS',
+    icon: '💸',
+    routeTitle: 'Çek Takas & Provizyon (11:00)',
+    institution: 'Bankalararası Takas Odası',
+    fullPrompt: 'Çek takas saati provizyon ve karşılıksız önleme'
+  },
+  {
+    label: 'Hazine nakit akışı',
+    domain: 'FINANS',
+    icon: '💰',
+    routeTitle: 'Nakit Akışı & 16:30 Repo',
+    institution: 'Kurumsal Hazine / TCMB',
+    fullPrompt: 'Günlük hazine nakit akışı ve gecelik repo nemalandırma'
+  },
+  {
+    label: 'VİOP teminat',
+    domain: 'FINANS',
+    icon: '⚠️',
+    routeTitle: 'VİOP Margin Call (14:30)',
+    institution: 'Borsa İstanbul / Takasbank',
+    fullPrompt: 'VİOP margin call teminat tamamlama'
+  },
+  {
+    label: 'KDV İadesi & YMM',
+    domain: 'FINANS',
+    icon: '📑',
+    routeTitle: 'YMM KDV İadesi & GEKSİS',
+    institution: 'Gelir İdaresi / Vergi Dairesi',
+    fullPrompt: 'YMM KDV iadesi karşıt inceleme ve GEKSİS raporu'
   },
   // Eczacılık
   {

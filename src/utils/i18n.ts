@@ -134,6 +134,24 @@ export interface Translations {
   moveSelectedDown: string;
   reorderSuccess: string;
   dragToReorder: string;
+
+  // Recycle bin (Geri Dönüşüm Kutusu)
+  recycleBinTitle: string;
+  recycleBinDesc: string;
+  restore: string;
+  restoreAll: string;
+  emptyTrash: string;
+  deleteForever: string;
+  trashEmpty: string;
+  trashEmptyDesc: string;
+  trashDaysRemaining: string;
+  trashExpiringToday: string;
+  movedToTrash: string;
+  restoredFromTrash: string;
+  emptyTrashConfirm: string;
+  deleteForeverConfirm: string;
+  openRecycleBin: string;
+  notesInTrash: string;
 }
 
 export const translations: Record<Language, Translations> = {
@@ -264,6 +282,24 @@ export const translations: Record<Language, Translations> = {
     moveSelectedDown: 'Seçilenleri Alta Taşı',
     reorderSuccess: 'Not sıralaması güncellendi',
     dragToReorder: 'Sıralamak için basılı tutup kaydırın',
+
+    // Geri Dönüşüm Kutusu (Recycle Bin)
+    recycleBinTitle: 'Geri Dönüşüm Kutusu',
+    recycleBinDesc: 'Silinen notlar 30 gün boyunca burada saklanır ve ardından kalıcı olarak silinir. Bu süre içerisinde dilediğiniz notu geri yükleyebilirsiniz.',
+    restore: 'Geri Yükle',
+    restoreAll: 'Tümünü Geri Yükle',
+    emptyTrash: 'Çöp Kutusunu Boşalt',
+    deleteForever: 'Kalıcı Olarak Sil',
+    trashEmpty: 'Geri dönüşüm kutusu boş',
+    trashEmptyDesc: 'Silinen notlarınız 30 gün boyunca güvenle burada saklanır.',
+    trashDaysRemaining: 'gün kaldı',
+    trashExpiringToday: 'Bugün kalıcı silinecek',
+    movedToTrash: 'Not çöp kutusuna taşındı (30 gün saklanır)',
+    restoredFromTrash: 'Not geri yüklendi ✓',
+    emptyTrashConfirm: 'Geri dönüşüm kutusundaki tüm notlar kalıcı olarak silinsin mi? Bu işlem geri alınamaz.',
+    deleteForeverConfirm: 'Bu not kalıcı olarak silinsin mi? Bu işlem geri alınamaz.',
+    openRecycleBin: 'Geri Dönüşüm Kutusu',
+    notesInTrash: 'silinmiş not',
   },
   en: {
     appName: 'Notivia',
@@ -392,5 +428,23 @@ export const translations: Record<Language, Translations> = {
     moveSelectedDown: 'Move Selected Down',
     reorderSuccess: 'Note order updated',
     dragToReorder: 'Press and hold to drag and reorder',
+
+    // Recycle bin (Geri Dönüşüm Kutusu)
+    recycleBinTitle: 'Recycle Bin',
+    recycleBinDesc: 'Deleted notes are kept here for 30 days before being permanently deleted. You can restore any note at any time within this period.',
+    restore: 'Restore',
+    restoreAll: 'Restore All',
+    emptyTrash: 'Empty Trash',
+    deleteForever: 'Delete Permanently',
+    trashEmpty: 'Recycle bin is empty',
+    trashEmptyDesc: 'Your deleted notes are safely stored here for 30 days.',
+    trashDaysRemaining: 'days left',
+    trashExpiringToday: 'Expires today',
+    movedToTrash: 'Note moved to trash (kept for 30 days)',
+    restoredFromTrash: 'Note restored ✓',
+    emptyTrashConfirm: 'Permanently delete all notes in the recycle bin? This action cannot be undone.',
+    deleteForeverConfirm: 'Permanently delete this note? This action cannot be undone.',
+    openRecycleBin: 'Recycle Bin',
+    notesInTrash: 'deleted note(s)',
   },
 };

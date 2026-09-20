@@ -26,6 +26,8 @@ interface SettingsModalProps {
   driveSyncTime?: string | null;
   viewMode?: 'single' | 'grid';
   onToggleViewMode?: () => void;
+  onOpenRecycleBin?: () => void;
+  trashCount?: number;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -48,6 +50,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSyncDrive,
   isSyncingDrive,
   driveSyncTime,
+  onOpenRecycleBin,
+  trashCount = 0,
 }) => {
   if (!isOpen) return null;
 
@@ -390,6 +394,40 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <span>EN</span>
                 </button>
               </div>
+            </div>
+
+            {/* Geri Dönüşüm Kutusu Satırı */}
+            <div className="flex items-center justify-between p-3.5">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 dark:bg-amber-400/15 text-amber-600 dark:text-amber-400 flex items-center justify-center text-sm">
+                  🗑️
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-semibold text-xs leading-tight">{t.recycleBinTitle}</p>
+                    {trashCount > 0 && (
+                      <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300">
+                        {trashCount}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-stone-500 dark:text-stone-400">
+                    {language === 'tr' ? '30 gün saklanan silinmiş notlar' : 'Deleted notes kept for 30 days'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                id="settings-open-recycle-bin-btn"
+                onClick={() => {
+                  onClose();
+                  onOpenRecycleBin?.();
+                }}
+                className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 transition-all cursor-pointer flex items-center gap-1 min-h-[36px] sm:min-h-0 active:scale-95"
+              >
+                <span>{language === 'tr' ? 'Aç' : 'Open'}</span>
+                <span>›</span>
+              </button>
             </div>
           </div>
         </div>

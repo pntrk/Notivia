@@ -71,6 +71,8 @@ import {
 } from './utils/driveStorage.ts';
 import { OfflineIndicator } from './components/OfflineIndicator.tsx';
 import { SettingsModal } from './components/SettingsModal.tsx';
+import { RecycleBinModal, RETENTION_MS } from './components/RecycleBinModal.tsx';
+import type { TrashNoteItem } from './types/notivia.ts';
 import { CardReminderEditor } from './components/CardReminderEditor.tsx';
 import { EditNoteModal } from './components/EditNoteModal.tsx';
 import { DOMAIN_REGISTRY, WORK_DOMAIN_OPTIONS, detectDomainFromNote, type ProfessionDomain } from './types/domainThemes.ts';
@@ -145,6 +147,7 @@ export function isCompletedCard(card: SimpleCardItem): boolean {
 }
 
 const LOCAL_STORAGE_KEY = 'notivia_local_notes';
+const LOCAL_TRASH_STORAGE_KEY = 'notivia_trash_notes';
 const SIMULATED_USER_KEY = 'notivia_simulated_user';
 
 export const getLocalNotes = (): SimpleCardItem[] => {
@@ -166,6 +169,31 @@ export const saveLocalNotes = (notes: SimpleCardItem[]) => {
   try {
     if (typeof localStorage !== 'undefined') {
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(notes));
+    }
+  } catch {
+    // ignore
+  }
+};
+
+export const getTrashNotes = (): TrashNoteItem[] => {
+  try {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(LOCAL_TRASH_STORAGE_KEY) : null;
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+};
+
+export const saveTrashNotes = (trashItems: TrashNoteItem[]) => {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(LOCAL_TRASH_STORAGE_KEY, JSON.stringify(trashItems));
     }
   } catch {
     // ignore
@@ -419,6 +447,10 @@ export default function App() {
   // Not Silme Öncesi Güvenli Onay Modalı (Delete Confirmation Dialog)
   const [deleteConfirmNote, setDeleteConfirmNote] = useState<SimpleCardItem | null>(null);
 
+  // Geri Dönüşüm Kutusu (Recycle Bin - 30 Günlük Saklama) State'leri
+  const [trashNotes, setTrashNotes] = useState<TrashNoteItem[]>(() => getTrashNotes());
+  const [showRecycleBinModal, setShowRecycleBinModal] = useState<boolean>(false);
+
   // Geri alma state'i
   const [undoToast, setUndoToast] = useState<{
     item: SimpleCardItem;
@@ -609,6 +641,39 @@ export default function App() {
       // ignore
     }
   }, [language]);
+
+  // Geri Dönüşüm Kutusu: 30 günü aşan süresi dolmuş çöpleri otomatik temizle
+  useEffect(() => {
+    const rawTrash = getTrashNotes();
+    const now = Date.now();
+    const valid: TrashNoteItem[] = [];
+    const expired: TrashNoteItem[] = [];
+
+    for (const item of rawTrash) {
+      const delTime = new Date(item.deletedAt).getTime();
+      if (!isNaN(delTime) && (now - delTime) >= RETENTION_MS) {
+        expired.push(item);
+      } else {
+        valid.push(item);
+      }
+    }
+
+    if (expired.length > 0) {
+      console.log(`[Recycle Bin] 30 günü aşan ${expired.length} not kalıcı olarak temizlendi.`);
+      expired.forEach((exp) => {
+        if (exp.item.mediaId) {
+          deleteLocalMedia(exp.item.mediaId).catch(() => {});
+        }
+        const calId = exp.item.calendarEventId || exp.item.calendar_event_id;
+        if (calId) {
+          deleteCalendarEvent(calId).catch(() => {});
+        }
+        recordDeletedNoteId(exp.item.id);
+      });
+      saveTrashNotes(valid);
+      setTrashNotes(valid);
+    }
+  }, []);
 
   // Native bildirim servisi ve bildirim tıklama dinleyicisi
   useEffect(() => {
@@ -1844,8 +1909,8 @@ export default function App() {
     }
   };
 
-  // Kalıcı silmeyi gerçekleştiren çekirdek fonksiyon
-  const commitPendingDeletion = async (card: SimpleCardItem) => {
+  // Kalıcı silmeyi gerçekleştiren çekirdek fonksiyon (Geri Dönüşüm Kutusundan silindiğinde veya 30 gün dolduğunda çağrılır)
+  const commitPermanentDeletion = async (card: SimpleCardItem) => {
     await localNotifications.cancelAlarm(card.id);
     await cancelAllFermentationAlarms(card.id);
     const calId = card.calendarEventId || card.calendar_event_id;
@@ -1866,66 +1931,206 @@ export default function App() {
     triggerDriveBackup(local);
   };
 
-  // Geri Alma Aksiyonu
+  // Geri Dönüşüm Kutusundan Tek Bir Notu Geri Yükle (Restore Single Item)
+  const restoreTrashItem = async (cardId: string) => {
+    const target = trashNotes.find((t) => t.item.id === cardId);
+    if (!target) return;
+
+    const remainingTrash = trashNotes.filter((t) => t.item.id !== cardId);
+    setTrashNotes(remainingTrash);
+    saveTrashNotes(remainingTrash);
+
+    const updatedCards = [target.item, ...cards.filter((c) => c.id !== cardId)];
+    setCards(updatedCards);
+    saveLocalNotes(updatedCards);
+    syncNoteToCloud(target.item);
+    triggerDriveBackup(updatedCards);
+
+    // Eğer tarih varsa alarmları tekrar kur
+    if (target.item.tarih_iso && !target.item.tamamlandi) {
+      localNotifications.scheduleAlarm({
+        id: target.item.id,
+        baslik: target.item.baslik,
+        tarih_iso: target.item.tarih_iso,
+        ikon: target.item.ikon,
+      });
+    }
+
+    setStatusText(language === 'tr' ? `"${target.item.baslik}" geri yüklendi ✓` : `"${target.item.baslik}" restored ✓`);
+    setTimeout(() => setStatusText(language === 'tr' ? 'Söyle, çek ya da yaz' : 'Speak, snap or type'), 2500);
+  };
+
+  // Geri Dönüşüm Kutusundaki Tüm Notları Geri Yükle (Restore All Items)
+  const restoreAllTrashItems = async () => {
+    if (trashNotes.length === 0) return;
+    const restoredCards = trashNotes.map((t) => t.item);
+    setTrashNotes([]);
+    saveTrashNotes([]);
+
+    const updatedCards = [...restoredCards, ...cards];
+    setCards(updatedCards);
+    saveLocalNotes(updatedCards);
+
+    for (const card of restoredCards) {
+      syncNoteToCloud(card);
+      if (card.tarih_iso && !card.tamamlandi) {
+        localNotifications.scheduleAlarm({
+          id: card.id,
+          baslik: card.baslik,
+          tarih_iso: card.tarih_iso,
+          ikon: card.ikon,
+        });
+      }
+    }
+    triggerDriveBackup(updatedCards);
+
+    setStatusText(language === 'tr' ? `${restoredCards.length} not başarıyla geri yüklendi ✓` : `${restoredCards.length} notes restored ✓`);
+    setTimeout(() => setStatusText(language === 'tr' ? 'Söyle, çek ya da yaz' : 'Speak, snap or type'), 2500);
+  };
+
+  // Geri Dönüşüm Kutusundan Tek Bir Notu Kalıcı Olarak Sil
+  const permanentDeleteTrashItem = async (cardId: string) => {
+    const target = trashNotes.find((t) => t.item.id === cardId);
+    if (!target) return;
+
+    const remainingTrash = trashNotes.filter((t) => t.item.id !== cardId);
+    setTrashNotes(remainingTrash);
+    saveTrashNotes(remainingTrash);
+
+    await commitPermanentDeletion(target.item);
+
+    setStatusText(language === 'tr' ? 'Not kalıcı olarak silindi' : 'Note permanently deleted');
+    setTimeout(() => setStatusText(language === 'tr' ? 'Söyle, çek ya da yaz' : 'Speak, snap or type'), 2000);
+  };
+
+  // Geri Dönüşüm Kutusundaki Tüm Notları Kalıcı Olarak Boşalt
+  const emptyTrash = async () => {
+    if (trashNotes.length === 0) return;
+    const itemsToDelete = [...trashNotes];
+    setTrashNotes([]);
+    saveTrashNotes([]);
+
+    for (const entry of itemsToDelete) {
+      await commitPermanentDeletion(entry.item);
+    }
+
+    setStatusText(language === 'tr' ? 'Geri dönüşüm kutusu boşaltıldı ✓' : 'Recycle bin emptied ✓');
+    setTimeout(() => setStatusText(language === 'tr' ? 'Söyle, çek ya da yaz' : 'Speak, snap or type'), 2000);
+  };
+
+  // Geri Alma Aksiyonu (Hızlı Toast üzerinden)
   const handleUndo = () => {
     if (!undoToast) return;
     clearTimeout(undoToast.timerId);
     const restoredItem = undoToast.item;
     
-    // Kartı listeye geri yükle
-    setCards((prev) => [restoredItem, ...prev]);
-    setUndoToast(null);
-    setStatusText('Not geri yüklendi');
-    setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2000);
-  };
+    // Çöp kutusundan çıkar
+    const remainingTrash = trashNotes.filter((t) => t.item.id !== restoredItem.id);
+    setTrashNotes(remainingTrash);
+    saveTrashNotes(remainingTrash);
 
-  // Tek tek doğrudan silme fonksiyonu (kullanıcı çöp kutusuna basarak direkt silebilir)
-  const directDeleteNote = (id: string) => {
-    if (undoToast) {
-      commitPendingDeletion(undoToast.item);
-      clearTimeout(undoToast.timerId);
+    // Kartı listeye geri yükle
+    setCards((prev) => [restoredItem, ...prev.filter((c) => c.id !== restoredItem.id)]);
+    const updatedLocal = [restoredItem, ...getLocalNotes().filter((c) => c.id !== restoredItem.id)];
+    saveLocalNotes(updatedLocal);
+    setUndoToast(null);
+
+    // Alarmları yeniden kur
+    if (restoredItem.tarih_iso && !restoredItem.tamamlandi) {
+      localNotifications.scheduleAlarm({
+        id: restoredItem.id,
+        baslik: restoredItem.baslik,
+        tarih_iso: restoredItem.tarih_iso,
+        ikon: restoredItem.ikon,
+      });
     }
 
+    setStatusText(language === 'tr' ? 'Not geri yüklendi ✓' : 'Note restored ✓');
+    setTimeout(() => setStatusText(language === 'tr' ? 'Söyle, çek ya da yaz' : 'Speak, snap or type'), 2000);
+  };
+
+  // Tek tek doğrudan silme fonksiyonu (Notu 30 günlük Geri Dönüşüm Kutusuna taşır)
+  const directDeleteNote = (id: string) => {
     const targetCard = cards.find((c) => c.id === id);
     if (!targetCard) return;
 
-    setCards((prev) => prev.filter((c) => c.id !== id));
+    // Alarmları durdur
+    localNotifications.cancelAlarm(targetCard.id);
+    cancelAllFermentationAlarms(targetCard.id);
+
+    // Aktif kartlardan çıkar ve kaydet
+    const updatedCards = cards.filter((c) => c.id !== id);
+    setCards(updatedCards);
+    saveLocalNotes(updatedCards);
     setSelectedCardIds((prev) => prev.filter((selectedId) => selectedId !== id));
 
-    const timerId = setTimeout(async () => {
-      await commitPendingDeletion(targetCard);
+    // Geri dönüşüm kutusuna ekle
+    const newTrashEntry: TrashNoteItem = {
+      item: targetCard,
+      deletedAt: new Date().toISOString(),
+    };
+    const updatedTrash = [newTrashEntry, ...trashNotes.filter((t) => t.item.id !== id)];
+    setTrashNotes(updatedTrash);
+    saveTrashNotes(updatedTrash);
+
+    triggerDriveBackup(updatedCards);
+
+    if (undoToast) {
+      clearTimeout(undoToast.timerId);
+    }
+
+    const timerId = setTimeout(() => {
       setUndoToast(null);
-    }, 5000);
+    }, 6000);
 
     setUndoToast({ item: targetCard, timerId });
-    setStatusText('Not silindi (Geri alabilirsiniz)');
+    setStatusText(language === 'tr' ? 'Not çöp kutusuna taşındı (30 gün saklanır)' : 'Note moved to trash (kept for 30 days)');
   };
 
-  // Çoklu seçim ile seçilen tüm notları silme
+  // Çoklu seçim ile seçilen tüm notları Geri Dönüşüm Kutusuna taşıma
   const deleteSelectedNotes = async () => {
     if (selectedCardIds.length === 0) return;
     const count = selectedCardIds.length;
     
     if (undoToast) {
-      commitPendingDeletion(undoToast.item);
       clearTimeout(undoToast.timerId);
       setUndoToast(null);
     }
 
     const targetsToDelete = cards.filter((c) => selectedCardIds.includes(c.id));
-    setCards((prev) => prev.filter((c) => !selectedCardIds.includes(c.id)));
+    const updatedCards = cards.filter((c) => !selectedCardIds.includes(c.id));
+    setCards(updatedCards);
+    saveLocalNotes(updatedCards);
     setSelectedCardIds([]);
     setIsSelectMode(false);
 
-    setStatusText(`${count} not siliniyor...`);
+    // Her birini çöp kutusuna ekle ve alarmları durdur
+    const nowIso = new Date().toISOString();
+    const newTrashEntries: TrashNoteItem[] = targetsToDelete.map((item) => ({
+      item,
+      deletedAt: nowIso,
+    }));
 
-    // Hepsini kalıcı olarak sil
     for (const card of targetsToDelete) {
-      await commitPendingDeletion(card);
+      await localNotifications.cancelAlarm(card.id);
+      await cancelAllFermentationAlarms(card.id);
     }
 
-    setStatusText(`${count} not başarıyla silindi ✓`);
-    setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
+    const updatedTrash = [
+      ...newTrashEntries,
+      ...trashNotes.filter((t) => !selectedCardIds.includes(t.item.id)),
+    ];
+    setTrashNotes(updatedTrash);
+    saveTrashNotes(updatedTrash);
+
+    triggerDriveBackup(updatedCards);
+
+    setStatusText(
+      language === 'tr'
+        ? `${count} not çöp kutusuna taşındı (30 gün saklanır)`
+        : `${count} notes moved to trash (kept for 30 days)`
+    );
+    setTimeout(() => setStatusText(language === 'tr' ? 'Söyle, çek ya da yaz' : 'Speak, snap or type'), 2500);
   };
 
   // Kartları Yeniden Sıralama (Reorder) Fonksiyonu
@@ -2239,8 +2444,8 @@ export default function App() {
         const targetOffset = Math.min(0, Math.max(-45, baseOffset + dx * 0.45));
         setSwipeOffsets((prev) => ({ ...prev, [cardId]: targetOffset }));
       } else {
-        const baseOffset = isCurrentlyOpen ? -224 : 0;
-        const targetOffset = Math.min(0, Math.max(-250, baseOffset + dx));
+        const baseOffset = isCurrentlyOpen ? -168 : 0;
+        const targetOffset = Math.min(0, Math.max(-200, baseOffset + dx));
         setSwipeOffsets((prev) => ({ ...prev, [cardId]: targetOffset }));
       }
     }
@@ -2293,9 +2498,9 @@ export default function App() {
         }
       } else {
         if (!isCurrentlyOpen) {
-          if (currentOffset < -50) {
+          if (currentOffset < -45) {
             setSwipedCardId(cardId);
-            setSwipeOffsets((prev) => ({ ...prev, [cardId]: -224 }));
+            setSwipeOffsets((prev) => ({ ...prev, [cardId]: -168 }));
             if (typeof navigator !== 'undefined' && navigator.vibrate) {
               try { navigator.vibrate(25); } catch {}
             }
@@ -2304,12 +2509,12 @@ export default function App() {
             setSwipeOffsets((prev) => ({ ...prev, [cardId]: 0 }));
           }
         } else {
-          if (currentOffset > -160) {
+          if (currentOffset > -110) {
             setSwipedCardId(null);
             setSwipeOffsets((prev) => ({ ...prev, [cardId]: 0 }));
           } else {
             setSwipedCardId(cardId);
-            setSwipeOffsets((prev) => ({ ...prev, [cardId]: -224 }));
+            setSwipeOffsets((prev) => ({ ...prev, [cardId]: -168 }));
           }
         }
       }
@@ -2353,8 +2558,8 @@ export default function App() {
         const targetOffset = Math.min(0, Math.max(-45, baseOffset + dx * 0.45));
         setSwipeOffsets((prev) => ({ ...prev, [cardId]: targetOffset }));
       } else {
-        const baseOffset = isCurrentlyOpen ? -224 : 0;
-        const targetOffset = Math.min(0, Math.max(-250, baseOffset + dx));
+        const baseOffset = isCurrentlyOpen ? -168 : 0;
+        const targetOffset = Math.min(0, Math.max(-200, baseOffset + dx));
         setSwipeOffsets((prev) => ({ ...prev, [cardId]: targetOffset }));
       }
     }
@@ -2381,20 +2586,20 @@ export default function App() {
         }
       } else {
         if (!isCurrentlyOpen) {
-          if (currentOffset < -50) {
+          if (currentOffset < -45) {
             setSwipedCardId(cardId);
-            setSwipeOffsets((prev) => ({ ...prev, [cardId]: -224 }));
+            setSwipeOffsets((prev) => ({ ...prev, [cardId]: -168 }));
           } else {
             setSwipedCardId(null);
             setSwipeOffsets((prev) => ({ ...prev, [cardId]: 0 }));
           }
         } else {
-          if (currentOffset > -160) {
+          if (currentOffset > -110) {
             setSwipedCardId(null);
             setSwipeOffsets((prev) => ({ ...prev, [cardId]: 0 }));
           } else {
             setSwipedCardId(cardId);
-            setSwipeOffsets((prev) => ({ ...prev, [cardId]: -224 }));
+            setSwipeOffsets((prev) => ({ ...prev, [cardId]: -168 }));
           }
         }
       }
@@ -3303,7 +3508,7 @@ export default function App() {
                 if (showSearch) setSearchQuery('');
               }}
               title={t.searchTitle}
-              className={`p-1.5 rounded-full transition-colors ${
+              className={`p-1.5 rounded-full transition-colors cursor-pointer active:scale-95 ${
                 showSearch 
                   ? theme === 'dark' ? 'text-white bg-stone-800' : 'text-stone-900 bg-stone-200'
                   : theme === 'dark' ? 'text-stone-400 hover:text-stone-200 hover:bg-stone-800' : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100'
@@ -3312,6 +3517,32 @@ export default function App() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
+            </button>
+
+            {/* Geri Dönüşüm Kutusu Butonu (30 Günlük Saklama) */}
+            <button
+              id="recycle-bin-top-btn"
+              type="button"
+              onClick={() => setShowRecycleBinModal(true)}
+              title={t.recycleBinTitle}
+              className={`relative p-1.5 rounded-full transition-all cursor-pointer active:scale-95 ${
+                trashNotes.length > 0
+                  ? theme === 'dark'
+                    ? 'text-amber-400 hover:bg-stone-800 hover:text-amber-300'
+                    : 'text-amber-600 hover:bg-stone-100 hover:text-amber-700'
+                  : theme === 'dark'
+                    ? 'text-stone-400 hover:text-stone-200 hover:bg-stone-800'
+                    : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100'
+              }`}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              {trashNotes.length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center border border-white dark:border-stone-900 leading-none">
+                  {trashNotes.length > 99 ? '99+' : trashNotes.length}
+                </span>
+              )}
             </button>
 
 
@@ -3572,7 +3803,7 @@ export default function App() {
                 // İkili ızgara görünümünde kart ekran dışına uçmaz; hızlı eylem paneli yüzen bir katman (HUD) olarak açılır
                 const cardOffset = viewMode === 'grid'
                   ? (isDraggingThis && currentDragOffset !== undefined ? currentDragOffset : 0)
-                  : (currentDragOffset !== undefined ? currentDragOffset : (isSwipedOpen ? -224 : 0));
+                  : (currentDragOffset !== undefined ? currentDragOffset : (isSwipedOpen ? -168 : 0));
 
                 return (
                   <React.Fragment key={item.id}>
@@ -3592,35 +3823,9 @@ export default function App() {
                       className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl group/swipe select-none card-swipe-container"
                       data-card-id={item.id}
                     >
-                      {/* Tek Sütun Görünümünde (Single View) Arkadan Açılan Mobil Aksiyon Çekmecesi */}
+                      {/* Tek Sütun Görünümünde (Single View) Arkadan Açılan Mobil Aksiyon Çekmecesi (Alarm, Düzenle, Sil) */}
                       {viewMode !== 'grid' && (
                         <div className="absolute inset-y-0 right-0 flex items-stretch z-0 bg-stone-900 dark:bg-stone-950 rounded-xl sm:rounded-2xl overflow-hidden shadow-inner">
-                          {/* 0. Tamamla / Geri Al */}
-                          <button
-                            type="button"
-                            id={`swipe-complete-${item.id}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleCardCompleted(item.id);
-                              setSwipedCardId(null);
-                              setSwipeOffsets({});
-                              if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                                try { navigator.vibrate(25); } catch {}
-                              }
-                            }}
-                            className={`w-14 sm:w-16 ${
-                              isCompleted
-                                ? 'bg-stone-700 hover:bg-stone-800 active:bg-stone-900'
-                                : 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800'
-                            } text-white flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer px-1 text-center select-none min-h-[48px]`}
-                            title={isCompleted ? (language === 'tr' ? 'Yeniden Aç' : 'Reopen') : (language === 'tr' ? 'Tamamlandı Olarak İşaretle' : 'Mark as Completed')}
-                          >
-                            <span className="text-lg sm:text-xl">{isCompleted ? '↩️' : '✓'}</span>
-                            <span className="text-[10px] sm:text-[11px] font-bold tracking-tight">
-                              {isCompleted ? (language === 'tr' ? 'Geri Al' : 'Undo') : (language === 'tr' ? 'Tamam' : 'Done')}
-                            </span>
-                          </button>
-
                           {/* 1. Alarm Kur / Takvim */}
                           <button
                             type="button"
@@ -3691,13 +3896,13 @@ export default function App() {
 
                       {/* İkili Izgarada (Grid View) Kaydırma Esnasında Gösterilen Sağ Çekme İpucu */}
                       {viewMode === 'grid' && (
-                        <div className="absolute inset-y-0 right-0 w-10 bg-stone-900 text-white flex items-center justify-center rounded-r-xl z-0 text-xs font-bold shadow-inner">
-                          <span>⚡</span>
+                        <div className="absolute inset-y-0 right-0 w-10 bg-stone-900 text-white flex items-center justify-center rounded-r-xl z-0 text-xs font-bold shadow-inner opacity-80">
+                          <span>⚙️</span>
                         </div>
                       )}
 
                       {/* İKİLİ IZGARADA (Grid View) Sola Çekince Açılan Pratik Yüzen Aksiyon HUD'ı */}
-                      {/* Kartın görünümünü engellemeden, içeriği taşmadan, 2x2 kompakt ve pratik eylem paneli */}
+                      {/* Kartın boyutlarına kusursuz oturan 3 hızlı aksiyon: Alarm, Düzenle, Sil */}
                       {viewMode === 'grid' && isSwipedOpen && (
                         <div
                           className="absolute inset-0 z-30 bg-stone-900/95 dark:bg-stone-950/95 backdrop-blur-md rounded-xl sm:rounded-2xl p-2 sm:p-2.5 flex flex-col justify-between text-white shadow-2xl animate-in fade-in zoom-in-95 duration-150 border border-white/15"
@@ -3725,34 +3930,9 @@ export default function App() {
                             </button>
                           </div>
 
-                          {/* 2x2 Kompakt Eylem Butonları */}
-                          <div className="grid grid-cols-2 gap-1.5 my-auto pt-1">
-                            {/* 1. Tamamla / Geri Al */}
-                            <button
-                              type="button"
-                              id={`grid-swipe-complete-${item.id}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleCardCompleted(item.id);
-                                setSwipedCardId(null);
-                                setSwipeOffsets({});
-                                if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                                  try { navigator.vibrate(25); } catch {}
-                                }
-                              }}
-                              className={`py-1.5 px-1 rounded-lg ${
-                                isCompleted
-                                  ? 'bg-stone-700 hover:bg-stone-600 active:bg-stone-800'
-                                  : 'bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700'
-                              } text-white flex flex-col items-center justify-center gap-0.5 cursor-pointer active:scale-95 transition-all text-center min-h-[40px]`}
-                            >
-                              <span className="text-sm">{isCompleted ? '↩️' : '✓'}</span>
-                              <span className="text-[10px] font-bold">
-                                {isCompleted ? (language === 'tr' ? 'Geri Al' : 'Undo') : (language === 'tr' ? 'Tamam' : 'Done')}
-                              </span>
-                            </button>
-
-                            {/* 2. Alarm */}
+                          {/* 3 Pratik ve Ergonomik Aksiyon Butonu */}
+                          <div className="flex flex-col gap-1.5 flex-1 justify-center py-1">
+                            {/* 1. Alarm */}
                             <button
                               type="button"
                               id={`grid-swipe-alarm-${item.id}`}
@@ -3765,13 +3945,18 @@ export default function App() {
                                   try { navigator.vibrate(25); } catch {}
                                 }
                               }}
-                              className="py-1.5 px-1 rounded-lg bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white flex flex-col items-center justify-center gap-0.5 cursor-pointer active:scale-95 transition-all text-center min-h-[40px]"
+                              className="w-full flex-1 min-h-[30px] max-h-[38px] px-2.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 active:from-amber-700 active:to-amber-800 text-white flex items-center justify-between shadow-2xs active:scale-95 transition-all text-left cursor-pointer"
                             >
-                              <span className="text-sm">🔔</span>
-                              <span className="text-[10px] font-bold">{language === 'tr' ? 'Alarm' : 'Alarm'}</span>
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-xs sm:text-sm shrink-0">🔔</span>
+                                <span className="text-[10px] sm:text-[11px] font-bold truncate">
+                                  {language === 'tr' ? 'Alarm Kur' : 'Set Alarm'}
+                                </span>
+                              </div>
+                              <span className="text-[10px] opacity-70 font-mono">›</span>
                             </button>
 
-                            {/* 3. Düzenle */}
+                            {/* 2. Düzenle */}
                             <button
                               type="button"
                               id={`grid-swipe-edit-${item.id}`}
@@ -3784,13 +3969,18 @@ export default function App() {
                                   try { navigator.vibrate(25); } catch {}
                                 }
                               }}
-                              className="py-1.5 px-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white flex flex-col items-center justify-center gap-0.5 cursor-pointer active:scale-95 transition-all text-center min-h-[40px]"
+                              className="w-full flex-1 min-h-[30px] max-h-[38px] px-2.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 active:from-indigo-800 active:to-indigo-900 text-white flex items-center justify-between shadow-2xs active:scale-95 transition-all text-left cursor-pointer"
                             >
-                              <span className="text-sm">✏️</span>
-                              <span className="text-[10px] font-bold">{language === 'tr' ? 'Düzenle' : 'Edit'}</span>
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-xs sm:text-sm shrink-0">✏️</span>
+                                <span className="text-[10px] sm:text-[11px] font-bold truncate">
+                                  {language === 'tr' ? 'Düzenle' : 'Edit'}
+                                </span>
+                              </div>
+                              <span className="text-[10px] opacity-70 font-mono">›</span>
                             </button>
 
-                            {/* 4. Sil */}
+                            {/* 3. Sil */}
                             <button
                               type="button"
                               id={`grid-swipe-delete-${item.id}`}
@@ -3803,10 +3993,15 @@ export default function App() {
                                   try { navigator.vibrate(30); } catch {}
                                 }
                               }}
-                              className="py-1.5 px-1 rounded-lg bg-red-600 hover:bg-red-500 active:bg-red-700 text-white flex flex-col items-center justify-center gap-0.5 cursor-pointer active:scale-95 transition-all text-center min-h-[40px]"
+                              className="w-full flex-1 min-h-[30px] max-h-[38px] px-2.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 active:from-red-800 active:to-red-900 text-white flex items-center justify-between shadow-2xs active:scale-95 transition-all text-left cursor-pointer"
                             >
-                              <span className="text-sm">🗑️</span>
-                              <span className="text-[10px] font-bold">{language === 'tr' ? 'Sil' : 'Delete'}</span>
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-xs sm:text-sm shrink-0">🗑️</span>
+                                <span className="text-[10px] sm:text-[11px] font-bold truncate">
+                                  {language === 'tr' ? 'Notu Sil' : 'Delete'}
+                                </span>
+                              </div>
+                              <span className="text-[10px] opacity-70 font-mono">›</span>
                             </button>
                           </div>
                         </div>
@@ -4925,6 +5120,24 @@ export default function App() {
         driveSyncTime={driveSyncTime}
         viewMode={viewMode}
         onToggleViewMode={toggleViewMode}
+        onOpenRecycleBin={() => {
+          setIsSettingsOpen(false);
+          setShowRecycleBinModal(true);
+        }}
+        trashCount={trashNotes.length}
+      />
+
+      {/* Geri Dönüşüm Kutusu Modalı (30 Gün Saklama & Geri Alma) */}
+      <RecycleBinModal
+        isOpen={showRecycleBinModal}
+        onClose={() => setShowRecycleBinModal(false)}
+        trashItems={trashNotes}
+        onRestoreItem={restoreTrashItem}
+        onPermanentDeleteItem={permanentDeleteTrashItem}
+        onRestoreAll={restoreAllTrashItems}
+        onEmptyTrash={emptyTrash}
+        theme={theme}
+        language={language}
       />
 
       {/* Not Silme Onay Modalı (Mobil Ergonomik ve Güvenli Onay Penceresi) */}
@@ -4943,20 +5156,20 @@ export default function App() {
             <div className="w-12 h-1.5 bg-stone-300 dark:bg-stone-700 rounded-full mx-auto mb-4 sm:hidden" />
 
             <div className="flex items-start gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 text-2xl shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 text-2xl shadow-xs">
                 🗑️
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="text-base sm:text-lg font-bold text-stone-900 dark:text-white leading-snug">
-                  {language === 'tr' ? 'Bu notu silmek istiyor musunuz?' : 'Delete this note?'}
+                  {language === 'tr' ? 'Notu Çöp Kutusuna Taşı?' : 'Move note to trash?'}
                 </h3>
                 <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mt-1 line-clamp-2">
                   <span className="font-semibold text-stone-800 dark:text-stone-200">
                     {deleteConfirmNote.ikon || '📌'} {deleteConfirmNote.baslik}
                   </span>
                   {language === 'tr' 
-                    ? ' başlıklı not ve varsa içindeki tüm alt görevler kalıcı olarak silinecektir.' 
-                    : ' and all its sub-tasks will be permanently deleted.'}
+                    ? ' başlıklı not geri dönüşüm kutusuna taşınacak ve 30 gün boyunca saklanacaktır.' 
+                    : ' will be moved to the recycle bin and kept for 30 days.'}
                 </p>
               </div>
             </div>
@@ -4980,10 +5193,10 @@ export default function App() {
                     try { navigator.vibrate([20, 50, 20]); } catch {}
                   }
                 }}
-                className="w-full sm:w-auto px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold text-sm shadow-md shadow-red-600/20 active:scale-95 transition-all cursor-pointer text-center flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-5 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-semibold text-sm shadow-md shadow-amber-600/20 active:scale-95 transition-all cursor-pointer text-center flex items-center justify-center gap-2"
               >
                 <span>🗑️</span>
-                <span>{language === 'tr' ? 'Evet, Sil' : 'Yes, Delete'}</span>
+                <span>{language === 'tr' ? 'Çöp Kutusuna Taşı' : 'Move to Trash'}</span>
               </button>
             </div>
           </div>

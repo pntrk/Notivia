@@ -84,8 +84,8 @@ export const AdaptiveNoteCard: React.FC<AdaptiveCardProps> = ({
     }
 
     if (isSwipingRef.current) {
-      const base = isOpen ? -224 : 0;
-      const target = Math.min(0, Math.max(-250, base + dx));
+      const base = isOpen ? -168 : 0;
+      const target = Math.min(0, Math.max(-200, base + dx));
       setOffsetX(target);
     }
   };
@@ -93,9 +93,9 @@ export const AdaptiveNoteCard: React.FC<AdaptiveCardProps> = ({
   const handleTouchEnd = () => {
     if (isSwipingRef.current) {
       if (!isOpen) {
-        if (offsetX < -50) {
+        if (offsetX < -45) {
           setIsOpen(true);
-          setOffsetX(-224);
+          setOffsetX(-168);
           if (typeof navigator !== 'undefined' && navigator.vibrate) {
             try { navigator.vibrate(25); } catch {}
           }
@@ -104,12 +104,12 @@ export const AdaptiveNoteCard: React.FC<AdaptiveCardProps> = ({
           setOffsetX(0);
         }
       } else {
-        if (offsetX > -160) {
+        if (offsetX > -110) {
           setIsOpen(false);
           setOffsetX(0);
         } else {
           setIsOpen(true);
-          setOffsetX(-224);
+          setOffsetX(-168);
         }
       }
     }
@@ -139,8 +139,8 @@ export const AdaptiveNoteCard: React.FC<AdaptiveCardProps> = ({
     }
 
     if (isSwipingRef.current) {
-      const base = isOpen ? -224 : 0;
-      const target = Math.min(0, Math.max(-250, base + dx));
+      const base = isOpen ? -168 : 0;
+      const target = Math.min(0, Math.max(-200, base + dx));
       setOffsetX(target);
     }
   };
@@ -148,20 +148,20 @@ export const AdaptiveNoteCard: React.FC<AdaptiveCardProps> = ({
   const handleMouseUp = () => {
     if (isSwipingRef.current) {
       if (!isOpen) {
-        if (offsetX < -50) {
+        if (offsetX < -45) {
           setIsOpen(true);
-          setOffsetX(-224);
+          setOffsetX(-168);
         } else {
           setIsOpen(false);
           setOffsetX(0);
         }
       } else {
-        if (offsetX > -160) {
+        if (offsetX > -110) {
           setIsOpen(false);
           setOffsetX(0);
         } else {
           setIsOpen(true);
-          setOffsetX(-224);
+          setOffsetX(-168);
         }
       }
     }
@@ -175,31 +175,8 @@ export const AdaptiveNoteCard: React.FC<AdaptiveCardProps> = ({
 
   return (
     <div className="relative w-full overflow-hidden rounded-2xl select-none card-swipe-container">
-      {/* Sola Çekince Açılan Mobil Çekmece: Tamamla, Alarm, Düzenle, Sil */}
+      {/* Sola Çekince Açılan Mobil Çekmece: Alarm, Düzenle, Sil */}
       <div className="absolute inset-y-0 right-0 flex items-stretch z-0 bg-stone-900 rounded-2xl overflow-hidden shadow-inner">
-        {/* 0. Tamamla / Geri Al */}
-        {onToggleComplete && (
-          <button
-            type="button"
-            id={`adaptive-swipe-complete-${id}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              closeDrawer();
-              onToggleComplete(id);
-              if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                try { navigator.vibrate(25); } catch {}
-              }
-            }}
-            className={`w-14 sm:w-16 ${
-              isCompleted ? 'bg-stone-700 hover:bg-stone-800' : 'bg-emerald-600 hover:bg-emerald-700'
-            } text-white flex flex-col items-center justify-center gap-1 cursor-pointer transition-colors px-1 text-center select-none`}
-            title={isCompleted ? 'Yeniden Aç' : 'Tamamla'}
-          >
-            <span className="text-xl">{isCompleted ? '↩️' : '✓'}</span>
-            <span className="text-[11px] font-bold tracking-tight">{isCompleted ? 'Geri Al' : 'Tamam'}</span>
-          </button>
-        )}
-
         {/* 1. Alarm Kur */}
         <button
           type="button"
@@ -408,7 +385,7 @@ export const AdaptiveNoteCard: React.FC<AdaptiveCardProps> = ({
                   <span className="font-semibold text-stone-800 dark:text-stone-200">
                     {ikon || '📌'} {baslik}
                   </span>{' '}
-                  başlıklı not ve varsa içindeki tüm alt görevler kalıcı olarak silinecektir.
+                  başlıklı not geri dönüşüm kutusuna taşınacak ve 30 gün saklanacaktır.
                 </p>
               </div>
             </div>

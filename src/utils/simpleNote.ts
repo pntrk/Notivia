@@ -54,6 +54,10 @@ import {
   parseArtMediaIntent,
   type ArtMediaTask
 } from '../services/artMediaEngine.ts';
+import {
+  parseFinanceIntent,
+  type FinanceTask
+} from '../services/financeEngine.ts';
 import { resolveInstitutionalReference } from './institutionalCalendar.ts';
 import { estimateCognitiveLoad } from './cognitiveLoadEstimator.ts';
 export { resolveInstitutionalReference } from './institutionalCalendar.ts';
@@ -5813,6 +5817,26 @@ export function extractSimpleNoteFromText(
     }, cleanInput, userDomain || 'SANAT_MEDYA');
   }
 
+  // 0.0095 ÖNCELİK: FİNANS, MUHASEBE, HAZİNE, BORSA & SERMAYE PİYASALARI PROTOKOLÜ (FINANCE ENGINE)
+  // (KDV/MUHSGK 26'sı, e-Defter Beratı, Geçici Vergi 17'si, Kurumlar Vergisi, YMM KDV İadesi & GEKSİS Karşıt İnceleme,
+  // Çek/Senet 11:00 Takas & Provizyon, Hazine Nakit Akışı & 16:30 Repo Nemalandırma, Personel Maaş Bordro & %3 BES,
+  // BIST T+2 Takas, VİOP 14:30 Margin Call Teminat Tamamlama, Halka Arz Talep Toplama, KAP Özel Durum Açıklaması & SPK,
+  // Kur Riski Forward / Kur Farkı Faturası, Ba-Bs 7 Gün e-Fatura Red İtirazı, Findeks & Kredi Kartı Asgari Ödeme)
+  const financeResult = parseFinanceIntent(cleanInput, baseDate, userDomain);
+  if (financeResult) {
+    return enrichWithPredictiveGraph({
+      baslik: financeResult.baslik,
+      zaman: financeResult.zaman_etiketi,
+      tarih_iso: financeResult.tarih_iso,
+      hazirlik_zamani: financeResult.hazirlik_zamani,
+      action_items: financeResult.action_items,
+      ikon: financeResult.ikon,
+      renk: financeResult.renk,
+      anomali_notu: financeResult.mevzuat_notu,
+      sesli_fisilti: financeResult.sesli_geribildirim
+    }, cleanInput, userDomain || 'FINANS');
+  }
+
   // 0.01 ÖNCELİK: DERİNLEŞTİRİLMİŞ MESLEKİ & KURUMSAL SENARYO MOTORU (ADVANCED PROFESSION ENGINE)
   // (TEFBİS, LGS/YKS Komisyonu, ASM Gebe-Bebek İzlem, 112 Nöbet/Narkotik, Arabuluculuk 3+1 Hafta,
   // İcra Kıymet Takdiri, YMM KDV İadesi/Karşıt İnceleme, Bağımsız Denetim KGK, ÇKS/TARSİM, TÜRKVET/Aşı, İSG İBYS, Yapı Denetim Demir Vizesi)
@@ -5979,6 +6003,20 @@ export function extractSimpleNoteFromText(
       const legalResult = parseLegalNote(cleanInput, baseDate);
       if (legalResult) return enrichWithPredictiveGraph(legalResult, cleanInput);
     } else if (activeDomain === 'FINANS' || activeDomain === 'MALIYE') {
+      const finRes = parseFinanceIntent(cleanInput, baseDate, activeDomain);
+      if (finRes) {
+        return enrichWithPredictiveGraph({
+          baslik: finRes.baslik,
+          zaman: finRes.zaman_etiketi,
+          tarih_iso: finRes.tarih_iso,
+          hazirlik_zamani: finRes.hazirlik_zamani,
+          action_items: finRes.action_items,
+          ikon: finRes.ikon,
+          renk: finRes.renk,
+          anomali_notu: finRes.mevzuat_notu,
+          sesli_fisilti: finRes.sesli_geribildirim
+        }, cleanInput, activeDomain);
+      }
       const finResult = parseLegalNote(cleanInput, baseDate);
       if (finResult) return enrichWithPredictiveGraph(finResult, cleanInput);
       const tradeResult = parseTradesmanLocalShopNote(cleanInput, baseDate, activeDomain);
