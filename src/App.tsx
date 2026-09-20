@@ -3028,7 +3028,7 @@ export default function App() {
       if (chunks.length > 1) {
         console.log(`[Multi-Action Extractor] Girdi ${chunks.length} bağımsız eyleme ayrıştırıldı:`, chunks);
         for (const chunk of chunks) {
-          const parsedChunk = extractSimpleNoteFromText(chunk, currentNow, cards, targetDomain);
+          const parsedChunk = extractSimpleNoteFromText(chunk, currentNow, cards, targetDomain, language);
           await addNote({
             baslik: sanitizeCardTitle(parsedChunk.baslik) || parsedChunk.baslik,
             zaman: parsedChunk.zaman,
@@ -3245,7 +3245,7 @@ export default function App() {
 
     if (!parsedByServer) {
       // Çevrimdışı / Hızlı Kural Motoru (Doğal Dil Ayrıştırıcı)
-      const fallback = extractSimpleNoteFromText(textInput, currentNow, cards.slice(0, 15), targetDomain);
+      const fallback = extractSimpleNoteFromText(textInput, currentNow, cards.slice(0, 15), targetDomain, language);
       console.log("2. Bilişsel Kural Motoru Devrede:", fallback);
       console.log("3. Ayrıştırılmış Veri:", fallback);
       const isMissingTime = fallback.eksik_bilgi || (!fallback.zaman && !fallback.tarih_iso && (fallback.baslik?.toLowerCase().includes('randevu') || fallback.baslik?.toLowerCase().includes('görüşme') || fallback.baslik?.toLowerCase().includes('buluşma') || fallback.baslik?.toLowerCase().includes('toplantı') || fallback.baslik?.toLowerCase().includes('meeting') || fallback.baslik?.toLowerCase().includes('appointment')));

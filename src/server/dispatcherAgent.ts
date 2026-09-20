@@ -274,7 +274,14 @@ export function dispatchDeterministic(
     lower.includes('haber ver') ||
     lower.includes('ilet') ||
     lower.includes('bilgilendir') ||
-    lower.includes('söyle');
+    lower.includes('söyle') ||
+    lower.includes('draft') ||
+    lower.includes('message') ||
+    lower.includes('email') ||
+    lower.includes('send') ||
+    lower.includes('inform') ||
+    lower.includes('tell') ||
+    lower.includes('announce');
 
   const isExplicitDraftRequest =
     (lower.includes('yaz') && (lower.includes('ye ') || lower.includes('ya ') || lower.includes('e ') || lower.includes('a '))) ||
@@ -282,40 +289,62 @@ export function dispatchDeterministic(
     lower.includes('mail taslağı') ||
     lower.includes('taslağı çıkar') ||
     lower.includes('gelemeyeceğimi') ||
-    lower.includes('katılamayacağımı');
+    lower.includes('katılamayacağımı') ||
+    lower.includes('draft a message') ||
+    lower.includes('draft an email') ||
+    lower.includes('prepare a message') ||
+    lower.includes('cannot attend') ||
+    lower.includes('won\'t be able to');
 
-  if (isExplicitDraftRequest || (isMessageDraft && !lower.includes('not al') && !lower.includes('hatırlat'))) {
-    let recipient = 'İlgili Kişi';
+  if (isExplicitDraftRequest || (isMessageDraft && !lower.includes('not al') && !lower.includes('hatırlat') && !lower.includes('take a note') && !lower.includes('remind me'))) {
+    const isEn = language === 'en';
+    let recipient = isEn ? 'Contact' : 'İlgili Kişi';
     let channel: 'whatsapp' | 'email' | 'sms' = 'whatsapp';
-    let subject = 'Bilgilendirme';
+    let subject = isEn ? 'Notification' : 'Bilgilendirme';
 
-    if (lower.includes('mail') || lower.includes('e-posta')) channel = 'email';
-    else if (lower.includes('sms')) channel = 'sms';
+    if (lower.includes('mail') || lower.includes('e-posta') || lower.includes('email')) channel = 'email';
+    else if (lower.includes('sms') || lower.includes('text')) channel = 'sms';
 
-    // Alıcı tespiti
-    if (lower.includes('müdür')) {
-      recipient = 'Müdür';
-      subject = 'Rapor Teslimi ve Bilgilendirme';
-    } else if (lower.includes('veli')) {
-      recipient = 'Veli Grubu';
-      subject = 'Veli Toplantısı Bilgilendirmesi';
+    // Alıcı tespiti (TR & EN)
+    if (lower.includes('müdür') || lower.includes('manager') || lower.includes('director') || lower.includes('boss')) {
+      recipient = isEn ? 'Manager' : 'Müdür';
+      subject = isEn ? 'Status Report and Update' : 'Rapor Teslimi ve Bilgilendirme';
+    } else if (lower.includes('veli') || lower.includes('parent')) {
+      recipient = isEn ? 'Parent Group' : 'Veli Grubu';
+      subject = isEn ? 'Parent-Teacher Meeting Notification' : 'Veli Toplantısı Bilgilendirmesi';
     } else {
-      const matchRecipient = input.match(/([A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?:\s+[A-Za-zçğıöşü]+)?)(?:'?[yea]\b)/);
-      if (matchRecipient) recipient = matchRecipient[1];
+      const matchRecipientTr = input.match(/([A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?:\s+[A-Za-zçğıöşü]+)?)(?:'?[yea]\b)/);
+      const matchRecipientEn = input.match(/(?:to|for)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i);
+      if (matchRecipientTr) recipient = matchRecipientTr[1];
+      else if (matchRecipientEn) recipient = matchRecipientEn[1];
     }
 
     let message_body = '';
-    if (lower.includes('gelemeyece') || lower.includes('katılamaya')) {
-      message_body = `Merhaba ${recipient}, elimde olmayan zorunlu sebeplerden ötürü yarın planlanan buluşmaya katılamayacağımı üzülerek bildirmek isterim. En kısa sürede telafi etmek üzere görüşmek dileğiyle.`;
-    } else if (lower.includes('veli toplantı')) {
-      message_body = `Sayın Velilerimiz, öğrencilerimizin akademik ve sosyal gelişim süreçlerini değerlendirmek üzere okulumuzda düzenlenecek veli toplantısına katılımınızı önemle rica ederiz.`;
-    } else if (lower.includes('rapor teslim') || (lower.includes('müdür') && lower.includes('rapor'))) {
-      message_body = `Sayın Müdürüm,\n\nHazırlamış olduğum rapor ve ilgili resmi evraklar tamamlanmış olup ekte bilgilerinize sunulmuştur. Bilgilerinize arz ederim.\n\nSaygılarımla.`;
+    if (isEn) {
+      if (lower.includes('cannot attend') || lower.includes('gelemeyece') || lower.includes('katılamaya') || lower.includes('won\'t be able')) {
+        message_body = `Hello ${recipient}, due to unforeseen circumstances, I regrettably will not be able to attend tomorrow's scheduled meeting. I look forward to catching up at the earliest opportunity.`;
+      } else if (lower.includes('parent') || lower.includes('veli toplantı')) {
+        message_body = `Dear Parents, we kindly invite you to our upcoming school parent-teacher conference to discuss academic progress and student development.`;
+      } else if (lower.includes('report') || lower.includes('rapor') || lower.includes('manager') || lower.includes('müdür')) {
+        message_body = `Dear ${recipient},\n\nThe report and associated documentation have been prepared and are attached for your review.\n\nBest regards.`;
+      } else {
+        message_body = `Hello ${recipient}, I wanted to provide a quick update regarding ${input}. Looking forward to discussing further.`;
+      }
     } else {
-      message_body = `Merhaba ${recipient}, ${input} konusu hakkında sizleri bilgilendirmek istedim. Detayları görüşmek üzere iyi çalışmalar dilerim.`;
+      if (lower.includes('gelemeyece') || lower.includes('katılamaya')) {
+        message_body = `Merhaba ${recipient}, elimde olmayan zorunlu sebeplerden ötürü yarın planlanan buluşmaya katılamayacağımı üzülerek bildirmek isterim. En kısa sürede telafi etmek üzere görüşmek dileğiyle.`;
+      } else if (lower.includes('veli toplantı')) {
+        message_body = `Sayın Velilerimiz, öğrencilerimizin akademik ve sosyal gelişim süreçlerini değerlendirmek üzere okulumuzda düzenlenecek veli toplantısına katılımınızı önemle rica ederiz.`;
+      } else if (lower.includes('rapor teslim') || (lower.includes('müdür') && lower.includes('rapor'))) {
+        message_body = `Sayın Müdürüm,\n\nHazırlamış olduğum rapor ve ilgili resmi evraklar tamamlanmış olup ekte bilgilerinize sunulmuştur. Bilgilerinize arz ederim.\n\nSaygılarımla.`;
+      } else {
+        message_body = `Merhaba ${recipient}, ${input} konusu hakkında sizleri bilgilendirmek istedim. Detayları görüşmek üzere iyi çalışmalar dilerim.`;
+      }
     }
 
-    const whisper = `${recipient} için ${channel === 'email' ? 'e-posta' : 'mesaj'} taslağı hazırlandı.`;
+    const whisper = isEn
+      ? `Draft ${channel === 'email' ? 'email' : 'message'} prepared for ${recipient}.`
+      : `${recipient} için ${channel === 'email' ? 'e-posta' : 'mesaj'} taslağı hazırlandı.`;
 
     return {
       tool: 'draft_message',
@@ -346,30 +375,38 @@ export function dispatchDeterministic(
     lower.includes('ajandam') ||
     lower.includes('randevum var mı') ||
     lower.includes('boş vaktim') ||
-    lower.includes('ne zaman müsait');
+    lower.includes('ne zaman müsait') ||
+    lower.includes('what do i have') ||
+    lower.includes('what is my schedule') ||
+    lower.includes('am i free') ||
+    lower.includes('am i available') ||
+    lower.includes('check my calendar') ||
+    lower.includes('any appointments') ||
+    lower.includes('my agenda');
 
   if (isCalendarQuery) {
+    const isEn = language === 'en';
     const pad = (n: number) => String(n).padStart(2, '0');
     const start = new Date(baseDate);
     const end = new Date(baseDate);
     let period_label: 'bugun' | 'yarin' | 'bu_hafta' | 'ozel' = 'bugun';
-    let fisilti = "Bugünün ajandasına bakıyorum.";
+    let fisilti = isEn ? "Checking today's schedule." : "Bugünün ajandasına bakıyorum.";
 
-    if (lower.includes('yarın') || lower.includes('yarin')) {
+    if (lower.includes('yarın') || lower.includes('yarin') || lower.includes('tomorrow')) {
       start.setDate(start.getDate() + 1);
       start.setHours(0, 0, 0, 0);
       end.setDate(end.getDate() + 1);
       end.setHours(23, 59, 59, 999);
       period_label = 'yarin';
-      fisilti = 'Yarının ajandasına bakıyorum.';
-    } else if (lower.includes('hafta') || lower.includes('bu hafta')) {
+      fisilti = isEn ? "Checking tomorrow's schedule." : 'Yarının ajandasına bakıyorum.';
+    } else if (lower.includes('hafta') || lower.includes('bu hafta') || lower.includes('this week') || lower.includes('week')) {
       start.setHours(0, 0, 0, 0);
       end.setDate(end.getDate() + 7);
       period_label = 'bu_hafta';
-      fisilti = 'Bu haftaki takviminize bakıyorum.';
-    } else if (lower.includes('cuma') || lower.includes('pazartesi') || lower.includes('çarşamba')) {
+      fisilti = isEn ? "Checking this week's schedule." : 'Bu haftaki takviminize bakıyorum.';
+    } else if (lower.includes('cuma') || lower.includes('pazartesi') || lower.includes('çarşamba') || lower.includes('friday') || lower.includes('monday') || lower.includes('wednesday')) {
       period_label = 'ozel';
-      fisilti = 'İlgili günün ajandasına bakıyorum.';
+      fisilti = isEn ? "Checking the schedule for that day." : 'İlgili günün ajandasına bakıyorum.';
       start.setHours(0, 0, 0, 0);
       end.setHours(23, 59, 59, 999);
     } else {
@@ -396,8 +433,9 @@ export function dispatchDeterministic(
   }
 
   // 3. KANAL: BİLİŞSEL EYLEM & NOT OLUŞTURUCU (create_note_or_event)
+  const isEn = language === 'en';
   const radar = detectDomainFromJargon(sanitizedInput, (userDomain as any) || 'GENEL');
-  const simpleNote = extractSimpleNoteFromText(sanitizedInput, currentDatetime, undefined, userDomain);
+  const simpleNote = extractSimpleNoteFromText(sanitizedInput, currentDatetime, undefined, userDomain, language);
 
   // Başlık maksimum 4 kelime kuralı ve dolgu sözcüklerden arındırma
   let baslik = sanitizeCardTitle(simpleNote.baslik);
@@ -414,10 +452,10 @@ export function dispatchDeterministic(
     if (!color || color === '#FEF3C7') color = radar.suggestedColor;
   }
 
-  if (lower.includes('alacak') || lower.includes('alacağım') || input.match(/\b[A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?:'?[dten]an|'?[dten]en)\b/)) {
+  if (lower.includes('alacak') || lower.includes('alacağım') || lower.includes('receivable') || lower.includes('owed to me') || input.match(/\b[A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?:'?[dten]an|'?[dten]en)\b/)) {
     icon = '🟢';
     color = '#DCFCE7';
-  } else if (lower.includes('borç') || lower.includes('öde') || input.match(/\b[A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?:'?[yea])\b/)) {
+  } else if (lower.includes('borç') || lower.includes('öde') || lower.includes('debt') || lower.includes('pay') || input.match(/\b[A-ZÇĞİÖŞÜ][a-zçğıöşü]+(?:'?[yea])\b/)) {
     icon = '🔴';
     color = '#FEE2E2';
   }
@@ -430,12 +468,12 @@ export function dispatchDeterministic(
     if (!hasExplicitHour) {
       const pad = (n: number) => String(n).padStart(2, '0');
       const timeStr = `${pad(radar.implicitHour)}:${pad(radar.implicitMinute)}`;
-      if (zamanText === 'Bugün' || !zamanText) {
-        zamanText = `Bugün ${timeStr}`;
-      } else if (zamanText === 'Yarın') {
-        zamanText = `Yarın ${timeStr}`;
+      if (zamanText === 'Bugün' || zamanText === 'Today' || !zamanText) {
+        zamanText = isEn ? `Today ${timeStr}` : `Bugün ${timeStr}`;
+      } else if (zamanText === 'Yarın' || zamanText === 'Tomorrow') {
+        zamanText = isEn ? `Tomorrow ${timeStr}` : `Yarın ${timeStr}`;
       } else {
-        zamanText = `${zamanText || 'Bugün'} ${timeStr}`;
+        zamanText = `${zamanText || (isEn ? 'Today' : 'Bugün')} ${timeStr}`;
       }
       if (tarihIso) {
         const d = new Date(tarihIso);
@@ -445,12 +483,18 @@ export function dispatchDeterministic(
     }
   }
 
-  const isClarificationNeeded = !radar.implicitHour && !!(simpleNote.eksik_bilgi || (!simpleNote.zaman && !simpleNote.tarih_iso && (lower.includes('randevu') || lower.includes('görüşme') || lower.includes('buluşma') || lower.includes('toplantı'))));
-  const soruText = simpleNote.netlestirme_sorusu || simpleNote.soru || (isClarificationNeeded ? 'Hangi gün ve saatte planlayalım?' : null);
-  zamanText = isClarificationNeeded ? 'Zaman Belirtilmedi' : (zamanText || 'Bugün');
-  const voiceWhisper = isClarificationNeeded && soruText
-    ? soruText
-    : `${baslik} ${zamanText ? zamanText + ' için ' : ''}kuruldu.`;
+  const isClarificationNeeded = !radar.implicitHour && !!(simpleNote.eksik_bilgi || (!simpleNote.zaman && !simpleNote.tarih_iso && (lower.includes('randevu') || lower.includes('görüşme') || lower.includes('buluşma') || lower.includes('toplantı') || lower.includes('appointment') || lower.includes('meeting'))));
+  const soruText = simpleNote.netlestirme_sorusu || simpleNote.soru || (isClarificationNeeded ? (isEn ? 'Which day and time should we schedule this for?' : 'Hangi gün ve saatte planlayalım?') : null);
+  zamanText = isClarificationNeeded ? (isEn ? 'Time Not Specified' : 'Zaman Belirtilmedi') : (zamanText || (isEn ? 'Today' : 'Bugün'));
+  
+  let voiceWhisper = simpleNote.sesli_fisilti;
+  if (isClarificationNeeded && soruText) {
+    voiceWhisper = soruText;
+  } else if (!voiceWhisper) {
+    voiceWhisper = isEn
+      ? `${baslik} ${zamanText ? 'scheduled for ' + zamanText : 'created'}.`
+      : `${baslik} ${zamanText ? zamanText + ' için ' : ''}kuruldu.`;
+  }
 
   return {
     tool: 'create_note_or_event',

@@ -1,4 +1,5 @@
 import type { NotiviaParsedNote, NotiviaSimpleNote } from '../types/notivia.ts';
+import { localizeSimpleNote } from './engineLocalization.ts';
 import { normalizePhoneticJargon } from './phoneticNormalizer.ts';
 import { extractEntityMetrics } from './entityMetricExtractor.ts';
 import { detectMilestoneChain } from './milestoneChainEngine.ts';
@@ -5683,7 +5684,19 @@ export function extractSimpleNoteFromText(
   input: string,
   refDatetime?: string,
   pastNotes?: any[],
-  userDomain?: string
+  userDomain?: string,
+  language: string = 'tr'
+): NotiviaSimpleNote {
+  const result = _extractSimpleNoteFromTextInternal(input, refDatetime, pastNotes, userDomain, language);
+  return localizeSimpleNote(result, language, input);
+}
+
+function _extractSimpleNoteFromTextInternal(
+  input: string,
+  refDatetime?: string,
+  pastNotes?: any[],
+  userDomain?: string,
+  language: string = 'tr'
 ): NotiviaSimpleNote {
   const rawTrimmed = (input || '').trim();
 

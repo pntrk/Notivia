@@ -1156,7 +1156,7 @@ JSON ÇIKTI ŞEMASI (Yalnızca aşağıdaki şemaya uyan ham JSON üret, markdow
     const cleanText = text.trim();
     const shortScenario = matchShortScenario(cleanText, userDomain);
     if (shortScenario) {
-      return extractSimpleNoteFromText(cleanText, now, pastNotes, userDomain);
+      return extractSimpleNoteFromText(cleanText, now, pastNotes, userDomain, language);
     }
   }
 
@@ -1270,9 +1270,9 @@ JSON ÇIKTI ŞEMASI (Yalnızca aşağıdaki şemaya uyan ham JSON üret, markdow
     }
   }
 
-  const fallback = extractSimpleNoteFromText(text || 'Görsel analizi', now, pastNotes, userDomain);
+  const fallback = extractSimpleNoteFromText(text || (language === 'en' ? 'Image Analysis' : 'Görsel analizi'), now, pastNotes, userDomain, language);
   if (base64Image && !text) {
-    fallback.baslik = 'Görsel Teşhisi';
+    fallback.baslik = language === 'en' ? 'Image Diagnosis' : 'Görsel Teşhisi';
     fallback.ikon = '📷';
   }
   return fallback;
