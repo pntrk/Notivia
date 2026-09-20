@@ -73,7 +73,6 @@ import { OfflineIndicator } from './components/OfflineIndicator.tsx';
 import { SettingsModal } from './components/SettingsModal.tsx';
 import { RecycleBinModal, RETENTION_MS } from './components/RecycleBinModal.tsx';
 import type { TrashNoteItem } from './types/notivia.ts';
-import { CardReminderEditor } from './components/CardReminderEditor.tsx';
 import { EditNoteModal } from './components/EditNoteModal.tsx';
 import { DOMAIN_REGISTRY, WORK_DOMAIN_OPTIONS, detectDomainFromNote, type ProfessionDomain } from './types/domainThemes.ts';
 import { translations, type Language } from './utils/i18n.ts';
@@ -526,6 +525,12 @@ export default function App() {
   const [workDomain, setWorkDomain] = useState<ProfessionDomain>(() => {
     try {
       if (typeof window !== 'undefined') {
+        const savedLang = localStorage.getItem('notivia_lang');
+        const navLang = navigator.language?.toLowerCase() || '';
+        const currentLang = savedLang === 'tr' || savedLang === 'en' ? savedLang : (navLang.startsWith('tr') ? 'tr' : 'en');
+        if (currentLang === 'en') {
+          return 'SADE';
+        }
         const saved = localStorage.getItem('notivia_work_domain');
         if (saved) {
           if (saved === 'CALISMIYORUM') return 'GENEL';
@@ -576,14 +581,12 @@ export default function App() {
     isAlarm?: boolean;
   } | null>(null);
 
-  // Kart üzerinden hatırlatıcı, takvim ve bildirim düzenleme paneli açık olan kart ID'si
-  const [activeReminderEditCardId, setActiveReminderEditCardId] = useState<string | null>(null);
-
   // Cihaz takvimine otomatik senkronizasyon animasyonu için kart ID'si
   const [syncingCalendarCardId, setSyncingCalendarCardId] = useState<string | null>(null);
 
-  // Kart detaylı düzenleme modalı için seçili kart
+  // Kart detaylı düzenleme ve alarm modalı için seçili kart ve başlangıç sekmesi
   const [editingNote, setEditingNote] = useState<SimpleCardItem | null>(null);
+  const [editingNoteInitialTab, setEditingNoteInitialTab] = useState<'all' | 'alarm' | 'tasks' | 'details'>('all');
 
   // Canlı Hava Durumu Takip State'i
   const [weather, setWeather] = useState<WeatherCondition | null>(null);
@@ -758,6 +761,16 @@ export default function App() {
 
   const handleSelectLanguage = (newLang: Language) => {
     setLanguage(newLang);
+    if (newLang === 'en') {
+      setWorkDomain('SADE');
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('notivia_work_domain', 'SADE');
+        }
+      } catch {
+        // ignore
+      }
+    }
   };
 
   const handleToggleNotifications = async () => {
@@ -2978,9 +2991,9 @@ export default function App() {
       await saveLocalMedia(mediaId, base64Image);
     }
 
-    // 0. SADE / MOTORSUZ MOD (Kullanıcı motor seçimi yapmadıysa veya Sade Mod seçiliyse)
+    // 0. SADE / MOTORSUZ MOD (Kullanıcı motor seçimi yapmadıysa, Sade Mod seçiliyse veya İngilizce dilindeyse)
     // Bilişsel motorlarla entegre olmadan yalnızca söylenen/yazılan ham metni kaydeder.
-    if (workDomain === 'SADE') {
+    if (workDomain === 'SADE' || language === 'en') {
       const createdNote = {
         baslik: textInput?.trim() || (base64Image ? (language === 'en' ? 'Photo Note' : 'Görsel Notu') : (language === 'en' ? 'New Note' : 'Yeni Not')),
         zaman: language === 'en' ? 'Saved' : 'Kayıt Edildi',
@@ -3785,7 +3798,7 @@ export default function App() {
               {searchQuery ? t.noSearchResults : t.emptyNotesDesc}
             </div>
           ) : (
-            <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-2 sm:gap-3 items-start' : 'flex flex-col gap-2.5 sm:gap-3'}>
+            <div className={viewMode === 'grid' ? 'grid grid-cols-2 gap-2.5 sm:gap-3.5 items-start' : 'flex flex-col gap-3 sm:gap-4'}>
               {sortNotiviaCards(filteredCards).map((item) => {
                 // Kartın süresinin dolup dolmadığını ve tamamlanma durumunu kontrol et
                 const isExpired = item.tarih_iso ? new Date(item.tarih_iso).getTime() < Date.now() : false;
@@ -3796,14 +3809,14 @@ export default function App() {
                 const cardBgColor = isWeatherTriggered ? '#FEE2E2' : (item.guncel_renk || item.renk || getCardColor(item.id, item.baslik));
                 const isSelected = selectedCardIds.includes(item.id);
 
-                // Mobil Sola Kaydırma (Swipe-to-Reveal: Alarm, Düzenle, Sil) Durumu
+                // Mobil Sola Kaydırma (Swipe-to-Reveal: Düzenle, Sil) Durumu
                 const isSwipedOpen = swipedCardId === item.id;
                 const isDraggingThis = activeSwipingCardIdRef.current === item.id && isSwipingCardRef.current;
                 const currentDragOffset = swipeOffsets[item.id];
                 // İkili ızgara görünümünde kart ekran dışına uçmaz; hızlı eylem paneli yüzen bir katman (HUD) olarak açılır
                 const cardOffset = viewMode === 'grid'
                   ? (isDraggingThis && currentDragOffset !== undefined ? currentDragOffset : 0)
-                  : (currentDragOffset !== undefined ? currentDragOffset : (isSwipedOpen ? -168 : 0));
+                  : (currentDragOffset !== undefined ? currentDragOffset : (isSwipedOpen ? -144 : 0));
 
                 return (
                   <React.Fragment key={item.id}>
@@ -3823,32 +3836,10 @@ export default function App() {
                       className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl group/swipe select-none card-swipe-container"
                       data-card-id={item.id}
                     >
-                      {/* Tek Sütun Görünümünde (Single View) Arkadan Açılan Mobil Aksiyon Çekmecesi (Alarm, Düzenle, Sil) */}
+                      {/* Tek Sütun Görünümünde (Single View) Arkadan Açılan Mobil Aksiyon Çekmecesi (Düzenle, Sil) */}
                       {viewMode !== 'grid' && (
                         <div className="absolute inset-y-0 right-0 flex items-stretch z-0 bg-stone-900 dark:bg-stone-950 rounded-xl sm:rounded-2xl overflow-hidden shadow-inner">
-                          {/* 1. Alarm Kur / Takvim */}
-                          <button
-                            type="button"
-                            id={`swipe-alarm-${item.id}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveReminderEditCardId(item.id);
-                              setSwipedCardId(null);
-                              setSwipeOffsets({});
-                              if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                                try { navigator.vibrate(25); } catch {}
-                              }
-                            }}
-                            className="w-14 sm:w-16 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer px-1 text-center select-none min-h-[48px]"
-                            title={language === 'tr' ? 'Alarm & Hatırlatıcı Kur' : 'Set Alarm'}
-                          >
-                            <span className="text-lg sm:text-xl">🔔</span>
-                            <span className="text-[10px] sm:text-[11px] font-bold tracking-tight">
-                              {language === 'tr' ? 'Alarm' : 'Alarm'}
-                            </span>
-                          </button>
-
-                          {/* 2. Düzenle */}
+                          {/* 1. Düzenle */}
                           <button
                             type="button"
                             id={`swipe-edit-${item.id}`}
@@ -3861,7 +3852,7 @@ export default function App() {
                                 try { navigator.vibrate(25); } catch {}
                               }
                             }}
-                            className="w-14 sm:w-16 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer px-1 text-center select-none border-x border-white/10 min-h-[48px]"
+                            className="w-18 sm:w-20 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer px-1 text-center select-none border-r border-white/10 min-h-[48px]"
                             title={language === 'tr' ? 'Kartı Düzenle' : 'Edit'}
                           >
                             <span className="text-lg sm:text-xl">✏️</span>
@@ -3870,7 +3861,7 @@ export default function App() {
                             </span>
                           </button>
 
-                          {/* 3. Sil (Öncesinde Onay İster) */}
+                          {/* 2. Sil (Öncesinde Onay İster) */}
                           <button
                             type="button"
                             id={`swipe-delete-${item.id}`}
@@ -3883,7 +3874,7 @@ export default function App() {
                                 try { navigator.vibrate(30); } catch {}
                               }
                             }}
-                            className="w-14 sm:w-16 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer px-1 text-center select-none min-h-[48px]"
+                            className="w-18 sm:w-20 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer px-1 text-center select-none min-h-[48px]"
                             title={language === 'tr' ? 'Notu Sil' : 'Delete'}
                           >
                             <span className="text-lg sm:text-xl">🗑️</span>
@@ -3902,7 +3893,7 @@ export default function App() {
                       )}
 
                       {/* İKİLİ IZGARADA (Grid View) Sola Çekince Açılan Pratik Yüzen Aksiyon HUD'ı */}
-                      {/* Kartın boyutlarına kusursuz oturan 3 hızlı aksiyon: Alarm, Düzenle, Sil */}
+                      {/* Kartın boyutlarına kusursuz oturan 2 hızlı aksiyon: Düzenle, Sil */}
                       {viewMode === 'grid' && isSwipedOpen && (
                         <div
                           className="absolute inset-0 z-30 bg-stone-900/95 dark:bg-stone-950/95 backdrop-blur-md rounded-xl sm:rounded-2xl p-2 sm:p-2.5 flex flex-col justify-between text-white shadow-2xl animate-in fade-in zoom-in-95 duration-150 border border-white/15"
@@ -3930,33 +3921,9 @@ export default function App() {
                             </button>
                           </div>
 
-                          {/* 3 Pratik ve Ergonomik Aksiyon Butonu */}
+                          {/* 2 Pratik ve Ergonomik Aksiyon Butonu */}
                           <div className="flex flex-col gap-1.5 flex-1 justify-center py-1">
-                            {/* 1. Alarm */}
-                            <button
-                              type="button"
-                              id={`grid-swipe-alarm-${item.id}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveReminderEditCardId(item.id);
-                                setSwipedCardId(null);
-                                setSwipeOffsets({});
-                                if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                                  try { navigator.vibrate(25); } catch {}
-                                }
-                              }}
-                              className="w-full flex-1 min-h-[30px] max-h-[38px] px-2.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 active:from-amber-700 active:to-amber-800 text-white flex items-center justify-between shadow-2xs active:scale-95 transition-all text-left cursor-pointer"
-                            >
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-xs sm:text-sm shrink-0">🔔</span>
-                                <span className="text-[10px] sm:text-[11px] font-bold truncate">
-                                  {language === 'tr' ? 'Alarm Kur' : 'Set Alarm'}
-                                </span>
-                              </div>
-                              <span className="text-[10px] opacity-70 font-mono">›</span>
-                            </button>
-
-                            {/* 2. Düzenle */}
+                            {/* 1. Düzenle */}
                             <button
                               type="button"
                               id={`grid-swipe-edit-${item.id}`}
@@ -3969,7 +3936,7 @@ export default function App() {
                                   try { navigator.vibrate(25); } catch {}
                                 }
                               }}
-                              className="w-full flex-1 min-h-[30px] max-h-[38px] px-2.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 active:from-indigo-800 active:to-indigo-900 text-white flex items-center justify-between shadow-2xs active:scale-95 transition-all text-left cursor-pointer"
+                              className="w-full flex-1 min-h-[32px] max-h-[42px] px-2.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 active:from-indigo-800 active:to-indigo-900 text-white flex items-center justify-between shadow-2xs active:scale-95 transition-all text-left cursor-pointer"
                             >
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <span className="text-xs sm:text-sm shrink-0">✏️</span>
@@ -3980,7 +3947,7 @@ export default function App() {
                               <span className="text-[10px] opacity-70 font-mono">›</span>
                             </button>
 
-                            {/* 3. Sil */}
+                            {/* 2. Sil */}
                             <button
                               type="button"
                               id={`grid-swipe-delete-${item.id}`}
@@ -3993,7 +3960,7 @@ export default function App() {
                                   try { navigator.vibrate(30); } catch {}
                                 }
                               }}
-                              className="w-full flex-1 min-h-[30px] max-h-[38px] px-2.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 active:from-red-800 active:to-red-900 text-white flex items-center justify-between shadow-2xs active:scale-95 transition-all text-left cursor-pointer"
+                              className="w-full flex-1 min-h-[32px] max-h-[42px] px-2.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 active:from-red-800 active:to-red-900 text-white flex items-center justify-between shadow-2xs active:scale-95 transition-all text-left cursor-pointer"
                             >
                               <div className="flex items-center gap-1.5 min-w-0">
                                 <span className="text-xs sm:text-sm shrink-0">🗑️</span>
@@ -5071,7 +5038,7 @@ export default function App() {
         </div>
       )}
 
-      {/* Kart Düzenleme Modalı */}
+      {/* Kart Düzenleme Modalı (Tüm Alarm ve Kart Ayarları Tek Yerde) */}
       <EditNoteModal
         isOpen={!!editingNote}
         onClose={() => setEditingNote(null)}
@@ -5079,23 +5046,8 @@ export default function App() {
         onSave={handleSaveEditedNote}
         language={language}
         theme={theme}
+        initialTab={editingNoteInitialTab}
       />
-
-      {/* Hatırlatıcı & Cihaz Takvimi Modalı */}
-      {(() => {
-        const activeReminderNote = cards.find((c) => c.id === activeReminderEditCardId);
-        if (!activeReminderNote) return null;
-        return (
-          <CardReminderEditor
-            note={activeReminderNote}
-            isOpen={!!activeReminderNote}
-            onClose={() => setActiveReminderEditCardId(null)}
-            onSaveReminder={updateNoteReminder}
-            language={language}
-            theme={theme}
-          />
-        );
-      })()}
 
       {/* Ayarlar ve Profil Modalı */}
       <SettingsModal

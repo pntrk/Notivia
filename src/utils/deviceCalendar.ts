@@ -90,7 +90,8 @@ export function downloadIcsFile(filename: string, icsContent: string): void {
 }
 
 /**
- * Google Takvim Web Intent linki üretir (Herhangi bir tarayıcıda doğrudan Google Takvim'i açar)
+ * Google Takvim Web / Mobil Uygulama Intent linki üretir.
+ * Mobil cihazlarda (Android / iOS) yüklü Google Takvim uygulamasını doğrudan açar.
  */
 export function getGoogleCalendarWebUrl(event: CalendarEventData): string {
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -105,48 +106,39 @@ export function getGoogleCalendarWebUrl(event: CalendarEventData): string {
     dates,
     details: event.description || 'Notivia Bilişsel Yaşam Asistanı Hatırlatıcısı',
   });
+  if (event.location) {
+    params.set('location', event.location);
+  }
+  if (event.rrule) {
+    params.set('recur', `RRULE:${event.rrule}`);
+  }
 
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
 /**
- * Cihazın yerel takvimine (Google Takvim, Apple Takvim, Samsung Takvim) 
- * dosya indirme zahmetine sokmadan DOĞRUDAN ve OTOMATİK aktarır.
- * iOS'ta yerel Apple Takvim "Ekle" sayfasını, Android ve masaüstünde ise
- * doğrudan takvim uygulamasını / intentini açar.
+ * Cihazın yerel takvimine (Apple Takvim, Samsung Takvim, Xiaomi Takvim vb.) 
+ * RFC 5545 .ics takvim verisiyle otomatik ve doğrudan aktarır.
+ * iOS'ta yerel takvim sayfasını, Android ve masaüstünde ise doğrudan takvim aktarımını tetikler.
  */
 export function openDirectDeviceCalendar(event: CalendarEventData): void {
   if (typeof window === 'undefined') return;
 
-  const ua = navigator.userAgent || '';
-  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const ics = generateIcsContent(event);
+  const safeTitle = (event.title || 'etkinlik').replace(/[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ_-]/g, '_').slice(0, 30);
+  downloadIcsFile(`${safeTitle}.ics`, ics);
+}
 
-  if (isIOS) {
-    // iOS Safari / WebKit:
-    // data:text/calendar formatı navigation ile tetiklendiğinde
-    // iOS sistemi "Etkinliği Takvime Ekle" sheet'ini (Apple Calendar) doğrudan kullanıcıya sunar.
-    // Kullanıcı tek tıkla "Ekle" der ve takvime kaydedilir. Dosya indirilmez.
-    const ics = generateIcsContent(event);
-    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    
-    // Doğrudan iOS sistem takvim uygulamasını tetiklemek için:
-    const link = document.createElement('a');
-    link.href = url;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(url), 15000);
-    return;
-  }
-
-  // Android ve Masaüstü (Chrome, Edge, Firefox, Samsung Internet):
-  // Google Calendar / Cihaz Takvim Web Intent'i doğrudan açılır.
-  // Android cihazda doğrudan Google Takvim / Samsung Takvim uygulaması açılır ve etkinlik hazır gelir.
+/**
+ * Google Takvim mobil uygulamasına veya web arayüzüne tek dokunuşla otomatik yönlendirir.
+ */
+export function openGoogleCalendarApp(event: CalendarEventData): void {
+  if (typeof window === 'undefined') return;
   const webUrl = getGoogleCalendarWebUrl(event);
-  const win = window.open(webUrl, '_blank');
-  if (!win || win.closed || typeof win.closed === 'undefined') {
+  
+  // Yeni sekmede veya mobil sistem intentinde aç
+  const newWin = window.open(webUrl, '_blank', 'noopener,noreferrer');
+  if (!newWin || newWin.closed || typeof newWin.closed === 'undefined') {
     window.location.href = webUrl;
   }
 }

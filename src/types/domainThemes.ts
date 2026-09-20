@@ -542,7 +542,10 @@ export const WORK_DOMAIN_OPTIONS_EN: WorkDomainOption[] = [
 ];
 
 export function getLocalizedWorkDomainOptions(language: string = 'tr'): WorkDomainOption[] {
-  return language === 'en' ? WORK_DOMAIN_OPTIONS_EN : WORK_DOMAIN_OPTIONS;
+  if (language === 'en') {
+    return WORK_DOMAIN_OPTIONS_EN.filter((opt) => opt.id === 'SADE');
+  }
+  return WORK_DOMAIN_OPTIONS;
 }
 
 export function detectDomainFromNote(note: { ikon?: string; baslik?: string; anomali_notu?: string | null; teshis_notu?: string | null; renk?: string }): ProfessionDomain {

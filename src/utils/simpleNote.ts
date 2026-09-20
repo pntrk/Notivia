@@ -5700,18 +5700,18 @@ function _extractSimpleNoteFromTextInternal(
 ): NotiviaSimpleNote {
   const rawTrimmed = (input || '').trim();
 
-  // 0. ÖNCELİK: SADE / MOTORSUZ MOD (Kullanıcı motor seçimi yapmadıysa veya Sade Mod seçildiyse)
+  // 0. ÖNCELİK: SADE / MOTORSUZ MOD (Kullanıcı motor seçimi yapmadıysa, Sade Mod seçildiyse veya İngilizce seçildiyse)
   // Hiçbir bilişsel motor, jargon radarı, mevzuat veya otomatik alt adım üretilmez; yalnızca söylenen ham haliyle yazılır.
-  if (userDomain === 'SADE') {
+  if (userDomain === 'SADE' || language === 'en') {
     return {
       baslik: rawTrimmed,
-      zaman: 'Kayıt Edildi',
+      zaman: language === 'en' ? 'Saved' : 'Kayıt Edildi',
       tarih_iso: null,
       action_items: [],
       ikon: '📝',
       renk: '#F8FAFC',
       anomali_notu: null,
-      sesli_fisilti: 'Notunuz kaydedildi.'
+      sesli_fisilti: language === 'en' ? 'Note saved.' : 'Notunuz kaydedildi.'
     };
   }
 

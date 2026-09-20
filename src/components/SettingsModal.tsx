@@ -234,31 +234,44 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 id="work-domain-select"
                 aria-label={language === 'tr' ? 'Çalıştığın Alan Seçimi' : 'Select Career Domain'}
                 value={workDomain}
+                disabled={language === 'en'}
                 onChange={(e) => {
                   if (onSelectWorkDomain) {
                     onSelectWorkDomain(e.target.value as ProfessionDomain);
                   }
                 }}
                 className={`w-full text-sm sm:text-xs font-medium py-3 sm:py-2 pl-3 pr-9 rounded-xl sm:rounded-lg border transition-all cursor-pointer outline-none appearance-none focus:ring-2 focus:ring-indigo-500/30 min-h-[44px] sm:min-h-0 ${
+                  language === 'en' ? 'opacity-90 cursor-default' : ''
+                } ${
                   isDark
                     ? 'bg-stone-900 border-stone-750 text-stone-100 hover:border-stone-650'
                     : 'bg-white border-stone-300 text-stone-800 hover:border-stone-400 shadow-2xs'
                 }`}
               >
-                <optgroup label={language === 'tr' ? 'Özel Durumlar' : 'Special Modes'}>
-                  {localizedDomainOptions.filter((o) => o.category === 'ozel').map((opt) => (
+                {language === 'en' ? (
+                  localizedDomainOptions.map((opt) => (
                     <option key={opt.id} value={opt.id}>
                       {opt.icon} {opt.label}
                     </option>
-                  ))}
-                </optgroup>
-                <optgroup label={language === 'tr' ? 'Meslek & Uzmanlık Grupları' : 'Professions & Specialized Fields'}>
-                  {localizedDomainOptions.filter((o) => o.category === 'meslek').map((opt) => (
-                    <option key={opt.id} value={opt.id}>
-                      {opt.icon} {opt.label}
-                    </option>
-                  ))}
-                </optgroup>
+                  ))
+                ) : (
+                  <>
+                    <optgroup label="Özel Durumlar">
+                      {localizedDomainOptions.filter((o) => o.category === 'ozel').map((opt) => (
+                        <option key={opt.id} value={opt.id}>
+                          {opt.icon} {opt.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Meslek & Uzmanlık Grupları">
+                      {localizedDomainOptions.filter((o) => o.category === 'meslek').map((opt) => (
+                        <option key={opt.id} value={opt.id}>
+                          {opt.icon} {opt.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  </>
+                )}
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-stone-400">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -266,6 +279,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </svg>
               </div>
             </div>
+            {language === 'en' && (
+              <p className="mt-2 text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">
+                💡 Cognitive profession engines are tuned for Turkish. English mode operates in streamlined Plain Note mode with fast voice and text capture.
+              </p>
+            )}
           </div>
 
           {/* 2. Sistem Ayarları Grubu (Görünüm, Bildirimler, Dil) */}
