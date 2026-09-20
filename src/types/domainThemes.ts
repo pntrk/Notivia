@@ -515,6 +515,36 @@ export const WORK_DOMAIN_OPTIONS: WorkDomainOption[] = [
   { id: 'SANAT_MEDYA', label: 'Sanat, Medya & Prodüksiyon', sublabel: 'Yönetmen, Kurgucu, Fotoğrafçı, Ses Mühendisi, Gazeteci, Sosyal Medya Yöneticisi & İçerik Üreticisi (Reels/TikTok kanca, #işbirliği, call sheet, -23 LUFS render, FSEK telif, meta ads)', icon: '🎬', category: 'meslek' },
 ];
 
+export const WORK_DOMAIN_OPTIONS_EN: WorkDomainOption[] = [
+  { id: 'SADE', label: 'Plain Note (No Engine)', sublabel: 'Cognitive engines disabled; directly saves your exact spoken or typed text', icon: '📝', category: 'ozel' },
+  { id: 'GENEL', label: 'General Life', sublabel: 'Personal life, home, bills & rent, subscriptions, shopping, and daily routines', icon: '🏠', category: 'ozel' },
+  { id: 'OGRENCI', label: 'Student & Academic', sublabel: 'Midterms/finals, course registration, homework submissions, scholarships', icon: '🎓', category: 'ozel' },
+  { id: 'HUKUK', label: 'Law & Justice', sublabel: 'Lawyer, Judge, Notary, Mediator (Legal notifications, hearings, writs, appeals)', icon: '⚖️', category: 'meslek' },
+  { id: 'FINANS', label: 'Finance & CPA / Accounting', sublabel: 'CPA, Accountant, Auditor (VAT withholding, tax declarations, social security, e-Ledger)', icon: '📊', category: 'meslek' },
+  { id: 'SAGLIK', label: 'Healthcare & Clinical Medicine', sublabel: 'Doctor, Nurse, Pharmacist, Dentist (SBAR handover, informed consent, transfusions)', icon: '🩺', category: 'meslek' },
+  { id: 'EGITIM', label: 'Education & School Administration', sublabel: 'Teacher, Principal, Academic (Exam grading, lesson plans, payroll, proctoring)', icon: '📚', category: 'meslek' },
+  { id: 'TEKNIK', label: 'Engineering & Construction Site', sublabel: 'Civil, Electrical, Mechanical, Software (Soil tests, 30mA leakage, LOTO, deployment)', icon: '🏗️', category: 'meslek' },
+  { id: 'VETERINER', label: 'Veterinary & Animal Health', sublabel: 'Veterinary Clinic (Microchip, rabies titer, vaccination schedule, post-op suture)', icon: '🐾', category: 'meslek' },
+  { id: 'EMLAK', label: 'Real Estate & Property', sublabel: 'Realtor, Broker (Title deed, property tax, earthquake insurance, mortgage release)', icon: '🏢', category: 'meslek' },
+  { id: 'GUMRUK', label: 'Customs & International Trade', sublabel: 'Customs Broker (Red lane inspection, ATR, bill of lading, delivery order)', icon: '📦', category: 'meslek' },
+  { id: 'DENIZCILIK', label: 'Maritime & Ship Management', sublabel: 'Captain, Deck & Engine Officers (PSC audit, ISM, draft survey, ballast log)', icon: '⚓', category: 'meslek' },
+  { id: 'SAVUNMA', label: 'Defense, Police & Military', sublabel: 'Police, Gendarmerie, Soldier, Firefighter, Security (Detention timer, roll call, SCBA, X-ray)', icon: '👮', category: 'meslek' },
+  { id: 'LOJISTIK', label: 'Logistics & Fleet Transport', sublabel: 'Heavy Vehicle Driver, Fleet Dispatch, Auto Repair (Tachograph, pre-trip inspection, CMR, battery)', icon: '🚛', category: 'meslek' },
+  { id: 'TICARET', label: 'Commerce, Sales & Retail', sublabel: 'Sales Advisor, Cashier, Shop Owner (Client quotes, register balance, Z-report)', icon: '💼', category: 'meslek' },
+  { id: 'GASTRONOMI', label: 'Gastronomy & Culinary Arts', sublabel: 'Chef, Line Cook, Kitchen Staff (Mise en place, HACCP, cold storage, tasting briefing)', icon: '👨‍🍳', category: 'meslek' },
+  { id: 'KUAFOR', label: 'Hair & Beauty Salon', sublabel: 'Hair Stylist, Colorist (Bleaching timer, keratin, autoclave sterilization)', icon: '✂️', category: 'meslek' },
+  { id: 'HAVACILIK', label: 'Aviation & Cockpit Operations', sublabel: 'Pilot, Flight Operations (OFP, METAR/TAF, FDP crew rest limits)', icon: '✈️', category: 'meslek' },
+  { id: 'KAMU', label: 'Civil Service & Corporate Office', sublabel: 'Civil Servant, HR, Public Administration (Official decrees, petitions, direct procurement)', icon: '🗂️', category: 'meslek' },
+  { id: 'ZIRAAT', label: 'Agriculture & Horticulture', sublabel: 'Gardener, Landscaper, Florist (Sun rule, cool evening watering, fertilizing)', icon: '🌿', category: 'meslek' },
+  { id: 'ECZACILIK', label: 'Pharmacy & Drug Dispensing', sublabel: 'Pharmacist, Pharmacy Tech (Cold chain 2-8°C, prescription claim, serial verification)', icon: '💊', category: 'meslek' },
+  { id: 'ISG', label: 'Occupational Health & Safety (OHS)', sublabel: 'OHS Specialist, Occupational Doctor (Safety training, near-miss report, hot work permit)', icon: '🦺', category: 'meslek' },
+  { id: 'SANAT_MEDYA', label: 'Art, Media & Content Production', sublabel: 'Director, Video Editor, Photographer, Creator (Call sheets, hook timing, audio LUFS, copyright)', icon: '🎬', category: 'meslek' },
+];
+
+export function getLocalizedWorkDomainOptions(language: string = 'tr'): WorkDomainOption[] {
+  return language === 'en' ? WORK_DOMAIN_OPTIONS_EN : WORK_DOMAIN_OPTIONS;
+}
+
 export function detectDomainFromNote(note: { ikon?: string; baslik?: string; anomali_notu?: string | null; teshis_notu?: string | null; renk?: string }): ProfessionDomain {
   const icon = note.ikon || '';
   const text = `${note.baslik || ''} ${note.anomali_notu || ''} ${note.teshis_notu || ''}`.toLowerCase();

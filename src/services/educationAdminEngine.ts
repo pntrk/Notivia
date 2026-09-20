@@ -649,22 +649,29 @@ export function parseSchoolAdminIntent(
     };
   }
 
-  // 16. GENEL EĞİTİM & OKUL YÖNETİMİ FALLBACK
-  return {
-    id: `edu_general_${Date.now()}`,
-    baslik: 'Okul Yönetimi & Eğitim Protokolü',
-    kategori: 'Mevzuat & DYS',
-    mevzuat_notu: 'Millî Eğitim Bakanlığı mevzuatı uyarınca resmi kayıtlar, kurul kararları ve öğrenci işleri eksiksiz dosyalanmalıdır.',
-    action_items: [
-      { task: 'İlgili resmi yazı, mevzuat maddesi veya kurul gündemini incele', is_completed: false },
-      { task: 'Sorumlu öğretmen, veli veya idari birimle koordinasyonu sağla', is_completed: false },
-      { task: 'İşlem sonuç tutanağını e-Okul, MEBBİS veya DYS ortamına kaydet', is_completed: false }
-    ],
-    zaman_etiketi: 'Mesai İçi İdari Süreç',
-    tarih_iso: now.toISOString(),
-    hazirlik_zamani: 'İşlem Öncesi Evrak İnceleme',
-    ikon: '🏫',
-    renk: '#E0E7FF',
-    sesli_geribildirim: 'Okul yönetimi ve eğitim idari işlem kartı oluşturuldu.'
-  };
+  // 16. GENEL EĞİTİM & OKUL YÖNETİMİ FALLBACK (Sadece eğitim terimleri geçtiğinde)
+  if (userDomain === 'EGITIM' || userDomain === 'OGRENCI') {
+    const isEduRelated = /okul|eğitim|egitim|meb|ders|sınav|sinav|öğretmen|ogretmen|öğrenci|ogrenci|veli|nöbet|nobet|puantaj|dys|mebbis|e-okul|eokul|school|teacher|student|exam|class/i.test(text);
+    if (isEduRelated) {
+      return {
+        id: `edu_general_${Date.now()}`,
+        baslik: 'Okul Yönetimi & Eğitim Protokolü',
+        kategori: 'Mevzuat & DYS',
+        mevzuat_notu: 'Millî Eğitim Bakanlığı mevzuatı uyarınca resmi kayıtlar, kurul kararları ve öğrenci işleri eksiksiz dosyalanmalıdır.',
+        action_items: [
+          { task: 'İlgili resmi yazı, mevzuat maddesi veya kurul gündemini incele', is_completed: false },
+          { task: 'Sorumlu öğretmen, veli veya idari birimle koordinasyonu sağla', is_completed: false },
+          { task: 'İşlem sonuç tutanağını e-Okul, MEBBİS veya DYS ortamına kaydet', is_completed: false }
+        ],
+        zaman_etiketi: 'Mesai İçi İdari Süreç',
+        tarih_iso: now.toISOString(),
+        hazirlik_zamani: 'İşlem Öncesi Evrak İnceleme',
+        ikon: '🏫',
+        renk: '#E0E7FF',
+        sesli_geribildirim: 'Okul yönetimi ve eğitim idari işlem kartı oluşturuldu.'
+      };
+    }
+  }
+
+  return null;
 }

@@ -57,6 +57,13 @@ export const TRANSLATION_DICTIONARY: Record<string, string> = {
   'Doğrudan Temin & TİF Süreci': 'Procurement & Asset Receipt',
   'Araç Tamir ve Yol Testi': 'Vehicle Repair & Road Test',
   'Müşteri Teklifi Takibi': 'Client Proposal Follow-up',
+  'Abonelik & Deneme İptal Uyarısı': 'Subscription & Trial Cancellation Alert',
+  'MTV & Sigorta / Kasko Yenileme': 'Vehicle Tax & Insurance / Policy Renewal',
+  'Kira & Aidat Ödemesi': 'Rent & Dues Payment',
+  'Fatura & Abonelik Ödemesi': 'Utility & Bill Payment',
+  'Araç Periyodik Bakımı & Muayene': 'Vehicle Periodic Maintenance & Inspection',
+  'Araç Bakım & Muayene': 'Vehicle Maintenance & Inspection',
+  'Lastik Değişimi & Balans': 'Tire Change & Balancing',
   'Kasa Kapanışı ve Z Raporu': 'Register Closeout & Z-Report',
   'Esnaf & Dükkan Rutini': 'Shop & Store Routine',
   'İçtima ve Tekmil Alarmı': 'Military Roll Call & Inspection',
@@ -307,11 +314,20 @@ export function translateWhisperToEn(whisper: string | null | undefined, baslik?
   return w;
 }
 
+export function isEnglishText(text: string): boolean {
+  if (!text) return false;
+  const clean = text.trim();
+  if (/[çğıöşüÇĞİÖŞÜ]/.test(clean)) return false;
+  const enWords = /\b(go|to|car|get|buy|milk|call|meeting|doctor|today|tomorrow|at|in|on|for|the|and|with|from|my|your|our|we|you|i|me|is|are|was|were|have|has|do|does|will|would|can|could|should|must|need|want|take|clean|fix|check|pay|send|write|make|create|find|grocery|store|drive|walk|run|work|home)\b/i;
+  return enWords.test(clean);
+}
+
 /**
- * Main localization dispatcher: Converts any NotiviaSimpleNote into English if language === 'en'
+ * Main localization dispatcher: Converts any NotiviaSimpleNote into English if language === 'en' or if rawInput is in English
  */
 export function localizeSimpleNote(note: NotiviaSimpleNote, language: string = 'tr', rawInput?: string): NotiviaSimpleNote {
-  if (language !== 'en' || !note) {
+  const isEn = language === 'en' || (rawInput ? isEnglishText(rawInput) : false);
+  if (!isEn || !note) {
     return note;
   }
 
@@ -335,8 +351,26 @@ export function localizeSimpleNote(note: NotiviaSimpleNote, language: string = '
       .replace(/Takvimi/gi, 'Calendar');
   }
 
+  // If we have an English raw input and the title is generic or fallback, use a clean title from raw input
+  if (rawInput && isEnglishText(rawInput)) {
+    const cleanInput = rawInput.trim();
+    if (cleanInput.length > 0 && cleanInput.length <= 50) {
+      baslikEn = cleanInput.charAt(0).toUpperCase() + cleanInput.slice(1);
+    }
+  } else if ((note.baslik === 'Not' || note.baslik === 'Notunuz' || baslikEn === 'Note' || baslikEn === 'Your Note') && rawInput) {
+    const cleanInput = rawInput.trim();
+    if (cleanInput.length > 0 && cleanInput.length <= 50) {
+      baslikEn = cleanInput.charAt(0).toUpperCase() + cleanInput.slice(1);
+    }
+  }
+
   // Localize Zaman
-  const zamanEn = translateTimeExpressionToEn(note.zaman);
+  let zamanEn = translateTimeExpressionToEn(note.zaman);
+  if (!zamanEn || zamanEn === 'Not' || zamanEn === 'Notunuz' || note.zaman === 'Not' || note.zaman === 'Notunuz') {
+    zamanEn = 'Note';
+  } else if (note.zaman === 'Kayıt Edildi') {
+    zamanEn = 'Saved';
+  }
 
   // Localize Preparation Time
   const prepEn = translateTimeExpressionToEn(note.hazirlik_zamani);
@@ -359,7 +393,10 @@ export function localizeSimpleNote(note: NotiviaSimpleNote, language: string = '
   }
 
   // Localize Whisper
-  const whisperEn = translateWhisperToEn(note.sesli_fisilti, baslikEn, zamanEn || undefined);
+  let whisperEn = translateWhisperToEn(note.sesli_fisilti, baslikEn, zamanEn || undefined);
+  if (!whisperEn || whisperEn.includes('planlandı') || whisperEn.includes('kaydedildi') || whisperEn.includes('oluşturuldu')) {
+    whisperEn = `Note '${baslikEn}' saved.`;
+  }
 
   return {
     ...note,
@@ -369,6 +406,6 @@ export function localizeSimpleNote(note: NotiviaSimpleNote, language: string = '
     action_items: actionsEn,
     anomali_notu: anomaliEn || note.anomali_notu,
     netlestirme_sorusu: netlestirmeEn || note.netlestirme_sorusu,
-    sesli_fisilti: whisperEn || note.sesli_fisilti,
+    sesli_fisilti: whisperEn,
   };
 }

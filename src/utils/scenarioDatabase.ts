@@ -4773,29 +4773,36 @@ export function matchShortScenario(text: string, userDomain?: ProfessionDomain |
 
   const hasDomainPriority = userDomain && userDomain !== 'GENEL';
 
+  const matchesKeywordPrecisely = (kw: string): boolean => {
+    const trimmedKw = kw.trim();
+    if (!trimmedKw) return false;
+    // Tek veya çok kelimeli tam ifade eşleşmesi (kelime sınırları ile)
+    const escaped = trimmedKw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+    const regex = new RegExp(`(^|\\b|\\s)${escaped}($|\\b|\\s)`, 'i');
+    if (regex.test(lower)) return true;
+
+    // Çok kelimeli kalıplarda her parçanın ayrı kelime olarak bulunması
+    const kwWords = trimmedKw.split(/\s+/);
+    if (kwWords.length > 1) {
+      return kwWords.every(w => {
+        if (w.length < 3) return false;
+        return words.some(userWord => userWord === w || (w.length >= 5 && userWord.startsWith(w)));
+      });
+    }
+    return false;
+  };
+
   // 1. ÖNCELİKLİ AŞAMA: Eğer kullanıcı belirli bir mesleki/yaşam alanı seçtiyse,
-  // ilk olarak O ALANA ait senaryoları test et! Böylece örneğin 'HUKUK' seçen avukat için
-  // hukuk kuralları en tepede önceliklendirilir.
+  // ilk olarak O ALANA ait senaryoları test et!
   if (hasDomainPriority) {
     const domainScenarios = SCENARIO_DATABASE.filter(s => s.domain === userDomain);
 
-    // 1.a: Tam anahtar kelime eşleşmesi
     for (const scenario of domainScenarios) {
       if (scenario.matcher && scenario.matcher(lower, words)) {
         return scenario;
       }
       for (const kw of scenario.keywords) {
-        if (lower.includes(kw)) {
-          return scenario;
-        }
-      }
-    }
-
-    // 1.b: Kök kelime veya benzerlik araması
-    for (const scenario of domainScenarios) {
-      for (const kw of scenario.keywords) {
-        const kwWords = kw.split(' ');
-        if (kwWords.every(w => words.some(userWord => userWord.startsWith(w) || userWord.includes(w)))) {
+        if (matchesKeywordPrecisely(kw)) {
           return scenario;
         }
       }
@@ -4809,17 +4816,7 @@ export function matchShortScenario(text: string, userDomain?: ProfessionDomain |
     }
 
     for (const kw of scenario.keywords) {
-      if (lower.includes(kw)) {
-        return scenario;
-      }
-    }
-  }
-
-  // 3. Kök kelime veya benzerlik araması (Tüm veritabanı)
-  for (const scenario of SCENARIO_DATABASE) {
-    for (const kw of scenario.keywords) {
-      const kwWords = kw.split(' ');
-      if (kwWords.every(w => words.some(userWord => userWord.startsWith(w) || userWord.includes(w)))) {
+      if (matchesKeywordPrecisely(kw)) {
         return scenario;
       }
     }

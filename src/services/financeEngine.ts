@@ -542,24 +542,27 @@ export function parseFinanceIntent(
     };
   }
 
-  // 14. EĞER GENEL FİNANS / ALAN EŞLEŞMESİ VARSA
+  // 14. EĞER GENEL FİNANS / ALAN EŞLEŞMESİ VARSA (Sadece metinde finansal kavramlar geçtiğinde)
   if (userDomain === 'FINANS' || userDomain === 'MALIYE') {
-    return {
-      id: `general_fin_${Date.now()}`,
-      baslik: 'Finansal Görev & Vergi Takibi',
-      kategori: 'SMMM & e-Beyanname (KDV, MUHSGK, Geçici)',
-      mevzuat_notu: 'Mali mevzuat ve vergi takvimine uygun finansal mutabakat ve kayıt zorunludur.',
-      action_items: [
-        { task: 'İlgili finansal evrak veya banka dekontunu dosyala', is_completed: false },
-        { task: 'Muhasebe cari hesap ve KDV mutabakatını sağla', is_completed: false },
-        { task: 'Vade ve ödeme takvimini ajandaya işle', is_completed: false }
-      ],
-      zaman_etiketi: 'Finans Takvimi',
-      tarih_iso: now.toISOString(),
-      ikon: '📊',
-      renk: '#DCFCE7',
-      sesli_geribildirim: 'Finansal işlem kaydedildi, yasal mevzuat adımları oluşturuldu.'
-    };
+    const isFinanceRelated = /smmm|mali|kdv|muhsgk|vergi|fatura|beyanname|muhasebe|banka|bütçe|butce|kredi|borç|borc|öde|ode|para|dekont|ekstre|tahakkuk|hesap|financial|tax|budget|invoice|payment|accounting/i.test(text);
+    if (isFinanceRelated) {
+      return {
+        id: `general_fin_${Date.now()}`,
+        baslik: 'Finansal Görev & Vergi Takibi',
+        kategori: 'SMMM & e-Beyanname (KDV, MUHSGK, Geçici)',
+        mevzuat_notu: 'Mali mevzuat ve vergi takvimine uygun finansal mutabakat ve kayıt zorunludur.',
+        action_items: [
+          { task: 'İlgili finansal evrak veya banka dekontunu dosyala', is_completed: false },
+          { task: 'Muhasebe cari hesap ve KDV mutabakatını sağla', is_completed: false },
+          { task: 'Vade ve ödeme takvimini ajandaya işle', is_completed: false }
+        ],
+        zaman_etiketi: 'Finans Takvimi',
+        tarih_iso: now.toISOString(),
+        ikon: '📊',
+        renk: '#DCFCE7',
+        sesli_geribildirim: 'Finansal işlem kaydedildi, yasal mevzuat adımları oluşturuldu.'
+      };
+    }
   }
 
   return null;

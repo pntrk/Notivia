@@ -2,7 +2,7 @@ import React from 'react';
 import type { Language } from '../utils/i18n';
 import { translations } from '../utils/i18n';
 import type { ProfessionDomain } from '../types/domainThemes.ts';
-import { WORK_DOMAIN_OPTIONS } from '../types/domainThemes.ts';
+import { getLocalizedWorkDomainOptions } from '../types/domainThemes.ts';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -58,7 +58,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const t = translations[language];
   const isDark = theme === 'dark';
 
-  const selectedOption = WORK_DOMAIN_OPTIONS.find((opt) => opt.id === workDomain) || WORK_DOMAIN_OPTIONS[0];
+  const localizedDomainOptions = getLocalizedWorkDomainOptions(language);
+  const selectedOption = localizedDomainOptions.find((opt) => opt.id === workDomain) || localizedDomainOptions[0];
 
   return (
     <div
@@ -231,7 +232,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="relative">
               <select
                 id="work-domain-select"
-                aria-label="Çalıştığın Alan Seçimi"
+                aria-label={language === 'tr' ? 'Çalıştığın Alan Seçimi' : 'Select Career Domain'}
                 value={workDomain}
                 onChange={(e) => {
                   if (onSelectWorkDomain) {
@@ -244,15 +245,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     : 'bg-white border-stone-300 text-stone-800 hover:border-stone-400 shadow-2xs'
                 }`}
               >
-                <optgroup label="Özel Durumlar">
-                  {WORK_DOMAIN_OPTIONS.filter((o) => o.category === 'ozel').map((opt) => (
+                <optgroup label={language === 'tr' ? 'Özel Durumlar' : 'Special Modes'}>
+                  {localizedDomainOptions.filter((o) => o.category === 'ozel').map((opt) => (
                     <option key={opt.id} value={opt.id}>
                       {opt.icon} {opt.label}
                     </option>
                   ))}
                 </optgroup>
-                <optgroup label="Meslek & Uzmanlık Grupları">
-                  {WORK_DOMAIN_OPTIONS.filter((o) => o.category === 'meslek').map((opt) => (
+                <optgroup label={language === 'tr' ? 'Meslek & Uzmanlık Grupları' : 'Professions & Specialized Fields'}>
+                  {localizedDomainOptions.filter((o) => o.category === 'meslek').map((opt) => (
                     <option key={opt.id} value={opt.id}>
                       {opt.icon} {opt.label}
                     </option>
