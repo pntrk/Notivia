@@ -23,7 +23,8 @@ export type ProfessionDomain =
   | 'DENIZCILIK'
   | 'GUMRUK'
   | 'ECZACILIK'
-  | 'ISG';
+  | 'ISG'
+  | 'SANAT_MEDYA';
 
 export interface ActionButtonConfig {
   id: string;
@@ -445,6 +446,23 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
     ]
   },
 
+  SANAT_MEDYA: {
+    domain: 'SANAT_MEDYA',
+    displayName: 'Sanat & Medya',
+    bgCard: 'bg-rose-50/70 border-rose-200',
+    borderAccent: 'border-l-rose-500',
+    badgeBg: 'bg-rose-100 dark:bg-rose-950/40',
+    badgeText: 'text-rose-900 dark:text-rose-200',
+    btnPrimaryBg: 'bg-rose-600 hover:bg-rose-700',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'call_sheet_btn', label: 'Call Sheet & Set Planı', icon: '🎬', actionType: 'COPY_TEMPLATE' },
+      { id: 'reels_hook_btn', label: 'Reels & TikTok Kanca (Hook)', icon: '📱', actionType: 'COPY_TEMPLATE' },
+      { id: 'influencer_brief_btn', label: '#İşbirliği Yasal Briefi', icon: '🤝', actionType: 'COPY_TEMPLATE' },
+      { id: 'fsek_copyright_btn', label: '5846 FSEK Telif Devri', icon: '📜', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
+
   GENEL: {
     domain: 'GENEL',
     displayName: 'Genel',
@@ -494,6 +512,7 @@ export const WORK_DOMAIN_OPTIONS: WorkDomainOption[] = [
   { id: 'ZIRAAT', label: 'Ziraat & Botanik', sublabel: 'Bahçıvan, Peyzaj, Çiçekçi (Güneş kuralı, sulama serinliği)', icon: '🌿', category: 'meslek' },
   { id: 'ECZACILIK', label: 'Eczacılık & Medula SUT', sublabel: 'Eczacı, Eczane Teknikeri (Soğuk zincir 2-8°C, Medula SUT, kırmızı reçete İTS, majistral)', icon: '💊', category: 'meslek' },
   { id: 'ISG', label: 'İş Sağlığı ve Güvenliği (İSG)', sublabel: 'İSG Uzmanı, İşyeri Hekimi (İBYS eğitimi, periyodik muayene, ramak kala, 6331 risk)', icon: '🦺', category: 'meslek' },
+  { id: 'SANAT_MEDYA', label: 'Sanat, Medya & Prodüksiyon', sublabel: 'Yönetmen, Kurgucu, Fotoğrafçı, Ses Mühendisi, Gazeteci, Sosyal Medya Yöneticisi & İçerik Üreticisi (Reels/TikTok kanca, #işbirliği, call sheet, -23 LUFS render, FSEK telif, meta ads)', icon: '🎬', category: 'meslek' },
 ];
 
 export function detectDomainFromNote(note: { ikon?: string; baslik?: string; anomali_notu?: string | null; teshis_notu?: string | null; renk?: string }): ProfessionDomain {
@@ -502,6 +521,25 @@ export function detectDomainFromNote(note: { ikon?: string; baslik?: string; ano
 
   if (icon === '📝' && !note.anomali_notu && !note.teshis_notu) {
     return 'SADE';
+  }
+
+  if (
+    icon === '🎬' || icon === '🎨' || icon === '📸' || icon === '🎥' || icon === '🎙️' || icon === '🎭' || icon === '🎞️' || icon === '📻' || icon === '📱' ||
+    text.includes('call sheet') || text.includes('callsheet') || text.includes('çekim planı') || text.includes('cekim plani') ||
+    text.includes('klaket') || text.includes('reji') || text.includes('gaffer') || text.includes('dit') ||
+    text.includes('render') || text.includes('export') || text.includes('kurgu') || text.includes('montaj') ||
+    text.includes('-23 lufs') || text.includes('ebu r128') || text.includes('color grading') || text.includes('davinci resolve') ||
+    text.includes('soundcheck') || text.includes('teknik rider') || text.includes('stage plot') || text.includes('in-ear') ||
+    text.includes('isrc') || text.includes('mesam') || text.includes('müyap') || text.includes('retouch') ||
+    text.includes('vernisaj') || text.includes('küratör') || text.includes('fine art') || text.includes('basın bülteni') ||
+    text.includes('ambargo') || text.includes('liveu') || text.includes('rundown') || text.includes('fsek') ||
+    text.includes('tiyatro') || text.includes('dress rehearsal') || text.includes('prömiyer') ||
+    text.includes('reels') || text.includes('tiktok') || text.includes('shorts') || text.includes('kanca') ||
+    text.includes('hook') || text.includes('influencer') || text.includes('#işbirliği') || text.includes('#isbirligi') ||
+    text.includes('meta ads') || text.includes('roas') || text.includes('içerik takvimi') || text.includes('carousel') ||
+    text.includes('youtube') || text.includes('thumbnail')
+  ) {
+    return 'SANAT_MEDYA';
   }
 
   if (

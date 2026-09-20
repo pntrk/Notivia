@@ -209,6 +209,79 @@ export const INSTANT_JARGON_CHIPS: JargonChip[] = [
     routeTitle: 'Okul Kat & Bahçe Nöbet İmzası',
     institution: 'Milli Eğitim Bakanlığı / İdare',
     fullPrompt: 'Sabah nöbet defteri imzalama ve kat emniyeti'
+  },
+  // Sanat, Medya & Prodüksiyon
+  {
+    label: 'Call Sheet hazırla',
+    domain: 'SANAT_MEDYA',
+    icon: '🎬',
+    routeTitle: 'Günlük Set Çekim Planı (Call Sheet)',
+    institution: 'Sinema / Dizi Prodüksiyonu',
+    fullPrompt: 'Yarın sabah 06:30 günlük call sheet ve çekim planı hazırla'
+  },
+  {
+    label: 'Render al (-23 LUFS)',
+    domain: 'SANAT_MEDYA',
+    icon: '🖥️',
+    routeTitle: 'EBU R128 Broadcast Master Export',
+    institution: 'RTÜK / Broadcast Standardı',
+    fullPrompt: 'Kurgu bitti -23 LUFS broadcast master render al'
+  },
+  {
+    label: 'Konser soundcheck',
+    domain: 'SANAT_MEDYA',
+    icon: '🎙️',
+    routeTitle: 'Konser Soundcheck & RF Frekans Taraması',
+    institution: 'Canlı Performans & Sahne Amirliği',
+    fullPrompt: 'Konser soundcheck saat 16:00 teknik rider ve RF taraması'
+  },
+  {
+    label: 'FSEK Telif devri',
+    domain: 'SANAT_MEDYA',
+    icon: '📜',
+    routeTitle: '5846 Sayılı FSEK Telif & Eser Devri',
+    institution: 'Kültür ve Turizm Bakanlığı (Telif Hakları)',
+    fullPrompt: '5846 FSEK mali hak devir sözleşmesi ve oyuncu muvafakatnamesi'
+  },
+  {
+    label: 'DIT çift SSD yedek',
+    domain: 'SANAT_MEDYA',
+    icon: '💾',
+    routeTitle: 'DIT Checksum & RAW Veri Güvenliği',
+    institution: 'Kamera & DIT Departmanı',
+    fullPrompt: 'DIT veri aktarımı çift SSD checksum doğrulama'
+  },
+  {
+    label: 'Basın bülteni ambargo',
+    domain: 'SANAT_MEDYA',
+    icon: '📰',
+    routeTitle: 'Basın Bülteni & Medya Ambargosu',
+    institution: 'Medya & İletişim Ajansı',
+    fullPrompt: 'Basın bülteni hazırla sabah 09:30 ambargolu servis'
+  },
+  {
+    label: 'Reels kanca (Hook) planı',
+    domain: 'SANAT_MEDYA',
+    icon: '📱',
+    routeTitle: 'Reels & TikTok Retention & Kanca',
+    institution: 'Sosyal Medya & İçerik Üretimi',
+    fullPrompt: 'Reels kanca ve retention optimizasyonu 9:16 altyazı hazırla'
+  },
+  {
+    label: 'Influencer #işbirliği briefi',
+    domain: 'SANAT_MEDYA',
+    icon: '🤝',
+    routeTitle: 'Ticaret Bakanlığı #İşbirliği Protokolü',
+    institution: 'Ticaret Bakanlığı / Tüketici Hakları',
+    fullPrompt: 'Influencer ürün tanıtımı #işbirliği yasal briefi hazırla'
+  },
+  {
+    label: 'Meta Ads & ROAS hedefi',
+    domain: 'SANAT_MEDYA',
+    icon: '📈',
+    routeTitle: 'Meta & TikTok Ads Performans Pazarlama',
+    institution: 'Dijital Pazarlama & Performans',
+    fullPrompt: 'Meta ads reklam kampanyası CAPI ve piksel ROAS optimizasyonu'
   }
 ];
 
@@ -491,10 +564,163 @@ const ROUTE_PATTERNS: RoutePattern[] = [
     domain: 'SAVUNMA',
     icon: '🛡️',
     badgeHex: '#BFDBFE'
+  },
+
+  // Sanat, Medya, Prodüksiyon & Sahne Sanatları
+  {
+    keywords: ['call sheet', 'callsheet', 'çekim planı', 'cekim plani', 'set çağrısı', 'set cagrisi', 'klaket'],
+    routeTitle: 'Günlük Call Sheet & Set Çekim Planı',
+    institution: 'Sinema & Dizi Prodüksiyonu',
+    domain: 'SANAT_MEDYA',
+    icon: '🎬',
+    badgeHex: '#FFE4E6'
+  },
+  {
+    keywords: ['dit', 'checksum', 'silverstack', 'veri aktarımı', 'timecode jam'],
+    routeTitle: 'DIT Çift SSD Checksum Doğrulama',
+    institution: 'Kamera & DIT Departmanı',
+    domain: 'SANAT_MEDYA',
+    icon: '💾',
+    badgeHex: '#FFE4E6'
+  },
+  {
+    keywords: ['render', 'export', 'broadcast master', '-23 lufs', 'ebu r128', 'kurgu', 'montaj'],
+    routeTitle: 'EBU R128 Broadcast Master (-23 LUFS)',
+    institution: 'RTÜK / Televizyon & Dijital Yayın',
+    domain: 'SANAT_MEDYA',
+    icon: '🖥️',
+    badgeHex: '#F3E8FF'
+  },
+  {
+    keywords: ['color grading', 'davinci resolve', 'davinci', 'show lut', 'vectorscope'],
+    routeTitle: 'DaVinci Resolve Renk Oturumu & LUT',
+    institution: 'Post-Prodüksiyon / Color Grading',
+    domain: 'SANAT_MEDYA',
+    icon: '🎨',
+    badgeHex: '#E0E7FF'
+  },
+  {
+    keywords: ['soundcheck', 'sound check', 'teknik rider', 'stage plot', 'in-ear', 'rf tarama'],
+    routeTitle: 'Konser Soundcheck & RF Frekans Taraması',
+    institution: 'Canlı Ses & Sahne Amirliği',
+    domain: 'SANAT_MEDYA',
+    icon: '🎙️',
+    badgeHex: '#CFFAFE'
+  },
+  {
+    keywords: ['isrc', 'mesam', 'msg', 'müyap', 'split sheet', 'müzik dağıtım', 'spotify pitch'],
+    routeTitle: 'Dijital Dağıtım, ISRC & Telif (MESAM)',
+    institution: 'Kültür Bakanlığı / MESAM & MÜYAP',
+    domain: 'SANAT_MEDYA',
+    icon: '🎵',
+    badgeHex: '#FEE2E2'
+  },
+  {
+    keywords: ['fotoğraf çekimi', 'fotograf cekimi', 'stüdyo çekimi', 'retouch', 'gri kart', 'colorchecker'],
+    routeTitle: 'Fotoğraf Çekimi & RAW Retouch Teslimi',
+    institution: 'Profesyonel Fotoğraf Stüdyosu',
+    domain: 'SANAT_MEDYA',
+    icon: '📸',
+    badgeHex: '#FEF3C7'
+  },
+  {
+    keywords: ['vernisaj', 'küratör', 'fine art baskı', 'paspartu', 'sergi açılışı', 'galeri açılışı'],
+    routeTitle: 'Sergi Açılışı, Vernisaj & Eser Künyeleri',
+    institution: 'Sanat Galerisi & Müze Yönetimi',
+    domain: 'SANAT_MEDYA',
+    icon: '🖼️',
+    badgeHex: '#FEF08A'
+  },
+  {
+    keywords: ['basın bülteni', 'basin bulteni', 'ambargo', 'medya dağıtım', 'tekzip'],
+    routeTitle: 'Basın Bülteni Servisi & Ambargo Takibi',
+    institution: 'Medya Takip & İletişim Ajansı',
+    domain: 'SANAT_MEDYA',
+    icon: '📰',
+    badgeHex: '#FED7AA'
+  },
+  {
+    keywords: ['canlı yayın', 'canli yayin', 'rundown', 'reji akışı', 'liveu', 'prompter', 'kj'],
+    routeTitle: 'Canlı Yayın Reji Akışı (Rundown) & LiveU',
+    institution: 'Televizyon Rejisi & Canlı Yayın',
+    domain: 'SANAT_MEDYA',
+    icon: '📡',
+    badgeHex: '#FEE2E2'
+  },
+  {
+    keywords: ['tiyatro', 'genel prova', 'dress rehearsal', 'suflör', 'ışık masası', 'cue'],
+    routeTitle: 'Tiyatro Genel Prova & Sahne Cueleri',
+    institution: 'Devlet / Şehir Tiyatroları & Sahne',
+    domain: 'SANAT_MEDYA',
+    icon: '🎭',
+    badgeHex: '#EDE9FE'
+  },
+  {
+    keywords: ['fsek', 'telif sözleşmesi', 'mali hak devri', 'oyuncu muvafakatname', 'eser sahibi'],
+    routeTitle: '5846 FSEK Telif & Mali Hak Devri',
+    institution: 'Kültür Bakanlığı (Telif Hakları Gn. Md.)',
+    domain: 'SANAT_MEDYA',
+    icon: '📜',
+    badgeHex: '#E0E7FF'
+  },
+  {
+    keywords: ['reels', 'tiktok', 'shorts', 'kanca', 'hook', 'retention', 'dikey video', 'auto caption'],
+    routeTitle: 'Reels & TikTok Retention & Kanca',
+    institution: 'Sosyal Medya & İçerik Üretimi',
+    domain: 'SANAT_MEDYA',
+    icon: '📱',
+    badgeHex: '#FFE4E6'
+  },
+  {
+    keywords: ['influencer', '#işbirliği', '#isbirligi', 'sponsorlu', 'işbirliği', 'ürün tanıtımı'],
+    routeTitle: 'Ticaret Bakanlığı #İşbirliği Protokolü',
+    institution: 'Ticaret Bakanlığı (Tüketici Hakları)',
+    domain: 'SANAT_MEDYA',
+    icon: '🤝',
+    badgeHex: '#FEF3C7'
+  },
+  {
+    keywords: ['meta ads', 'tiktok ads', 'roas', 'ctr', 'pixel', 'conversions api', 'reklam seti'],
+    routeTitle: 'Meta & TikTok Ads Performans Pazarlama',
+    institution: 'Dijital Reklam & Performans',
+    domain: 'SANAT_MEDYA',
+    icon: '📈',
+    badgeHex: '#DCFCE7'
+  },
+  {
+    keywords: ['içerik takvimi', 'icerik takvimi', 'carousel', 'kaydırmalı post', 'prime time', 'grid planı'],
+    routeTitle: 'Aylık İçerik Takvimi & Prime Time Dağıtımı',
+    institution: 'Sosyal Medya Yönetimi & Planlama',
+    domain: 'SANAT_MEDYA',
+    icon: '🗓️',
+    badgeHex: '#E0F2FE'
+  },
+  {
+    keywords: ['linç', 'linc', 'sosyal medya kriz', 'troll', 'bot saldırısı', 'kara liste', 'holding statement'],
+    routeTitle: 'Sosyal Medya Kriz & Topluluk Moderasyonu',
+    institution: 'İtibar & Kriz İletişimi',
+    domain: 'SANAT_MEDYA',
+    icon: '🛡️',
+    badgeHex: '#FEE2E2'
+  },
+  {
+    keywords: ['youtube', 'thumbnail', 'kapak fotoğrafı', 'chapters', 'end screen', 'youtube seo'],
+    routeTitle: 'YouTube Video SEO & Thumbnail CTR',
+    institution: 'Video Yayıncılığı & YouTube',
+    domain: 'SANAT_MEDYA',
+    icon: '🔴',
+    badgeHex: '#FEE2E2'
   }
 ];
 
 const DOMAIN_INSTITUTIONS: Record<string, { label: string; institution: string; icon: string; badgeHex: string; defaultRoute: string }> = {
+  SANAT_MEDYA: {
+    label: 'Sanat, Medya & Prodüksiyon',
+    institution: 'Kültür Bakanlığı / RTÜK & Sektörel Standart',
+    icon: '🎬',
+    badgeHex: '#FFE4E6',
+    defaultRoute: 'Prodüksiyon, Kurgu & Telif Protokolü'
+  },
   HUKUK: {
     label: 'Hukuk / Avukat',
     institution: 'Adalet Bakanlığı / UYAP',

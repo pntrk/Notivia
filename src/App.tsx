@@ -251,9 +251,12 @@ function formatCreatedTime(rawTime: any, lang: Language = 'tr'): string {
   const date = rawTime.toDate ? rawTime.toDate() : new Date(rawTime);
   if (isNaN(date.getTime())) return "";
 
+  const isCurrentYear = date.getFullYear() === new Date().getFullYear();
+
   return date.toLocaleDateString(lang === 'en' ? 'en-US' : 'tr-TR', {
     day: "numeric",
     month: "short",
+    ...(isCurrentYear ? {} : { year: "numeric" }),
     hour: "2-digit",
     minute: "2-digit"
   });
@@ -3959,139 +3962,12 @@ export default function App() {
                           >
                             {item.baslik}
                           </h2>
-
-                          {item.createdAt && (
-                            <span className="text-[8px] sm:text-[9px] text-stone-400 dark:text-stone-500 font-mono tracking-tight select-none mt-0.5 block truncate">
-                              {formatCreatedTime(item.createdAt, language)}
-                            </span>
-                          )}
                         </div>
                       </div>
                     </div>
 
                   {/* Kart Gövdesi: Rozetler, Uyarılar ve Alt Görevler (Kartın Tam Genişliğini Kullanır) */}
                   <div className={`w-full ${viewMode === 'grid' ? 'space-y-1.5' : 'space-y-2'}`}>
-                    {/* Kompakt Görsel İkon Çubuğu ve Meta Etiketler */}
-                    <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap w-full">
-                      {isWeatherTriggered && (
-                        <span className="text-[9px] sm:text-[10px] font-bold text-red-700 bg-red-100/90 border border-red-300/80 px-1.5 sm:px-2 py-0.5 rounded-md shadow-2xs flex items-center gap-1 shrink-0 animate-pulse">
-                          <span>⚡</span>
-                          <span className="truncate">{item.tetikleyici?.sart === 'yagmur' ? 'Yağmur' : '0°C Altı'}</span>
-                        </span>
-                      )}
-
-                      {isExpired ? (
-                        <span className="text-[9px] sm:text-[10px] bg-stone-900/10 text-stone-700 px-1.5 sm:px-2 py-0.5 rounded-md font-medium shrink-0 flex items-center gap-1 border border-black/5" title="Süresi doldu">
-                          <span>⌛</span>
-                          <span className="truncate">{item.zaman || t.incompleteStatus}</span>
-                        </span>
-                      ) : (
-                        <>
-                          {/* Zaman / Hatırlatıcı İkonik Kapsülü */}
-                          {item.tetikleyici?.etiket ? (
-                            <span
-                              className="text-[9px] sm:text-[10px] bg-white/90 text-stone-800 font-semibold px-1.5 sm:px-2 py-0.5 rounded-md shrink-0 flex items-center gap-1 shadow-2xs border border-stone-900/10"
-                              title={item.tetikleyici.sart ? `${t.conditionLabel}: ${item.tetikleyici.sart}` : undefined}
-                            >
-                              <span>📍</span>
-                              <span className="truncate">{item.tetikleyici.etiket}</span>
-                            </span>
-                          ) : item.zaman ? (
-                            <span
-                              className={`text-stone-800 dark:text-stone-200 font-medium flex items-center gap-1 bg-white/90 dark:bg-black/20 rounded-md border border-stone-200/90 dark:border-white/10 shadow-2xs shrink-0 select-none ${
-                                viewMode === 'grid' ? 'text-[10px] px-1.5 py-0.5' : 'text-[11px] px-2.5 py-0.5'
-                              }`}
-                            >
-                              <span className="text-xs">🗓️</span>
-                              <span className="truncate max-w-[130px] sm:max-w-none">{item.zaman}</span>
-                            </span>
-                          ) : null}
-
-                          {/* İkonik Mini Rozetler Grubu */}
-                          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 flex-wrap">
-                            {/* Cihaz Alarmı / Bildirimi İkonu */}
-                            {item.tarih_iso && item.deviceNotificationEnabled !== false && (
-                              <span
-                                className="h-5 px-1.5 rounded-md bg-amber-500/15 text-amber-900 dark:text-amber-300 border border-amber-500/30 flex items-center gap-0.5 text-[9px] font-medium shadow-2xs select-none"
-                                title={language === 'tr' ? 'Cihaz sesli alarmı devrede' : 'Device audio alert active'}
-                              >
-                                <span>🔔</span>
-                              </span>
-                            )}
-
-                            {/* Periyodik / Rutin İkonu */}
-                            {item.periyodik && (
-                              <span
-                                className="h-5 px-1 rounded-md bg-emerald-500/15 text-emerald-800 border border-emerald-500/30 flex items-center gap-0.5 text-[9px] font-medium shadow-2xs"
-                                title={item.periyodik.tip === 'aylik_son_hafta' ? (language === 'tr' ? 'Ay Sonu Tekrarlı' : 'End of Month') : t.periodicBadge}
-                              >
-                                <span>🔄</span>
-                              </span>
-                            )}
-
-                            {/* Hazırlık Zamanı İkonu */}
-                            {item.hazirlik_zamani && (
-                              <span
-                                className="h-5 px-1 rounded-md bg-white/80 text-amber-900 border border-amber-300/40 flex items-center gap-0.5 text-[9px] font-medium shadow-2xs"
-                                title={`${t.prepLeadTime}: ${item.hazirlik_zamani}`}
-                              >
-                                <span>⏳</span>
-                                <span className="text-[8.5px]">{item.hazirlik_zamani}</span>
-                              </span>
-                            )}
-
-                            {/* Bilişsel Alan İkonik Etiketi */}
-                            {(() => {
-                              const cardDomain = detectDomainFromNote(item);
-                              if (cardDomain && cardDomain !== 'GENEL') {
-                                const dTheme = DOMAIN_REGISTRY[cardDomain];
-                                const domainOpt = WORK_DOMAIN_OPTIONS.find((opt) => opt.id === cardDomain);
-                                const domainIcon = domainOpt?.icon || '🏷️';
-                                return (
-                                  <span
-                                    className={`h-5 px-1 rounded-md text-[8.5px] font-medium shrink-0 flex items-center gap-0.5 shadow-2xs border ${dTheme?.badgeBg || 'bg-stone-100'} ${dTheme?.badgeText || 'text-stone-800'} border-black/10`}
-                                    title={`Bilişsel Alan: ${dTheme?.displayName || cardDomain}`}
-                                  >
-                                    <span>{domainIcon}</span>
-                                  </span>
-                                );
-                              }
-                              return null;
-                            })()}
-
-                            {/* Cihaz Takvimine Otomatik Aktar (Doğrudan ve Dosyasız) */}
-                            {item.tarih_iso && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  autoSyncCardToDeviceCalendar(item);
-                                }}
-                                className={`w-5 h-5 rounded-md flex items-center justify-center shadow-2xs cursor-pointer active:scale-95 transition-all ${
-                                  item.calendarEventId || item.calendar_event_id
-                                    ? 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-900 border border-emerald-500/30'
-                                    : 'bg-white/80 hover:bg-white text-stone-700 border border-stone-200/90'
-                                }`}
-                                title={
-                                  item.calendarEventId || item.calendar_event_id
-                                    ? (language === 'tr' ? 'Cihaz Takviminde Senkronize ✓' : 'Synced with Calendar ✓')
-                                    : (language === 'tr' ? 'Takvime Aktar' : 'Add to Calendar')
-                                }
-                              >
-                                {syncingCalendarCardId === item.id ? (
-                                  <span className="text-[9px] animate-spin">⏳</span>
-                                ) : item.calendarEventId || item.calendar_event_id ? (
-                                  <span className="text-[9px]">📅</span>
-                                ) : (
-                                  <span className="text-[9px]">📲</span>
-                                )}
-                              </button>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
-
                     {/* Çakışma Uyarısı */}
                     {(item.conflictWith || item.conflictWarning) && (
                       <div className={`flex items-center gap-1 text-amber-900 bg-amber-500/15 border border-amber-500/30 rounded-lg break-words ${
@@ -4311,6 +4187,18 @@ export default function App() {
                         </div>
                       );
                     })()}
+                  </div>
+
+                  {/* Kartın Kaydedildiği Tarih ve Saat (Sağ Alt Köşe) */}
+                  <div className="flex items-center justify-end w-full pt-1 mt-auto select-none pointer-events-none">
+                    <span
+                      className={`font-mono text-stone-500/80 dark:text-stone-400/80 tracking-tight flex items-center gap-1 ${
+                        viewMode === 'grid' ? 'text-[8.5px]' : 'text-[9.5px]'
+                      }`}
+                      title={language === 'tr' ? 'Kaydedilme Tarihi ve Saati' : 'Saved Date & Time'}
+                    >
+                      <span>{formatCreatedTime(item.createdAt || (!isNaN(Number(item.id)) ? Number(item.id) : item.tarih_iso) || Date.now(), language)}</span>
+                    </span>
                   </div>
                 </div>
               </div>

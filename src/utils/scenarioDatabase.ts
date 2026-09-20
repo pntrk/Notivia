@@ -4102,6 +4102,404 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
       'Paraşüt tipi emniyet kemeri ve kurtarma tripodu vinç bağlantısını test et',
       'Sıcak İş İzin Belgesini (PTW) imzalayıp çalışma noktasına as'
     ]
+  },
+
+  // 17. SANAT, MEDYA, PRODÜKSİYON & SAHNE SANATLARI
+  {
+    id: 'sanat_call_sheet',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['call sheet', 'callsheet', 'çekim planı', 'cekim plani', 'set çağrısı', 'set cagrisi', 'klaket', 'set saatleri'],
+    baslik: 'Call Sheet & Set Çekim Planı',
+    ikon: '🎬',
+    renk: '#FFE4E6',
+    varsayilanZaman: 'Sabah 06:30 (Set Çağrısı)',
+    hazirlikZamani: 'Önceki Akşam 20:00 (Call Dağıtımı)',
+    akilliFisilti: '🎬 Call sheet önceki akşam 20:00\'de dağıtılmalı, mekan izinleri ve ambulans hazır tutulmalıdır.',
+    oncedenYapilacaklar: [
+      'Sahne dökümü, mekan adresleri ve acil durum hastane bilgilerini call sheet\'e işle',
+      'Oyuncuların makyaj/kostüm ve kamera karşısı çağrı saatlerini (call time) teyit et',
+      'Valilik/Belediye kamu alanı çekim ve park izin belgelerini dosyala',
+      'Kamera, ışık (gaffer) ve ses departmanlarına telsiz kanallarını dağıt'
+    ]
+  },
+  {
+    id: 'sanat_render_master',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['render al', 'render', 'export al', 'export', 'broadcast master', '-23 lufs', 'ebu r128', 'kurgu teslim'],
+    baslik: 'Kurgu Render & Broadcast Master (-23 LUFS)',
+    ikon: '🖥️',
+    renk: '#F3E8FF',
+    varsayilanZaman: 'Akşam 19:00 (Render Kapanışı)',
+    hazirlikZamani: '30 Dk Önce (Relink & Kontrol)',
+    akilliFisilti: '🖥️ TV/Yayın için entegre ses -23 LUFS (±0.5), master video Apple ProRes 422 HQ profiline uymalıdır.',
+    oncedenYapilacaklar: [
+      'Timeline proxy medyalarını orijinal kamera RAW dosyalarına relink et',
+      'Ses miksajını EBU R128 (-23 LUFS) yayın standardına göre normalize et',
+      'Broadcast Safe renk filtresi ile luma ve kroma taşmalarını kısıtla',
+      'ProRes 422 HQ Clean ve Texted versiyonlarını export alıp SRT altyazıyı test et'
+    ]
+  },
+  {
+    id: 'sanat_soundcheck',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['soundcheck', 'sound check', 'teknik rider', 'stage plot', 'konser provası', 'ses provası', 'in-ear', 'rf tarama'],
+    baslik: 'Konser Soundcheck & Sahne Teknik Rider',
+    ikon: '🎙️',
+    renk: '#CFFAFE',
+    varsayilanZaman: 'Saat 16:00 (Kapı Öncesi)',
+    hazirlikZamani: '1 Saat Önce (Patch & RF Scan)',
+    akilliFisilti: '🎙️ Konserden 3 saat önce FOH, in-ear monitör dengeleri ve telsiz mikrofon RF taraması bitmelidir.',
+    oncedenYapilacaklar: [
+      'Teknik rider uyarınca mikser patch listesini mekan ses teknisyenine teyit ettir',
+      'Kablosuz mikrofonlar ve in-ear için RF frekans taraması yaparak parazitsiz kanal ata',
+      'Enstrüman ve vokal monitör mikslerini müzisyenlerle tek tek doğrula',
+      'Kulis ikram/havlu kontrollerini bitirip sahneyi kapı açılışına hazırla'
+    ]
+  },
+  {
+    id: 'sanat_fsek_telif',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['fsek', 'telif sözleşmesi', 'telif sozlesmesi', 'mali hak devri', 'eser sahibi sözleşmesi', 'oyuncu muvafakatname'],
+    baslik: '5846 FSEK Telif & Mali Hak Devri',
+    ikon: '📜',
+    renk: '#E0E7FF',
+    varsayilanZaman: 'Sözleşme Kapanışı',
+    hazirlikZamani: '1 Gün Önce (Hukuki İnceleme)',
+    akilliFisilti: '📜 FSEK m. 52 uyarınca mali hak devir sözleşmelerinin yazılı olması ve hakların tek tek sayılması şarttır.',
+    oncedenYapilacaklar: [
+      'İşleme, çoğaltma, yayma, temsil ve umuma iletim haklarını sözleşmede açıkça belirt',
+      'Sözleşme mecra (dijital/TV/sinema), süre ve coğrafi kapsamını sınırlandır',
+      'Oyuncu/seslendirmen görsel-işitsel muvafakatnamelerini çekimden önce ıslak imzalat',
+      'Kültür Bakanlığı Telif Hakları Genel Müdürlüğü tescil evrakını arşivle'
+    ]
+  },
+  {
+    id: 'sanat_dit_checksum',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['dit', 'silverstack', 'veri aktarımı', 'çift ssd', 'cift ssd', 'checksum', 'xxhash64', 'kamera yedek'],
+    baslik: 'DIT Çift SSD Checksum Doğrulama & RAW Güvenliği',
+    ikon: '💾',
+    renk: '#FFE4E6',
+    varsayilanZaman: 'Her Çekim Kartında',
+    hazirlikZamani: '30 Dk Önce (SSD Hazırlığı)',
+    akilliFisilti: '💾 Kopya doğrulaması bitmeden ve MD5/xxHash64 checksum raporu alınmadan kamera kartı asla formatlanmaz.',
+    oncedenYapilacaklar: [
+      'Silverstack veya ShotPut Pro ile çift bağımsız harici SSD\'ye eşzamanlı kopya başlat',
+      'xxHash64 / MD5 checksum algoritmalarıyla bit-by-bit doğrulama al',
+      'Günlük Show LUT ile DaVinci Resolve üzerinde H.264/ProRes proxy üret ve ses senkronla',
+      'Birinci SSD kopyasını ana ofise, ikinci kopyayı güvenli harici kasaya teslim et'
+    ]
+  },
+  {
+    id: 'sanat_basin_bulteni',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['basın bülteni', 'basin bulteni', 'ambargo', 'medya dağıtım', 'tekzip', 'medya bülteni'],
+    baslik: 'Basın Bülteni Servisi & Ambargo Takibi',
+    ikon: '📰',
+    renk: '#FED7AA',
+    varsayilanZaman: 'Sabah 09:30 (Basın Servisi)',
+    hazirlikZamani: '1 Gün Önce (Metin Onayı)',
+    akilliFisilti: '📰 Ambargolu haberlerde tarih ve saat kısıtı metnin en başında büyük kırmızı harflerle yazılmalıdır.',
+    oncedenYapilacaklar: [
+      '5N1K formatında haber metnini ve yüksek çözünürlüklü süresiz fotoğraf linkini hazırla',
+      'Metnin en başına "AMBARGOLUDUR: [Tarih/Saat] ÖNCESİ YAYINLANAMAZ" ibaresi koy',
+      'Kültür-sanat ve ekonomi editörleri dağıtım listesine sabah 09:30\'da e-posta servisi yap',
+      'Öğleden sonra medya takip merkezi üzerinden çıkan haberleri ve kupürleri raporla'
+    ]
+  },
+  {
+    id: 'sanat_vernisaj',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['vernisaj', 'sergi açılışı', 'sergi acilisi', 'galeri açılışı', 'küratör', 'fine art baskı', 'eser künyesi'],
+    baslik: 'Sergi Açılışı, Vernisaj & Eser Künyeleri',
+    ikon: '🖼️',
+    renk: '#FEF08A',
+    varsayilanZaman: 'Akşam 18:30 (Vernisaj Kokteyli)',
+    hazirlikZamani: '2 Saat Önce (Işık & Künye Kontrol)',
+    akilliFisilti: '🖼️ Eser künyeleri, küratör metni ve spotların 30-45 derece aydınlatma açıları kontrol edilmelidir.',
+    oncedenYapilacaklar: [
+      'Eserlerin asitsiz pamuklu Fine Art kağıt ve çerçeve kalitesini denetle',
+      'Duvarlara Türkçe/İngilizce sanatçı ve edisyon künyelerini as',
+      'Galeri spotlarını eser üzerinde parlama yapmayacak açılara ayarla',
+      'VIP davetli listesini, koleksiyonerleri ve kokteyl ikramını teyit et'
+    ]
+  },
+  {
+    id: 'sanat_canli_yayin',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['canlı yayın', 'canli yayin', 'rundown', 'reji akışı', 'liveu', 'tvu', 'prompter', 'kj'],
+    baslik: 'Canlı Yayın Reji Akışı (Rundown) & LiveU',
+    ikon: '📡',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Yayın Öncesi T-30 Dk',
+    hazirlikZamani: '45 Dk Önce (Delay & Hat Testi)',
+    akilliFisilti: '📡 LiveU/TVU hücresel yayın gecikmesi 1.5 sn altına kilitlenmeli, KJ altyazıları hukuki denetimden geçmelidir.',
+    oncedenYapilacaklar: [
+      'Saniye saniye planlanan Rundown akışını reji ekibi ve spikere senkronize et',
+      'LiveU 4G/5G hücresel hatlarını test edip yayın gecikmesini 1.5 saniye altına sabitle',
+      'Prompter metnini ve alt yazı (KJ) yazımlarını imla/hukuk açısından denetle',
+      'Yayına 5 dakika kala çift yedekli Master Rec kayıtlarını başlat'
+    ]
+  },
+  {
+    id: 'sanat_tiyatro_prova',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['tiyatro', 'genel prova', 'dress rehearsal', 'suflör', 'ışık masası', 'cue', 'prömiyer'],
+    baslik: 'Tiyatro Genel Prova & Sahne Cueleri',
+    ikon: '🎭',
+    renk: '#EDE9FE',
+    varsayilanZaman: 'Akşam 19:00 (Perde)',
+    hazirlikZamani: '1 Saat Önce (Kostüm & Işık)',
+    akilliFisilti: '🎭 Genel prova kesintisiz, gerçek sahne saatinde, tam kostüm/makyaj ve cue defteriyle icra edilmelidir.',
+    oncedenYapilacaklar: [
+      'Işık masası operatörü ile tüm sahne cue geçişlerini saniyesine göre test et',
+      'Hızlı kostüm değişim (quick-change) kabinini ve aksesuarları yerleştir',
+      'Suflör ve sahne amiri telsiz bağlantılarını doğrula',
+      'Prova bitiminde yönetmen notlarını sahnede değerlendir'
+    ]
+  },
+  {
+    id: 'sanat_podcast_sesli_kitap',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['podcast', 'sesli kitap', 'acx', 'audible', 'de-esser', 'noise floor', 'dublaj'],
+    baslik: 'Podcast & Sesli Kitap Prodüksiyonu (ACX / -20dB RMS)',
+    ikon: '🎙️',
+    renk: '#CFFAFE',
+    varsayilanZaman: 'Ses Prodüksiyon Teslimi',
+    hazirlikZamani: '1 Saat Önce (QC & Master)',
+    akilliFisilti: '🎙️ ACX/Audible standardında RMS -20dB, True Peak -3dBTP ve gürültü tabanı -60dBFS altında olmalıdır.',
+    oncedenYapilacaklar: [
+      'De-Click ve Pop-Filter ile nefes ve ağız şapırtılarını temizle',
+      'De-Esser ile 5-8 kHz arasındaki sibilans patlamalarını yumuşat',
+      'Oda gürültüsünü (Noise Floor) -60 dBFS seviyesinin altına indir',
+      '3000x3000px kare kapak görseli ve ID3v2 etiketlerini eksiksiz işle'
+    ]
+  },
+  {
+    id: 'sanat_dcp_festival',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['dcp', 'film festivali', 'filmfreeway', 'kdm', 'epk', 'press kit', 'dci dcp'],
+    baslik: 'Film Festivali Başvurusu, EPK & DCI DCP Paketleme',
+    ikon: '🏆',
+    renk: '#FEF08A',
+    varsayilanZaman: 'Festival Erken Başvuru',
+    hazirlikZamani: '2 Gün Önce (DCP QC)',
+    akilliFisilti: '🏆 Sinema salonu gösterimleri için DCI uyumlu 24fps SMPTE DCP paketlenmeli ve altyazı timecode\'u test edilmelidir.',
+    oncedenYapilacaklar: [
+      'Filmi 24.00 fps, XYZ renk uzayında Flat/Scope DCP olarak paketle',
+      'Timecode gömülü İngilizce diyalog altyazılarını sahne geçişlerine göre doğrula',
+      'Elektronik Basın Kitini (EPK: afiş, set fotoğrafları, yönetmen biyografisi) hazırla',
+      'FilmFreeway portalına şifreli gösterim linkini ve teknik formunu yükle'
+    ]
+  },
+  {
+    id: 'sanat_senaryo_bakanlik',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['senaryo', 'tretman', 'sinopsis', 'logline', 'sinema genel müdürlüğü', 'sinema destek'],
+    baslik: 'Senaryo, Tretman & Sinema Destek Başvurusu',
+    ikon: '📑',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Bakanlık Başvuru Günü',
+    hazirlikZamani: '3 Gün Önce (Evrak Toplama)',
+    akilliFisilti: '📑 5224 sayılı Kanun uyarınca standart Courier 12pt Amerikan formatı senaryo ve bütçe tablosu aranır.',
+    oncedenYapilacaklar: [
+      'Senaryoyu Courier 12pt Amerikan formatına ve sahne marjlarına göre düzenle',
+      'Tek sayfalık logline, 2 sayfalık sinopsis ve ayrıntılı tretman metnini finalize et',
+      'Yönetmenin sanatsal vizyonunu (Director\'s Vision & Moodboard) hazırla',
+      'Resmi bütçe tablosunu ve yapımcı-yönetmen sözleşmelerini portala yükle'
+    ]
+  },
+  {
+    id: 'sanat_vfx_chromakey',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['greenbox', 'green box', 'chroma key', 'yeşil perde', 'yesil perde', 'vfx', 'camera tracking'],
+    baslik: 'VFX, Chroma Key & Camera Tracking Çekim Protokolü',
+    ikon: '🟩',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'VFX Set Çekim Saati',
+    hazirlikZamani: '45 Dk Önce (Işık & Marker)',
+    akilliFisilti: '🟩 Yeşil perde fon aydınlatması dalga formu üzerinde homojen olmalı, rim light ile green spill kesilmelidir.',
+    oncedenYapilacaklar: [
+      'Yeşil perde fon aydınlatmasını dalga formu ile homojen ±0.5 stop ayarla',
+      'Oyuncu ile perde arasına mesafe koyup ters ışıkla green spill sızıntısını engelle',
+      '3D matchmove için perdeye yüksek kontrastlı tracking marker bantları koy',
+      'Her lens değişiminde lens distorsiyon ızgarasını (Lens Grid) çekerek arşivle'
+    ]
+  },
+  {
+    id: 'sanat_defile_moda',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['defile', 'podyum', 'backstage', 'lookbook', 'model kadrosu', 'koleksiyon sunumu'],
+    baslik: 'Moda Defilesi, Backstage & Podyum Akış Yönetimi',
+    ikon: '👗',
+    renk: '#FCE7F3',
+    varsayilanZaman: 'Defile Saati 17:00',
+    hazirlikZamani: '2 Saat Önce (Line-up & DJ)',
+    akilliFisilti: '👗 Model giyinme sırası (line-up), lookbook numaraları ve podyum müzik cueleri senkronize edilmelidir.',
+    oncedenYapilacaklar: [
+      'Model çıkış sırasını (Line-up) ve fotoğraflı giysi askılarını numaralandır',
+      'Backstage saç ve makyaj zaman çizelgesini denetle',
+      'Podyum zemin kaymazlık bandı ve 5600K gün ışığı aydınlatmasını test et',
+      'DJ müzik geçişleri ve final selamlaması provasını tamamla'
+    ]
+  },
+  {
+    id: 'sanat_rtuk_yayin',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['rtük', 'rtuk', 'akıllı işaret', 'akilli isaret', 'ürün yerleştirme', 'koruyucu sembol'],
+    baslik: 'RTÜK Yayın İlkeleri & Akıllı İşaretler Denetimi',
+    ikon: '📺',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Yayın Öncesi Hukuki Onay',
+    hazirlikZamani: 'Yayın Öncesi (QC)',
+    akilliFisilti: '📺 6112 sayılı Kanun uyarınca koruyucu semboller (Genel İzleyici, 7+, 13+) ve ürün yerleştirme uyarıları zorunludur.',
+    oncedenYapilacaklar: [
+      'İçerik analizine göre yaş sınıflandırması ve koruyucu sembol ikonlarını belirle',
+      'Program başında ve reklam dönüşünde koruyucu sembolü en az 5 saniye yayında tut',
+      'Ürün yerleştirme bulunan yapımlarda başlangıç ve bitiş logolarını ekle',
+      'Tütün, alkol ve şiddet unsurlarının hukuki mozaikleme kontrollerini yap'
+    ]
+  },
+  {
+    id: 'sanat_reels_kanca',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['reels', 'tiktok', 'shorts', 'kanca', 'hook', 'retention', 'dikey video', 'auto caption', 'trend ses'],
+    baslik: 'Reels, TikTok & Shorts Kanca (Hook) & Retention Optimizasyonu',
+    ikon: '📱',
+    renk: '#FFE4E6',
+    varsayilanZaman: 'Prime Time (19:30 - 21:00)',
+    hazirlikZamani: '1 Saat Önce (Kurgu & Altyazı)',
+    akilliFisilti: '📱 İlk 3 saniyede güçlü kanca (Hook), 9:16 safe-zone ve dinamik altyazı retention oranını katlar.',
+    oncedenYapilacaklar: [
+      'İlk 0-3 saniyeye merak uyandıran metinsel/görsel kanca (Hook) yerleştir',
+      'Dikey 9:16 (1080x1920 px) safe zone sınırlarına ve 60fps akıcılığına uy',
+      'Sessiz izleyenler için renkli ve kelime vurgulu dinamik altyazı (Auto-Captions) ekle',
+      'Platform içi trend olan ticari lisanslı sesi bağla ve sonuna net bir CTA (eylem çağrısı) koy'
+    ]
+  },
+  {
+    id: 'sanat_influencer_isbirligi',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['influencer', 'işbirliği', 'isbirligi', '#işbirliği', '#isbirligi', 'sponsorlu', 'ürün tanıtımı', 'affiliate'],
+    baslik: 'Influencer Sponsorluk & Ticaret Bakanlığı #İşbirliği Protokolü',
+    ikon: '🤝',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Sponsorlu Paylaşım Onayı',
+    hazirlikZamani: 'Paylaşım Öncesi (Hukuki Kontrol)',
+    akilliFisilti: '🤝 Ticaret Bakanlığı uyarınca #işbirliği veya #reklam etiketi ilk bakışta görünür olmalı, filtre kullanılmamalıdır.',
+    oncedenYapilacaklar: [
+      'Story veya post metninin en başına yüksek kontrastlı "#işbirliği" veya "#reklam" etiketini koy',
+      'Kozmetik veya cilt bakımında filtre/efekt kullanılmadığını açıkça belirt',
+      'Hediye veya davet ise "#Hediye" / "#Davet" ibaresini şeffafça işle',
+      'Marka onaylı bio link ve UTM takip kodlu kampanya linkini entegre et'
+    ]
+  },
+  {
+    id: 'sanat_meta_ads_roas',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['meta ads', 'facebook reklam', 'instagram reklam', 'tiktok ads', 'roas', 'ctr', 'pixel', 'conversions api'],
+    baslik: 'Meta & TikTok Ads Kampanya, ROAS & Piksel Optimizasyonu',
+    ikon: '📈',
+    renk: '#DCFCE7',
+    varsayilanZaman: 'Reklam Kampanyası Başlatma',
+    hazirlikZamani: 'Kampanya Öncesi (Piksel & Kreatif)',
+    akilliFisilti: '📈 Meta Pixel ve Conversions API (CAPI) dönüşüm olayları doğrulanmalı, kreatiflerde A/B test uygulanmalıdır.',
+    oncedenYapilacaklar: [
+      'Meta Pixel ve Conversions API (CAPI) Purchase/Lead olaylarını test et',
+      'En az 3 farklı kreatif varyasyonu (UGC video, tek görsel, carousel) hazırla',
+      'Sıcak kitleye Retargeting, soğuk kitleye %1-2 Lookalike benzer kitle ata',
+      'Kampanya bütçesi optimizasyonunda (CBO) günlük harcama ve minimum ROAS hedefini kitle'
+    ]
+  },
+  {
+    id: 'sanat_icerik_takvimi',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['içerik takvimi', 'icerik takvimi', 'prime time', 'carousel', 'kaydırmalı post', 'grid planı'],
+    baslik: 'Aylık İçerik Takvimi, Carousel & Prime Time Dağıtımı',
+    ikon: '🗓️',
+    renk: '#E0F2FE',
+    varsayilanZaman: 'Haftalık İçerik Planlama',
+    hazirlikZamani: 'Pazar Akşamı',
+    akilliFisilti: '🗓️ Instagram için 19:30, LinkedIn için 08:45 prime-time saatleri ve 1080x1350 px (4:5 dikey) carousel formatı etkilidir.',
+    oncedenYapilacaklar: [
+      'Eğitici, ilham verici ve ürün odaklı içerik sütunlarını haftalık takvime böl',
+      'Carousel postları 1080x1350 px (4:5) oranında tasarlayıp son slayta kaydetme CTA\'sı koy',
+      'Planlama araçlarına (Buffer/Later/Meta Suite) prime-time saatleriyle gir',
+      'Metin altına paragraflar, boşluklar ve 3-5 niş hashtag ekle'
+    ]
+  },
+  {
+    id: 'sanat_sosyal_kriz',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['linç', 'linc', 'sosyal medya kriz', 'negatif yorum', 'troll saldırısı', 'bot saldırısı', 'kara liste'],
+    baslik: 'Sosyal Medya Kriz Yönetimi & Topluluk Moderasyonu',
+    ikon: '🛡️',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Acil Kriz Müdahalesi (T-15 Dk)',
+    hazirlikZamani: 'Derhal',
+    akilliFisilti: '🛡️ Kriz anında tüm planlı neşeli/otomatik paylaşımlar durdurulmalı ve resmi holding statement yayımlanmalıdır.',
+    oncedenYapilacaklar: [
+      'Yorum ayarlarına küfür, hakaret ve saldırı kelimelerini kara liste (Blacklist) olarak gir',
+      'Planlanmış tüm otomatik post, reklam ve storyleri derhal duraklat (Pause)',
+      'Hukuk ve PR onaylı resmi açıklama metnini (Holding Statement) profilde sabitle (Pin)',
+      'Haklı müşteri şikayetlerine DM üzerinden 15 dakika içinde çözüm odaklı kurumsal dönüş yap'
+    ]
+  },
+  {
+    id: 'sanat_youtube_seo',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['youtube', 'thumbnail', 'kapak fotoğrafı', 'youtube seo', 'chapters', 'end screen'],
+    baslik: 'YouTube Video SEO, Thumbnail (CTR) & Chapters Bölümleme',
+    ikon: '🔴',
+    renk: '#FEE2E2',
+    varsayilanZaman: 'Video Yayına Alma Saati',
+    hazirlikZamani: 'Yayından 2 Saat Önce',
+    akilliFisilti: '🔴 1280x720 px yüksek kontrastlı thumbnail, ilk 30 sn kancası ve timecode gömülü video bölümleri (Chapters) şarttır.',
+    oncedenYapilacaklar: [
+      'Yüksek kontrastlı, büyük yüz ifadeli ve maksimum 3 kelimeli Thumbnail (1280x720) tasarla',
+      'Açıklama kutusuna timecode tabanlı bölümleri (Chapters) yaz',
+      'Video başlığını arama hacmi yüksek anahtar kelimeler ve merak unsuru ile yaz',
+      'Videonun son 20 saniyesine Bitiş Ekranı (End Screen) ve oynatma listesi kartı koy'
+    ]
+  },
+  {
+    id: 'sanat_sosyal_canli',
+    category: 'is_kariyer',
+    domain: 'SANAT_MEDYA',
+    keywords: ['tiktok live', 'instagram live', 'twitch', 'canlı yayın sohbet', 'yayıncı', 'stream key', 'obs studio'],
+    baslik: 'Sosyal Medya Canlı Yayını (OBS / Live Stream & İnteraktif Sohbet)',
+    ikon: '🎙️',
+    renk: '#EDE9FE',
+    varsayilanZaman: 'Canlı Yayın Başlangıcı',
+    hazirlikZamani: '30 Dk Önce (Ses & Stream Key)',
+    akilliFisilti: '🎙️ OBS mikrofon ve stream key bağlantısı test edilmeli, sohbete aktif moderatör atanmalıdır.',
+    oncedenYapilacaklar: [
+      'OBS üzerinde ses seviyesi, kamera açısı ve dikey/yatay stream key bağlantısını test et',
+      'Sohbete en az 1 aktif moderatör atayarak spam filtresini devreye al',
+      'Günün duyurusunu veya soru-cevap konusunu ekrana ve sohbete sabitle (Pin)',
+      'Her 10 dakikada bir canlı anket veya soru-cevap çağrısı yaparak etkileşimi yüksek tut'
+    ]
   }
 ];
 

@@ -536,6 +536,52 @@ const DOMAIN_RULES: DomainRule[] = [
       { keyword: 'tatbikat', hour: 11, minute: 0 },
       { keyword: 'kaza', hour: 17, minute: 0 }
     ]
+  },
+  {
+    domain: 'SANAT_MEDYA',
+    defaultIcon: '🎬',
+    defaultColor: '#FFE4E6',
+    exclusiveKeywords: [
+      'call sheet', 'callsheet', 'çekim planı', 'cekim plani', 'klaket', 'gaffer',
+      'dit', 'silverstack', 'shotput pro', 'prores', 'apple prores', 'dnxhr',
+      'color grading', 'davinci resolve', 'vectorscope', 'show lut', '-23 lufs',
+      'ebu r128', 'broadcast master', 'soundcheck', 'teknik rider', 'stage plot',
+      'in-ear monitör', 'rf tarama', 'isrc', 'isrc kodu', 'mesam', 'müyap',
+      'split sheet', 'raw retouch', 'colorchecker', 'vernisaj', 'küratör',
+      'fine art baskı', 'paspartu', 'basın bülteni', 'medya ambargosu',
+      'liveu', 'tvu', 'rundown', 'dress rehearsal', '5846 sayılı', 'fsek',
+      'telif sözleşmesi', 'mali hak devri', 'reels', 'tiktok', 'shorts',
+      'kanca', 'hook', 'retention', 'dikey video', 'auto caption', 'trend ses',
+      'influencer', '#işbirliği', '#isbirligi', 'işbirliği', 'isbirligi', 'sponsorlu içerik',
+      'meta ads', 'tiktok ads', 'roas', 'ctr', 'pixel', 'conversions api',
+      'içerik takvimi', 'icerik takvimi', 'carousel', 'kaydırmalı post', 'prime time',
+      'sosyal medya kriz', 'troll saldırısı', 'bot saldırısı', 'kara liste',
+      'youtube seo', 'thumbnail', 'video chapters', 'end screen', 'tiktok live',
+      'instagram live', 'stream key', 'obs studio'
+    ],
+    supportingKeywords: [
+      'set', 'çekim', 'kurgu', 'montaj', 'render', 'export', 'reji',
+      'kamera', 'ışık', 'ses', 'mikser', 'konser', 'tiyatro', 'prova',
+      'sergi', 'galeri', 'haber', 'spiker', 'bülten', 'fotoğraf',
+      'stüdyo', 'deklanşör', 'telif', 'şarkı', 'albüm', 'single',
+      'sosyal medya', 'story', 'post', 'takipçi', 'etkileşim', 'algoritma',
+      'canlı yayın', 'yayıncı', 'akış', 'feed', 'grid', 'bio link'
+    ],
+    implicitTimeHooks: [
+      { keyword: 'call sheet', hour: 6, minute: 30 },
+      { keyword: 'set', hour: 6, minute: 30 },
+      { keyword: 'soundcheck', hour: 16, minute: 0 },
+      { keyword: 'render', hour: 19, minute: 0 },
+      { keyword: 'vernisaj', hour: 18, minute: 30 },
+      { keyword: 'basın bülteni', hour: 9, minute: 30 },
+      { keyword: 'canlı yayın', hour: 19, minute: 30 },
+      { keyword: 'prova', hour: 19, minute: 0 },
+      { keyword: 'reels', hour: 19, minute: 30 },
+      { keyword: 'tiktok', hour: 20, minute: 0 },
+      { keyword: 'içerik takvimi', hour: 10, minute: 0 },
+      { keyword: 'prime time', hour: 19, minute: 30 },
+      { keyword: 'youtube', hour: 18, minute: 0 }
+    ]
   }
 ];
 

@@ -311,6 +311,42 @@ export function getDomainTheme(domain: string): { ikon: string; renk: string } {
     else if (d.includes('borc') || d.includes('fatura') || d.includes('odeme')) ikon = '💸';
     return { ikon, renk: '#FEE2E2' };
   }
+  if (
+    d.includes('sanat') || d.includes('medya') || d.includes('film') || d.includes('set') ||
+    d.includes('call_sheet') || d.includes('kurgu') || d.includes('render') || d.includes('soundcheck') ||
+    d.includes('konser') || d.includes('fsek') || d.includes('telif') || d.includes('dit') ||
+    d.includes('tiyatro') || d.includes('vernisaj') || d.includes('sergi') || d.includes('fotograf') ||
+    d.includes('fotoğraf') || d.includes('liveu') || d.includes('basin_bulteni') || d.includes('isrc')
+  ) {
+    let ikon = '🎬';
+    let renk = '#FFE4E6';
+    if (d.includes('soundcheck') || d.includes('konser') || d.includes('ses')) {
+      ikon = '🎙️';
+      renk = '#CFFAFE';
+    } else if (d.includes('kurgu') || d.includes('render') || d.includes('lufs') || d.includes('montaj')) {
+      ikon = '🖥️';
+      renk = '#F3E8FF';
+    } else if (d.includes('dit') || d.includes('ssd') || d.includes('checksum')) {
+      ikon = '💾';
+      renk = '#FFE4E6';
+    } else if (d.includes('foto') || d.includes('retouch') || d.includes('stüdyo')) {
+      ikon = '📸';
+      renk = '#FEF3C7';
+    } else if (d.includes('vernisaj') || d.includes('sergi') || d.includes('galeri')) {
+      ikon = '🖼️';
+      renk = '#FEF08A';
+    } else if (d.includes('tiyatro') || d.includes('prova') || d.includes('sahne')) {
+      ikon = '🎭';
+      renk = '#EDE9FE';
+    } else if (d.includes('isrc') || d.includes('mesam') || d.includes('muzik') || d.includes('müzik')) {
+      ikon = '🎵';
+      renk = '#FEE2E2';
+    } else if (d.includes('fsek') || d.includes('telif') || d.includes('muvafakat')) {
+      ikon = '📜';
+      renk = '#E0E7FF';
+    }
+    return { ikon, renk };
+  }
   return { ikon: '📌', renk: '#E0F2FE' };
 }
 
@@ -319,6 +355,137 @@ const PREDICTIVE_GRAPH_PATTERNS: Array<{
   matcher: (lower: string) => boolean;
   inference: PredictiveInference;
 }> = [
+  // Sanat, Medya & Prodüksiyon - Call Sheet & Set
+  {
+    matcher: (l) => l.includes('call sheet') || l.includes('callsheet') || l.includes('çekim planı') || l.includes('cekim plani') || l.includes('set saati') || l.includes('klaket'),
+    inference: {
+      domain: 'sanat_call_sheet',
+      hazirlikZamani: 'Çekimden Önceki Akşam 21:00',
+      hazirlikSaatOncesi: 12,
+      oncedenYapilacaklar: [
+        'Hava durumu, gün doğumu/batımı (Golden Hour) ve meteorolojik yağış/rüzgar riskini denetle',
+        'Kamera, ışık, ses, sanat, kostüm ve makyaj ekiplerinin kademeli set çağrı saatlerini (Call Time) dağıt',
+        'En yakın acil servis hastanesi, ambulans güzergahı ve ambulans iletişim bilgisini call sheet üzerine işle',
+        'Oyuncuların sahne numaraları, kostüm kontinüite fotoğrafları ve karavan/makyaj sürelerini eşitle',
+        'Set amiri, prodüksiyon şoförleri ve catering servisi için yemek saatlerini (T-6 saat kuralı) kilitle'
+      ],
+      akilliFisilti: '🎬 Call sheet dağıtımı için oyuncu kontinüitesi ve T-6 yemek molası kuralı kritik önemdedir.',
+      oneriAksiyonu: {
+        baslik: 'Call Sheet & Set Planlama Rehberi',
+        url: '#'
+      }
+    }
+  },
+
+  // Sanat, Medya & Prodüksiyon - Broadcast Render & -23 LUFS
+  {
+    matcher: (l) => l.includes('-23 lufs') || l.includes('ebu r128') || (l.includes('render') && (l.includes('kurgu') || l.includes('montaj') || l.includes('master') || l.includes('prores'))),
+    inference: {
+      domain: 'sanat_render_master',
+      hazirlikZamani: 'Yayın Tesliminden 3 Saat Önce',
+      hazirlikSaatOncesi: 3,
+      oncedenYapilacaklar: [
+        'EBU R128 / ITU-R BS.1770 ses standardında entegre ses şiddetini -23.0 LUFS (±0.5) ve Max True Peak < -1.0 dBTP aralığına limitle',
+        'Yayıncı kuruluş teknik şartnamesine uygun codec (Apple ProRes 422 HQ / Avid DNxHR HQX 10-bit) ve Rec.709 renk profilini seç',
+        'Ses kanallarını CH1-CH2 Full Mix Stereo, CH3-CH4 M&E (Müzik & Efekt temiz bant) olarak haritalandır',
+        'Timeline başı ve sonundaki siyah kareleri, ses patlamalarını ve interlaced/progressive tarama ayarlarını kontrol et',
+        'Render tamamlandıktan sonra dışa aktarılan master dosyasını MediaInfo ve player üzerinde baştan sona kalite kontrolünden (QC) geçir'
+      ],
+      akilliFisilti: '🖥️ RTÜK ve TV yayın standartlarında -23 LUFS ses ve temiz M&E kanalları cezai yaptırımı önler.',
+      oneriAksiyonu: {
+        baslik: 'EBU R128 Ses Standardı Rehberi',
+        url: '#'
+      }
+    }
+  },
+
+  // Sanat, Medya & Prodüksiyon - Konser Soundcheck & RF Scan
+  {
+    matcher: (l) => l.includes('soundcheck') || l.includes('sound check') || l.includes('teknik rider') || l.includes('stage plot') || l.includes('in-ear') || l.includes('rf tarama'),
+    inference: {
+      domain: 'sanat_soundcheck',
+      hazirlikZamani: 'Konserden 3 Saat Önce',
+      hazirlikSaatOncesi: 3,
+      oncedenYapilacaklar: [
+        'Kablosuz mikrofonlar ve In-Ear Monitor (IEM) sistemleri için Wireless Workbench / RF Explorer ile yerel frekans taraması yap; intermodülasyonsuz temiz kanalları kitle',
+        'Sahne kutusu (Stage Box) ve FOH mikseri arasında Input Patch List & Gain Staging eşlemesini birebir sağla',
+        'Davul mikrofonlarının faz uyumunu (Phase Alignment) ve bas gitar DI-Box polaritesini kontrol et',
+        'Sanatçının sahne içi monitör miksini (Aux Send) ve IEM limiter seviyesini kulak sağlığı güvenliğine al',
+        'Telsiz mikrofon ve bodypack transmitter ünitelerine sıfır alkalin/şarjlı Pro bataryaları yerleştir'
+      ],
+      akilliFisilti: '🎙️ RF frekans taraması ve IEM limiter kilidi canlı performanslarda sahne kazalarını önler.',
+      oneriAksiyonu: {
+        baslik: 'Sahne Ses & RF Frekans Rehberi',
+        url: '#'
+      }
+    }
+  },
+
+  // Sanat, Medya & Prodüksiyon - 5846 FSEK Telif & Mali Hak Devri
+  {
+    matcher: (l) => l.includes('fsek') || l.includes('telif sözleşmesi') || l.includes('telif sozlesmesi') || l.includes('mali hak devri') || l.includes('muvafakatname'),
+    inference: {
+      domain: 'sanat_fsek_telif',
+      hazirlikZamani: 'Yapım / Çekim Başlamadan Önce',
+      hazirlikSaatOncesi: 48,
+      oncedenYapilacaklar: [
+        '5846 sayılı FSEK m. 52 uyarınca işleme, çoğaltma, yayma, temsil ve umuma iletim haklarını sözleşmede ayrı ayrı ve açıkça say',
+        'Devredilen hakların coğrafi yer (dünya çapında), süre ve mecra (dijital, TV, sinema, VOD) kapsamını şüpheye yer bırakmayacak şekilde bağla',
+        'Oyuncu, seslendirmen ve model muvafakatnamelerini (Görsel ve İşitsel Hak İzni) çekim başlamadan önce ıslak imzalı teslim al',
+        'Eser sahipleri (yönetmen, senarist, besteci, diyalog yazarı) mali hak devir protokolünü noter tasdikli olarak yapım arşivine kaldır',
+        'Kültür ve Turizm Bakanlığı Telif Hakları Genel Müdürlüğü kayıt-tescil işlemlerini dosyalayarak sakla'
+      ],
+      akilliFisilti: '📜 5846 sayılı FSEK m. 52 uyarınca mali haklar tek tek sayılmadığı takdirde devir geçersiz sayılır.',
+      oneriAksiyonu: {
+        baslik: 'Kültür Bakanlığı Telif Hakları Mevzuatı',
+        url: 'https://telifhaklari.ktb.gov.tr/'
+      }
+    }
+  },
+
+  // Sanat, Medya & Prodüksiyon - DIT Çift SSD Checksum
+  {
+    matcher: (l) => l.includes('dit') || l.includes('silverstack') || (l.includes('checksum') && l.includes('ssd')) || (l.includes('veri aktarımı') && l.includes('kamera')),
+    inference: {
+      domain: 'sanat_dit_checksum',
+      hazirlikZamani: 'Her Çekim Kartı Dolduğunda',
+      hazirlikSaatOncesi: 1,
+      oncedenYapilacaklar: [
+        'Kamera CFexpress/SD kartını kart yuvasına tak ve Silverstack / ShotPut Pro ile MD5 / xxHash64 checksum doğrulamalı çift bağımsız harici SSD\'ye kopyala',
+        'Kopya doğrulaması bitmeden ve yeşil checksum raporu alınmadan orijinal kamera hafıza kartını asla formatlama ve kameramana iade etme',
+        'Günün sahnelerini DaVinci Resolve ile Color LUT (Show LUT) eşliğinde ses senkronu (WAV sync) yaparak yönetmen ve kurgu için H.264/ProRes Proxy üret',
+        'Gün sonu DIT veri log raporunu (toplam gigabyte, sahne-plan listesi, dosya adları, eksik drop frame kontrolü) prodüksiyon amirine e-posta ile ilet',
+        'SSD yedeklerinden birini setten ayrı bir fiziksel lokasyona (off-site backup) ulaştırılmak üzere teslim et'
+      ],
+      akilliFisilti: '💾 Çift SSD checksum doğrulaması ve off-site yedekleme prodüksiyonun en büyük sigortasıdır.',
+      oneriAksiyonu: {
+        baslik: 'DIT Veri Güvenliği Protokolü',
+        url: '#'
+      }
+    }
+  },
+
+  // Sanat, Medya & Prodüksiyon - Basın Bülteni & Ambargo
+  {
+    matcher: (l) => l.includes('basın bülteni') || l.includes('basin bulteni') || l.includes('ambargo') || (l.includes('medya') && l.includes('dağıtım')),
+    inference: {
+      domain: 'sanat_basin_bulteni',
+      hazirlikZamani: 'Basın Servisinden 1 Gün Önce',
+      hazirlikSaatOncesi: 24,
+      oncedenYapilacaklar: [
+        'Bülten metnini 5N1K kuralına uygun, ilgi çekici başlık, spot ve iletişim kişisi (telefon/e-posta) ile hazırla',
+        'Yüksek çözünürlüklü yatay ve dikey basın fotoğraflarını süresiz bulut linki olarak bültenin altına ekle',
+        'Metnin en başına büyük kırmızı harflerle "AMBARGOLUDUR: [Tarih/Saat] ÖNCESİ YAYINLANAMAZ" uyarısı yerleştir',
+        'Kültür-Sanat ve ekonomi muhabirlerinin güncel e-posta dağıtım listesini BCC olarak hazırla',
+        'Basın servisini sabah saat 09:30\'da gönderip öğleden sonra medya takip ajansından kupür taraması başlat'
+      ],
+      akilliFisilti: '📰 Ambargolu basın bültenlerinde tarih/saat kısıtı en üstte kırmızı harflerle belirtilmelidir.',
+      oneriAksiyonu: {
+        baslik: 'Medya İlişkileri & Basın Bülteni Rehberi',
+        url: '#'
+      }
+    }
+  },
   // 1. Pasaport Randevusu & Vize İşlemleri
   {
     matcher: (l) => l.includes('pasaport') || l.includes('vize randevu') || l.includes('vize görüşme'),

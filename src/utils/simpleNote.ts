@@ -50,6 +50,10 @@ import {
   parseDefenseSecurityIntent,
   type DefenseSecurityTask
 } from '../services/defenseSecurityEngine.ts';
+import {
+  parseArtMediaIntent,
+  type ArtMediaTask
+} from '../services/artMediaEngine.ts';
 import { resolveInstitutionalReference } from './institutionalCalendar.ts';
 import { estimateCognitiveLoad } from './cognitiveLoadEstimator.ts';
 export { resolveInstitutionalReference } from './institutionalCalendar.ts';
@@ -71,6 +75,10 @@ export {
   parseOccupationalSafetyIntent,
   type OccupationalSafetyTask
 } from '../services/occupationalSafetyEngine.ts';
+export {
+  parseArtMediaIntent,
+  type ArtMediaTask
+} from '../services/artMediaEngine.ts';
 export { splitCompoundUtterance } from '../services/engine/sentenceSplitter.ts';
 export {
   resolveContextualTime,
@@ -399,6 +407,27 @@ export function dispatchDomainRule(
         renk: defenseResult.renk,
         anomali_notu: defenseResult.mevzuat_notu,
         sesli_fisilti: defenseResult.sesli_geribildirim
+      };
+    }
+  }
+
+  // Sanat, Medya, Prodüksiyon & Sahne Sanatları Tespiti
+  if (
+    domain === 'SANAT_MEDYA' ||
+    /(call sheet|callsheet|çekim planı|cekim plani|klaket|gaffer|dit|prores|color grading|davinci resolve|vectorscope|show lut|-23 lufs|ebu r128|broadcast master|soundcheck|teknik rider|stage plot|in-ear|rf tarama|isrc|mesam|müyap|split sheet|raw retouch|colorchecker|vernisaj|küratör|fine art baskı|paspartu|basın bülteni|ambargo|liveu|tvu|rundown|dress rehearsal|fsek|telif sözleşmesi)/i.test(text)
+  ) {
+    const artResult = parseArtMediaIntent(text, targetIso ? new Date(targetIso) : new Date(), domain);
+    if (artResult) {
+      return {
+        baslik: artResult.baslik,
+        zaman: targetDateText || artResult.zaman_etiketi,
+        tarih_iso: targetIso || artResult.tarih_iso,
+        hazirlik_zamani: artResult.hazirlik_zamani,
+        action_items: artResult.action_items,
+        ikon: artResult.ikon,
+        renk: artResult.renk,
+        anomali_notu: artResult.mevzuat_notu,
+        sesli_fisilti: artResult.sesli_geribildirim
       };
     }
   }
@@ -5764,6 +5793,26 @@ export function extractSimpleNoteFromText(
     }, cleanInput, userDomain || 'SAVUNMA');
   }
 
+  // 0.009 ÖNCELİK: SANAT, MEDYA, PRODÜKSİYON & SAHNE SANATLARI PROTOKOLÜ (ART & MEDIA ENGINE)
+  // (Call sheet & set çekim planı, DIT çift SSD checksum, render/export & broadcast master -23 LUFS,
+  // DaVinci Resolve color grading & LUT, konser soundcheck & RF tarama, ISRC & telif MESAM/MSG,
+  // stüdyo fotoğrafı & RAW retouch, sergi vernisaj & fine art baskı, basın bülteni & ambargo,
+  // canlı yayın rundown & LiveU, tiyatro genel prova & cue listesi, 5846 FSEK telif devri)
+  const artMediaResult = parseArtMediaIntent(cleanInput, baseDate, userDomain);
+  if (artMediaResult) {
+    return enrichWithPredictiveGraph({
+      baslik: artMediaResult.baslik,
+      zaman: artMediaResult.zaman_etiketi,
+      tarih_iso: artMediaResult.tarih_iso,
+      hazirlik_zamani: artMediaResult.hazirlik_zamani,
+      action_items: artMediaResult.action_items,
+      ikon: artMediaResult.ikon,
+      renk: artMediaResult.renk,
+      anomali_notu: artMediaResult.mevzuat_notu,
+      sesli_fisilti: artMediaResult.sesli_geribildirim
+    }, cleanInput, userDomain || 'SANAT_MEDYA');
+  }
+
   // 0.01 ÖNCELİK: DERİNLEŞTİRİLMİŞ MESLEKİ & KURUMSAL SENARYO MOTORU (ADVANCED PROFESSION ENGINE)
   // (TEFBİS, LGS/YKS Komisyonu, ASM Gebe-Bebek İzlem, 112 Nöbet/Narkotik, Arabuluculuk 3+1 Hafta,
   // İcra Kıymet Takdiri, YMM KDV İadesi/Karşıt İnceleme, Bağımsız Denetim KGK, ÇKS/TARSİM, TÜRKVET/Aşı, İSG İBYS, Yapı Denetim Demir Vizesi)
@@ -6068,6 +6117,21 @@ export function extractSimpleNoteFromText(
           renk: isgResult.renk,
           anomali_notu: isgResult.mevzuat_notu,
           sesli_fisilti: isgResult.sesli_geribildirim
+        }, cleanInput, activeDomain);
+      }
+    } else if (activeDomain === 'SANAT_MEDYA') {
+      const artMediaResult = parseArtMediaIntent(cleanInput, baseDate, activeDomain);
+      if (artMediaResult) {
+        return enrichWithPredictiveGraph({
+          baslik: artMediaResult.baslik,
+          zaman: artMediaResult.zaman_etiketi,
+          tarih_iso: artMediaResult.tarih_iso,
+          hazirlik_zamani: artMediaResult.hazirlik_zamani,
+          action_items: artMediaResult.action_items,
+          ikon: artMediaResult.ikon,
+          renk: artMediaResult.renk,
+          anomali_notu: artMediaResult.mevzuat_notu,
+          sesli_fisilti: artMediaResult.sesli_geribildirim
         }, cleanInput, activeDomain);
       }
     } else if (activeDomain === 'KUAFOR' || activeDomain === 'GUZELLIK' || activeDomain === 'MUTFAK') {
