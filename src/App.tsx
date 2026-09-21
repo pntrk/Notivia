@@ -5,6 +5,9 @@ import { App as CapApp } from '@capacitor/app';
 import {
   auth,
   googleProvider,
+  standardGoogleProvider,
+  googleDriveCalendarProvider,
+  connectGoogleDriveAndCalendar,
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
@@ -13,6 +16,7 @@ import {
   onAuthStateChanged,
   setGoogleAccessToken,
   getGoogleAccessToken,
+  googleAccessToken,
   refreshGoogleAccessToken,
   createCalendarEvent,
   deleteCalendarEvent,
@@ -3379,13 +3383,14 @@ export default function App() {
     }
   };
 
-  // Google Sign-In Handler
+  // Google Sign-In Handler (Tüm kullanıcılar için açık, kısıtlamasız standart Google girişi)
   const handleLogin = async () => {
     setStatusText(language === 'en' ? 'Connecting Google account...' : 'Google hesabı bağlanıyor...');
     
     try {
-      // Modern mobil ve masaüstü tarayıcılarda kullanıcı tıklamasıyla tetiklenen popup en kararlı yöntemdir.
-      const result = await signInWithPopup(auth, googleProvider);
+      // Standart sağlayıcı hassas yetki (Drive/Takvim) istemez; Google OAuth test modu kısıtlamalarına takılmadan
+      // tüm kullanıcıların (arkadaş, aile vb.) başarıyla giriş yapmasını sağlar.
+      const result = await signInWithPopup(auth, standardGoogleProvider);
       if (result?.user) {
         setCachedUser(result.user);
         setCurrentUser(result.user);
@@ -3394,7 +3399,7 @@ export default function App() {
       const token = credential?.accessToken || null;
       if (token) {
         setGoogleAccessToken(token);
-        console.log("Mevcut Google Token başarıyla alındı:", token);
+        console.log("Mevcut Google Token alındı:", token);
         await syncFromDrive();
       }
       setStatusText(language === 'en' ? 'Google account connected ✓' : 'Google hesabı bağlandı ✓');
@@ -3405,7 +3410,7 @@ export default function App() {
       if (err?.code === 'auth/popup-blocked') {
         setStatusText(language === 'en' ? 'Popup blocked, redirecting...' : 'Açılır pencere engellendi, yönlendiriliyor...');
         try {
-          await signInWithRedirect(auth, googleProvider);
+          await signInWithRedirect(auth, standardGoogleProvider);
         } catch (redirectErr: any) {
           setStatusText(language === 'en' ? `Redirect error: ${redirectErr?.message || 'Unknown'}` : `Yönlendirme hatası: ${redirectErr?.message || redirectErr?.code || 'Bilinmeyen hata'}`);
           setTimeout(() => setStatusText(t.speakOrWrite), 4000);
@@ -3413,7 +3418,7 @@ export default function App() {
       } else if (err?.code === 'auth/unauthorized-domain') {
         const currentHost = window.location.hostname;
         setStatusText(language === 'en' ? `Unauthorized domain: add "${currentHost}" in Firebase` : `Domain yetkisiz: Firebase Console'da "${currentHost}" eklenmeli`);
-        alert(`Firebase: "${currentHost}" domain is not yet in Firebase Console > Authentication > Authorized domains.`);
+        alert(`Firebase Yetkilendirme Uyarısı:\n\nŞu anki domain ("${currentHost}") Firebase Console > Authentication > Settings > Authorized domains listesinde bulunmuyor.\n\nBu adresi Firebase Console'a ekleyerek yetkilendirebilirsiniz.`);
         setTimeout(() => setStatusText(t.speakOrWrite), 5000);
       } else if (err?.code === 'auth/cancelled-popup-request' || err?.code === 'auth/popup-closed-by-user') {
         setStatusText(language === 'en' ? 'Sign-in cancelled' : 'Giriş penceresi kapatıldı');
@@ -3423,6 +3428,25 @@ export default function App() {
         setStatusText(language === 'en' ? `Sign-in error: ${msg}` : `Giriş hatası: ${msg}`);
         setTimeout(() => setStatusText(t.speakOrWrite), 4500);
       }
+    }
+  };
+
+  // İsteğe Bağlı Google Drive & Takvim Yetkilendirmesi
+  const handleConnectDriveCalendar = async () => {
+    setStatusText(language === 'en' ? 'Connecting Google Drive & Calendar...' : 'Google Drive ve Takvim bağlanıyor...');
+    try {
+      const res = await connectGoogleDriveAndCalendar();
+      if (res.success && res.token) {
+        setStatusText(language === 'en' ? 'Drive & Calendar connected ✓' : 'Drive ve Takvim bağlandı ✓');
+        await syncFromDrive();
+      } else {
+        setStatusText(language === 'en' ? 'Drive connection optional' : 'Drive bağlantısı isteğe bağlıdır');
+      }
+      setTimeout(() => setStatusText(t.speakOrWrite), 3000);
+    } catch (err: any) {
+      console.warn('Drive bağlantı uyarısı:', err);
+      setStatusText(language === 'en' ? 'Drive permission error' : 'Drive izin hatası');
+      setTimeout(() => setStatusText(t.speakOrWrite), 3000);
     }
   };
 
@@ -5079,6 +5103,8 @@ export default function App() {
         onSyncDrive={syncFromDrive}
         isSyncingDrive={isSyncingDrive}
         driveSyncTime={driveSyncTime}
+        isDriveConnected={Boolean(getGoogleAccessToken() || googleAccessToken)}
+        onConnectDrive={handleConnectDriveCalendar}
         viewMode={viewMode}
         onToggleViewMode={toggleViewMode}
         onOpenRecycleBin={() => {

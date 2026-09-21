@@ -135,11 +135,40 @@ export function setCachedUser(user: User | null) {
   }
 }
 
-// Google Auth Provider with Google Drive & Calendar scopes for user database sync
-export const googleProvider = new GoogleAuthProvider();
-googleProvider.addScope('https://www.googleapis.com/auth/drive.file');
-googleProvider.addScope('https://www.googleapis.com/auth/calendar.events');
-googleProvider.setCustomParameters({ prompt: 'select_account' });
+// 1. Standart Google Giriş Sağlayıcısı (Temel Profil & E-posta)
+// Bu sağlayıcı hassas yetkiler (Drive/Takvim) İSTEMEZ; bu sayede Google Cloud OAuth "Testing" modunda olsa dahi
+// dünyadaki HERHANGİ bir Google hesabı (arkadaşlarınız, aileniz, iş arkadaşlarınız) Error 403 veya engelleme olmadan tek tıkla giriş yapabilir!
+export const standardGoogleProvider = new GoogleAuthProvider();
+standardGoogleProvider.setCustomParameters({ prompt: 'select_account' });
+
+// 2. Gelişmiş Google Drive & Takvim Sağlayıcısı (İsteğe bağlı ek yetkiler)
+// Kişisel Google Drive dosyası yedekleme ve Google Takvim çakışma kontrolü isteyen kullanıcılar için isteğe bağlı olarak tetiklenir.
+export const googleDriveCalendarProvider = new GoogleAuthProvider();
+googleDriveCalendarProvider.addScope('https://www.googleapis.com/auth/drive.file');
+googleDriveCalendarProvider.addScope('https://www.googleapis.com/auth/calendar.events');
+googleDriveCalendarProvider.setCustomParameters({ prompt: 'select_account' });
+
+// Geriye dönük tam uyumluluk için googleProvider varsayılan olarak engelsiz ve güvenli standart sağlayıcıdır
+export const googleProvider = standardGoogleProvider;
+
+/**
+ * Kullanıcı dilerse Google Drive & Takvim izinlerini isteğe bağlı olarak bağlayabilir
+ */
+export async function connectGoogleDriveAndCalendar(): Promise<{ success: boolean; token: string | null; error?: any }> {
+  try {
+    const result = await signInWithPopup(auth, googleDriveCalendarProvider);
+    const credential = GoogleAuthProvider.credentialFromResult(result);
+    const token = credential?.accessToken || null;
+    if (token) {
+      setGoogleAccessToken(token);
+      return { success: true, token };
+    }
+    return { success: false, token: null, error: 'Token alınamadı' };
+  } catch (err: any) {
+    console.warn('Google Drive/Takvim izin alma uyarısı:', err);
+    return { success: false, token: null, error: err };
+  }
+}
 
 // Token management (in-memory + localStorage + sessionStorage for persistent Google Drive sync)
 const TOKEN_KEY = 'notivia_g_token';
@@ -285,7 +314,7 @@ export async function refreshGoogleAccessToken(interactive: boolean = false): Pr
   // Yalnızca kullanıcı bir etkileşim / tıklama başlattıysa popup tetiklenebilir
   if (interactive && auth.currentUser) {
     try {
-      const result = await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleDriveCalendarProvider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const newToken = credential?.accessToken || null;
       if (newToken) {

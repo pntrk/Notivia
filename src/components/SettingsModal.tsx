@@ -43,6 +43,8 @@ interface SettingsModalProps {
   onSyncDrive?: () => void;
   isSyncingDrive?: boolean;
   driveSyncTime?: string | null;
+  isDriveConnected?: boolean;
+  onConnectDrive?: () => void;
   viewMode?: 'single' | 'grid';
   onToggleViewMode?: () => void;
   onOpenRecycleBin?: () => void;
@@ -69,6 +71,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSyncDrive,
   isSyncingDrive = false,
   driveSyncTime,
+  isDriveConnected = false,
+  onConnectDrive,
   viewMode,
   onToggleViewMode,
   onOpenRecycleBin,
@@ -190,43 +194,73 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </button>
                   </div>
 
-                  {/* Drive Sync Bilgi ve Aksiyon Çubuğu */}
-                  <div className={`flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl text-[11px] ${
+                  {/* Bulut & Senkronizasyon Durum Paneli */}
+                  <div className={`space-y-2 p-2.5 rounded-xl text-[11px] ${
                     isDark ? 'bg-stone-800/80 text-stone-300' : 'bg-stone-100/80 text-stone-600'
                   }`}>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Cloud className="w-4 h-4 text-sky-500 shrink-0" />
-                      <span className="truncate">
-                        {driveSyncTime
-                          ? `${language === 'tr' ? 'Son Eşitleme:' : 'Last Synced:'} ${driveSyncTime}`
-                          : (language === 'tr' ? 'Drive senkronizasyonu hazır' : 'Drive sync ready')}
-                      </span>
+                    {/* 1. Firestore Gerçek Zamanlı Bulut Eşitleme (Herkes için kesintisiz aktif) */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                        <span className="font-medium text-stone-700 dark:text-stone-200">
+                          {language === 'tr' ? 'Notivia Bulut (Firestore):' : 'Notivia Cloud (Firestore):'}
+                        </span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                          {language === 'tr' ? 'Gerçek Zamanlı Aktif ✓' : 'Real-time Active ✓'}
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {onSyncDrive && (
-                        <button
-                          type="button"
-                          onClick={onSyncDrive}
-                          disabled={isSyncingDrive}
-                          className={`px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
-                            isDark
-                              ? 'bg-stone-750 hover:bg-stone-700 text-stone-200'
-                              : 'bg-white hover:bg-stone-200 text-stone-800 shadow-2xs'
-                          }`}
-                        >
-                          <RefreshCw className={`w-3 h-3 ${isSyncingDrive ? 'animate-spin text-indigo-500' : ''}`} />
-                          <span>{isSyncingDrive ? (language === 'tr' ? 'Eşitleniyor...' : 'Syncing...') : (language === 'tr' ? 'Eşitle' : 'Sync')}</span>
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={onLogin}
-                        title="Google oturumunu ve Drive erişim yetkisini yenile"
-                        className="px-2 py-1 rounded-lg text-xs font-medium text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 transition-colors cursor-pointer"
-                      >
-                        {language === 'tr' ? 'Yetkiyi Yenile' : 'Re-auth'}
-                      </button>
+                    {/* 2. Google Drive & Takvim Eşitlemesi (İsteğe bağlı ek katman) */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-stone-200/60 dark:border-stone-700/60">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Cloud className={`w-3.5 h-3.5 shrink-0 ${isDriveConnected ? 'text-sky-500' : 'text-stone-400'}`} />
+                        <span className="truncate">
+                          {isDriveConnected
+                            ? (driveSyncTime
+                                ? `${language === 'tr' ? 'Drive Eşitlendi:' : 'Drive Synced:'} ${driveSyncTime}`
+                                : (language === 'tr' ? 'Drive & Takvim: Bağlı ✓' : 'Drive & Calendar: Connected ✓'))
+                            : (language === 'tr' ? 'Drive & Takvim: İsteğe Bağlı' : 'Drive & Calendar: Optional')}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isDriveConnected ? (
+                          <>
+                            {onSyncDrive && (
+                              <button
+                                type="button"
+                                onClick={onSyncDrive}
+                                disabled={isSyncingDrive}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
+                                  isDark
+                                    ? 'bg-stone-750 hover:bg-stone-700 text-stone-200'
+                                    : 'bg-white hover:bg-stone-200 text-stone-800 shadow-2xs'
+                                }`}
+                              >
+                                <RefreshCw className={`w-3 h-3 ${isSyncingDrive ? 'animate-spin text-indigo-500' : ''}`} />
+                                <span>{isSyncingDrive ? (language === 'tr' ? 'Eşitleniyor...' : 'Syncing...') : (language === 'tr' ? 'Eşitle' : 'Sync')}</span>
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={onConnectDrive || onLogin}
+                              title="Google oturumunu ve Drive erişim yetkisini yenile"
+                              className="px-2 py-1 rounded-lg text-xs font-medium text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 transition-colors cursor-pointer"
+                            >
+                              {language === 'tr' ? 'Yenile' : 'Refresh'}
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={onConnectDrive || onLogin}
+                            className="px-2.5 py-1 rounded-lg text-xs font-medium bg-sky-500 hover:bg-sky-600 text-white transition-all cursor-pointer active:scale-95 shadow-2xs"
+                          >
+                            {language === 'tr' ? 'Drive & Takvim Bağla' : 'Connect Drive & Cal'}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -238,12 +272,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                     <div>
                       <p className="font-semibold text-xs sm:text-sm leading-tight">
-                        {language === 'tr' ? 'Google ile Bağlan' : 'Connect with Google'}
+                        {language === 'tr' ? 'Google ile Giriş Yap' : 'Sign in with Google'}
                       </p>
                       <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-normal">
                         {language === 'tr'
-                          ? 'Takvim etkinlikleri ve Drive yedeklemesi için oturum açın'
-                          : 'Sign in for Calendar events and Drive backup'}
+                          ? 'Tüm cihazlarınızda gerçek zamanlı bulut eşitlemesi için tek tıkla bağlanın'
+                          : 'Sign in with Google for real-time cloud sync across all your devices'}
                       </p>
                     </div>
                   </div>
