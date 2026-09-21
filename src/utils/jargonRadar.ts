@@ -35,18 +35,30 @@ const DOMAIN_RULES: DomainRule[] = [
     defaultIcon: '📚',
     defaultColor: '#FEF08A',
     exclusiveKeywords: [
-      'dys', 'mebbis', 'e-okul', 'eokul', 'şök', 'bep', 'ram', 'ek ders',
-      'puantaj', 'zümre', 'zümresi', 'nöbet defteri', 'yazılı kağıdı',
+      'dys', 'mebbis', 'e-okul', 'eokul', 'şök', 'sok', 'bep', 'ram', 'ek ders',
+      'puantaj', 'zümre', 'zumre', 'zümresi', 'nöbet defteri', 'yazılı kağıdı',
       'taşımalı yemek', 'öğretmenler odası', 'kazanım analizi', 'barem',
       'tefbis', 'okul aile birliği', 'bina sınav komisyonu', 'lgs görev',
       'yks görev', 'e-kurs', 'dyk', 'norm kadro', 'ders dağıtım',
       'ram yönlendirme', 'bep toplantısı', 'lgs deneme', 'yks deneme',
-      'ortak yazılı mazeret', 'mazeret sınavı', 'zümre başkanı'
+      'ortak yazılı mazeret', 'mazeret sınavı', 'zümre başkanı',
+      'açık uçlu sınav', 'acik uclu sinav', 'öba', 'öbiç', 'iyep', 'mesem',
+      'çıraklık', 'ciraklik', '3308', 'koordinatör öğretmen', 'usta öğretici',
+      'staj sözleşmesi', 'stajyer sgk', 'turnitin', 'intihal raporu', 'tik raporu',
+      'tez izleme komitesi', 'doktora yeterlik', 'doktora tez jürisi',
+      'bologna', 'syllabus', 'ders izlencesi', 'akts', 'obs not', 'çan eğrisi',
+      'aday öğretmenlik', 'aöp', 'danışman öğretmen', 'gelişim gözlem formu',
+      'okul öncesi', 'anaokulu', 'veli muvafakatname', 'türsab', 'd2 araç',
+      'sosyal etkinlik modülü', 'kitap seçim modülü', 'ücretsiz ders kitabı',
+      'özel öğretim ruhsat', '5580', 'özel okul ücret ilanı'
     ],
     supportingKeywords: [
       'okul', 'sınav', 'veli', 'müdür', 'müdür yardımcısı', 'nöbet',
       'ders', 'teneffüs', 'karne', 'tatil', 'idare', 'tutanak', 'öğrenci',
-      'bağış', 'sosyal etkinlik', 'karneler', 'ödev'
+      'bağış', 'sosyal etkinlik', 'karneler', 'ödev', 'öğretmen', 'ogretmen',
+      'akademisyen', 'üniversite', 'enstitü', 'fakülte', 'rektörlük',
+      'dekanlık', 'bölüm başkanı', 'araştırma görevlisi', 'öğretim görevlisi',
+      'tez', 'makale', 'hakemlik', 'jüri', 'savunma', 'gezi', 'staj', 'kura'
     ],
     implicitTimeHooks: [
       { keyword: 'nöbet', hour: 8, minute: 0 },
@@ -54,6 +66,12 @@ const DOMAIN_RULES: DomainRule[] = [
       { keyword: 'ek ders', hour: 17, minute: 0 },
       { keyword: 'tefbis', hour: 16, minute: 0 },
       { keyword: 'bep', hour: 14, minute: 30 },
+      { keyword: 'iyep', hour: 15, minute: 0 },
+      { keyword: 'mesem', hour: 10, minute: 0 },
+      { keyword: 'tez savunma', hour: 14, minute: 0 },
+      { keyword: 'bina sınav', hour: 8, minute: 0 },
+      { keyword: 'okul gezisi', hour: 7, minute: 30 },
+      { keyword: 'veli toplantısı', hour: 13, minute: 0 }
     ]
   },
   {

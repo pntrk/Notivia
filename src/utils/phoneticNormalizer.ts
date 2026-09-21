@@ -49,6 +49,14 @@ const PHONETIC_REPLACEMENTS: [RegExp, string][] = [
   [/\b(sök|sok toplantısı|şök)\b/gi, 'şök'],
   [/\b(bep planı|bep toplantısı)\b/gi, 'bep'],
   [/\b(tefbis kaydı|tefbis sistemi)\b/gi, 'tefbis'],
+  [/\b(iyep|i-yep|ilkokul yetistirme)\b/gi, 'iyep'],
+  [/\b(mesem|mes-em|meslek egitim merkezi)\b/gi, 'mesem'],
+  [/\b(syllabus|silabus|ders izlencesi)\b/gi, 'syllabus'],
+  [/\b(turnitin|törnıtın|intihal raporu)\b/gi, 'turnitin'],
+  [/\b(bologna|bolonya süreci)\b/gi, 'bologna'],
+  [/\b(acik uclu|açık uçlu sınav|acik uclu sinav)\b/gi, 'açık uçlu sınav'],
+  [/\b(bsk|bina sinav komisyonu|bina sınav komisyonu)\b/gi, 'bina sınav komisyonu'],
+  [/\b(muvafakatname|muvafakat|veli izin belgesi)\b/gi, 'veli muvafakatname'],
 
   // Mühendislik & Bilişim / IT & Siber Güvenlik
   [/\b(siemm|siyem|siiem|siem'in|siemler)\b/gi, 'siem'],

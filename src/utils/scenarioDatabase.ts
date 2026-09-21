@@ -1169,6 +1169,96 @@ export const SCENARIO_DATABASE: ShortScenarioMatch[] = [
       'Sınav kağıtlarını ve analiz çıktısını ıslak imzayla zümre başkanına teslim et'
     ]
   },
+  {
+    id: 'okul_gezisi_protokolu',
+    category: 'resmi',
+    domain: 'EGITIM',
+    keywords: ['okul gezisi', 'türsab gezi', 'veli muvafakatname', 'veli izin belgesi', 'gezi oluru', 'd2 araç gezi'],
+    baslik: 'Okul Gezisi & Veli İzin / DYS Onayı',
+    ikon: '🚌',
+    renk: '#FEF3C7',
+    varsayilanZaman: 'Geziden 7 Gün Önce',
+    hazirlikZamani: '1 Hafta Önce DYS Kaymakamlık Onayı',
+    akilliFisilti: '🚌 MEB Sosyal Etkinlikler Yönetmeliği uyarınca TÜRSAB sözleşmesi, D2 belgesi ve veli muvafakatnameleri zorunludur.',
+    oncedenYapilacaklar: [
+      'Öğrencilerin ıslak imzalı Veli İzin Muvafakatnamelerini topla ve dosyala',
+      'TÜRSAB onaylı acente sözleşmesi, D2 taşımacılık yetki belgesi ve şoför evrakını kontrol et',
+      'Öğrenci isim listesi ve refakatçi öğretmen görevlendirmesini DYS ile Kaymakamlık onayına sun',
+      'Gezi bitiminde değerlendirme raporunu e-Okul Sosyal Etkinlikler Modülüne yükle'
+    ]
+  },
+  {
+    id: 'acik_uclu_barem_sinav',
+    category: 'resmi',
+    domain: 'EGITIM',
+    keywords: ['açık uçlu sınav', 'acik uclu sinav', 'soru dağılım tablosu', 'senaryo tablosu', 'puanlama baremi', 'madde analizi'],
+    baslik: 'Açık Uçlu Ortak Sınav & Barem Analizi',
+    ikon: '📝',
+    renk: '#FEF08A',
+    varsayilanZaman: '10 Günlük Not Kilidi',
+    hazirlikZamani: 'Sınav Öncesi Barem İlanı',
+    akilliFisilti: '📝 MEB Ölçme Yönetmeliği uyarınca yazılı sınavlar il zümre senaryolarına uygun açık uçlu maddelerden oluşmalıdır.',
+    oncedenYapilacaklar: [
+      'İl zümre başkanları kurulu soru dağılım senaryosunu (Senaryo 1/2) seç ve ilan et',
+      'Açık uçlu sınav sorularını ve rubrik puanlama baremini hazırla',
+      'Kağıtları zümre öğretmenleriyle bağımsız puanlama baremiyle oku',
+      'Madde analizini e-Okul ortak sınav analiz modülüne işle'
+    ]
+  },
+  {
+    id: 'mesem_3308_staj_sgk',
+    category: 'resmi',
+    domain: 'EGITIM',
+    keywords: ['mesem', 'çıraklık', 'ciraklik', '3308', 'staj sözleşmesi', 'stajyer sgk', 'koordinatör öğretmen'],
+    baslik: 'MESEM & 3308 Stajyer SGK / Sözleşme',
+    ikon: '🛠️',
+    renk: '#FED7AA',
+    varsayilanZaman: 'Stajdan 1 Gün Önce SGK',
+    hazirlikZamani: 'T-1 Gün e-Sigorta İşe Giriş Bildirgesi',
+    akilliFisilti: '🛠️ 3308 Sayılı Kanun gereği stajyer SGK iş kazası bildirgesi staja başlamadan en az 1 gün önce onaylanmalıdır.',
+    oncedenYapilacaklar: [
+      'İşletme, okul ve veli arasında 3308 Mesleki Eğitim Sözleşmesini imzalat',
+      'SGK 4/a iş kazası e-Sigorta işe giriş bildirgesini staj başlamadan 1 gün önce onayla',
+      'Aylık koordinatörlük öğretmen takip föyünü ve işletme devam çizelgelerini dosyala',
+      'İşletmeye devlet katkısı için usta öğreticilik ve dekont denetimini yap'
+    ]
+  },
+  {
+    id: 'universite_syllabus_bologna',
+    category: 'is_kariyer',
+    domain: 'EGITIM',
+    keywords: ['syllabus', 'ders izlencesi', 'bologna', 'akts tablosu', 'obs not girişi', 'öğrenme çıktıları'],
+    baslik: 'Ders İzlencesi (Syllabus) & Bologna / AKTS',
+    ikon: '🎓',
+    renk: '#DDD6FE',
+    varsayilanZaman: 'Dönem Başı 1. Hafta',
+    hazirlikZamani: 'Dönemden 1 Hafta Önce OBS Onayı',
+    akilliFisilti: '🎓 Bologna Süreci standartları uyarınca 14 haftalık ders izlencesi ve AKTS iş yükü OBS ortamında ilan edilmelidir.',
+    oncedenYapilacaklar: [
+      '14 haftalık konu başlıklarını, kaynakları ve okumaları syllabus formatında yaz',
+      'Dersin AKTS iş yükü tablosunu Bologna bilgi paketine işle',
+      'Vize, final ve proje değerlendirme yüzdelerini OBS ortamında onayla',
+      'Syllabus belgesini ilk ders gününden önce Moodle/Blackboard sistemine yükle'
+    ]
+  },
+  {
+    id: 'tez_jurisi_turnitin_intihal',
+    category: 'is_kariyer',
+    domain: 'EGITIM',
+    keywords: ['turnitin', 'intihal raporu', 'tik raporu', 'tez izleme komitesi', 'doktora yeterlik', 'tez savunma jürisi'],
+    baslik: 'Tez Jürisi, TİK & Turnitin İntihal Kontrolü',
+    ikon: '🔬',
+    renk: '#DDD6FE',
+    varsayilanZaman: 'Savunmadan 15 Gün Önce',
+    hazirlikZamani: 'Turnitin Benzerlik <%20 Taraması',
+    akilliFisilti: '🔬 Lisansüstü Yönetmeliği uyarınca Turnitin intihal oranı %20 altında olmalı ve tez 15 gün önce jüriye teslim edilmelidir.',
+    oncedenYapilacaklar: [
+      'Tezin son halini Turnitin sistemine yükleyerek benzerlik raporunu (<%20) al',
+      'Enstitü Yönetim Kurulu onaylı 5 jüri üyesine tez nüshalarını ve davet yazılarını teslim et',
+      'Doktora Tez İzleme Komitesi (TİK) 6 aylık rapor tutanağını Enstitüye ilet',
+      'Tez savunma sınavı tutanağını ve jüri kişisel değerlendirme raporlarını imzalat'
+    ]
+  },
 
   // 14. POLİS, İTFAİYE & ACİL DURUM (GÖZALTI, SCBA, DEVRİYE)
   {

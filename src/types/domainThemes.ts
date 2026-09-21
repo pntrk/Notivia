@@ -211,8 +211,12 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
     btnPrimaryBg: 'bg-amber-600 hover:bg-amber-700',
     btnPrimaryText: 'text-white',
     actions: [
-      { id: 'kbs_counter', label: '20-27 Ek Ders / KBS', icon: '📋', actionType: 'TIMER' },
       { id: 'exam_10days', label: '10 Gün Sınav Sayacı', icon: '✍️', actionType: 'TIMER' },
+      { id: 'kbs_counter', label: '20-27 Ek Ders / KBS', icon: '📋', actionType: 'TIMER' },
+      { id: 'trip_permit', label: 'Okul Gezisi & Veli İzni', icon: '🚌', actionType: 'LOTO_CHECK' },
+      { id: 'mesem_staj', label: '3308 MESEM & Stajyer SGK', icon: '🛠️', actionType: 'LOTO_CHECK' },
+      { id: 'open_ended_rubric', label: 'Açık Uçlu Barem / Soru', icon: '📝', actionType: 'TIMER' },
+      { id: 'thesis_turnitin', label: 'Turnitin İntihal <%20', icon: '🔬', actionType: 'LOTO_CHECK' },
       { id: 'food_sample', label: '72s Yemek Numunesi', icon: '🍱', actionType: 'LOTO_CHECK' },
       { id: 'proctor_alarm', label: 'Gözetmenlik (T-25)', icon: '🎓', actionType: 'TIMER' }
     ]
@@ -1111,7 +1115,16 @@ export function detectDomainFromNote(note: { ikon?: string; baslik?: string; ano
   if (icon === '🩺' || icon === '💉' || icon === '🦷' || icon === '💊' || text.includes('ilaç') || text.includes('hasta') || text.includes('doktor') || text.includes('hemşire') || text.includes('klinik') || text.includes('sbar') || text.includes('dekübitus') || text.includes('aydınlatılmış onam') || text.includes('transfüzyon')) {
     return 'SAGLIK';
   }
-  if (icon === '📚' || icon === '🏫' || icon === '🍱' || (icon === '🏛️' && (text.includes('dys') || text.includes('okul') || text.includes('mem') || text.includes('müdür'))) || text.includes('e-okul') || text.includes('ek ders') || text.includes('kbs') || text.includes('devamsızlık mektubu') || text.includes('öğretmen') || text.includes('zümre') || text.includes('taşımalı') || text.includes('okul') || text.includes('bep') || text.includes('tefbis')) {
+  if (
+    icon === '📚' || icon === '🏫' || icon === '🍱' || icon === '🧑‍🏫' || (icon === '📝' && (text.includes('sınav') || text.includes('barem') || text.includes('yazılı') || text.includes('not'))) ||
+    (icon === '🎓' && (text.includes('syllabus') || text.includes('jüri') || text.includes('tez') || text.includes('akadem') || text.includes('üniversite') || text.includes('obs'))) ||
+    (icon === '🚌' && (text.includes('gezi') || text.includes('okul') || text.includes('öğrenci'))) ||
+    (icon === '🏛️' && (text.includes('dys') || text.includes('okul') || text.includes('mem') || text.includes('müdür'))) ||
+    text.includes('e-okul') || text.includes('ek ders') || text.includes('kbs') || text.includes('devamsızlık mektubu') ||
+    text.includes('öğretmen') || text.includes('zümre') || text.includes('taşımalı') || text.includes('okul') ||
+    text.includes('bep') || text.includes('tefbis') || text.includes('iyep') || text.includes('mesem') ||
+    text.includes('turnitin') || text.includes('syllabus') || text.includes('bologna') || text.includes('açık uçlu')
+  ) {
     return 'EGITIM';
   }
   if (icon === '🔧' || icon === '🛠️' || icon === '⚡' || icon === '⚙️' || icon === '📐' || icon === '💻' || text.includes('loto') || text.includes('arıza') || text.includes('bakım') || text.includes('şantiye') || text.includes('mimar') || text.includes('teknik') || text.includes('tamir') || text.includes('spt') || text.includes('kaçak akım')) {

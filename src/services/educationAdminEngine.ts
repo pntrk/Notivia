@@ -15,7 +15,10 @@ export interface SchoolAdminTask {
     | 'Öğretmenlik'
     | 'Akademi & Araştırma'
     | 'İSG & Güvenlik'
-    | 'Taşımalı & Sosyal';
+    | 'Taşımalı & Sosyal'
+    | 'Mesleki Eğitim & Staj'
+    | 'Merkezi Sınav & BSK'
+    | 'Sosyal Etkinlik & Gezi';
   mevzuat_notu: string;
   action_items: { task: string; is_completed: boolean }[];
   zaman_etiketi: string;
@@ -151,7 +154,15 @@ export function parseSchoolAdminIntent(
     text.includes('tahliye tatbikatı') || text.includes('yangın tatbikatı') || text.includes('ziyaretçi defteri') ||
     text.includes('destek eğitim') || text.includes('destek egitim') || text.includes('bep') || /\bram\b/i.test(text) ||
     text.includes('pdr') || text.includes('rehberlik') || text.includes('tefbis') || text.includes('kantin kira') || text.includes('okul aile birliği') ||
-    text.includes('istiklal') || text.includes('bayrak') || text.includes('tören') || text.includes('toreni');
+    text.includes('istiklal') || text.includes('bayrak') || text.includes('tören') || text.includes('toreni') ||
+    text.includes('gezi') || text.includes('veli izin') || text.includes('muvafakatname') || text.includes('türsab') ||
+    text.includes('açık uçlu') || text.includes('acik uclu') || text.includes('mazeret sınav') || text.includes('mazeret sinav') ||
+    text.includes('mesem') || text.includes('çıraklık') || text.includes('ciraklik') || text.includes('staj') || text.includes('3308') ||
+    text.includes('iyep') || text.includes('bologna') || text.includes('syllabus') || text.includes('ders izlencesi') ||
+    text.includes('turnitin') || text.includes('intihal') || text.includes('bina sınav') || text.includes('bina sinav') ||
+    text.includes('özel okul') || text.includes('ozel okul') || text.includes('ruhsat') || text.includes('ders kitabı') || text.includes('ders kitabi') ||
+    text.includes('kitap seçim') || text.includes('kitap secim') || text.includes('anaokulu') || text.includes('kreş') || text.includes('kres') ||
+    text.includes('gelişim gözlem') || text.includes('gelisim gozlem') || text.includes('aday öğretmen') || text.includes('aday ogretmen');
 
   if (!isEducationContext) return null;
 
@@ -730,7 +741,424 @@ export function parseSchoolAdminIntent(
     };
   }
 
-  // 16. GENEL EĞİTİM & OKUL YÖNETİMİ FALLBACK (Sadece eğitim terimleri geçtiğinde)
+  // 16. OKUL GEZİSİ, VELİ İZİN MUVAFAKATNAMESİ & KAYMAKAMLIK/İLÇE MEM ONAY PROTOKOLÜ
+  if (
+    text.includes('okul gezisi') ||
+    text.includes('sosyal etkinlik gezisi') ||
+    text.includes('veli izin belgesi') ||
+    text.includes('veli muvafakatname') ||
+    text.includes('türsab') ||
+    text.includes('tursab') ||
+    text.includes('d2 belgeli') ||
+    (text.includes('gezi') && (text.includes('okul') || text.includes('öğrenci') || text.includes('kaymakamlık') || text.includes('onay')))
+  ) {
+    const geziDue = addBusinessDays(now, 7);
+
+    return {
+      id: `edu_gezi_${Date.now()}`,
+      baslik: 'Okul Gezisi & Veli İzin / DYS Onay Dosyası',
+      kategori: 'Sosyal Etkinlik & Gezi',
+      mevzuat_notu: 'MEB Sosyal Etkinlikler Yönetmeliği uyarınca il dışı/il içi gezilerde TÜRSAB acente sözleşmesi, D2 araç belgesi, ferdi kaza sigortası ve mülki amir (Kaymakamlık) Oluru zorunludur.',
+      action_items: [
+        { task: 'Geziye katılacak tüm öğrencilerin ıslak imzalı Veli İzin Muvafakatnamelerini topla ve dosyala', is_completed: false },
+        { task: 'TÜRSAB onaylı seyahat acentesi sözleşmesi, D2 taşımacılık yetki belgesi ve araç şoför belgelerini kontrol et', is_completed: false },
+        { task: 'Öğrenci isim listesi, refakatçi öğretmen görevlendirmesi ve gezi planını DYS üzerinden İlçe MEM / Kaymakamlık onayına gönder', is_completed: false },
+        { task: 'Gezi bitiminde gezi değerlendirme raporunu ve fotoğraflarını e-Okul Sosyal Etkinlikler Modülüne yükle', is_completed: false }
+      ],
+      zaman_etiketi: 'Gezi Öncesi (En Geç 7 Gün Önce Onay)',
+      tarih_iso: geziDue.toISOString(),
+      hazirlik_zamani: 'Geziden 1 Hafta Önce (DYS Kaymakamlık Oluru)',
+      ikon: '🚌',
+      renk: '#FEF3C7',
+      sesli_geribildirim: 'Okul gezisi yasal izin dosyası, TÜRSAB ve veli muvafakatname süreci planlandı.'
+    };
+  }
+
+  // 17. AÇIK UÇLU ORTAK SINAV & MEB SORU DAĞILIM TABLOSU / PUANLAMA BAREMİ
+  if (
+    text.includes('açık uçlu') ||
+    text.includes('acik uclu') ||
+    text.includes('ortak yazılı') ||
+    text.includes('ortak yazili') ||
+    text.includes('ülke geneli ortak') ||
+    text.includes('il geneli ortak') ||
+    text.includes('soru dağılım tablosu') ||
+    text.includes('senaryo tablosu') ||
+    text.includes('madde analizi') ||
+    text.includes('dereceli puanlama')
+  ) {
+    const sinavDate = new Date(now);
+    sinavDate.setDate(sinavDate.getDate() + 10);
+    sinavDate.setHours(17, 0, 0, 0);
+
+    return {
+      id: `edu_acik_uclu_${Date.now()}`,
+      baslik: 'Açık Uçlu Ortak Sınav & Barem Analizi',
+      kategori: 'Öğretmenlik',
+      mevzuat_notu: 'MEB Ölçme ve Değerlendirme Yönetmeliği gereğince tüm yazılı sınavlar açık uçlu veya kısa cevaplı maddelerden oluşmalı, MEB il zümre konu soru dağılım senaryolarına tam uyulmalıdır.',
+      action_items: [
+        { task: 'İl zümre başkanları kurulu tarafından yayımlanan konu soru dağılım senaryosunu (Senaryo 1/2) seç ve ilan et', is_completed: false },
+        { task: 'Açık uçlu sınav sorularını ve her soruya ait detaylı puanlama baremini (Rubrik) hazırla', is_completed: false },
+        { task: 'Sınav kağıtlarını zümre öğretmenleriyle birlikte çift okuma veya bağımsız puanlama baremiyle değerlendir', is_completed: false },
+        { task: 'Madde analizi ve kazanım kavrama oranlarını çıkararak e-Okul ortak sınav analiz modülüne kaydet', is_completed: false }
+      ],
+      zaman_etiketi: '10 Günlük Not & Barem Kilidi',
+      tarih_iso: sinavDate.toISOString(),
+      hazirlik_zamani: 'Sınav Öncesi Barem Dağıtımı',
+      ikon: '📝',
+      renk: '#FEF08A',
+      sesli_geribildirim: 'Açık uçlu sınav senaryosu, soru dağılım baremi ve kazanım analizi adımları oluşturuldu.'
+    };
+  }
+
+  // 18. SAĞLIK RAPORLU ÖĞRENCİ MAZERET SINAVI (RAPOR BİTİMİNDEN İTİBAREN 5 GÜN)
+  if (
+    text.includes('mazeret sınavı') ||
+    text.includes('mazeret sinavi') ||
+    text.includes('raporlu öğrenci sınavı') ||
+    text.includes('mazeretli yazılı') ||
+    (text.includes('mazeret') && (text.includes('sınav') || text.includes('sinav') || text.includes('yazılı') || text.includes('yazili') || text.includes('öğrenci')))
+  ) {
+    const mazeretDue = addBusinessDays(now, 5);
+
+    return {
+      id: `edu_mazeret_${Date.now()}`,
+      baslik: 'Mazeret Sınavı & Telafi Değerlendirmesi',
+      kategori: 'Öğretmenlik',
+      mevzuat_notu: 'MEB Kurumları Yönetmeliği uyarınca geçerli mazereti (sağlık raporu vb.) bulunan öğrenciler, mazeretin bitimini izleyen 5 iş günü içinde zümre öğretmenlerince mazeret sınavına alınır.',
+      action_items: [
+        { task: 'Öğrencinin sağlık raporunu veya resmi mazeret dilekçesini e-Okul sistemine işle ve idare onayını al', is_completed: false },
+        { task: 'Zümre ortak kararıyla paralel kazanımları içeren eşdeğer mazeret sınav kağıdını hazırla', is_completed: false },
+        { task: 'Öğrenciye ve veliye mazeret sınavının gün ve saatini resmi olarak tebliğ et', is_completed: false },
+        { task: 'Sınavı uygulayıp kağıdı oku, notu e-Okul mazeret sınav hanesine girerek kaydı tamamla', is_completed: false }
+      ],
+      zaman_etiketi: 'Mazeret Bitiminden 5 İş Günü',
+      tarih_iso: mazeretDue.toISOString(),
+      hazirlik_zamani: 'Rapor Geldiğinde Eşdeğer Sınav Hazırlığı',
+      ikon: '📋',
+      renk: '#FEF08A',
+      sesli_geribildirim: 'Sağlık raporlu öğrenci için 5 iş günü yasal mazeret sınavı süreci takvimlendi.'
+    };
+  }
+
+  // 19. MESEM, ÇIRAKLIK, İŞLETMEDE BECERİ EĞİTİMİ & 3308 STAJYER SGK TAKİBİ
+  if (
+    text.includes('mesem') ||
+    text.includes('çıraklık') ||
+    text.includes('ciraklik') ||
+    text.includes('3308') ||
+    text.includes('işletmelerde mesleki eğitim') ||
+    text.includes('isletmelerde mesleki egitim') ||
+    text.includes('staj sözleşmesi') ||
+    text.includes('stajyer sgk') ||
+    text.includes('koordinatör öğretmen') ||
+    text.includes('koordinator ogretmen') ||
+    text.includes('usta öğretici') ||
+    text.includes('usta ogretici')
+  ) {
+    return {
+      id: `edu_mesem_${Date.now()}`,
+      baslik: 'MESEM & 3308 Stajyer SGK / Sözleşme Dosyası',
+      kategori: 'Mesleki Eğitim & Staj',
+      mevzuat_notu: '3308 Sayılı Mesleki Eğitim Kanunu uyarınca stajyer öğrencilerin SGK iş kazası ve meslek hastalığı işe giriş bildirgeleri staja başlamadan en az 1 gün önce onaylanmalıdır.',
+      action_items: [
+        { task: 'İşletme, okul ve veli arasında 3308 sayılı İşletmelerde Mesleki Eğitim Sözleşmesini eksiksiz imzalat', is_completed: false },
+        { task: 'Öğrencinin SGK 4/a (İş Kazası ve Meslek Hastalığı) e-Sigorta işe giriş bildirgesini staj başlamadan 1 gün önce onayla', is_completed: false },
+        { task: 'Aylık koordinatörlük öğretmen takip föyünü ve işletme staj devam-devamsızlık çizelgelerini dosyala', is_completed: false },
+        { task: 'İşletmeye ödenen devlet katkısı için usta öğreticilik belgesi ve banka dekont kontrolünü yap', is_completed: false }
+      ],
+      zaman_etiketi: 'Staj Öncesi SGK (T-1 Gün) / Aylık Takip',
+      tarih_iso: now.toISOString(),
+      hazirlik_zamani: 'Staj Başlamadan 1 Gün Önce SGK Girişi',
+      ikon: '🛠️',
+      renk: '#FED7AA',
+      sesli_geribildirim: 'MESEM 3308 staj sözleşmesi, koordinatörlük föyü ve SGK işe giriş protokolü açıldı.'
+    };
+  }
+
+  // 20. İYEP (İLKOKULLARDA YETİŞTİRME PROGRAMI) & ÖĞRENCİ BELİRLEME MODÜLÜ
+  if (
+    text.includes('iyep') ||
+    text.includes('ilkokullarda yetiştirme') ||
+    text.includes('iyep modülü') ||
+    text.includes('öbiç') ||
+    text.includes('öğrenci belirleme aracı')
+  ) {
+    return {
+      id: `edu_iyep_${Date.now()}`,
+      baslik: 'İYEP Öğrenci Belirleme & Kurs Takvimi',
+      kategori: 'Öğretmenlik',
+      mevzuat_notu: 'MEB İYEP Yönergesi uyarınca 3. ve 4. sınıf öğrencilerine Öğrenci Belirleme Aracı (ÖBA) uygulanır, Modül 1/2/3 seviye tespiti yapılarak veli muvafakatiyle kurs açılır.',
+      action_items: [
+        { task: 'Öğrenci Belirleme Aracını (ÖBA) 3. ve 4. sınıflara uygulayarak cevap formlarını oku', is_completed: false },
+        { task: 'e-Okul İYEP Modülüne öğrenci puanlarını girip Modül 1, 2 veya 3 düzeyindeki hedef kitleyi belirle', is_completed: false },
+        { task: 'İYEP kursuna dahil edilecek öğrencilerin veli muvafakatnamelerini imzalatıp arşivle', is_completed: false },
+        { task: 'Haftalık İYEP ders saatleri ve öğretmen görevlendirmesini okul idaresi onayına sun', is_completed: false }
+      ],
+      zaman_etiketi: 'Dönem Başı İYEP Takvimi',
+      tarih_iso: now.toISOString(),
+      hazirlik_zamani: 'ÖBA Uygulama Haftası',
+      ikon: '📖',
+      renk: '#FEF08A',
+      sesli_geribildirim: 'İYEP öğrenci belirleme modülü, ÖBA analizi ve veli izin adımları hazırlandı.'
+    };
+  }
+
+  // 21. MEBBİS NORM KADRO & HAFTALIK DERS DAĞITIM ÇİZELGELERİ (ASC TIMETABLES)
+  if (
+    text.includes('norm kadro') ||
+    text.includes('norm fazlası') ||
+    text.includes('norm fazlasi') ||
+    text.includes('ders dağıtım') ||
+    text.includes('ders dagitim') ||
+    text.includes('asc timetables') ||
+    text.includes('haftalık ders çizelgesi')
+  ) {
+    return {
+      id: `edu_norm_kadro_${Date.now()}`,
+      baslik: 'MEBBİS Norm Kadro & Ders Dağıtım Protokolü',
+      kategori: 'Özlük & Puantaj',
+      mevzuat_notu: 'MEB Norm Kadro Yönetmeliği gereği ders yükü ve şube sayıları her yıl Ekim ayında MEBBİS modülüne girilir; norm fazlası veya norm ihtiyacı olan branşlar ilçe MEM\'e bildirilir.',
+      action_items: [
+        { task: 'Toplam şube sayısı ve haftalık ders saatlerini branşlar bazında hesaplayarak norm tablosunu çıkar', is_completed: false },
+        { task: 'MEBBİS Norm Kadro Modülüne okul verilerini hatasız işleyip İlçe MEM onayına sun', is_completed: false },
+        { task: 'Öğretmenlerin nöbet ve boş gün taleplerini gözeterek haftalık ders programını (ASC) oluştur', is_completed: false },
+        { task: 'Haftalık ders dağıtım çizelgesini öğretmenlere ıslak imzayla tebliğ et ve panolara as', is_completed: false }
+      ],
+      zaman_etiketi: 'Ekim Ayı Norm Güncellemesi',
+      tarih_iso: now.toISOString(),
+      hazirlik_zamani: 'Dönem Başı / Şube Belirleme',
+      ikon: '📊',
+      renk: '#FEF3C7',
+      sesli_geribildirim: 'Norm kadro MEBBİS güncellemesi ve haftalık ders dağıtım tebliği takvimlendi.'
+    };
+  }
+
+  // 22. ADAY ÖĞRETMENLİK (AÖP) & DANIŞMAN ÖĞRETMEN DERS İZLEME FORMU
+  if (
+    text.includes('aday öğretmen') ||
+    text.includes('aday ogretmen') ||
+    text.includes('danışman öğretmen') ||
+    text.includes('danisman ogretmen') ||
+    text.includes('adaylık kaldırma') ||
+    text.includes('adaylik kaldirma') ||
+    text.includes('aöp') ||
+    text.includes('ders izleme formu')
+  ) {
+    return {
+      id: `edu_aday_ogretmen_${Date.now()}`,
+      baslik: 'Aday Öğretmenlik & Danışman İzleme Dosyası',
+      kategori: 'Öğretmenlik',
+      mevzuat_notu: 'MEB Öğretmenlik Meslek Kanunu ve Aday Öğretmenlik Yetiştirme Programı uyarınca danışman öğretmen haftalık ders izleme ve okul içi/dışı etkinlik formlarını tanzim eder.',
+      action_items: [
+        { task: 'Danışman öğretmen eşliğinde haftalık ders gözlem formunu doldur ve aday öğretmene geri bildirim ver', is_completed: false },
+        { task: 'Okul içi idari işleyiş (DYS, nöbet, kurul toplantıları) gözlem tutanağını hazırla', is_completed: false },
+        { task: 'Aday öğretmen yetiştirme programı çalışma dosyasını MEBBİS modülüne yükle', is_completed: false },
+        { task: 'Dönem sonu aday öğretmen değerlendirme formunu Okul Müdürü ve Danışman onayıyla tamamla', is_completed: false }
+      ],
+      zaman_etiketi: 'Haftalık İzleme / Dönemlik Dosya',
+      tarih_iso: now.toISOString(),
+      hazirlik_zamani: 'Ders Öncesi Gözlem Planı',
+      ikon: '🧑‍🏫',
+      renk: '#FEF08A',
+      sesli_geribildirim: 'Aday öğretmen yetiştirme süreci, danışman gözlem formu ve MEBBİS onay basamakları açıldı.'
+    };
+  }
+
+  // 23. ÜNİVERSİTE / AKADEMİ: DERS İZLENCESİ (SYLLABUS) & BOLOGNA / AKTS KREDİLENDİRME
+  if (
+    text.includes('syllabus') ||
+    text.includes('ders izlencesi') ||
+    text.includes('ders izlencesı') ||
+    text.includes('bologna') ||
+    text.includes('akts') ||
+    text.includes('ects') ||
+    text.includes('öğrenme çıktıları') ||
+    text.includes('obs not girişi') ||
+    text.includes('bağıl değerlendirme') ||
+    text.includes('çan eğrisi')
+  ) {
+    return {
+      id: `edu_syllabus_${Date.now()}`,
+      baslik: 'Ders İzlencesi (Syllabus) & Bologna / AKTS Paketi',
+      kategori: 'Akademi & Araştırma',
+      mevzuat_notu: 'YÖK ve Bologna Süreci Standartları gereği her dersin 14 haftalık izlencesi, AKTS iş yükü tablosu, değerlendirme kriterleri (vize/final ağırlığı) dönem başında OBS\'de ilan edilmelidir.',
+      action_items: [
+        { task: '14 haftalık konu başlıklarını, zorunlu/önerilen kaynakları ve haftalık okumaları syllabus formatında yaz', is_completed: false },
+        { task: 'Dersin AKTS iş yükü (derse katılım, ödev, sınav hazırlığı) tablosunu Bologna bilgi paketine işle', is_completed: false },
+        { task: 'Vize, final, ödev ve proje değerlendirme yüzdelerini OBS (Öğrenci Bilgi Sistemi) ortamında onayla', is_completed: false },
+        { task: 'Syllabus belgesini ilk ders gününden önce ders yönetim sistemine (Moodle/Blackboard) yükle', is_completed: false }
+      ],
+      zaman_etiketi: 'Dönem Başı / 1. Hafta',
+      tarih_iso: now.toISOString(),
+      hazirlik_zamani: 'Dönem Başlamadan 1 Hafta Önce',
+      ikon: '🎓',
+      renk: '#DDD6FE',
+      sesli_geribildirim: 'Ders izlencesi (Syllabus), Bologna AKTS tablosu ve OBS değerlendirme kriterleri oluşturuldu.'
+    };
+  }
+
+  // 24. LİSANSÜSTÜ TEZ JÜRİSİ, TİK (TEZ İZLEME KOMİTESİ) & TURNİTİN İNTİHAL RAPORU (<%20)
+  if (
+    text.includes('turnitin') ||
+    text.includes('intihal raporu') ||
+    text.includes('intihal orani') ||
+    text.includes('tik raporu') ||
+    text.includes('tez izleme komitesi') ||
+    text.includes('doktora yeterlik') ||
+    text.includes('doktora yeterlilik') ||
+    (text.includes('tez') && (text.includes('savunma') || text.includes('jüri') || text.includes('enstitü')))
+  ) {
+    const due = new Date(now);
+    due.setDate(due.getDate() + 15);
+    due.setHours(17, 0, 0, 0);
+
+    return {
+      id: `edu_tez_tik_${Date.now()}`,
+      baslik: 'Tez Jürisi, TİK & Turnitin İntihal Kontrolü',
+      kategori: 'Akademi & Araştırma',
+      mevzuat_notu: 'Lisansüstü Eğitim ve Öğretim Yönetmeliği uyarınca savunma öncesi Turnitin intihal benzerlik oranı %20\'nin altında olmalı, asil ve yedek jüri üyelerine tezin basılı nüshası en geç 15 gün önce teslim edilmelidir.',
+      action_items: [
+        { task: 'Tezin son halini Turnitin/iThenticate sistemine yükleyerek benzerlik raporunu (alıntılar hariç <%20) al', is_completed: false },
+        { task: 'Enstitü Yönetim Kurulu onaylı asil ve yedek 5 jüri üyesine tez nüshalarını ve resmi davet yazılarını ilet', is_completed: false },
+        { task: 'Doktora Tez İzleme Komitesi (TİK) 6 aylık rapor tutanağını Enstitüye süresi içinde teslim et', is_completed: false },
+        { task: 'Tez savunma sınavı tutanağını ve jüri kişisel değerlendirme raporlarını savunma bitiminde imzalat', is_completed: false }
+      ],
+      zaman_etiketi: 'Savunmadan 15 Gün Önce (Jüri Teslim)',
+      tarih_iso: due.toISOString(),
+      hazirlik_zamani: 'Turnitin İntihal Taraması Öncesi',
+      ikon: '🔬',
+      renk: '#DDD6FE',
+      sesli_geribildirim: 'Turnitin intihal raporu, jüri teslim süreci ve tez savunma takvimi oluşturuldu.'
+    };
+  }
+
+  // 25. BİNA SINAV KOMİSYONU (BSK) & MERKEZİ SINAV (ÖSYM GİS / MEB MEBBİS) PROTOKOLÜ
+  if (
+    text.includes('bina sınav komisyonu') ||
+    text.includes('bina sinav komisyonu') ||
+    text.includes('öbel') ||
+    text.includes('bina sınav sorumlusu') ||
+    text.includes('bina denetim') ||
+    text.includes('öğrenci girişi arama') ||
+    (text.includes('sınav') && (text.includes('kurye') || text.includes('mühürlü poşet') || text.includes('gis görev') || text.includes('öly')))
+  ) {
+    return {
+      id: `edu_bsk_merkezi_${Date.now()}`,
+      baslik: 'Bina Sınav Komisyonu & Merkezi Sınav Güvenliği',
+      kategori: 'Merkezi Sınav & BSK',
+      mevzuat_notu: 'ÖSYM ve MEB Merkezi Sınav Yönergesi uyarınca Bina Sınav Komisyonu sınavdan en az 2 saat önce binada hazır bulunur, mühürlü kutular emniyet kuryesi ve tutanakla teslim alınır.',
+      action_items: [
+        { task: 'Sınav saatinden 2 saat önce salon başkanları ve gözetmenlerle toplantı yaparak görev kartlarını dağıt', is_completed: false },
+        { task: 'Emniyet kuryesinden sınav soru/cevap evrakı kilitli kutularını teslim tutanağıyla teslim al', is_completed: false },
+        { task: 'Sinyal kesici (Jammer) ve salon duvar saati kontrollerini tamamla; adayların elektronik cihazsız girişini sağla', is_completed: false },
+        { task: 'Sınav bitiminde salon sınav poşetlerinin eksiksiz ve mühürlü olduğunu teyit edip kuryeye teslim et', is_completed: false }
+      ],
+      zaman_etiketi: 'Sınav Sabahı (T-2 Saat)',
+      tarih_iso: now.toISOString(),
+      hazirlik_zamani: 'Sınavdan 1 Gün Önce Salon Numaralandırma',
+      ikon: '🛡️',
+      renk: '#FEF3C7',
+      sesli_geribildirim: 'Bina sınav komisyonu güvenlik adımları, mühürlü poşet ve kurye teslim protokolü hazırlandı.'
+    };
+  }
+
+  // 26. OKUL ÖNCESİ / ANAOKULU GÜNLÜK AKIŞ & GELİŞİM GÖZLEM FORMU
+  if (
+    text.includes('anaokulu') ||
+    text.includes('okul öncesi') ||
+    text.includes('okul oncesi') ||
+    text.includes('kreş') ||
+    text.includes('kres') ||
+    text.includes('gelişim gözlem formu') ||
+    text.includes('gelisim gozlem') ||
+    text.includes('çember saati') ||
+    text.includes('günlük eğitim akışı')
+  ) {
+    return {
+      id: `edu_okul_oncesi_${Date.now()}`,
+      baslik: 'Okul Öncesi Günlük Akış & Gelişim Formu',
+      kategori: 'Öğretmenlik',
+      mevzuat_notu: 'MEB Okul Öncesi Eğitim Programı uyarınca güne başlama, oyun, öğrenme merkezleri ve beslenme saatleri günlük akışa göre yürütülür, dönemlik Gelişim Gözlem Formları e-Okul\'a işlenir.',
+      action_items: [
+        { task: 'Güne başlama çemberinde günün hava durumu, takvimi ve merkez etkinliklerinin duyurusunu yap', is_completed: false },
+        { task: 'Öğrenme merkezlerinde (blok, dramatik oyun, sanat, kitap) çocukların serbest oyunlarını gözlemle', is_completed: false },
+        { task: 'Çocukların bilişsel, motor ve dil gelişimine dair bireysel gözlem notlarını portfolyoya kaydet', is_completed: false },
+        { task: 'Dönem sonu MEB Okul Öncesi Gelişim Raporlarını e-Okul modülüne girerek çıktısını velilere ilet', is_completed: false }
+      ],
+      zaman_etiketi: 'Günlük Akış & Dönemlik Portfolyo',
+      tarih_iso: now.toISOString(),
+      hazirlik_zamani: 'Sabah 08:30 (Merkezlerin Hazırlığı)',
+      ikon: '🎨',
+      renk: '#FBCFE8',
+      sesli_geribildirim: 'Okul öncesi günlük akış, öğrenme merkezleri ve gelişim gözlem formu takvimlendi.'
+    };
+  }
+
+  // 27. MEB ÜCRETSİZ DERS KİTABI SAYIMI & KİTAP SEÇİM MODÜLÜ
+  if (
+    text.includes('ders kitabı') ||
+    text.includes('ders kitabi') ||
+    text.includes('kitap seçim modülü') ||
+    text.includes('kitap secim modulu') ||
+    text.includes('ücretsiz ders kitabı') ||
+    text.includes('hurda kitap') ||
+    text.includes('kitap teslim')
+  ) {
+    return {
+      id: `edu_ders_kitabi_${Date.now()}`,
+      baslik: 'Ücretsiz Ders Kitabı & MEBBİS Kitap Seçimi',
+      kategori: 'Mevzuat & DYS',
+      mevzuat_notu: 'MEB Ders Kitapları ve Eğitim Araçları Yönetmeliği uyarınca gelecek eğitim yılı ders kitabı ihtiyaçları MEBBİS Kitap Seçim Modülüne süresi içinde işlenir, hurda kitaplar tutanakla geri dönüşüme verilir.',
+      action_items: [
+        { task: 'Öğrenci şube sayıları ve tahmini kayıt projeksiyonuna göre ders kitabı ihtiyaç sayılarını çıkar', is_completed: false },
+        { task: 'MEBBİS Kitap Seçim Modülüne branş ve sınıf bazlı ders kitabı sayı girişini yaparak onayla', is_completed: false },
+        { task: 'Yaz döneminde okula gelen ücretsiz ders kitaplarını paket bazında sayarak irsaliye ile teslim al', is_completed: false },
+        { task: 'Eski ve kullanılmayan atık kitapları hurda geri dönüşüm komisyonu tutanağı ile teslim et', is_completed: false }
+      ],
+      zaman_etiketi: 'MEBBİS Kitap Modülü Takvimi',
+      tarih_iso: now.toISOString(),
+      hazirlik_zamani: 'Dönem Başı Sayım Haftası',
+      ikon: '📚',
+      renk: '#FEF08A',
+      sesli_geribildirim: 'Ders kitabı sayımı, MEBBİS kitap seçim girişi ve geri dönüşüm adımları kaydedildi.'
+    };
+  }
+
+  // 28. ÖZEL ÖĞRETİM KURUMLARI / KURS & MEB RUHSAT / BAKANLIK DENETİMİ
+  if (
+    text.includes('özel okul') ||
+    text.includes('ozel okul') ||
+    text.includes('özel öğretim') ||
+    text.includes('ozel ogretim') ||
+    text.includes('kurs açma') ||
+    text.includes('kurum açma izni') ||
+    text.includes('çalışma ruhsatı') ||
+    text.includes('calisma ruhsati') ||
+    text.includes('ücret ilanı') ||
+    text.includes('ucret ilani')
+  ) {
+    return {
+      id: `edu_ozel_ogretim_${Date.now()}`,
+      baslik: 'Özel Öğretim Ruhsat & Bakanlık Denetim Dosyası',
+      kategori: 'Mevzuat & DYS',
+      mevzuat_notu: '5580 Sayılı Özel Öğretim Kurumları Kanunu uyarınca bina yerleşim planı, itfaiye yangın raporu, sağlık uygunluk raporu, öğretmen MEBBİS çalışma izinleri ve yıllık ücret ilanları tam olmalıdır.',
+      action_items: [
+        { task: 'İtfaiye yangın emniyet raporu, ilçe sağlık uygunluk belgesi ve bina deprem dayanım raporunu dosyala', is_completed: false },
+        { task: 'Tüm eğitim personelinin MEBBİS üzerinden atanma ve çalışma izin (onay) belgelerini kontrol et', is_completed: false },
+        { task: 'Eğitim ve yemek/servis ücretlerini Mayıs ayı sonuna kadar MEBBİS modülüne girip veli panosunda ilan et', is_completed: false },
+        { task: 'Kurum açma ve yerleşim planı krokisi ile derslik kontenjan levhalarını denetle', is_completed: false }
+      ],
+      zaman_etiketi: 'Yıllık MEB Özel Öğretim Denetimi',
+      tarih_iso: now.toISOString(),
+      hazirlik_zamani: 'Denetim Öncesi Evrak Arşivi',
+      ikon: '🏫',
+      renk: '#E0E7FF',
+      sesli_geribildirim: '5580 Özel Öğretim mevzuatı, MEBBİS personel izinleri ve ücret ilanı dosyası açıldı.'
+    };
+  }
+
+  // 29. GENEL EĞİTİM & OKUL YÖNETİMİ FALLBACK (Sadece eğitim terimleri geçtiğinde)
   if (userDomain === 'EGITIM' || userDomain === 'OGRENCI') {
     const isEduRelated = /okul|eğitim|egitim|meb|ders|sınav|sinav|öğretmen|ogretmen|öğrenci|ogrenci|veli|nöbet|nobet|puantaj|dys|mebbis|e-okul|eokul|school|teacher|student|exam|class/i.test(text);
     if (isEduRelated) {

@@ -83,7 +83,6 @@ import { translations, type Language } from './utils/i18n.ts';
 import { checkLocalWeather, checkWeatherTaskCompatibility, type WeatherCondition } from './utils/weather.ts';
 import { detectCalendarConflict } from './utils/calendar.ts';
 import { evaluatePipelineTrigger } from './utils/actionPipeline.ts';
-import { clusterErrandsByLocation } from './utils/errandClustering.ts';
 import { splitMultiActionMemo, isMultiActionMemo } from './utils/multiActionExtractor.ts';
 import { calculateDailyCognitiveLoad, estimateCognitiveLoad } from './utils/cognitiveLoadEstimator.ts';
 import { evaluateTaskEscalation } from './utils/adaptiveEscalation.ts';
@@ -3475,8 +3474,7 @@ export default function App() {
   const activeUser = currentUser || simulatedUser;
   const isCloudSync = !!activeUser;
 
-  // ⚡ Mekânsal Güzergâh ve Bilişsel Yük Analizi
-  const errandClusters = React.useMemo(() => clusterErrandsByLocation(cards), [cards]);
+  // ⚡ Bilişsel Yük Analizi
   const activeUncompletedCards = React.useMemo(() => cards.filter((c) => !isCompletedCard(c)), [cards]);
   const dailyLoad = React.useMemo(() => calculateDailyCognitiveLoad(activeUncompletedCards), [activeUncompletedCards]);
 
@@ -3641,7 +3639,7 @@ export default function App() {
         {/* Kart Listesi Alanı */}
         <section
           id="cards-container"
-          className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full px-3 sm:px-5 py-2.5 sm:py-3 space-y-2.5 sm:space-y-3 pb-32"
+          className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden w-full max-w-full px-3 sm:px-5 py-2.5 sm:py-3 space-y-2.5 sm:space-y-3 pb-6"
         >
           {/* Gizlenebilir Arama Alanı */}
           <div
@@ -3797,32 +3795,6 @@ export default function App() {
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium bg-amber-500/10 text-amber-900 dark:text-amber-200 border border-amber-500/20 mb-2.5 animate-in fade-in">
               <span className="text-base shrink-0">🧠</span>
               <span className="flex-1 leading-snug">{dailyLoad.warningNote}</span>
-            </div>
-          )}
-
-          {/* ⚡ Mekânsal Güzergâh Kümeleme (Errand Clusters) */}
-          {errandClusters.length > 0 && !searchQuery && (
-            <div className="space-y-1.5 mb-2.5">
-              {errandClusters.map((cluster) => (
-                <div
-                  key={cluster.clusterId}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium border shadow-2xs transition-all"
-                  style={{ backgroundColor: cluster.color, borderColor: 'rgba(0,0,0,0.06)' }}
-                >
-                  <span className="text-base shrink-0">{cluster.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <span className="font-bold text-stone-900 mr-1.5">
-                      {cluster.clusterTitle} Güzergâhı:
-                    </span>
-                    <span className="text-[11px] text-stone-700 truncate">
-                      {cluster.taskTitles.join(' + ')}
-                    </span>
-                  </div>
-                  <span className="text-[10px] bg-black/10 px-2 py-0.5 rounded-full font-semibold text-stone-800 shrink-0">
-                    {cluster.taskIds.length} İş Tek Seferde
-                  </span>
-                </div>
-              ))}
             </div>
           )}
 
@@ -4416,10 +4388,10 @@ export default function App() {
         </section>
 
         {/* Alt Kontrol Barı (Kamera + Mikrofon + Klavye) */}
-        <footer className={`absolute bottom-0 inset-x-0 p-6 flex flex-col items-center bg-gradient-to-t pointer-events-auto transition-colors duration-200 ${
+        <footer className={`shrink-0 z-20 w-full px-4 pt-3 pb-4 sm:pb-5 flex flex-col items-center border-t backdrop-blur-md transition-colors duration-200 ${
           theme === 'dark'
-            ? 'from-stone-900 via-stone-900/95 to-transparent'
-            : 'from-white via-white/95 to-transparent'
+            ? 'bg-stone-900/95 border-stone-800 text-stone-100 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]'
+            : 'bg-white/95 border-stone-200/80 text-stone-900 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]'
         }`}>
           {/* Bekleyen Görsel Önizleme Kartı */}
           {pendingImage && (
@@ -4737,7 +4709,7 @@ export default function App() {
 
         {/* Geri Alma (Undo Toast) Bildirimi */}
         {undoToast && (
-          <div className="absolute bottom-28 inset-x-6 z-30 flex items-center justify-between bg-stone-900 text-white text-xs px-4 py-2.5 rounded-2xl shadow-xl border border-stone-800 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          <div className="absolute bottom-24 inset-x-4 z-30 flex items-center justify-between bg-stone-900 text-white text-xs px-4 py-2.5 rounded-2xl shadow-xl border border-stone-800 animate-in fade-in slide-in-from-bottom-2 duration-200">
             <div className="flex items-center gap-2 truncate pr-2">
               <span className="text-red-400 font-bold">🗑</span>
               <span className="truncate">"{undoToast.item.baslik}" {t.deletedToast}</span>

@@ -74,12 +74,12 @@ export function generateNextActionSuggestion(noteTitle: string, noteCategory?: s
     };
   }
 
-  // 5. Eğitim & Okul: Sınav okundu -> Zümreye Teslim
-  if (text.includes('sınav') || text.includes('yazılı') || text.includes('not giriş')) {
+  // 5. Eğitim & Okul: Sınav okundu -> Zümreye Teslim & e-Okul Not Girişi
+  if (text.includes('sınav') || text.includes('yazılı') || text.includes('not giriş') || text.includes('barem')) {
     return {
       id: `next-edu-${Date.now()}`,
-      title: 'Zümre Teslim Tutanağı Hazırla',
-      description: 'Sınav kağıtları ve analiz çıktılarının idareye teslim kaydını oluştur.',
+      title: 'Zümre Teslim Tutanağı & e-Okul Girişi',
+      description: 'Sınav kağıtları, barem ve analiz çıktılarının zümre başkanına teslim kaydını oluştur.',
       actionType: 'CREATE_FOLLOWUP',
       icon: '🗂️',
       payload: {
@@ -87,6 +87,39 @@ export function generateNextActionSuggestion(noteTitle: string, noteCategory?: s
         followupZaman: 'Yarın 10:00',
         followupOffsetDays: 1,
         followupIkon: '📚'
+      }
+    };
+  }
+
+  // 5.1 Eğitim: Okul Gezisi -> Veli Bilgilendirme Mesajı
+  if (text.includes('gezi') || text.includes('türsab') || text.includes('muvafakatname')) {
+    return {
+      id: `next-trip-${Date.now()}`,
+      title: 'Velilere Gezi Dönüş & Bilgilendirme Mesajı',
+      description: 'Geziye katılan öğrenci velilerine güvenli varış ve etkinlik özeti mesajı oluştur.',
+      actionType: 'DRAFT_MESSAGE',
+      icon: '🚌',
+      payload: {
+        recipient: 'Sınıf Veli Grubu',
+        channel: 'whatsapp',
+        messageBody: `Değerli Velilerimiz, bugünkü okul gezimiz güvenli ve son derece verimli bir şekilde tamamlanmıştır. Öğrencilerimiz okulumuza dönmüş bulunmaktadır. İlginiz ve desteğiniz için teşekkür ederiz.`
+      }
+    };
+  }
+
+  // 5.2 Lisansüstü: Tez Savunması / TİK -> Enstitü Mezuniyet Dosyası
+  if (text.includes('tez savunma') || text.includes('jüri') || text.includes('turnitin') || text.includes('tik raporu')) {
+    return {
+      id: `next-thesis-${Date.now()}`,
+      title: 'Enstitü Tez Ciltleme & Mezuniyet Dosyası',
+      description: 'Savunma sonrası jüri onaylı ciltli tez ve intihal raporunu Enstitüye teslim et.',
+      actionType: 'CREATE_FOLLOWUP',
+      icon: '🎓',
+      payload: {
+        followupTitle: 'Enstitü Ciltli Tez & Mezuniyet Teslimi',
+        followupZaman: '30 Gün İçinde',
+        followupOffsetDays: 30,
+        followupIkon: '🎓'
       }
     };
   }
