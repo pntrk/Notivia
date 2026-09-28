@@ -5,6 +5,7 @@ import {
   RefreshCw,
   LogOut,
   Cloud,
+  Calendar,
   Bell,
   BellOff,
   Sun,
@@ -15,8 +16,7 @@ import {
   List,
   ChevronRight,
   Sparkles,
-  ShieldCheck,
-  Smartphone
+  CheckCircle2
 } from 'lucide-react';
 import type { Language } from '../utils/i18n';
 import { translations } from '../utils/i18n';
@@ -45,6 +45,8 @@ interface SettingsModalProps {
   driveSyncTime?: string | null;
   isDriveConnected?: boolean;
   onConnectDrive?: () => void;
+  onSyncAllCalendar?: () => void;
+  isSyncingCalendar?: boolean;
   viewMode?: 'single' | 'grid';
   onToggleViewMode?: () => void;
   onOpenRecycleBin?: () => void;
@@ -73,6 +75,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   driveSyncTime,
   isDriveConnected = false,
   onConnectDrive,
+  onSyncAllCalendar,
+  isSyncingCalendar = false,
   viewMode,
   onToggleViewMode,
   onOpenRecycleBin,
@@ -262,6 +266,39 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         )}
                       </div>
                     </div>
+
+                    {/* 3. Google Takvim Doğrudan Otomatik Entegrasyonu */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-stone-200/60 dark:border-stone-700/60">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Calendar className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                        <span className="truncate">
+                          {language === 'tr' ? 'Google Takvim Otomatik Senkron:' : 'Google Calendar Auto Sync:'}
+                        </span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                          {language === 'tr' ? 'Doğrudan Entegre ✓' : 'Direct Sync ✓'}
+                        </span>
+                      </div>
+
+                      {onSyncAllCalendar && (
+                        <button
+                          type="button"
+                          onClick={onSyncAllCalendar}
+                          disabled={isSyncingCalendar}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
+                            isDark
+                              ? 'bg-blue-950/60 hover:bg-blue-900/60 text-blue-300 border border-blue-800/60'
+                              : 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 shadow-2xs'
+                          }`}
+                        >
+                          <RefreshCw className={`w-3 h-3 ${isSyncingCalendar ? 'animate-spin text-blue-500' : ''}`} />
+                          <span>
+                            {isSyncingCalendar
+                              ? (language === 'tr' ? 'Takvime Aktarılıyor...' : 'Syncing...')
+                              : (language === 'tr' ? 'Tüm Notları Takvime Eşitle' : 'Sync All to Calendar')}
+                          </span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -341,21 +378,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </p>
                   </div>
                 </div>
-
-                {/* Aktif Mod Rozeti */}
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase shrink-0 ${
-                  workDomain === 'OTOMATIK_JARGON'
-                    ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
-                    : workDomain === 'SADE'
-                    ? 'bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-300'
-                    : 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400'
-                }`}>
-                  {workDomain === 'OTOMATIK_JARGON'
-                    ? (language === 'tr' ? 'Global Radar' : 'Global Radar')
-                    : workDomain === 'SADE'
-                    ? (language === 'tr' ? 'Düz Not' : 'Plain Note')
-                    : (language === 'tr' ? 'Sektörel' : 'Sectoral')}
-                </span>
               </div>
 
               {/* Hızlı Seçim Hapları (Quick-Pill Selector) */}
@@ -434,24 +456,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   <ChevronRight className="w-4 h-4 rotate-90" />
                 </div>
               </div>
-
-              {/* Seçili Sektörün Bilişsel Açıklaması */}
-              {selectedOption.sublabel && (
-                <div className={`p-2.5 rounded-xl text-[11px] leading-relaxed border transition-colors ${
-                  isDark ? 'bg-stone-900/90 border-stone-800 text-stone-400' : 'bg-stone-50 border-stone-200/80 text-stone-600'
-                }`}>
-                  <p className="line-clamp-2">
-                    <span className="font-semibold text-stone-700 dark:text-stone-300">💡 {selectedOption.label}: </span>
-                    {selectedOption.sublabel}
-                  </p>
-                </div>
-              )}
-
-              {language === 'en' && (
-                <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">
-                  💡 Cognitive profession engines are tuned for Turkish. English mode operates in streamlined Plain Note mode with fast voice and text capture.
-                </p>
-              )}
             </div>
           </div>
 
@@ -706,34 +710,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
-          {/* 4. GÜVENLİK & YEREL DEPOLAMA GÜVENCESİ */}
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-bold tracking-wider uppercase px-1 text-stone-400 dark:text-stone-500">
-              {language === 'tr' ? 'Veri Güvenliği' : 'Data & Privacy'}
-            </span>
 
-            <div className={`p-3.5 rounded-2xl border transition-colors flex items-center justify-between gap-3 ${
-              isDark ? 'bg-stone-850/60 border-stone-800/80 text-stone-300' : 'bg-stone-100/70 border-stone-200 text-stone-700'
-            }`}>
-              <div className="flex items-center gap-2.5 min-w-0">
-                <ShieldCheck className="w-5 h-5 text-emerald-500 shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold leading-tight">
-                    {language === 'tr' ? 'Uçtan Uca Yerel Bellek' : 'On-Device Local Storage'}
-                  </p>
-                  <p className="text-[11px] text-stone-500 dark:text-stone-400 truncate">
-                    {language === 'tr'
-                      ? 'Notlarınız cihazınızda IndexedDB içinde saklanır ve çevrimdışı çalışır'
-                      : 'Notes are preserved in local IndexedDB and operate offline'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-1 rounded-lg shrink-0">
-                <Smartphone className="w-3 h-3" />
-                <span>PWA</span>
-              </div>
-            </div>
-          </div>
 
         </div>
 

@@ -2,6 +2,16 @@ import type { ProfessionDomain } from '../types/domainThemes.ts';
 import { normalizePhoneticJargon } from './phoneticNormalizer.ts';
 import { matchCustomVocabulary } from './userVocabularyEngine.ts';
 
+export interface AmbiguousDomainCandidate {
+  domain: ProfessionDomain;
+  score: number;
+  matchedKeywords: string[];
+  domainLabel: string;
+  suggestedIcon: string;
+  suggestedColor: string;
+  description?: string;
+}
+
 export interface JargonDetectionResult {
   detectedDomain: ProfessionDomain;
   confidence: number; // 0.0 - 1.0
@@ -11,6 +21,9 @@ export interface JargonDetectionResult {
   implicitHour?: number;
   implicitMinute?: number;
   reason?: string;
+  isAmbiguous?: boolean;
+  candidateDomains?: AmbiguousDomainCandidate[];
+  clarificationQuestion?: string;
 }
 
 interface DomainRule {
@@ -35,6 +48,16 @@ const DOMAIN_RULES: DomainRule[] = [
     defaultIcon: '📚',
     defaultColor: '#FEF08A',
     exclusiveKeywords: [
+      'maarif modeli', 'maarif planı', 'maarif plani', 'maarif ders planı', 'maarif ders plani',
+      'türkiye yüzyılı maarif modeli', 'turkiye yuzyili maarif modeli', 'öğrenme çıktısı', 'ogrenme ciktisi',
+      'öğrenme çıktıları', 'ogrenme ciktilari', 'süreç bileşenleri', 'surec bilesenleri', 'beceri örgüsü',
+      'beceri orgusu', 'kavramsal beceri', 'kavramsal beceriler', 'alan becerisi', 'alan becerileri',
+      'sosyal duygusal öğrenme', 'sosyal duygusal ogrenme', 'sdb', 'okuryazarlık becerileri', 'okuryazarlik becerileri',
+      'süreç odaklı ölçme', 'surec odakli olcme', 'biçimlendirici değerlendirme', 'bicimlendirici degerlendirme',
+      'formatif değerlendirme', 'formatif degerlendirme', 'konu soru dağılım tablosu', 'konu soru dagilim tablosu',
+      'ksdt', 'dereceli puanlama anahtarı', 'dereceli puanlama anahtari', 'rubrik', 'farklılaştırma',
+      'farklilastirma', 'zenginleştirme', 'zenginlestirme', 'destekleme eğitimi', 'öğrenme kanıtları',
+      'ogrenme kanitlari', 'çıkış kartı', 'cikis karti', 'erdem değer eylem', 'öğrenme yaşantısı',
       'dys', 'mebbis', 'e-okul', 'eokul', 'şök', 'sok', 'bep', 'ram', 'ek ders',
       'puantaj', 'zümre', 'zumre', 'zümresi', 'nöbet defteri', 'yazılı kağıdı',
       'taşımalı yemek', 'öğretmenler odası', 'kazanım analizi', 'barem',
@@ -50,10 +73,15 @@ const DOMAIN_RULES: DomainRule[] = [
       'aday öğretmenlik', 'aöp', 'danışman öğretmen', 'gelişim gözlem formu',
       'okul öncesi', 'anaokulu', 'veli muvafakatname', 'türsab', 'd2 araç',
       'sosyal etkinlik modülü', 'kitap seçim modülü', 'ücretsiz ders kitabı',
-      'özel öğretim ruhsat', '5580', 'özel okul ücret ilanı'
+      'özel öğretim ruhsat', '5580', 'özel okul ücret ilanı',
+      'öğrenci nakil', 'ogrenci nakil', 'nakil kabul', 'nakil onayı', 'nakil talebi',
+      'şube kura', 'sube kura', 'şube belirleme', 'kura çekimi', 'karne basımı', 'karne basimi',
+      'maddi hata komisyonu', 'not düzeltme', 'şartlı eğitim yardımı', 'şey devamsızlık',
+      'nöbetçi müdür yardımcısı', 'nöbetçi idareci'
     ],
     supportingKeywords: [
-      'okul', 'sınav', 'veli', 'müdür', 'müdür yardımcısı', 'nöbet',
+      'maarif', 'çıktı', 'cikti', 'bileşen', 'bilesen', 'beceri', 'kavramsal', 'eğilim', 'egilim',
+      'portfolyo', 'gelişim dosyası', 'okul', 'sınav', 'veli', 'müdür', 'müdür yardımcısı', 'nöbet',
       'ders', 'teneffüs', 'karne', 'tatil', 'idare', 'tutanak', 'öğrenci',
       'bağış', 'sosyal etkinlik', 'karneler', 'ödev', 'öğretmen', 'ogretmen',
       'akademisyen', 'üniversite', 'enstitü', 'fakülte', 'rektörlük',
@@ -61,6 +89,10 @@ const DOMAIN_RULES: DomainRule[] = [
       'tez', 'makale', 'hakemlik', 'jüri', 'savunma', 'gezi', 'staj', 'kura'
     ],
     implicitTimeHooks: [
+      { keyword: 'maarif', hour: 15, minute: 30 },
+      { keyword: 'öğrenme çıktısı', hour: 16, minute: 0 },
+      { keyword: 'rubrik', hour: 16, minute: 30 },
+      { keyword: 'ksdt', hour: 15, minute: 0 },
       { keyword: 'nöbet', hour: 8, minute: 0 },
       { keyword: 'zümre', hour: 15, minute: 30 },
       { keyword: 'ek ders', hour: 17, minute: 0 },
@@ -71,7 +103,11 @@ const DOMAIN_RULES: DomainRule[] = [
       { keyword: 'tez savunma', hour: 14, minute: 0 },
       { keyword: 'bina sınav', hour: 8, minute: 0 },
       { keyword: 'okul gezisi', hour: 7, minute: 30 },
-      { keyword: 'veli toplantısı', hour: 13, minute: 0 }
+      { keyword: 'veli toplantısı', hour: 13, minute: 0 },
+      { keyword: 'nakil', hour: 10, minute: 0 },
+      { keyword: 'kura', hour: 10, minute: 30 },
+      { keyword: 'karne', hour: 9, minute: 0 },
+      { keyword: 'maddi hata', hour: 11, minute: 0 }
     ]
   },
   {
@@ -87,12 +123,14 @@ const DOMAIN_RULES: DomainRule[] = [
       '89/1', '89/2', '89/3', 'haciz ihbarnamesi', 'kıymet takdiri itirazı',
       'e-satış', 'mezat', 'sıra cetveli', 'icra edilebilirlik şerhi',
       'cmk 100', 'cmk 101', 'tutukluluğa itiraz', 'kyok', 'kovuşturmaya yer olmadığı',
-      'takipsizlik kararı', 'segbis', 'istintak'
+      'takipsizlik kararı', 'segbis', 'istintak', 'uets', 'uets tebligat',
+      'tebligat 7/a', '7/a', 'tebliğ sayılma', 'duruşmaya gir', 'duruşmam var',
+      'mazeret gönder', 'istinaf süresi', 'gerekçeli karar yazımı', 'hmk 30 gün'
     ],
     supportingKeywords: [
       'duruşma', 'adliye', 'mahkeme', 'savcı', 'savcılık', 'hâkim', 'hakim',
       'dava', 'müvekkil', 'tutanak', 'keşif', 'ihtarname', 'haciz', 'satış',
-      'itiraz', 'dilekçe', 'tahliye'
+      'itiraz', 'dilekçe', 'tahliye', 'icra', 'avukat'
     ],
     implicitTimeHooks: [
       { keyword: 'duruşma', hour: 9, minute: 30 },
@@ -159,6 +197,10 @@ const DOMAIN_RULES: DomainRule[] = [
     defaultIcon: '⚙️',
     defaultColor: '#E2E8F0',
     exclusiveKeywords: [
+      'oyun geliştirme', 'oyun geliştirme prosedürü', 'oyun gelistirme proseduru', 'game development', 'game dev',
+      'game design document', 'gdd', 'oyun motoru', 'unity', 'unreal engine', 'godot', 'game loop', 'gameplay mechanics',
+      'oyunda arayüz güncellemeleri', 'oyunda arayüz güncellemesi', 'oyunda arayüz', 'oyun arayüzü', 'arayüz güncellemesi',
+      'arayüz güncellemeleri', 'ui güncellemesi', 'ux revizyonu', 'ui/ux güncellemesi', 'gamedev ui',
       'siem', 'soc', 'siem kurulumu', 'korelasyon kuralı', 'edr', 'xdr',
       'firewall', 'fortigate', 'palo alto', 'waf', 'active directory',
       'domain controller', 'gpo', 'veeam', 'disaster recovery', 'dr tatbikatı',
@@ -175,6 +217,8 @@ const DOMAIN_RULES: DomainRule[] = [
       'canary release', 'rollback planı', 'p1 incident post-mortem'
     ],
     supportingKeywords: [
+      'oyun', 'oyunda', 'arayüz', 'arayüzü', 'güncellemeleri', 'güncellemesi', 'ui', 'ux', 'hud', 'menu', 'tasarım',
+      'geliştirme', 'prosedür', 'prosedürü', 'game', 'level', 'asset', 'shader',
       'bilişim', 'sunucu', 'network', 'kural', 'entegrasyon', 'kurulum', 'sunum',
       'güvenlik', 'yedek', 'yedekleme', 'bulut', 'cloud', 'ci/cd', 'pipeline', 'devops',
       'şantiye', 'arıza', 'kalibrasyon', 'bakım', 'kod', 'deploy',
@@ -192,6 +236,7 @@ const DOMAIN_RULES: DomainRule[] = [
       { keyword: 'kırım', hour: 10, minute: 0 },
       { keyword: 'isg', hour: 10, minute: 0 },
       { keyword: 'spt', hour: 9, minute: 0 },
+      { keyword: 'oyun', hour: 11, minute: 0 }
     ]
   },
   {
@@ -199,6 +244,10 @@ const DOMAIN_RULES: DomainRule[] = [
     defaultIcon: '💻',
     defaultColor: '#E0F2FE',
     exclusiveKeywords: [
+      'oyun geliştirme', 'oyun geliştirme prosedürü', 'oyun gelistirme proseduru', 'game development', 'game dev',
+      'game design document', 'gdd', 'oyun motoru', 'unity', 'unreal engine', 'godot', 'game loop', 'gameplay mechanics',
+      'oyunda arayüz güncellemeleri', 'oyunda arayüz güncellemesi', 'oyunda arayüz', 'oyun arayüzü', 'arayüz güncellemesi',
+      'arayüz güncellemeleri', 'ui güncellemesi', 'ux revizyonu', 'ui/ux güncellemesi', 'gamedev ui',
       'siem', 'soc', 'siem kurulumu', 'korelasyon kuralı', 'edr', 'xdr',
       'firewall', 'fortigate', 'palo alto', 'waf', 'active directory',
       'domain controller', 'gpo', 'veeam', 'disaster recovery', 'dr tatbikatı',
@@ -207,6 +256,8 @@ const DOMAIN_RULES: DomainRule[] = [
       'loto', 'kompanzasyon', 'prod deploy', 'staging', 'hotfix', 'semver', 'db migration'
     ],
     supportingKeywords: [
+      'oyun', 'oyunda', 'arayüz', 'arayüzü', 'güncellemeleri', 'güncellemesi', 'ui', 'ux', 'hud', 'menu', 'tasarım',
+      'geliştirme', 'prosedür', 'prosedürü', 'game', 'level', 'asset', 'shader',
       'bilişim', 'sunucu', 'network', 'kural', 'entegrasyon', 'kurulum', 'sunum',
       'güvenlik', 'yedek', 'yedekleme', 'bulut', 'cloud', 'ci/cd', 'pipeline', 'devops',
       'arıza', 'bakım', 'kod', 'deploy', 'test'
@@ -217,6 +268,7 @@ const DOMAIN_RULES: DomainRule[] = [
       { keyword: 'firewall', hour: 11, minute: 0 },
       { keyword: 'soc', hour: 9, minute: 0 },
       { keyword: 'deploy', hour: 11, minute: 0 },
+      { keyword: 'oyun', hour: 11, minute: 0 }
     ]
   },
   {
@@ -652,20 +704,29 @@ const DOMAIN_RULES: DomainRule[] = [
     defaultIcon: '💻',
     defaultColor: '#E0F2FE',
     exclusiveKeywords: [
+      'oyun geliştirme', 'oyun geliştirme prosedürü', 'oyun gelistirme proseduru', 'game development', 'game dev',
+      'game design document', 'gdd', 'oyun motoru', 'unity', 'unreal engine', 'godot', 'game loop', 'gameplay mechanics',
+      'level design', 'bölüm tasarımı', 'playtest', 'oyun testi', 'shader optimizasyonu', 'draw call optimizasyonu',
+      'sprite atlas', 'navmesh pathfinding', 'steam build deploy', 'itch.io release', 'oyun yayınlama',
       'prod deploy', 'production deploy', 'staging deploy', 'hotfix', 'semver',
       'pull request', 'pr review', 'db migration', 'database migration',
       'api endpoint', 'graphql query', 'rest api', 'docker container',
       'kubernetes pod', 'ci/cd pipeline', 'penetrasyon testi', 'firewall kuralı',
-      'redis cache', 'postgresql query', 'mongodb aggregation'
+      'redis cache', 'postgresql query', 'mongodb aggregation',
+      'canlıya al', 'canlıya alma', 'canliya al', 'rollback', 'rollback planı',
+      'staging ortamı', 'p1 incident', 'canary deploy', 'blue green deploy'
     ],
     supportingKeywords: [
+      'oyun', 'geliştirme', 'prosedür', 'prosedürü', 'game', 'level', 'asset', 'shader', 'fps',
       'yazılım', 'kod', 'developer', 'yazılımcı', 'sunucu', 'server', 'deploy',
-      'commit', 'branch', 'merge', 'frontend', 'backend', 'devops', 'cloud', 'aws', 'bug'
+      'commit', 'branch', 'merge', 'frontend', 'backend', 'devops', 'cloud', 'aws', 'bug',
+      'staging', 'migration', 'database', 'veritabanı'
     ],
     implicitTimeHooks: [
       { keyword: 'deploy', hour: 10, minute: 0 },
       { keyword: 'pr review', hour: 14, minute: 0 },
-      { keyword: 'standup', hour: 9, minute: 30 }
+      { keyword: 'standup', hour: 9, minute: 30 },
+      { keyword: 'oyun', hour: 11, minute: 0 }
     ]
   },
   {
@@ -715,11 +776,12 @@ const DOMAIN_RULES: DomainRule[] = [
       'loto', 'loto güvenlik prosedürleri', 'loto prosedürü', 'loto prosedürleri', 'kilitleme etiketleme', 'loto güvenlik',
       '30ma kaçak akım', '300ma yangın koruma', 'kompanzasyon panosu',
       'kondansatör kademesi', 'meger testi', 'yalıtım direnci', 'kontaktör bobini',
-      'termik röle', 'plc panosu', 'scada ekranı', 'trafo hücresi', 'trafo buşingi'
+      'termik röle', 'plc panosu', 'scada ekranı', 'trafo hücresi', 'trafo buşingi',
+      'reaktif ceza', 'endüktif ceza', 'kapasitif ceza', 'sayaç endeks', 'trafo bakımı', 'enerji kesme'
     ],
     supportingKeywords: [
       'elektrik', 'pano', 'şalter', 'voltaj', 'amper', 'topraklama', 'kablo',
-      'sigorta', 'röle', 'inverter', 'motor sürücü', 'akım', 'gerilim'
+      'sigorta', 'röle', 'inverter', 'motor sürücü', 'akım', 'gerilim', 'trafo'
     ],
     implicitTimeHooks: [
       { keyword: 'loto', hour: 8, minute: 0 },
@@ -772,11 +834,13 @@ const DOMAIN_RULES: DomainRule[] = [
     exclusiveKeywords: [
       '7 günlük kırım', '28 günlük kırım', 'küp numune etiketleme', 'slump deneyi',
       'demir donatı teslimi', 'paspayı kontrolü', 'yeşil defter metraj', 'ataşman faturası',
-      'hakediş raporu', 'iskele periyodik kontrol', 'zemin etüdü spt', 'fore kazık donatı'
+      'hakediş raporu', 'iskele periyodik kontrol', 'zemin etüdü spt', 'fore kazık donatı',
+      'beton döktük', 'beton döküldü', 'c30 beton', 'c35 beton', 'küp kırımı', 'küp kırma',
+      'demir vizesi', 'şantiye günlüğü', 'hakediş pursantajı', 'kür sulaması', 'transmikser'
     ],
     supportingKeywords: [
       'inşaat', 'şantiye', 'beton', 'demir', 'kalıp', 'mimar', 'şef',
-      'proje', 'statik', 'harç', 'döküm', 'iskele', 'tuğla'
+      'proje', 'statik', 'harç', 'döküm', 'iskele', 'tuğla', 'döşeme'
     ],
     implicitTimeHooks: [
       { keyword: 'beton', hour: 8, minute: 0 },
@@ -1078,6 +1142,54 @@ const DOMAIN_RULES: DomainRule[] = [
  * Girdiyi harfiyat ve kelime sınırlarıyla regex üzerinden tarar.
  * Yüksek puan alan domain'i ve örtük kuralları anında döndürür.
  */
+export const DOMAIN_FRIENDLY_LABELS: Record<string, string> = {
+  HUKUK: 'Hukuk / Avukat',
+  ADALET_GUVENLIK: 'Hukuk & Adalet',
+  SAGLIK: 'Sağlık / Hekim',
+  SAGLIK_SOSYAL: 'Sağlık & Klinik',
+  MALIYE: 'Mali Müşavir / SMMM',
+  FINANS: 'Finans & Muhasebe',
+  EGITIM: 'Eğitim / Öğretmen',
+  OGRENCI: 'Öğrenci & Akademi',
+  MUHENDISLIK: 'Mühendislik / Şantiye',
+  INSAAT: 'İnşaat / Şantiye',
+  BILISIM: 'Yazılım / Bilişim',
+  TEKNIK: 'Otomotiv / Sanayi',
+  OTOMOTIV: 'Otomotiv / Sanayi',
+  VETERINER: 'Veterinerlik',
+  ECZACILIK: 'Eczacılık',
+  ISG: 'İş Sağlığı ve Güvenliği',
+  DENIZCILIK: 'Denizcilik',
+  ZIRAAT: 'Ziraat / Çiftçi',
+  TARIM_AV_BALIK: 'Tarım & Ziraat',
+  SAVUNMA: 'Askeri / Savunma',
+  EMNIYET: 'Emniyet / Polis',
+  GASTRONOMI: 'Gastronomi / Şef',
+  GIDA: 'Gıda & Mutfak',
+  HAVACILIK: 'Havacılık / Pilot',
+  KAMU: 'Bürokrasi / Memur',
+  TICARET: 'Ticaret & Esnaf',
+  IS_YONETIM: 'İş Yönetimi & Kurumsal',
+  EMLAK: 'Gayrimenkul / Emlak',
+  GUMRUK: 'Gümrük & Dış Ticaret',
+  KUAFOR: 'Kişisel Bakım & Kuaför',
+  SANAT_MEDYA: 'Sanat & Medya',
+  MEDYA_ILETISIM_YAYIN: 'Medya & Yayıncılık',
+  ELEKTRIK_ELEKTRONIK: 'Elektrik & Elektronik',
+  MAKINE: 'Makine Mühendisliği',
+  ENERJI: 'Enerji & Şebeke',
+  MADEN: 'Madencilik & Jeoloji',
+  METAL: 'Metal & İmalat',
+  KIMYA_PETROL_PLASTIK: 'Kimya & Rafineri',
+  TEKSTIL_GIYIM_DERI: 'Tekstil & Moda',
+  TURIZM_KONAKLAMA_YIYECEK: 'Turizm & Otelcilik',
+  ULASTIRMA_LOJISTIK: 'Lojistik & Nakliye',
+  LOJISTIK: 'Lojistik & Taşımacılık',
+  GENEL: 'Genel Not',
+  SADE: 'Sade Not',
+  CALISMIYORUM: 'Günlük Yaşam'
+};
+
 export function detectDomainFromJargon(
   text: string,
   fallbackDomain: ProfessionDomain = 'GENEL'
@@ -1127,6 +1239,7 @@ export function detectDomainFromJargon(
   let highestScore = 0;
   let bestMatches: string[] = [];
   let matchedRule: DomainRule | null = null;
+  const candidateScores: AmbiguousDomainCandidate[] = [];
 
   for (const rule of DOMAIN_RULES) {
     let currentScore = 0;
@@ -1157,11 +1270,58 @@ export function detectDomainFromJargon(
       currentScore += 15;
     }
 
+    if (currentScore >= 20 && currentMatches.length > 0) {
+      const domainLabel = DOMAIN_FRIENDLY_LABELS[rule.domain] || String(rule.domain);
+      candidateScores.push({
+        domain: rule.domain,
+        score: currentScore,
+        matchedKeywords: currentMatches,
+        domainLabel,
+        suggestedIcon: rule.defaultIcon,
+        suggestedColor: rule.defaultColor,
+        description: `${currentMatches.join(', ')} (${domainLabel})`
+      });
+    }
+
     if (currentScore > highestScore) {
       highestScore = currentScore;
       bestDomain = rule.domain;
       bestMatches = currentMatches;
       matchedRule = rule;
+    }
+  }
+
+  // Adayları puana göre azalan sırala
+  candidateScores.sort((a, b) => b.score - a.score);
+
+  // Belirsizlik / İkilem (Ambiguity) Tespiti:
+  // Eğer en az 2 farklı mesleki alan eşleştiyse ve puanları birbirine çok yakınsa
+  let isAmbiguous = false;
+  let candidateDomains: AmbiguousDomainCandidate[] | undefined = undefined;
+  let clarificationQuestion: string | undefined = undefined;
+
+  const distinctCandidates: AmbiguousDomainCandidate[] = [];
+  const seenDomains = new Set<string>();
+  for (const cand of candidateScores) {
+    if (!seenDomains.has(cand.domain)) {
+      seenDomains.add(cand.domain);
+      distinctCandidates.push(cand);
+    }
+  }
+
+  if (distinctCandidates.length >= 2) {
+    const top1 = distinctCandidates[0];
+    const top2 = distinctCandidates[1];
+    
+    // İkilem şartı: En az 2 alan eşleştiğinde ve ikisi de önemli bir puan aldığında
+    const hasCloseScores = (top1.score - top2.score) <= 35 && top2.score >= 20;
+    const hasMultipleExclusive = top1.score >= 60 && top2.score >= 60;
+
+    if (hasCloseScores || hasMultipleExclusive) {
+      isAmbiguous = true;
+      candidateDomains = distinctCandidates.slice(0, 3);
+      const domainOptionsText = candidateDomains.map(c => `${c.suggestedIcon} ${c.domainLabel}`).join(' veya ');
+      clarificationQuestion = `Bunu mu demek istediniz: ${domainOptionsText}?`;
     }
   }
 
@@ -1194,6 +1354,9 @@ export function detectDomainFromJargon(
       reason: fallbackDomain === 'OTOMATIK_JARGON'
         ? `Otomatik Jargon: ${bestMatches.join(', ')} (${bestDomain})`
         : `Tespit edilen sektörel jargon: ${bestMatches.join(', ')}`,
+      isAmbiguous,
+      candidateDomains,
+      clarificationQuestion,
     };
   }
 
@@ -1205,5 +1368,108 @@ export function detectDomainFromJargon(
     suggestedIcon: fallbackDomain === 'OTOMATIK_JARGON' ? '🎯' : '📌',
     suggestedColor: '#FEF3C7',
     reason: fallbackDomain === 'OTOMATIK_JARGON' ? 'Otomatik Jargon (Genel mod)' : undefined,
+    isAmbiguous: false,
+  };
+}
+
+export interface JargonKeywordInsight {
+  keyword: string;
+  count: number;
+  percentage: number;
+  domain: ProfessionDomain;
+  domainLabel: string;
+  suggestedIcon: string;
+  suggestedColor: string;
+}
+
+export interface JargonInsightsResult {
+  activeDomain: ProfessionDomain;
+  activeDomainLabel: string;
+  totalNotesAnalyzed: number;
+  notesWithJargonCount: number;
+  topKeywords: JargonKeywordInsight[];
+  totalJargonOccurrences: number;
+  hasJargonData: boolean;
+}
+
+/**
+ * Kullanıcının mevcut notlarını ve seçtiği uzmanlık alanını analiz ederek
+ * kart listesinde en sık kullanılan jargon kelimelerini hesaplar.
+ */
+export function analyzeJargonInsights(
+  notes: { baslik: string; hamMetin?: string; action_items?: { task: string }[] }[],
+  userDomain: ProfessionDomain = 'OTOMATIK_JARGON'
+): JargonInsightsResult {
+  const activeDomainLabel = DOMAIN_FRIENDLY_LABELS[userDomain] || (userDomain === 'OTOMATIK_JARGON' ? 'Otomatik Jargon Radarı' : String(userDomain));
+
+  if (!notes || notes.length === 0) {
+    return {
+      activeDomain: userDomain,
+      activeDomainLabel,
+      totalNotesAnalyzed: 0,
+      notesWithJargonCount: 0,
+      topKeywords: [],
+      totalJargonOccurrences: 0,
+      hasJargonData: false,
+    };
+  }
+
+  let notesWithJargonCount = 0;
+  let totalJargonOccurrences = 0;
+  const keywordMap = new Map<string, {
+    count: number;
+    domain: ProfessionDomain;
+    domainLabel: string;
+    icon: string;
+    color: string;
+  }>();
+
+  for (const note of notes) {
+    const actionText = note.action_items ? note.action_items.map(a => a.task).join(' ') : '';
+    const fullText = `${note.baslik || ''} ${note.hamMetin || ''} ${actionText}`.trim();
+    if (!fullText) continue;
+
+    const radar = detectDomainFromJargon(fullText, userDomain);
+    if (radar.matchedKeywords && radar.matchedKeywords.length > 0) {
+      notesWithJargonCount++;
+      for (const kw of radar.matchedKeywords) {
+        totalJargonOccurrences++;
+        const key = kw.toLowerCase();
+        const existing = keywordMap.get(key);
+        if (existing) {
+          existing.count++;
+        } else {
+          keywordMap.set(key, {
+            count: 1,
+            domain: radar.detectedDomain,
+            domainLabel: DOMAIN_FRIENDLY_LABELS[radar.detectedDomain] || String(radar.detectedDomain),
+            icon: radar.suggestedIcon || '🎯',
+            color: radar.suggestedColor || '#FEF3C7',
+          });
+        }
+      }
+    }
+  }
+
+  const sortedList = Array.from(keywordMap.entries())
+    .map(([kw, data]) => ({
+      keyword: kw.charAt(0).toLocaleUpperCase('tr-TR') + kw.slice(1),
+      count: data.count,
+      percentage: totalJargonOccurrences > 0 ? Math.round((data.count / totalJargonOccurrences) * 100) : 0,
+      domain: data.domain,
+      domainLabel: data.domainLabel,
+      suggestedIcon: data.icon,
+      suggestedColor: data.color,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  return {
+    activeDomain: userDomain,
+    activeDomainLabel,
+    totalNotesAnalyzed: notes.length,
+    notesWithJargonCount,
+    topKeywords: sortedList.slice(0, 8),
+    totalJargonOccurrences,
+    hasJargonData: sortedList.length > 0,
   };
 }

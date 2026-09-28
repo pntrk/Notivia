@@ -7,6 +7,7 @@ export interface SchoolAdminTask {
   id: string;
   baslik: string;
   kategori:
+    | 'Maarif Modeli & Beceri Örgüsü'
     | 'Özel Eğitim'
     | 'Mevzuat & DYS'
     | 'Öğrenci İşleri'
@@ -136,9 +137,15 @@ export function parseSchoolAdminIntent(
 
   const isEducationContext =
     isEduDomain ||
-    text.includes('okul') || (text.includes('eğitim') && !text.includes('iş güvenliği') && !text.includes('çalışan')) || text.includes('egitim') ||
+    text.includes('maarif') || text.includes('öğrenme çıktısı') || text.includes('ogrenme ciktisi') || text.includes('öğrenme çıktıları') || text.includes('ogrenme ciktilari') ||
+    text.includes('beceri örgüsü') || text.includes('beceri orgusu') || text.includes('süreç bileşenleri') || text.includes('surec bilesenleri') ||
+    text.includes('süreç odaklı') || text.includes('surec odakli') || text.includes('biçimlendirici') || text.includes('formatif') ||
+    text.includes('ksdt') || text.includes('rubrik') || text.includes('farklılaştırma') || text.includes('farklilastirma') ||
+    text.includes('zenginleştirme') || text.includes('zenginlestirme') || text.includes('okul') || (text.includes('eğitim') && !text.includes('iş güvenliği') && !text.includes('çalışan')) || text.includes('egitim') ||
     text.includes('öğretmen') || text.includes('ogretmen') || text.includes('müdür') || text.includes('mudur') ||
-    text.includes('sınav') || text.includes('sinav') || text.includes('e-okul') || text.includes('eokul') ||
+    text.includes('sınav') || text.includes('sinav') || text.includes('e-okul') || text.includes('eokul') || text.includes('e okul') ||
+    text.includes('nakil') || text.includes('kura') || text.includes('karne') || text.includes('sosyal etkinlik') ||
+    text.includes('maddi hata') || text.includes('hizmetiçi') || text.includes('hizmetici') || text.includes('idareci') || text.includes('şartlı eğitim') ||
     text.includes('not giriş') || text.includes('not giris') || text.includes('kazanım analizi') || text.includes('barem') ||
     text.includes('nöbet') || text.includes('nobet') || text.includes('gözetmen') || text.includes('gozetmen') ||
     text.includes('makale') || text.includes('hakemlik') || text.includes('peer-review') || text.includes('peer review') ||
@@ -165,6 +172,454 @@ export function parseSchoolAdminIntent(
     text.includes('gelişim gözlem') || text.includes('gelisim gozlem') || text.includes('aday öğretmen') || text.includes('aday ogretmen');
 
   if (!isEducationContext) return null;
+
+  // 0.0 TÜRKİYE YÜZYILI MAARİF MODELİ: DERS PLANI & ÖĞRENME ÇIKTILARI (ÖÇ)
+  if (
+    text.includes('maarif') ||
+    text.includes('öğrenme çıktısı') ||
+    text.includes('ogrenme ciktisi') ||
+    text.includes('öğrenme çıktıları') ||
+    text.includes('ogrenme ciktilari') ||
+    text.includes('süreç bileşenleri') ||
+    text.includes('surec bilesenleri') ||
+    text.includes('beceri örgüsü') ||
+    text.includes('beceri orgusu') ||
+    text.includes('kavramsal beceri') ||
+    text.includes('alan becerisi') ||
+    text.includes('öğrenme yaşantısı') ||
+    text.includes('ogrenme yasantisi') ||
+    (text.includes('ders planı') && (text.includes('maarif') || text.includes('müfredat') || text.includes('beceri')))
+  ) {
+    const dt = parseEduDateTime(rawText, now, 8, 30);
+    return {
+      id: `edu_maarif_plan_${Date.now()}`,
+      baslik: dt.cleanedTitle || 'Maarif Modeli Ders Planı & Beceri Örgüsü',
+      kategori: 'Maarif Modeli & Beceri Örgüsü',
+      mevzuat_notu: 'Türkiye Yüzyılı Maarif Modeli Öğretim Programları uyarınca ders planları öğrenme çıktısı (ÖÇ), süreç bileşenleri, beceri örgüsü (Kavramsal, Sosyal-Duygusal, Alan Becerileri) ve erdem-değer-eylem çerçevesinde hazırlanır.',
+      action_items: [
+        { task: 'Giriş (Köprü Kurma): Öğrencilerin ön bilgilerini harekete geçiren merak uyandırıcı soru/etkinliği belirle', is_completed: false },
+        { task: 'Keşfetme & Derinleşme: Öğrenme çıktısı ve süreç bileşenlerine (SB) yönelik beceri modelleme ve uygulama adımlarını kurgula', is_completed: false },
+        { task: 'Öğrenme Kanıtları: Süreç odaklı biçimlendirici değerlendirme (Çıkış kartı, öz/akran değerlendirme veya kontrol listesi) hazırla', is_completed: false },
+        { task: 'Farklılaştırma Entegrasyonu: Hızlı öğrenenler için zenginleştirme, ek desteğe ihtiyaç duyanlar için destekleme görevlerini uyarla', is_completed: false },
+        { task: 'Sosyal-Duygusal Öğrenme (SDB) ve erdem-değer-eylem yansımalarını ders akışında ilişkilendir', is_completed: false }
+      ],
+      zaman_etiketi: `${dt.dayLabel} (Ders Planı & Uygulama)`,
+      tarih_iso: dt.tarih_iso,
+      hazirlik_zamani: 'Dersten Önce (Öğrenme Yaşantısı Hazırlığı)',
+      ikon: '🌟',
+      renk: '#FEF08A',
+      sesli_geribildirim: 'Türkiye Yüzyılı Maarif Modeli ders planı, öğrenme çıktısı ve beceri basamakları hazırlandı.'
+    };
+  }
+
+  // 0.01 TÜRKİYE YÜZYILI MAARİF MODELİ: SÜREÇ ODAKLI ÖLÇME DEĞERLENDİRME & KSDT / RUBRİK
+  if (
+    text.includes('süreç odaklı') ||
+    text.includes('surec odakli') ||
+    text.includes('biçimlendirici') ||
+    text.includes('formatif') ||
+    text.includes('ksdt') ||
+    (text.includes('rubrik') && !text.includes('tez')) ||
+    (text.includes('dereceli puanlama') && !text.includes('tez')) ||
+    (text.includes('dağılım tablosu') && text.includes('soru'))
+  ) {
+    const dt = parseEduDateTime(rawText, now, 10, 0);
+    return {
+      id: `edu_maarif_olcme_${Date.now()}`,
+      baslik: 'Süreç Odaklı Ölçme & KSDT / Rubrik',
+      kategori: 'Maarif Modeli & Beceri Örgüsü',
+      mevzuat_notu: 'MEB Ölçme ve Değerlendirme Yönetmeliği ile Maarif Modeli Ölçme Kılavuzu uyarınca ölçme-değerlendirme ezbere değil, süreç odaklı biçimlendirici değerlendirme, konu soru dağılım senaryosu (KSDT) ve analitik rubriklerle yürütülür.',
+      action_items: [
+        { task: 'İl/okul zümre kurulu konu soru dağılım tablosundan (KSDT) ortak yazılı sınav senaryosunu seç', is_completed: false },
+        { task: 'Ezberci çoktan seçmeli test yerine açık uçlu, analitik ve üst düzey düşünme sorularını hazırla', is_completed: false },
+        { task: 'Her soru için aşamalı puanlama basamaklarını içeren analitik Dereceli Puanlama Anahtarını (Rubrik) oluştur', is_completed: false },
+        { task: 'Süreç odaklı gözlem formları, öğrenci gelişim dosyası (portfolyo) ve öz/akran değerlendirmelerini e-Okul\'a işle', is_completed: false }
+      ],
+      zaman_etiketi: `${dt.dayLabel} (Süreç Odaklı Ölçme)`,
+      tarih_iso: dt.tarih_iso,
+      hazirlik_zamani: 'Sınav / Değerlendirme Öncesi Barem Hazırlığı',
+      ikon: '📝',
+      renk: '#FEF08A',
+      sesli_geribildirim: 'Süreç odaklı ölçme, konu soru dağılım tablosu ve dereceli puanlama rubriği planlandı.'
+    };
+  }
+
+  // 0.02 TÜRKİYE YÜZYILI MAARİF MODELİ: FARKLILAŞTIRMA (ZENGİNLEŞTİRME & DESTEKLEME) & SOSYAL-DUYGUSAL ÖĞRENME (SDB)
+  if (
+    text.includes('farklılaştırma') ||
+    text.includes('farklilastirma') ||
+    text.includes('zenginleştirme') ||
+    text.includes('zenginlestirme') ||
+    (text.includes('destekleme') && (text.includes('eğitim') || text.includes('öğrenci') || text.includes('maarif'))) ||
+    text.includes('sosyal duygusal') ||
+    text.includes('sdb') ||
+    text.includes('erdem değer eylem') ||
+    text.includes('bütüncül eğitim')
+  ) {
+    return {
+      id: `edu_maarif_farklilastirma_${Date.now()}`,
+      baslik: 'Maarif Modeli Farklılaştırma & SDB',
+      kategori: 'Maarif Modeli & Beceri Örgüsü',
+      mevzuat_notu: 'Türkiye Yüzyılı Maarif Modeli Farklılaştırılmış Öğretim Kılavuzu uyarınca sınıftaki bireysel farklılıklar zenginleştirme (enrichment) ve destekleme (scaffolding) yollarıyla karşılanır; sosyal-duygusal beceriler desteklenir.',
+      action_items: [
+        { task: 'İleri düzeydeki öğrenciler için derinleştirici zenginleştirme (proje, problem çözme, vaka inceleme) materyalleri hazırla', is_completed: false },
+        { task: 'Öğrenme desteğine ihtiyaç duyan öğrenciler için basamaklandırılmış destekleme (scaffolding) föyleri oluştur', is_completed: false },
+        { task: 'Sosyal-duygusal öğrenme becerileri (Benlik farkındalığı, öz yönetim, empati ve iş birliği) gözlem kriterlerini ders sürecine ekle', is_completed: false },
+        { task: 'Akl-ı selim, kalb-i selim ve zevk-i selim bütüncül insan profiline uygun değer-eylem kazanımlarını değerlendir', is_completed: false }
+      ],
+      zaman_etiketi: 'Haftalık / Dönemlik Farklılaştırma',
+      tarih_iso: now.toISOString(),
+      hazirlik_zamani: 'Öğrenci Düzey Belirleme & Ön Test',
+      ikon: '🎯',
+      renk: '#FEF08A',
+      sesli_geribildirim: 'Maarif Modeli zenginleştirme, destekleme ve sosyal-duygusal beceri adımları planlandı.'
+    };
+  }
+
+  // 0.03 E-OKUL ÖĞRENCİ NAKİL & GEÇİŞ İŞLEMLERİ (İDARECİ: OKUL MÜDÜRÜ / MÜDÜR YARDIMCISI)
+  if (
+    text.includes('nakil') ||
+    text.includes('ogrenci nakil') ||
+    text.includes('öğrenci nakil') ||
+    text.includes('nakil kabul') ||
+    text.includes('nakil onay') ||
+    text.includes('nakil onayı') ||
+    text.includes('nakil isteği') ||
+    text.includes('nakil talebi') ||
+    text.includes('nakil başvurusu') ||
+    text.includes('nakil islemi') ||
+    text.includes('nakil işlemi') ||
+    (text.includes('kontenjan') && (text.includes('öğrenci') || text.includes('ogrenci') || text.includes('okul') || text.includes('şube') || text.includes('sube')))
+  ) {
+    const dt = parseEduDateTime(rawText, now, 10, 0);
+    return {
+      id: `edu_nakil_${Date.now()}`,
+      baslik: 'e-Okul Öğrenci Nakil & Geçiş İşlemleri',
+      kategori: 'Öğrenci İşleri',
+      mevzuat_notu: 'MEB Okul Öncesi ve İlköğretim Kurumları Yönetmeliği (Md. 12) ile Ortaöğretim Kurumları Yönetmeliği (Md. 37-38) uyarınca nakil ve geçiş başvuruları haftalık/aylık kontenjan dahilinde e-Okul sistemi üzerinden okul idaresince karara bağlanır.',
+      action_items: [
+        { task: 'e-Okul Yönetim Bilgi Sistemi > Kurum İşlemleri > Nakil İşlemleri ekranına okul idareci şifresiyle giriş yap', is_completed: false },
+        { task: 'Sınıf seviyesi, boş kontenjan durumu ve yabancı dil/alan uyumunu e-Okul üzerinden doğrula', is_completed: false },
+        { task: 'Gelen nakil başvurusunu veli ikametgah/çalışma belgesi veya yasal mazeret evrakıyla teyit et', is_completed: false },
+        { task: 'e-Okul üzerinden "Nakil Kabul" onayını ver veya yasal gerekçesini sisteme girerek işlemi sonuçlandır', is_completed: false },
+        { task: 'Nakli gerçekleşen öğrenciyi uygun şubeye yerleştir, sınıf defteri ve öğrenci kütüğüne kaydet; eski okulundan sağlık/özlük dosyasını DYS ile iste', is_completed: false }
+      ],
+      zaman_etiketi: 'Haftalık Nakil Dönemi (e-Okul Onayı)',
+      tarih_iso: dt.tarih_iso,
+      hazirlik_zamani: 'Haftalık Kontenjan Belirleme & İnceleme',
+      ikon: '🔄',
+      renk: '#E0E7FF',
+      sesli_geribildirim: 'e-Okul öğrenci nakil kabul, kontenjan kontrolü ve şube yerleştirme protokolü hazırlandı.'
+    };
+  }
+
+  // 0.04 E-OKUL MERKEZİ KURA & ŞUBE BELİRLEME KOMİSYONU (İDARECİ)
+  if (
+    text.includes('kura çekimi') ||
+    text.includes('kura cekimi') ||
+    text.includes('şube kura') ||
+    text.includes('sube kura') ||
+    text.includes('sınıf kura') ||
+    text.includes('sinif kura') ||
+    text.includes('şube belirleme') ||
+    text.includes('sube belirleme') ||
+    text.includes('şube kuraları') ||
+    text.includes('sube kuralari') ||
+    (text.includes('kura') && (text.includes('öğrenci') || text.includes('ogrenci') || text.includes('öğretmen') || text.includes('ogretmen') || text.includes('1. sınıf') || text.includes('5. sınıf') || text.includes('9. sınıf')))
+  ) {
+    const dt = parseEduDateTime(rawText, now, 10, 30);
+    return {
+      id: `edu_kura_sube_${Date.now()}`,
+      baslik: 'e-Okul Merkezi Kura & Şube Belirleme',
+      kategori: 'Öğrenci İşleri',
+      mevzuat_notu: 'MEB Yönetmeliği gereğince ilkokul ve ortaokullarda şube ve sınıf öğretmenleri, e-Okul sistemi üzerinden merkezi kura yöntemiyle veli ve komisyon huzurunda şeffaf olarak belirlenir.',
+      action_items: [
+        { task: 'Okul Kura Komisyonunu (Okul Müdürü, Md. Yrd., Rehber Öğretmen ve Okul Aile Birliği Bşk.) resmi yazıyla kur', is_completed: false },
+        { task: 'Kayıt bölgesindeki kesin kayıtlı öğrencilerin kız/erkek, doğum tarihi ve özel eğitim dengesini e-Okul\'da doğrula', is_completed: false },
+        { task: 'e-Okul Merkezi Kura Modülü üzerinden öğrenci şube ve öğretmen kura çekimini gerçekleştir', is_completed: false },
+        { task: 'Kura çekim tutanağını komisyon üyelerine ıslak imzalatarak okul ilan panosunda ve internet sitesinde duyur', is_completed: false },
+        { task: 'Şube değişiklik taleplerinin ancak veli yazılı başvurusu ve PDR komisyon raporuyla değerlendirilebileceğini tebliğ et', is_completed: false }
+      ],
+      zaman_etiketi: 'Eylül Ayı Kura Takvimi',
+      tarih_iso: dt.tarih_iso,
+      hazirlik_zamani: 'Kura Öncesi Komisyon Toplantısı',
+      ikon: '🎲',
+      renk: '#FEF3C7',
+      sesli_geribildirim: 'e-Okul merkezi kura, şube dağıtımı ve komisyon tutanak adımları oluşturuldu.'
+    };
+  }
+
+  // 0.05 E-OKUL SOSYAL ETKİNLİK MODÜLÜ & E-PORTFOLYO İDARE ONAYI
+  if (
+    text.includes('sosyal etkinlik onay') ||
+    text.includes('sosyal etkinlik modülü') ||
+    text.includes('sosyal etkinlik modulu') ||
+    text.includes('e-okul sosyal etkinlik') ||
+    text.includes('eokul sosyal etkinlik') ||
+    text.includes('e okul sosyal etkinlik') ||
+    text.includes('kulüp onay') ||
+    text.includes('kulup onay') ||
+    text.includes('e-portfolyo onay') ||
+    (text.includes('sosyal etkinlik') && (text.includes('onayla') || text.includes('onay') || text.includes('idare')))
+  ) {
+    const dt = parseEduDateTime(rawText, now, 11, 0);
+    return {
+      id: `edu_sosyal_etkinlik_onay_${Date.now()}`,
+      baslik: 'e-Okul Sosyal Etkinlik & e-Portfolyo İdare Onayı',
+      kategori: 'Sosyal Etkinlik & Gezi',
+      mevzuat_notu: 'MEB Sosyal Etkinlikler Yönetmeliği uyarınca danışman öğretmenler tarafından sisteme girilen etkinlikler, yarışma dereceleri ve katılım belgeleri okul müdürlüğü tarafından incelenerek onaylanır.',
+      action_items: [
+        { task: 'e-Okul Sosyal Etkinlik Modülü > Kurum Onay İşlemleri menüsünden bekleyen kayıtları listele', is_completed: false },
+        { task: 'Öğrencinin katılım belgesi, yarışma derecesi, veli izin belgesi ve faaliyet fotoğraflarını mevzuata göre incele', is_completed: false },
+        { task: 'Uygun bulunan sanatsal, sportif ve bilimsel etkinlikleri okul idaresi yetkisiyle sistemde onayla', is_completed: false },
+        { task: 'Dönem sonu Sosyal Etkinlik Tamamlama Belgelerinin e-Okul dökümünü alarak öğrenci gelişim dosyalarına ekle', is_completed: false }
+      ],
+      zaman_etiketi: 'Aylık İdari Onay Rutini',
+      tarih_iso: dt.tarih_iso,
+      hazirlik_zamani: 'Onay Öncesi Belge İnceleme',
+      ikon: '🏆',
+      renk: '#DCFCE7',
+      sesli_geribildirim: 'e-Okul sosyal etkinlik modülü idari onay ve e-Portfolyo doğrulama adımları hazırlandı.'
+    };
+  }
+
+  // 0.06 E-OKUL ŞÖK KARAR GİRİŞİ & BAŞARISIZ ÖĞRENCİ TEDBİR PLANI
+  if (
+    text.includes('şök kararları gir') ||
+    text.includes('sok kararlari gir') ||
+    text.includes('şök sisteme işle') ||
+    text.includes('sok sisteme isle') ||
+    text.includes('şök karar girişi') ||
+    text.includes('sok karar girisi') ||
+    (text.includes('şök') && text.includes('e-okul')) ||
+    (text.includes('sok') && text.includes('e-okul')) ||
+    (text.includes('şök') && text.includes('e okul')) ||
+    (text.includes('şök') && (text.includes('karar') || text.includes('başarısız') || text.includes('tedbir')))
+  ) {
+    const dt = parseEduDateTime(rawText, now, 14, 0);
+    return {
+      id: `edu_sok_giris_${Date.now()}`,
+      baslik: 'e-Okul ŞÖK Karar Girişi & Tedbir Planı',
+      kategori: 'Kurul & Zümre',
+      mevzuat_notu: 'MEB Yönetmelikleri gereğince Şube Öğretmenler Kurulunda her şube için alınan akademik ve davranışsal kararlar ile başarısız öğrenciler için planlanan tedbirler süresi içinde e-Okul sistemine işlenmelidir.',
+      action_items: [
+        { task: 'Şube Öğretmenler Kurulunda alınan şube başarı analizi ve karar tutanaklarını topla', is_completed: false },
+        { task: 'e-Okul > Kurum İşlemleri > Bilgi Giriş İşlemleri > ŞÖK Kararları ekranına öğrenci bazında kararları gir', is_completed: false },
+        { task: '3 veya daha fazla dersten başarısız olan öğrenciler için DYK, destek eğitim veya rehberlik servisi tedbir planını sisteme kaydet', is_completed: false },
+        { task: 'İmzalı ŞÖK toplantı tutanağını ve veli bilgilendirme taahhütnamelerini okul idari arşivine kaldır', is_completed: false }
+      ],
+      zaman_etiketi: 'Dönem Sonu / ŞÖK Takvimi',
+      tarih_iso: dt.tarih_iso,
+      hazirlik_zamani: 'Kurul Kararları Derleme',
+      ikon: '📋',
+      renk: '#FEF08A',
+      sesli_geribildirim: 'e-Okul ŞÖK karar girişi, başarısız öğrenci tedbirleri ve veli bilgilendirme protokolü açıldı.'
+    };
+  }
+
+  // 0.07 E-OKUL NOT DÜZELTME & MADDİ HATA İNCELEME KOMİSYONU
+  if (
+    text.includes('not düzeltme') ||
+    text.includes('not duzeltme') ||
+    text.includes('maddi hata') ||
+    text.includes('sınav notuna itiraz') ||
+    text.includes('sinav notuna itiraz') ||
+    text.includes('not itiraz dilekçesi') ||
+    text.includes('not itiraz dilekcesi') ||
+    (text.includes('not') && text.includes('itiraz') && text.includes('sınav'))
+  ) {
+    const due = addBusinessDays(now, 5);
+    return {
+      id: `edu_not_duzeltme_${Date.now()}`,
+      baslik: 'e-Okul Not Düzeltme & Maddi Hata Komisyonu',
+      kategori: 'Öğrenci İşleri',
+      mevzuat_notu: 'MEB Ölçme ve Değerlendirme Yönetmeliği uyarınca sınav notuna itirazlarda okul müdürü başkanlığında zümre öğretmenlerinden Maddi Hata Komisyonu kurulur; not düzeltmesi İlçe MEM onayıyla e-Okul\'a işlenir.',
+      action_items: [
+        { task: 'Velinin sınav sonuçlarının ilanından itibaren en geç 5 iş günü içinde verdiği yazılı itiraz dilekçesini DYS evrak kaydına al', is_completed: false },
+        { task: 'Okul Müdürü başkanlığında branş zümre öğretmenlerinden oluşan 3 kişilik Maddi Hata İnceleme Komisyonunu kur', is_completed: false },
+        { task: 'Sınav kağıdını ve dereceli puanlama rubriğini/cevap anahtarını inceleyerek komisyon değerlendirme tutanağını tanzim et', is_completed: false },
+        { task: 'Not değişikliği gerekiyorsa DYS üzerinden gerekçeli komisyon tutanağıyla İlçe MEM\'den e-Okul Not Düzeltme Oluru talep et', is_completed: false },
+        { task: 'İlçe MEM onayından sonra e-Okul sisteminde notu güncelle ve sonucu veliye resmi yazıyla tebliğ et', is_completed: false }
+      ],
+      zaman_etiketi: '5 İş Günü Yasal İnceleme Süresi',
+      tarih_iso: due.toISOString(),
+      hazirlik_zamani: 'İtiraz Dilekçesi Alındığında (Derhal)',
+      ikon: '⚖️',
+      renk: '#FEF08A',
+      sesli_geribildirim: 'Maddi hata inceleme komisyonu, DYS İlçe MEM olur yazısı ve e-Okul not düzeltme protokolü takvimlendi.'
+    };
+  }
+
+  // 0.08 E-OKUL KARNE, TAKDİR/TEŞEKKÜR & KÜTÜK DEFTERİ BASIMI
+  if (
+    text.includes('karne basımı') ||
+    text.includes('karne basimi') ||
+    text.includes('karne bas') ||
+    text.includes('karne hazırla') ||
+    text.includes('karne hazirla') ||
+    text.includes('takdir teşekkür bas') ||
+    text.includes('takdir tesekkur bas') ||
+    text.includes('iftihar belgesi') ||
+    text.includes('onur belgesi bas') ||
+    text.includes('dönem sonu karne') ||
+    text.includes('donem sonu karne') ||
+    text.includes('sınıf geçme defteri') ||
+    text.includes('sinif gecme defteri')
+  ) {
+    const dt = parseEduDateTime(rawText, now, 9, 0);
+    return {
+      id: `edu_karne_basim_${Date.now()}`,
+      baslik: 'e-Okul Karne & Takdir/Teşekkür Belgesi Basımı',
+      kategori: 'Öğrenci İşleri',
+      mevzuat_notu: 'MEB Yönetmelikleri uyarınca tüm derslerin not kilidi tamamlandıktan sonra e-Okul sisteminden karne, takdir-teşekkür, üstün başarı ve iftihar belgeleri ile sınıf geçme kütük defterleri resmi mühür ve imza için basılır.',
+      action_items: [
+        { task: 'Tüm branş öğretmenlerinin e-Okul sınav, sözlü ve ders içi katılım not girişlerini tamamlayıp kilitlediğini doğrula', is_completed: false },
+        { task: 'Devamsızlık sınırını aşan veya sınıf tekrarına kalan öğrencilerin durumunu ŞÖK ve disiplin kuruluyla netleştir', is_completed: false },
+        { task: 'e-Okul Raporlar > Karne ve Belge Basım ekranından takdir, teşekkür, onur ve iftihar belgelerini dök', is_completed: false },
+        { task: 'Karneleri okul müdürü ıslak imzası ve resmi mühürle onaylayıp sınıf rehber öğretmenlerine zimmetle teslim et', is_completed: false },
+        { task: 'Dönem sonu Sınıf Geçme Defterlerini yazdırıp ciltleterek okulun daimi arşivine kaldır', is_completed: false }
+      ],
+      zaman_etiketi: 'Dönem Sonu Karne Haftası',
+      tarih_iso: dt.tarih_iso,
+      hazirlik_zamani: 'Karne Öncesi Not & Kilit Denetimi',
+      ikon: '📜',
+      renk: '#FEF3C7',
+      sesli_geribildirim: 'e-Okul karne basımı, takdir-teşekkür belgeleri ve dönem sonu not kilit kontrolleri hazırlandı.'
+    };
+  }
+
+  // 0.09 MEBBİS İZİN/RAPOR GİRİŞİ & BOŞ DERS NÖBETÇİ İKAME PLANI (İDARECİ)
+  if (
+    text.includes('öğretmen rapor aldı') ||
+    text.includes('ogretmen rapor aldi') ||
+    text.includes('raporu mebbise işle') ||
+    text.includes('raporu mebbise isle') ||
+    text.includes('mebbis rapor girişi') ||
+    text.includes('mebbis rapor girisi') ||
+    text.includes('öğretmen sevk aldı') ||
+    text.includes('ogretmen sevk aldi') ||
+    text.includes('öğretmen mazeret izni') ||
+    text.includes('ogretmen mazeret izni') ||
+    (text.includes('öğretmen') && text.includes('rapor') && (text.includes('mebbis') || text.includes('idare') || text.includes('okul')))
+  ) {
+    const dt = parseEduDateTime(rawText, now, 8, 15);
+    return {
+      id: `edu_mebbis_rapor_${Date.now()}`,
+      baslik: 'MEBBİS İzin/Rapor Girişi & Ders İkame Planı',
+      kategori: 'Özlük & Puantaj',
+      mevzuat_notu: 'MEB İzin Yönergesi ve DMK uyarınca personelin aldığı sağlık raporları derhal MEBBİS İzin Modülüne işlenmeli; öğrencilerin boş dersi nöbetçi veya ek ders ücretli öğretmenle ikame edilmelidir.',
+      action_items: [
+        { task: 'Öğretmenin e-Devlet barkodlu veya hastane onaylı sağlık raporunu teslim alarak kayıt numarası ver', is_completed: false },
+        { task: 'MEBBİS > Özlük Modülü > İzin İşlemleri > Sağlık İzinleri ekranına rapor protokol no ve gün sayısını hatasız işle', is_completed: false },
+        { task: 'Raporlu öğretmenin haftalık ders programını inceleyerek sınıfların boş geçmemesi için nöbetçi öğretmen görevlendirmesi yap', is_completed: false },
+        { task: 'KBS Ek Ders Modülünde raporlu günlerin ders ücreti kesintisini puantaja yansıt', is_completed: false },
+        { task: 'Rapor fotokopisi ve MEBBİS izin onay belgesini öğretmenin okul özlük dosyasına kaldır', is_completed: false }
+      ],
+      zaman_etiketi: 'Mesai Başlangıcı (Rapor Bildirimiyle Derhal)',
+      tarih_iso: dt.tarih_iso,
+      hazirlik_zamani: 'Sabah 08:15 (Ders İkamesi)',
+      ikon: '🩺',
+      renk: '#E0F2FE',
+      sesli_geribildirim: 'MEBBİS personel rapor girişi, KBS ek ders kesintisi ve nöbetçi öğretmen ikame planı oluşturuldu.'
+    };
+  }
+
+  // 0.10 MEBBİS HİZMETİÇİ EĞİTİM & SEMİNER İDARE ONAYLARI
+  if (
+    text.includes('hizmetiçi onay') ||
+    text.includes('hizmetici onay') ||
+    text.includes('mebbis hizmetiçi') ||
+    text.includes('mebbis hizmetici') ||
+    text.includes('mebbis seminer onay') ||
+    text.includes('öğretmen kurs başvurusu') ||
+    text.includes('ogretmen kurs basvurusu') ||
+    text.includes('mahalli hizmetiçi') ||
+    text.includes('mahalli hizmetici')
+  ) {
+    const dt = parseEduDateTime(rawText, now, 11, 30);
+    return {
+      id: `edu_hizmetici_onay_${Date.now()}`,
+      baslik: 'MEBBİS Hizmetiçi Eğitim & Seminer İdare Onayı',
+      kategori: 'Özlük & Puantaj',
+      mevzuat_notu: 'MEB Hizmetiçi Eğitim Yönetmeliği uyarınca öğretmenlerin mahalli ve merkezi eğitim faaliyetleri okul müdürlüğü 1. onay makamı tarafından takvimine göre incelenip onaylanır.',
+      action_items: [
+        { task: 'MEBBİS Hizmetiçi Eğitim Modülü > Başvuru Onay İşlemleri ekranına girerek bekleyen öğretmen başvurularını listele', is_completed: false },
+        { task: 'Eğitimin tarihlerinin okul sınav takvimi, nöbet günleri ve ders yüküyle çakışma durumunu denetle', is_completed: false },
+        { task: 'Okulun eğitim-öğretim aksamayacak şekilde uygun görülen başvuruları okul müdürü yetkisiyle sistemde onayla', is_completed: false },
+        { task: 'Faaliyet bitiminde personelin e-Sertifika katılım belgesini MEBBİS özlük kaydında teyit et', is_completed: false }
+      ],
+      zaman_etiketi: 'Başvuru Takvimi İçi (Sistem Onayı)',
+      tarih_iso: dt.tarih_iso,
+      hazirlik_zamani: 'Ders Yükü & İkame Kontrolü',
+      ikon: '🧑‍🏫',
+      renk: '#FEF9C3',
+      sesli_geribildirim: 'MEBBİS hizmetiçi eğitim idari onayı ve ders ikame kontrolleri planlandı.'
+    };
+  }
+
+  // 0.11 ŞARTLI EĞİTİM YARDIMI (ŞEY) & E-OKUL DEVAMSIZLIK TAKİBİ
+  if (
+    text.includes('şartlı eğitim yardımı') ||
+    text.includes('sartli egitim yardimi') ||
+    text.includes('şey devamsızlık') ||
+    text.includes('sey devamsizlik') ||
+    text.includes('sydv öğrenci') ||
+    text.includes('sydv ogrenci') ||
+    (text.includes('sosyal yardım') && text.includes('devamsızlık'))
+  ) {
+    const dt = parseEduDateTime(rawText, now, 13, 30);
+    return {
+      id: `edu_sey_takip_${Date.now()}`,
+      baslik: 'Şartlı Eğitim Yardımı (ŞEY) & Devamsızlık Takibi',
+      kategori: 'Öğrenci İşleri',
+      mevzuat_notu: 'MEB ve Aile ve Sosyal Hizmetler Bakanlığı Şartlı Eğitim Yardımı (ŞEY) protokolü uyarınca yardım alan öğrencilerin aylık devamsızlıkları (en fazla 4 gün) e-Okul sistemi üzerinden kontrol edilerek onaylanır.',
+      action_items: [
+        { task: 'e-Okul Şartlı Eğitim Yardımı (ŞEY) modülünden yardım alan öğrenci listesini dök', is_completed: false },
+        { task: 'Öğrencilerin ilgili aydaki özürlü/özürsüz devamsızlık durumunu sınıf yoklama fişleriyle karşılaştır', is_completed: false },
+        { task: 'Aylık 4 günden fazla devamsızlık yaparak yardımı kesilme riski bulunan öğrencilerin velileriyle görüşme yap', is_completed: false },
+        { task: 'e-Okul ŞEY modülündeki aylık devam doğrulamasını tamamla ve İlçe SYDV raporunu arşivle', is_completed: false }
+      ],
+      zaman_etiketi: 'Aylık SYDV Doğrulama Takvimi',
+      tarih_iso: dt.tarih_iso,
+      hazirlik_zamani: 'Ay Başı Devamsızlık İcmali',
+      ikon: '🤝',
+      renk: '#CCFBF1',
+      sesli_geribildirim: 'Şartlı Eğitim Yardımı devamsızlık analizi ve e-Okul ŞEY doğrulama kartı açıldı.'
+    };
+  }
+
+  // 0.12 NÖBETÇİ İDARECİ & OKUL EMNİYET / KAMERA / KAPANIŞ DEVRİ
+  if (
+    text.includes('nöbetçi müdür yardımcısı') ||
+    text.includes('nobetci mudur yardimcisi') ||
+    text.includes('nöbetçi idareci') ||
+    text.includes('nobetci idareci') ||
+    text.includes('idareci nöbeti') ||
+    text.includes('idareci nobeti') ||
+    text.includes('okul kamera denetimi') ||
+    text.includes('okul kapanış devri') ||
+    text.includes('okul kapanis devri')
+  ) {
+    const dt = parseEduDateTime(rawText, now, 17, 30);
+    return {
+      id: `edu_idareci_nobet_${Date.now()}`,
+      baslik: 'Nöbetçi İdareci & Okul Emniyet / Kamera Devri',
+      kategori: 'İSG & Güvenlik',
+      mevzuat_notu: 'MEB Nöbet Hizmetleri Yönergesi gereği nöbetçi müdür yardımcısı mesai bitiminde okulun fiziki güvenliğini, kamera kayıtlarını ve nöbet defterini denetleyerek binayı emniyete alır.',
+      action_items: [
+        { task: 'Sabah nöbetçi öğretmenlerin görev yerlerini almalarını sağla, boş geçen dersleri ek ders defterine işle', is_completed: false },
+        { task: 'Okul güvenlik kameralarının (DVR) kesintisiz kayıt yaptığını ve kör nokta olmadığını kontrol et', is_completed: false },
+        { task: 'Bahçe kapısı ve bina giriş turnikelerinde ziyaretçi defterinin tutulduğunu denetle', is_completed: false },
+        { task: 'Ders bitiminde katların boşaltıldığını, pencerelerin kapalı olduğunu kontrol et; nöbet defterini imzalayarak binayı kilitle', is_completed: false }
+      ],
+      zaman_etiketi: 'Mesai Bitimi 17:30 (Kapanış Devri)',
+      tarih_iso: dt.tarih_iso,
+      hazirlik_zamani: 'Sabah 08:00 Açılış & Akşam 17:30 Kapanış',
+      ikon: '🛡️',
+      renk: '#F1F5F9',
+      sesli_geribildirim: 'Nöbetçi idareci denetimi, kamera sistemi kontrolü ve bina kapanış devir adımları oluşturuldu.'
+    };
+  }
 
   // 0.1 İSTİKLAL MARŞI & BAYRAK TÖRENİ PROTOKOLÜ
   if (
@@ -460,13 +915,13 @@ export function parseSchoolAdminIntent(
 
     return {
       id: `edu_sinav_${Date.now()}`,
-      baslik: 'e-Okul Sınav Not Kilidi & Kazanım Analizi',
+      baslik: 'e-Okul Not Kilidi & Maarif Çıktı Analizi',
       kategori: 'Öğretmenlik',
-      mevzuat_notu: 'MEB Ölçme ve Değerlendirme Yönetmeliği uyarınca sınav sonuçları ve kazanım analizleri sınav tarihinden itibaren en geç 10 gün içinde e-Okul\'a girilmelidir.',
+      mevzuat_notu: 'MEB Ölçme ve Değerlendirme Yönetmeliği ile Türkiye Yüzyılı Maarif Modeli uyarınca sınav sonuçları, açık uçlu madde analizleri ve öğrenme çıktıları (ÖÇ) sınav tarihinden itibaren en geç 10 gün içinde e-Okul\'a girilmelidir.',
       action_items: [
-        { task: 'Sınav cevap anahtarı ve puanlama baremini okul duyuru panosuna asarak öğrencilere duyur', is_completed: false },
-        { task: 'Yazılı sınav kağıtlarını objektif kriterle oku ve soru bazlı kazanım analiz tablosunu doldur', is_completed: false },
-        { task: 'e-Okul sistemine sınav notlarını ve kazanım eksikliklerini işleyerek not kilidini kapat', is_completed: false },
+        { task: 'Sınav cevap anahtarı ve dereceli puanlama rubriğini okul duyuru panosuna asarak öğrencilere duyur', is_completed: false },
+        { task: 'Yazılı kağıtlarını analitik rubrikle oku ve soru bazlı öğrenme çıktısı (ÖÇ) analiz tablosunu doldur', is_completed: false },
+        { task: 'e-Okul sistemine sınav notlarını ve süreç bileşeni eksikliklerini işleyerek not kilidini kapat', is_completed: false },
         { task: 'İmzalı sınav analiz çıktısı, cevap anahtarı ve kağıtları zümre başkanına teslim tutanağıyla ilet', is_completed: false }
       ],
       zaman_etiketi: 'Son 10 Gün (Not Kilitleme)',
@@ -474,7 +929,7 @@ export function parseSchoolAdminIntent(
       hazirlik_zamani: 'Sınav Sonrası İlk 3 Gün (Okuma Başlangıcı)',
       ikon: '✍️',
       renk: '#FEF08A',
-      sesli_geribildirim: 'Sınav not girişi için 10 günlük e-Okul sayacı ve kazanım analizi adımları oluşturuldu.'
+      sesli_geribildirim: 'Sınav not girişi için 10 günlük e-Okul sayacı ve Maarif öğrenme çıktısı analizi oluşturuldu.'
     };
   }
 
@@ -546,10 +1001,10 @@ export function parseSchoolAdminIntent(
       id: `edu_kurul_${Date.now()}`,
       baslik,
       kategori: 'Kurul & Zümre',
-      mevzuat_notu: 'MEB Eğitim Kurulları ve Zümreleri Yönergesi uyarınca zümre ve ŞÖK karar tutanakları toplantı bitimini izleyen 3 gün içinde okul idaresine sunulur.',
+      mevzuat_notu: 'MEB Eğitim Kurulları ve Zümreleri Yönergesi ile Türkiye Yüzyılı Maarif Modeli uyarınca zümre kararlarında öğrenme çıktıları, süreç odaklı ölçme araçları ve farklılaştırma eylemleri yer almalıdır.',
       action_items: [
-        { task: 'Toplantı gündem maddelerini, yıllık plan gerçekleşme oranlarını ve önceki karar tutanaklarını hazırla', is_completed: false },
-        { task: 'Öğrenci başarı durumunu, başarısızlık nedenlerini ve telafi eylem planlarını görüşerek karara bağla', is_completed: false },
+        { task: 'Toplantı gündem maddelerini, Maarif Modeli öğrenme çıktıları gerçekleşme durumunu ve önceki karar tutanaklarını hazırla', is_completed: false },
+        { task: 'Öğrenme çıktıları analizi, süreç odaklı değerlendirme sonuçları ve telafi/farklılaştırma (zenginleştirme/destekleme) eylem planını karara bağla', is_completed: false },
         { task: 'Zümre / ŞÖK toplantı tutanağını tüm kurul üyelerine eksiksiz imzalat', is_completed: false },
         { task: 'İmzalı karar tutanağını ve çalışma takvimini DYS üzerinden Okul Müdürü onayına sun', is_completed: false }
       ],
@@ -558,7 +1013,7 @@ export function parseSchoolAdminIntent(
       hazirlik_zamani: 'Toplantıdan 1 Gün Önce Gündem Dağıtımı',
       ikon: '📑',
       renk: '#FEF08A',
-      sesli_geribildirim: 'Zümre ve ŞÖK toplantı gündemi, imza föyü ve karar tutanağı adımları hazırlandı.'
+      sesli_geribildirim: 'Maarif Modeli zümre ve ŞÖK toplantı gündemi, imza föyü ve karar tutanağı adımları hazırlandı.'
     };
   }
 

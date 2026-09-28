@@ -215,111 +215,27 @@ export function dispatchDomainRule(
     if (clinicalResult) return clinicalResult;
   }
 
-  // Eğitim & Okul Yönetimi Tespiti
+  // Eğitim & Okul Yönetimi (Türkiye Yüzyılı Maarif Modeli) Tespiti
   if (
     domain === 'EGITIM' ||
-    /(kbs|ek ders|taşımalı|yemek numune|nöbetçi öğretmen|dys|devamsızlık mektubu|yazılı yaptık|sınav okuma|e-okul|gözetmenlik|hakemlik|tez jürisi)/i.test(text)
+    /(maarif|öğrenme çıktısı|ogrenme ciktisi|beceri örgüsü|süreç bileşenleri|süreç odaklı|ksdt|rubrik|farklılaştırma|zenginleştirme|kbs|ek ders|taşımalı|yemek numune|nöbetçi|dys|devamsızlık|yazılı|sınav|e[\s-]?okul|nakil|kura|şube|sube|karne|iftihar|takdir|sosyal etkinlik|maddi hata|not düzeltme|hizmetiçi|hizmetici|şartlı eğitim|sydv|idareci|müdür yardımcısı|gözetmenlik|hakemlik|tez jürisi)/i.test(text)
   ) {
-    const isKbs = /(kbs|ek ders|puantaj)/i.test(text);
-    const isExam = /(yazılı|sınav yaptık|sınav bitti|not girişi)/i.test(text);
-    const isFoodOrDuty = /(taşımalı|numune|yemek|nöbet)/i.test(text);
-    const isAcademia = /(gözetmenlik|hakemlik|makale|bap|tübitak|jüri)/i.test(text);
-
-    let baslik = 'Eğitim & Yönetim Görevi';
-    let ikon = '📚';
-    let renk = '#FEF08A';
-
-    // 10 Günlük e-Okul Not Kilidi Hesabı
-    if (isExam) {
-      const baseDate = targetIso ? new Date(targetIso) : new Date();
-      const deadlineDate = new Date(baseDate.getTime() + 10 * 24 * 60 * 60 * 1000);
-      deadlineDate.setHours(17, 0, 0, 0);
-      const deadlineIso = deadlineDate.toISOString();
-
+    const fullEduTask = parseSchoolAdminIntent(text, targetIso ? new Date(targetIso) : new Date(), domain);
+    if (fullEduTask) {
       return {
-        baslik: 'Yazılı Sınav Not Kilidi (e-Okul)',
-        zaman: `${deadlineDate.getDate()} ${new Intl.DateTimeFormat('tr-TR', { month: 'short' }).format(deadlineDate)} 17:00 (10. Gün)`,
-        tarih_iso: deadlineIso,
-        hazirlik_zamani: 'Sınavdan 3 Gün Sonra (Okuma Başlangıcı)',
-        eksik_bilgi: false,
-        action_items: [
-          { task: 'Cevap anahtarını ve puanlama baremini okul panosuna as', is_completed: false },
-          { task: 'Yazılı kağıtlarını oku ve kazanım analiz tablosunu doldur', is_completed: false },
-          { task: 'e-Okul sistemine notları gir ve sınav analiz çıktısını zümre başkanına teslim et', is_completed: false }
-        ],
-        anomali_notu: 'MEB Yönetmeliği uyarınca sınav sonuçları sınav tarihini takip eden en geç 10 gün içinde e-Okul\'a işlenmelidir.',
-        ikon: '✍️',
-        renk: '#FEF08A',
-        sesli_fisilti: 'Yazılı sınav için 10 günlük e-Okul not giriş sayacı başlatıldı.'
+        baslik: fullEduTask.baslik,
+        zaman: fullEduTask.zaman_etiketi,
+        tarih_iso: fullEduTask.tarih_iso,
+        hazirlik_zamani: fullEduTask.hazirlik_zamani,
+        action_items: fullEduTask.action_items,
+        ikon: fullEduTask.ikon,
+        renk: fullEduTask.renk,
+        anomali_notu: fullEduTask.mevzuat_notu,
+        sesli_fisilti: fullEduTask.sesli_geribildirim
       };
     }
-
-    // KBS / Ek Ders Döngüsü
-    if (isKbs) {
-      return {
-        baslik: 'KBS Ek Ders Onay & Puantaj',
-        zaman: 'Her Ayın 24\'ü 17:00',
-        tarih_iso: targetIso || null,
-        eksik_bilgi: false,
-        action_items: [
-          { task: 'Raporlu, sevkli ve izinli öğretmenlerin ek ders kesintilerini puantaja işle', is_completed: false },
-          { task: 'Nöbet, DYK ve ders dışı kulüp faaliyet saatlerini kontrol et', is_completed: false },
-          { task: 'KBS sistemi üzerinden bordroyu hesaplat ve Malmüdürlüğü/Muhasebeye ilet', is_completed: false }
-        ],
-        anomali_notu: 'Ek ders puantajları her ayın 20-27\'si arasında tamamlanmalıdır; onay gecikmesi maaş ödemelerini aksatır.',
-        ikon: '📋',
-        renk: '#FEF3C7',
-        sesli_fisilti: 'KBS ek ders onay ve puantaj kontrol kartı açıldı.'
-      };
-    }
-
-    // Taşımalı Yemek & Güvenlik
-    if (isFoodOrDuty) {
-      return {
-        baslik: 'Taşımalı Yemek & Nöbet Kontrolü',
-        zaman: targetDateText || 'Sabah 08:15',
-        tarih_iso: targetIso || null,
-        eksik_bilgi: false,
-        action_items: [
-          { task: 'Öğle yemeği numunesini steril kavanoza al, etiketle ve +4°C dolapta 72 saat sakla', is_completed: false },
-          { task: 'Öğrenci servis araçlarının emniyet kemeri ve şoför denetim föyünü imzala', is_completed: false },
-          { task: 'Boş geçen sınıflar için nöbetçi öğretmen görevlendirmesini yap', is_completed: false }
-        ],
-        anomali_notu: 'Gıda güvenliği mevzuatı gereği taşımalı yemek numuneleri 72 saat boyunca +4°C saklanmak zorundadır.',
-        ikon: '🍱',
-        renk: '#DCFCE7',
-        sesli_fisilti: 'Taşımalı yemek numune ve nöbet görev föyü oluşturuldu.'
-      };
-    }
-
-    // Akademisyen (Gözetmenlik / Hakemlik)
-    if (isAcademia) {
-      const isProctor = /gözetmenlik/i.test(text);
-      return {
-        baslik: isProctor ? 'Sınav Gözetmenliği' : 'Akademik Hakemlik / Revizyon',
-        zaman: targetDateText || 'Planlanan Saat',
-        tarih_iso: targetIso || null,
-        hazirlik_zamani: isProctor ? 'Sınavdan 25 Dk Önce (Evrak Teslim)' : null,
-        eksik_bilgi: false,
-        action_items: isProctor
-          ? [
-              { task: 'Sınav salon başkanlığından soru kitapçıkları ve yoklama listesini teslim al', is_completed: false },
-              { task: 'Öğrenci kimlik kontrolü yap ve sınav salon oturma düzenini sağla', is_completed: false },
-              { task: 'Sınav bitiminde optik formları sayıp tutanakla teslim et', is_completed: false }
-            ]
-          : [
-              { task: 'Makalenin metodoloji ve kaynakça kontrolünü tamamla', is_completed: false },
-              { task: 'Dergi portalı üzerinden hakem değerlendirme raporunu sisteme yükle', is_completed: false }
-            ],
-        anomali_notu: isProctor ? 'Gözetmenlik evrakları sınav başlamadan en az 20 dakika önce teslim alınmalıdır.' : null,
-        ikon: isProctor ? '🎓' : '🔬',
-        renk: '#DDD6FE',
-        sesli_fisilti: isProctor ? 'Gözetmenlik için 25 dakika öncesine hazırlık alarmı kuruldu.' : 'Akademik görev kaydedildi.'
-      };
-    }
-
     return {
-      baslik,
+      baslik: 'Eğitim & Maarif Modeli Görevi',
       zaman: targetDateText || 'Mesai İçi',
       tarih_iso: targetIso || null,
       eksik_bilgi: false,
@@ -327,8 +243,8 @@ export function dispatchDomainRule(
         { task: 'Görev detaylarını ve resmi evrak kayıtlarını kontrol et', is_completed: false },
         { task: 'İdare onaylı karar veya tutanağı dosyala', is_completed: false }
       ],
-      ikon,
-      renk,
+      ikon: '📚',
+      renk: '#FEF08A',
       sesli_fisilti: 'Eğitim ve okul yönetimi görevi kaydedildi.'
     };
   }
@@ -2987,6 +2903,7 @@ export function parseEngineeringSuiteNote(input: string, baseDate: Date, userDom
     lower.includes('hidrostatik test') || lower.includes('vibrasyon') || lower.includes('titreşim') || lower.includes('titresim') || lower.includes('yağ analizi') || lower.includes('yag analizi') ||
     lower.includes('deploy') || lower.includes('canlıya alma') || lower.includes('canliya alma') || lower.includes('migration') ||
     lower.includes('rollback') || lower.includes('staging') || lower.includes('semver') || lower.includes('hotfix') || lower.includes('sprint') ||
+    lower.includes('oyun geliştirme') || lower.includes('oyun gelistirme') || lower.includes('game dev') || lower.includes('game development') || lower.includes('gdd') || lower.includes('oyun motoru') || lower.includes('unity') || lower.includes('unreal engine') || lower.includes('godot') ||
     lower.includes('zemin etüdü') || lower.includes('zemin etudu') || lower.includes('spt') || lower.includes('aplikasyon') || lower.includes('nivo') || lower.includes('total station') ||
     lower.includes('biyomedikal') || lower.includes('kalibrasyon') || lower.includes('iec 62353') ||
     lower.includes('5s') || lower.includes('kaizen') || lower.includes('balık kılçığı') || lower.includes('spc') || lower.includes('fmea');
@@ -3244,6 +3161,56 @@ export function parseEngineeringSuiteNote(input: string, baseDate: Date, userDom
       renk: '#E0F2FE',
       anomali_notu: 'Hotfix ana dala (main) atıldıktan sonra mutlaka develop dalına da cherry-pick edilmeli ve patch sürüm etiketi verilmelidir.',
       sesli_fisilti: 'Acil hotfix SLA sayacı başlatıldı; cherry-pick ve SemVer adımları listelendi.'
+    };
+  }
+
+  // 8.1 YAZILIM & OYUN GELİŞTİRME: Oyun Tasarımı, GDD, Mekanikler, Oyun Arayüzü (UI/UX) & QA Pipeline
+  if (
+    lower.includes('oyun geliştirme') || lower.includes('oyun gelistirme') ||
+    lower.includes('game dev') || lower.includes('game development') ||
+    lower.includes('oyun motoru') || lower.includes('gdd') ||
+    lower.includes('game design document') || lower.includes('unity') ||
+    lower.includes('unreal engine') || lower.includes('godot') ||
+    (lower.includes('oyun') && (lower.includes('arayüz') || lower.includes('arayuz') || lower.includes('ui') || lower.includes('ux') || lower.includes('prosedür') || lower.includes('prosedürü') || lower.includes('kodlama') || lower.includes('mekanik') || lower.includes('pipeline') || lower.includes('tasarım') || lower.includes('güncelleme') || lower.includes('güncellemeleri'))) ||
+    ((lower.includes('arayüz') || lower.includes('arayuz')) && (lower.includes('güncelleme') || lower.includes('güncellemeleri') || lower.includes('revizyon') || lower.includes('düzenleme')))
+  ) {
+    const isGameUI = lower.includes('arayüz') || lower.includes('arayuz') || lower.includes('ui') || lower.includes('ux') || lower.includes('hud');
+    if (isGameUI) {
+      return {
+        baslik: 'Oyun Arayüzü & UI/UX Güncellemesi',
+        zaman: 'Arayüz Sprint Bitişi',
+        tarih_iso: baseDate.toISOString(),
+        hazirlik_zamani: 'UI Wireframe & Asset İhracı',
+        action_items: [
+          { task: 'Oyun içi HUD (can barı, skor, envanter, minimap) ve menü yerleşimini (UI/UX) wireframe üzerinde revize et', is_completed: false },
+          { task: 'UI görsellerini (Sprite Atlas, Fontlar, Buton durumları: Normal/Hover/Pressed) yüksek çözünürlükte dışa aktar', is_completed: false },
+          { task: 'Oyun motorunda (Unity/Unreal/Godot) Canvas, Anchor, Safe Area ve ekran çözünürlüğü (Responsive UI) ayarlarını yapılandır', is_completed: false },
+          { task: 'Menü geçiş animasyonlarını, ses efektlerini (SFX) ve dokunmatik/gamepad/klavye girdi entegrasyonunu kodla', is_completed: false },
+          { task: 'Farklı ekran oranlarında (16:9, 19.5:9, 21:9) UI taşması ve performans (Draw Call / Canvas Batching) testlerini tamamla', is_completed: false }
+        ],
+        ikon: '🎮',
+        renk: '#E0F2FE',
+        anomali_notu: '🎮 Oyun Arayüz (UI) Standardı: Canvas ve HUD elemanları responsive anchor yapısıyla kurulmalı; mobil çentik (Safe Area) ve GPU Draw Call yükünü düşürmek için Sprite Atlas kullanılmalıdır.',
+        sesli_fisilti: 'Oyun içi arayüz güncellemeleri, UI Canvas anchor ayarları ve performans optimizasyonu ajandaya alındı.'
+      };
+    }
+
+    return {
+      baslik: 'Oyun Geliştirme Prosedürü & Pipeline',
+      zaman: 'Geliştirme / Sprint Fazı',
+      tarih_iso: baseDate.toISOString(),
+      hazirlik_zamani: 'GDD & Çekirdek Mekanik Prototipi',
+      action_items: [
+        { task: 'GDD (Game Design Document) dokümanında çekirdek oyun döngüsü (Core Loop) ve kontrol mekaniklerini netleştir', is_completed: false },
+        { task: 'Gri kutu (Graybox) sahnesinde fizik, çarpışma (Collision) ve girdi (Input) mekaniklerini prototiple', is_completed: false },
+        { task: '2D/3D varlıkları (Assets, Sprite Atlas, Rigged Modeller) oyun motoruna (Unity/Unreal/Godot) import et', is_completed: false },
+        { task: 'Draw call, occlusion culling, shader ve hedef 60/120 FPS optimizasyon profil testlerini (Profiler) tamamla', is_completed: false },
+        { task: 'Oynanış testleri (Playtest), dengeleme (Balancing) ve platform (Steam/Mobil/Konsol) build dağıtımını hazırla', is_completed: false }
+      ],
+      ikon: '🎮',
+      renk: '#E0F2FE',
+      anomali_notu: '🎮 Oyun Geliştirme Standardı: GDD (Game Design Document) kilitlenmeden asset üretimine geçilmemeli; temel mekanikler gri kutu (Graybox) seviyesinde doğrulanıp 60 FPS profil testleri yapılmalıdır.',
+      sesli_fisilti: 'Oyun geliştirme prosedürü, GDD mekanikleri, optimizasyon ve QA test adımları ajandaya alındı.'
     };
   }
 
@@ -5911,8 +5878,8 @@ function _extractSimpleNoteFromTextInternal(
       if (opResult) return enrichWithPredictiveGraph(opResult, cleanInput);
       const militaryResult = parseMilitaryCommanderNote(cleanInput, baseDate);
       if (militaryResult) return enrichWithPredictiveGraph(militaryResult, cleanInput);
-    } else if (activeDomain === 'TEKNIK') {
-      const domainRuleResult = dispatchDomainRule('TEKNIK', cleanInput, zaman, tarih_iso);
+    } else if (activeDomain === 'TEKNIK' || activeDomain === 'BILISIM' || activeDomain === 'MUHENDISLIK') {
+      const domainRuleResult = dispatchDomainRule(activeDomain, cleanInput, zaman, tarih_iso);
       if (domainRuleResult) return enrichWithPredictiveGraph(domainRuleResult, cleanInput, activeDomain);
       const engResult = parseEngineeringSuiteNote(cleanInput, baseDate, activeDomain);
       if (engResult) return enrichWithPredictiveGraph(engResult, cleanInput, activeDomain);
@@ -6756,6 +6723,30 @@ function enrichWithPredictiveGraph(note: NotiviaSimpleNote, input: string, userD
     const nextAction = generateNextActionSuggestion(result.baslik, undefined, input);
     if (nextAction) {
       result.next_action = nextAction;
+    }
+  }
+
+  // 9. Jargon İkilemi & "Bunu mu demek istediniz?" Belirsizlik Tespiti
+  if (!result.domain_clarification) {
+    const radar = detectDomainFromJargon(input, (userDomain as any) || 'OTOMATIK_JARGON');
+    if (radar.isAmbiguous && radar.candidateDomains && radar.candidateDomains.length >= 2) {
+      result.domain_clarification = {
+        isAmbiguous: true,
+        question: radar.clarificationQuestion || `Bunu mu demek istediniz? (${radar.candidateDomains.map(c => `${c.suggestedIcon} ${c.domainLabel}`).join(' / ')})`,
+        candidates: radar.candidateDomains.map(c => ({
+          domain: c.domain,
+          domainLabel: c.domainLabel,
+          icon: c.suggestedIcon,
+          color: c.suggestedColor,
+          title: c.domainLabel,
+          keywords: c.matchedKeywords
+        }))
+      };
+      if (!result.netlestirme_sorusu) {
+        result.netlestirme_sorusu = result.domain_clarification.question;
+        result.eksik_bilgi = true;
+      }
+      result.sesli_fisilti = 'Birden fazla mesleki jargon sezildi. Bunu mu demek istediniz?';
     }
   }
 

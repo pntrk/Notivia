@@ -290,6 +290,30 @@ export const AdaptiveNoteCard: React.FC<AdaptiveCardProps> = ({
           </div>
         </div>
 
+        {/* Jargon İkilemi / "Bunu mu demek istediniz?" Uyarısı */}
+        {radarResult.isAmbiguous && radarResult.candidateDomains && radarResult.candidateDomains.length >= 2 && (
+          <div className="mt-3 p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-xs text-amber-950 dark:text-amber-100 font-medium">
+            <div className="flex items-center gap-1.5 mb-1.5 font-bold text-amber-900 dark:text-amber-200 text-[11px]">
+              <span>🤔</span>
+              <span>Bunu mu demek istediniz?</span>
+            </div>
+            <p className="text-[11px] text-stone-800 dark:text-stone-200 mb-2 leading-relaxed">
+              {radarResult.clarificationQuestion || 'Birden fazla mesleki jargon tespit edildi.'}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {radarResult.candidateDomains.map((cand, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-white/80 dark:bg-stone-800 text-stone-800 dark:text-stone-200 border border-stone-300 dark:border-stone-700 shadow-2xs"
+                >
+                  <span>{cand.suggestedIcon}</span>
+                  <span>{cand.domainLabel}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Varsa Kritik Güvenlik / Yasal Süre / Anomali Uyarısı */}
         {anomaliNotu && (
           <div className="mt-3 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-950 dark:text-amber-100 font-medium flex items-center gap-2">

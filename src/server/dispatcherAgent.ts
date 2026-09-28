@@ -71,6 +71,10 @@ export const createNoteOrEventDeclaration: FunctionDeclaration = {
           required: ['task', 'is_completed'],
         },
       },
+      domain_clarification: {
+        type: Type.OBJECT,
+        description: 'Birden fazla mesleki jargon sezildiğinde kullanıcıya seçenek sunan netleştirme nesnesi',
+      },
       tetikleyici: {
         type: Type.OBJECT,
         description: 'Koşullu tetikleyici (hava, konum vb.)',
@@ -509,6 +513,18 @@ export function dispatchDeterministic(
       eksik_bilgi: isClarificationNeeded,
       netlestirme_sorusu: isClarificationNeeded ? soruText : null,
       soru: isClarificationNeeded ? soruText : null,
+      domain_clarification: simpleNote.domain_clarification || (radar.isAmbiguous && radar.candidateDomains ? {
+        isAmbiguous: true,
+        question: radar.clarificationQuestion || `Bunu mu demek istediniz? (${radar.candidateDomains.map(c => `${c.suggestedIcon} ${c.domainLabel}`).join(' / ')})`,
+        candidates: radar.candidateDomains.map(c => ({
+          domain: c.domain,
+          domainLabel: c.domainLabel,
+          icon: c.suggestedIcon,
+          color: c.suggestedColor,
+          title: c.domainLabel,
+          keywords: c.matchedKeywords
+        }))
+      } : null),
       action_items: simpleNote.action_items || [],
       tetikleyici: simpleNote.tetikleyici ? {
         tip: (simpleNote.tetikleyici.tip as any) || 'hava',

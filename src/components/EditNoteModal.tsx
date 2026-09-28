@@ -27,6 +27,12 @@ import {
   requestDeviceNotificationPermission,
   playNotificationChime,
 } from '../utils/deviceCalendar.ts';
+import {
+  syncNoteToGoogleCalendar,
+  getGoogleAccessToken,
+  connectGoogleDriveAndCalendar,
+  deleteCalendarEvent,
+} from '../firebase.ts';
 
 export interface EditNoteModalProps {
   isOpen: boolean;
@@ -96,6 +102,7 @@ export function EditNoteModal({
   const [deviceNotificationEnabled, setDeviceNotificationEnabled] = useState(true);
   const [periodicType, setPeriodicType] = useState<string>('none');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'info' | 'error'; text: string } | null>(null);
+  const [isSyncingCalendar, setIsSyncingCalendar] = useState(false);
 
   const activeColorObj = useMemo(() => {
     return (
@@ -208,6 +215,54 @@ export function EditNoteModal({
     showFeedback('success', language === 'tr' ? '📱 Telefon takvimine aktarılıyor...' : '📱 Exporting to device calendar...');
   };
 
+  const handleDirectGoogleCalendarSync = async () => {
+    triggerHaptic(15);
+    if (!tarihIso) {
+      showFeedback('error', language === 'tr' ? 'Önce geçerli bir tarih ve saat seçin.' : 'Please select a date and time first.');
+      return;
+    }
+
+    setIsSyncingCalendar(true);
+    try {
+      let token = getGoogleAccessToken();
+      if (!token) {
+        const connectRes = await connectGoogleDriveAndCalendar();
+        if (!connectRes.success || !connectRes.token) {
+          showFeedback('error', language === 'tr' ? 'Google Takvim yetkilendirmesi yapılamadı.' : 'Google Calendar auth failed.');
+          setIsSyncingCalendar(false);
+          return;
+        }
+      }
+
+      const notePayload = {
+        id: note?.id || 'note_' + Date.now(),
+        baslik: baslik || 'Notivia Hatırlatıcı',
+        tarih_iso: tarihIso,
+        ikon: ikon || '📌',
+        anomali_notu: anomaliNotu,
+        action_items: actionItems,
+        calendarEventId: note?.calendarEventId || note?.calendar_event_id,
+        periyodik: periodicType !== 'none' ? { tip: periodicType } : null,
+      };
+
+      const res = await syncNoteToGoogleCalendar(notePayload);
+      if (res.success && res.eventId) {
+        if (note) {
+          note.calendarEventId = res.eventId;
+          note.calendar_event_id = res.eventId;
+        }
+        showFeedback('success', language === 'tr' ? '📅 Google Takvime doğrudan eşitlendi ✓' : '📅 Synced directly to Google Calendar ✓');
+      } else {
+        showFeedback('error', language === 'tr' ? 'Google Takvime yazılamadı.' : 'Could not write to Google Calendar.');
+      }
+    } catch (err) {
+      console.warn('Google Takvim eşitleme hatası:', err);
+      showFeedback('error', language === 'tr' ? 'Takvim senkronizasyonunda hata oluştu.' : 'Error during calendar sync.');
+    } finally {
+      setIsSyncingCalendar(false);
+    }
+  };
+
   const handleOpenGoogleCalendar = () => {
     triggerHaptic(15);
     const targetDate = tarihIso ? new Date(tarihIso) : new Date();
@@ -285,6 +340,8 @@ export function EditNoteModal({
     triggerHaptic(25);
     const finalIso = tarihIso ? new Date(tarihIso).toISOString() : null;
 
+    const existingCalId = note.calendarEventId || note.calendar_event_id;
+
     const updated: SimpleCardItem = {
       ...note,
       baslik: baslik.trim(),
@@ -313,6 +370,20 @@ export function EditNoteModal({
           : null,
       eksik_bilgi: finalIso ? false : note.eksik_bilgi,
     };
+
+    // Eğer önceden takvim etkinliği vardı ve kullanıcı tarihi kaldırdıysa Google Takvimden de sil
+    if (!finalIso && existingCalId) {
+      deleteCalendarEvent(existingCalId).catch((err) =>
+        console.warn('Tarih kaldırıldı, takvim etkinliği silinirken hata:', err)
+      );
+      updated.calendarEventId = null;
+      updated.calendar_event_id = null;
+    } else if (finalIso && existingCalId) {
+      // Tarih/saat güncellendiyse Google Takvimi arka planda senkronize güncelle
+      syncNoteToGoogleCalendar(updated).catch((err) =>
+        console.warn('Takvim güncelleme hatası:', err)
+      );
+    }
 
     onSave(updated);
     onClose();
@@ -729,10 +800,34 @@ export function EditNoteModal({
               </div>
 
               {/* Takvim Senkronizasyon Butonları */}
-              <div className="space-y-1.5 pt-1">
-                <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">
-                  {language === 'tr' ? 'Harici Takvim Senkronizasyonu' : 'External Calendar Sync'}
-                </span>
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">
+                    {language === 'tr' ? 'Google Takvim & Cihaz Senkronizasyonu' : 'Google Calendar & Device Sync'}
+                  </span>
+                  {(note?.calendarEventId || note?.calendar_event_id) && (
+                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>{language === 'tr' ? 'Takvimde Eşitlendi' : 'Synced to Calendar'}</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Birincil Otomatik Google Takvim API Butonu */}
+                <button
+                  type="button"
+                  onClick={handleDirectGoogleCalendarSync}
+                  disabled={isSyncingCalendar}
+                  className="w-full py-2.5 px-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-98 shadow-2xs min-h-[42px]"
+                >
+                  <Calendar className={`w-4 h-4 text-blue-600 dark:text-blue-400 ${isSyncingCalendar ? 'animate-bounce' : ''}`} />
+                  <span>
+                    {isSyncingCalendar
+                      ? (language === 'tr' ? 'Google Takvime Aktarılıyor...' : 'Syncing to Google Calendar...')
+                      : (language === 'tr' ? 'Google Takvime Otomatik Eşitle' : 'Auto Sync to Google Calendar')}
+                  </span>
+                </button>
+
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -749,7 +844,7 @@ export function EditNoteModal({
                     className="py-2 px-3 rounded-xl bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 border border-stone-200 dark:border-stone-700 text-stone-800 dark:text-stone-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shadow-2xs min-h-[40px]"
                   >
                     <Calendar className="w-3.5 h-3.5 text-blue-500" />
-                    <span>Google Takvim</span>
+                    <span>{language === 'tr' ? 'Webde Aç' : 'Open in Web'}</span>
                     <ExternalLink className="w-3 h-3 opacity-50" />
                   </button>
                 </div>

@@ -62,41 +62,66 @@ export const DynamicInputBar: React.FC<DynamicInputBarProps> = ({
       {/* 1. Canlı Niyet Radar Barı (Live Intent Waveform) */}
       {route.hasActiveMatch && (
         <div
-          className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl border shadow-sm backdrop-blur-md transition-all duration-200 animate-in fade-in slide-in-from-bottom-1"
+          className="flex flex-col gap-1 px-3 py-1.5 rounded-xl border shadow-sm backdrop-blur-md transition-all duration-200 animate-in fade-in slide-in-from-bottom-1"
           style={{
             backgroundColor: `${route.color}25`,
             borderColor: `${route.color}60`
           }}
         >
-          <div className="flex items-center gap-2 min-w-0">
-            {/* Canlı Ekolayzer / Ses Dalgası Animasyonu */}
-            <div className="flex items-end gap-0.5 h-3.5 px-0.5 shrink-0">
-              <span className="w-1 bg-stone-800 dark:bg-stone-100 rounded-full animate-pulse h-2" style={{ animationDuration: '450ms' }} />
-              <span className="w-1 bg-stone-800 dark:bg-stone-100 rounded-full animate-pulse h-3.5" style={{ animationDuration: '600ms', animationDelay: '150ms' }} />
-              <span className="w-1 bg-stone-800 dark:bg-stone-100 rounded-full animate-pulse h-2.5" style={{ animationDuration: '500ms', animationDelay: '300ms' }} />
-              <span className="w-1 bg-stone-800 dark:bg-stone-100 rounded-full animate-pulse h-3" style={{ animationDuration: '550ms', animationDelay: '75ms' }} />
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              {/* Canlı Ekolayzer / Ses Dalgası Animasyonu */}
+              <div className="flex items-end gap-0.5 h-3.5 px-0.5 shrink-0">
+                <span className="w-1 bg-stone-800 dark:bg-stone-100 rounded-full animate-pulse h-2" style={{ animationDuration: '450ms' }} />
+                <span className="w-1 bg-stone-800 dark:bg-stone-100 rounded-full animate-pulse h-3.5" style={{ animationDuration: '600ms', animationDelay: '150ms' }} />
+                <span className="w-1 bg-stone-800 dark:bg-stone-100 rounded-full animate-pulse h-2.5" style={{ animationDuration: '500ms', animationDelay: '300ms' }} />
+                <span className="w-1 bg-stone-800 dark:bg-stone-100 rounded-full animate-pulse h-3" style={{ animationDuration: '550ms', animationDelay: '75ms' }} />
+              </div>
+
+              <span className="text-base shrink-0">{route.icon}</span>
+
+              <div className="min-w-0 flex items-center gap-1.5 truncate">
+                <span className="text-[11px] font-bold text-stone-900 dark:text-stone-100 truncate">
+                  {route.domainLabel}:
+                </span>
+                <span className="text-[11px] font-semibold text-stone-800 dark:text-stone-200 truncate">
+                  {route.routeTitle}
+                </span>
+              </div>
             </div>
 
-            <span className="text-base shrink-0">{route.icon}</span>
-
-            <div className="min-w-0 flex items-center gap-1.5 truncate">
-              <span className="text-[11px] font-bold text-stone-900 dark:text-stone-100 truncate">
-                {route.domainLabel}:
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="hidden sm:inline-block text-[10px] font-medium text-stone-600 dark:text-stone-300 bg-white/70 dark:bg-stone-900/70 px-2 py-0.5 rounded-full border border-black/5 dark:border-white/10 shadow-2xs">
+                🏛️ {route.institution}
               </span>
-              <span className="text-[11px] font-semibold text-stone-800 dark:text-stone-200 truncate">
-                {route.routeTitle}
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-stone-900/10 dark:bg-white/10 text-stone-800 dark:text-stone-200">
+                %{Math.round(route.confidence * 100)}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="hidden sm:inline-block text-[10px] font-medium text-stone-600 dark:text-stone-300 bg-white/70 dark:bg-stone-900/70 px-2 py-0.5 rounded-full border border-black/5 dark:border-white/10 shadow-2xs">
-              🏛️ {route.institution}
-            </span>
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-stone-900/10 dark:bg-white/10 text-stone-800 dark:text-stone-200">
-              %{Math.round(route.confidence * 100)}
-            </span>
-          </div>
+          {/* İkilem & "Bunu mu demek istediniz?" Seçenekleri */}
+          {route.isAmbiguous && route.candidateDomains && route.candidateDomains.length >= 2 && (
+            <div className="flex items-center gap-1.5 pt-1 border-t border-black/10 dark:border-white/10 overflow-x-auto scrollbar-none">
+              <span className="text-[10px] font-bold text-amber-900 dark:text-amber-200 shrink-0 flex items-center gap-1">
+                <span>🤔</span>
+                <span>Bunu mu demek istediniz:</span>
+              </span>
+              {route.candidateDomains.map((cand, cIdx) => (
+                <button
+                  key={cIdx}
+                  type="button"
+                  onClick={() => {
+                    handleChipClick(`${cand.domainLabel}: ${inputText}`);
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-white/80 dark:bg-stone-800/80 hover:bg-white dark:hover:bg-stone-700 text-stone-900 dark:text-stone-100 border border-black/10 dark:border-white/10 shadow-2xs cursor-pointer transition-all active:scale-95 whitespace-nowrap"
+                >
+                  <span>{cand.suggestedIcon}</span>
+                  <span>{cand.domainLabel}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

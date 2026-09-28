@@ -19,7 +19,11 @@ import {
   googleAccessToken,
   refreshGoogleAccessToken,
   createCalendarEvent,
+  updateCalendarEvent,
+  syncNoteToGoogleCalendar,
+  syncAllCardsToGoogleCalendar,
   deleteCalendarEvent,
+  deleteCalendarEventForNote,
   updateCalendarEventTitle,
   checkCalendarConflicts,
   saveUserNoteToFirestore,
@@ -33,7 +37,7 @@ import {
 import { extractSimpleNoteFromText, findFermentationRecipe } from './utils/simpleNote.ts';
 import { getCardColor } from './utils/cardColors.ts';
 import { checkEpisodicMemory } from './utils/episodicMemory.ts';
-import type { ActionItem, ExtractedMetric, MilestoneChain, NextActionSuggestion } from './types/notivia.ts';
+import type { ActionItem, ExtractedMetric, MilestoneChain, NextActionSuggestion, DomainClarificationInfo } from './types/notivia.ts';
 import { scheduleMedicationAlarms } from './utils/medicationScheduler.ts';
 import {
   exportToDeviceCalendar,
@@ -113,6 +117,7 @@ export interface SimpleCardItem {
   anomali_notu?: string | null;
   teshis_notu?: string | null;
   baglantili_hatirlatma?: string | null;
+  domain_clarification?: DomainClarificationInfo | null;
   periyodik?: {
     tip: string;
     aralik_gun?: number;
@@ -467,6 +472,7 @@ export default function App() {
 
   const [isSyncingDrive, setIsSyncingDrive] = useState<boolean>(false);
   const [driveSyncTime, setDriveSyncTime] = useState<string | null>(null);
+  const [isSyncingCalendar, setIsSyncingCalendar] = useState<boolean>(false);
 
   // Otonom Ajan Yönlendirici (Autonomous Dispatcher) Sonuç Modalları
   const [draftedMessage, setDraftedMessage] = useState<{
@@ -1602,6 +1608,7 @@ export default function App() {
     renk?: string;
     mediaId?: string | null;
     baglantili_hatirlatma?: string | null;
+    domain_clarification?: DomainClarificationInfo | null;
     action_items?: ActionItem[] | null;
     sesli_fisilti?: string | null;
     periyodik?: {
@@ -1756,6 +1763,7 @@ export default function App() {
       anomali_notu: noteData.anomali_notu || null,
       teshis_notu: noteData.teshis_notu || null,
       baglantili_hatirlatma: noteData.baglantili_hatirlatma || null,
+      domain_clarification: noteData.domain_clarification || null,
       action_items: (noteData as any).action_items || null,
       createdAt: nowIso,
     };
@@ -1938,12 +1946,12 @@ export default function App() {
   const commitPermanentDeletion = async (card: SimpleCardItem) => {
     await localNotifications.cancelAlarm(card.id);
     await cancelAllFermentationAlarms(card.id);
-    const calId = card.calendarEventId || card.calendar_event_id;
-    if (calId) {
-      deleteCalendarEvent(calId).catch((err) =>
-        console.warn('Takvim silme hatası:', err)
-      );
-    }
+    
+    // Google Takvimden sil
+    deleteCalendarEventForNote(card).catch((err) =>
+      console.warn('Takvim silme hatası:', err)
+    );
+
     if (card.mediaId) {
       deleteLocalMedia(card.mediaId).catch((err) =>
         console.warn('Medya silme hatası:', err)
@@ -1971,7 +1979,7 @@ export default function App() {
     syncNoteToCloud(target.item);
     triggerDriveBackup(updatedCards);
 
-    // Eğer tarih varsa alarmları tekrar kur
+    // Eğer tarih varsa alarmları ve Google Takvim kaydını tekrar kur
     if (target.item.tarih_iso && !target.item.tamamlandi) {
       localNotifications.scheduleAlarm({
         id: target.item.id,
@@ -1979,6 +1987,19 @@ export default function App() {
         tarih_iso: target.item.tarih_iso,
         ikon: target.item.ikon,
       });
+      syncNoteToGoogleCalendar(target.item).then((res) => {
+        if (res.success && res.eventId) {
+          target.item.calendarEventId = res.eventId;
+          target.item.calendar_event_id = res.eventId;
+          setCards((prev) =>
+            prev.map((c) =>
+              c.id === target.item.id
+                ? { ...c, calendarEventId: res.eventId, calendar_event_id: res.eventId }
+                : c
+            )
+          );
+        }
+      }).catch((err) => console.warn('Takvim geri yükleme hatası:', err));
     }
 
     setStatusText(language === 'tr' ? `"${target.item.baslik}" geri yüklendi ✓` : `"${target.item.baslik}" restored ✓`);
@@ -2005,6 +2026,9 @@ export default function App() {
           tarih_iso: card.tarih_iso,
           ikon: card.ikon,
         });
+        syncNoteToGoogleCalendar(card).catch((err) =>
+          console.warn('Toplu takvim geri yükleme hatası:', err)
+        );
       }
     }
     triggerDriveBackup(updatedCards);
@@ -2060,7 +2084,7 @@ export default function App() {
     saveLocalNotes(updatedLocal);
     setUndoToast(null);
 
-    // Alarmları yeniden kur
+    // Alarmları ve Google Takvim kaydını yeniden kur
     if (restoredItem.tarih_iso && !restoredItem.tamamlandi) {
       localNotifications.scheduleAlarm({
         id: restoredItem.id,
@@ -2068,6 +2092,19 @@ export default function App() {
         tarih_iso: restoredItem.tarih_iso,
         ikon: restoredItem.ikon,
       });
+      syncNoteToGoogleCalendar(restoredItem).then((res) => {
+        if (res.success && res.eventId) {
+          restoredItem.calendarEventId = res.eventId;
+          restoredItem.calendar_event_id = res.eventId;
+          setCards((prev) =>
+            prev.map((c) =>
+              c.id === restoredItem.id
+                ? { ...c, calendarEventId: res.eventId, calendar_event_id: res.eventId }
+                : c
+            )
+          );
+        }
+      }).catch((err) => console.warn('Undo takvim eşitleme hatası:', err));
     }
 
     setStatusText(language === 'tr' ? 'Not geri yüklendi ✓' : 'Note restored ✓');
@@ -2082,6 +2119,11 @@ export default function App() {
     // Alarmları durdur
     localNotifications.cancelAlarm(targetCard.id);
     cancelAllFermentationAlarms(targetCard.id);
+
+    // Google Takvim verisini de Google Takvimden sil
+    deleteCalendarEventForNote(targetCard).catch((err) =>
+      console.warn('Takvim silme hatası:', err)
+    );
 
     // Aktif kartlardan çıkar ve kaydet
     const updatedCards = cards.filter((c) => c.id !== id);
@@ -2129,7 +2171,7 @@ export default function App() {
     setSelectedCardIds([]);
     setIsSelectMode(false);
 
-    // Her birini çöp kutusuna ekle ve alarmları durdur
+    // Her birini çöp kutusuna ekle, alarmları durdur ve Google Takvimden sil
     const nowIso = new Date().toISOString();
     const newTrashEntries: TrashNoteItem[] = targetsToDelete.map((item) => ({
       item,
@@ -2139,6 +2181,9 @@ export default function App() {
     for (const card of targetsToDelete) {
       await localNotifications.cancelAlarm(card.id);
       await cancelAllFermentationAlarms(card.id);
+      deleteCalendarEventForNote(card).catch((err) =>
+        console.warn('Çoklu takvim silme hatası:', err)
+      );
     }
 
     const updatedTrash = [
@@ -2859,6 +2904,49 @@ export default function App() {
     }
   };
 
+  // 2.1 Çoklu Jargon İkilemi Seçimi ("Bunu mu demek istediniz?" Seçimi)
+  const handleSelectDomainClarification = async (cardId: string, chosenDomain: ProfessionDomain) => {
+    const targetCard = cards.find((c) => c.id === cardId);
+    if (!targetCard) return;
+
+    // Seçilen sektörel jargona göre notu derinlemesine yeniden zenginleştir
+    const refined = extractSimpleNoteFromText(targetCard.baslik, new Date().toISOString(), cards, chosenDomain, language);
+
+    const updatedCard: SimpleCardItem = {
+      ...targetCard,
+      ikon: refined.ikon || targetCard.ikon,
+      renk: refined.renk || targetCard.renk,
+      action_items: (refined.action_items && refined.action_items.length > 0) ? refined.action_items : targetCard.action_items,
+      anomali_notu: refined.anomali_notu || targetCard.anomali_notu,
+      eksik_bilgi: false,
+      netlestirme_sorusu: null,
+      soru: null,
+      domain_clarification: null,
+    };
+
+    setCards((prev) => prev.map((c) => (c.id === cardId ? updatedCard : c)));
+    const local = getLocalNotes();
+    const idx = local.findIndex((n) => n.id === cardId);
+    if (idx !== -1) {
+      local[idx] = updatedCard;
+      saveLocalNotes(local);
+      syncNoteToCloud(updatedCard);
+      triggerDriveBackup(local);
+    }
+
+    const domainLabel = DOMAIN_REGISTRY[chosenDomain]?.displayName || chosenDomain;
+    const whisper = language === 'en' ? `${domainLabel} domain applied.` : `${domainLabel} uzmanlık alanı uygulandı.`;
+    setStatusText(whisper);
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        const u = new SpeechSynthesisUtterance(whisper);
+        u.lang = language === 'en' ? 'en-US' : 'tr-TR';
+        window.speechSynthesis.speak(u);
+      } catch {}
+    }
+    setTimeout(() => setStatusText(t.speakOrWrite), 2500);
+  };
+
   // Kartı Doğrudan Cihaz Takvimine (Google Takvim / Apple Takvim) Otomatik ve Dosyasız Aktarma
   const autoSyncCardToDeviceCalendar = async (item: SimpleCardItem) => {
     if (!item.tarih_iso) return;
@@ -2958,6 +3046,43 @@ export default function App() {
     }
   };
 
+  // Tüm Zamanlı ve Alarmlı Notları Doğrudan Google Takvime Tek Seferde Otomatik Eşitle
+  const handleSyncAllGoogleCalendar = async () => {
+    setIsSyncingCalendar(true);
+    try {
+      let token = getGoogleAccessToken();
+      if (!token) {
+        const connectRes = await connectGoogleDriveAndCalendar();
+        if (!connectRes.success || !connectRes.token) {
+          setStatusText(language === 'tr' ? 'Google Takvim yetkilendirmesi yapılamadı' : 'Google Calendar auth failed');
+          setTimeout(() => setStatusText(t.speakOrWrite), 2500);
+          setIsSyncingCalendar(false);
+          return;
+        }
+      }
+
+      setStatusText(language === 'tr' ? 'Notlar Google Takvime aktarılıyor...' : 'Syncing notes to Google Calendar...');
+      const { syncedCount, updatedCards } = await syncAllCardsToGoogleCalendar(cards);
+      setCards(updatedCards);
+      saveLocalNotes(updatedCards);
+      triggerDriveBackup(updatedCards);
+
+      playNotificationChime();
+      setStatusText(
+        language === 'tr'
+          ? `✓ ${syncedCount} zamanlı not Google Takviminize otomatik eşitlendi!`
+          : `✓ ${syncedCount} timed notes synced directly to your Google Calendar!`
+      );
+      setTimeout(() => setStatusText(t.speakOrWrite), 3500);
+    } catch (err) {
+      console.warn('Google Takvim toplu eşitleme hatası:', err);
+      setStatusText(language === 'tr' ? 'Takvim senkronizasyonunda hata oluştu' : 'Calendar sync error');
+      setTimeout(() => setStatusText(t.speakOrWrite), 2500);
+    } finally {
+      setIsSyncingCalendar(false);
+    }
+  };
+
   // View full image in modal
   const viewFullImage = async (mediaId: string) => {
     const base64 = await getLocalMedia(mediaId);
@@ -3004,8 +3129,7 @@ export default function App() {
     }
 
     // 0. SADE / MOTORSUZ MOD (Kullanıcı motor seçimi yapmadıysa, Sade Mod seçiliyse veya İngilizce dilindeyse)
-    // Bilişsel motorlarla entegre olmadan yalnızca söylenen/yazılan ham metni kaydeder.
-    if (workDomain === 'SADE' || language === 'en') {
+    if (workDomain === 'SADE') {
       const createdNote = {
         baslik: textInput?.trim() || (base64Image ? (language === 'en' ? 'Photo Note' : 'Görsel Notu') : (language === 'en' ? 'New Note' : 'Yeni Not')),
         zaman: language === 'en' ? 'Saved' : 'Kayıt Edildi',
@@ -3170,6 +3294,7 @@ export default function App() {
                 anomali_notu: args.anomali_notu,
                 eksik_bilgi: isMissingTime,
                 soru: questionToAsk,
+                domain_clarification: args.domain_clarification || null,
                 ikon: args.ikon || '📌',
                 renk: args.renk || '#FEF3C7',
                 periyodik: args.periyodik,
@@ -3244,6 +3369,7 @@ export default function App() {
             tarih_iso: isMissingTime ? null : sJson.data.tarih_iso,
             eksik_bilgi: isMissingTime,
             soru: questionToAsk,
+            domain_clarification: sJson.data.domain_clarification || null,
             mediaId,
           };
           await addNote(createdNote);
@@ -3284,6 +3410,7 @@ export default function App() {
         tarih_iso: isMissingTime ? null : fallback.tarih_iso,
         eksik_bilgi: isMissingTime,
         soru: questionToAsk,
+        domain_clarification: fallback.domain_clarification || null,
         mediaId,
       };
       await addNote(createdNote);
@@ -4129,6 +4256,64 @@ export default function App() {
                           >
                             {item.baslik}
                           </h2>
+
+                          {/* Zaman Damgası & Google Takvim Rozeti */}
+                          {(item.zaman || item.tarih_iso) && (
+                            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                              {item.zaman && (
+                                <span
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingNote(item);
+                                    setEditingNoteInitialTab('alarm');
+                                  }}
+                                  className={`inline-flex items-center gap-1 font-semibold rounded-md transition-colors cursor-pointer hover:opacity-80 select-none ${
+                                    viewMode === 'grid' ? 'text-[9.5px] px-1.5 py-0.5' : 'text-[11px] px-2 py-0.5'
+                                  } ${
+                                    isExpired
+                                      ? 'bg-amber-500/20 text-amber-900 dark:text-amber-200 border border-amber-500/30'
+                                      : 'bg-black/8 dark:bg-white/10 text-stone-800 dark:text-stone-200'
+                                  }`}
+                                  title={language === 'tr' ? 'Zamanı düzenlemek için tıkla' : 'Click to edit time'}
+                                >
+                                  <span>{item.isAlarm ? '⏰' : '🗓️'}</span>
+                                  <span className="truncate">{item.zaman}</span>
+                                </span>
+                              )}
+
+                              {/* Google Takvim Doğrudan Senkronizasyon Rozeti */}
+                              {item.tarih_iso && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    autoSyncCardToDeviceCalendar(item);
+                                  }}
+                                  className={`inline-flex items-center gap-1 font-semibold rounded-md border transition-all cursor-pointer select-none active:scale-95 ${
+                                    viewMode === 'grid' ? 'text-[9px] px-1.5 py-0.5' : 'text-[10.5px] px-2 py-0.5'
+                                  } ${
+                                    item.calendarEventId || item.calendar_event_id
+                                      ? 'bg-blue-500/15 border-blue-500/30 text-blue-700 dark:text-blue-300'
+                                      : 'bg-stone-500/10 border-stone-500/20 text-stone-600 dark:text-stone-400 hover:bg-blue-500/15 hover:border-blue-500/30 hover:text-blue-700'
+                                  }`}
+                                  title={
+                                    item.calendarEventId || item.calendar_event_id
+                                      ? (language === 'tr' ? 'Google Takvimde otomatik eşitlendi (Yenilemek için tıkla)' : 'Synced in Google Calendar (Click to refresh)')
+                                      : (language === 'tr' ? 'Google Takvime otomatik aktarmak için tıkla' : 'Click to auto-sync to Google Calendar')
+                                  }
+                                >
+                                  <span>📅</span>
+                                  <span>
+                                    {syncingCalendarCardId === item.id
+                                      ? (language === 'tr' ? 'Aktarılıyor...' : 'Syncing...')
+                                      : (item.calendarEventId || item.calendar_event_id)
+                                      ? (language === 'tr' ? 'Google Takvimde ✓' : 'Google Calendar ✓')
+                                      : (language === 'tr' ? 'Takvime Eşitle' : 'Sync to Cal')}
+                                  </span>
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -4145,8 +4330,53 @@ export default function App() {
                       </div>
                     )}
 
+                    {/* Jargon İkilemi / "Bunu mu demek istediniz?" Çoklu Mesleki Geri Bildirim */}
+                    {item.domain_clarification?.isAmbiguous && item.domain_clarification.candidates?.length > 0 && (
+                      <div className={`rounded-xl bg-amber-500/15 dark:bg-amber-400/15 border border-amber-500/40 text-stone-900 dark:text-stone-100 flex flex-col gap-2 shadow-xs transition-all animate-in fade-in slide-in-from-top-1 duration-200 ${
+                        viewMode === 'grid' ? 'p-2 text-[10px]' : 'p-2.5 sm:p-3 text-xs'
+                      }`}>
+                        <div className="flex items-start gap-2">
+                          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-amber-500/25 text-amber-900 dark:text-amber-100 flex items-center justify-center shrink-0 text-xs font-bold mt-0.5">
+                            🤔
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
+                                {language === 'en' ? 'Did You Mean?' : 'Bunu mu Demek İstediniz?'}
+                              </span>
+                              <span className="text-[8.5px] px-1.5 py-0.2 rounded-full bg-amber-500/25 text-amber-950 dark:text-amber-100 font-semibold font-mono">
+                                Jargon
+                              </span>
+                            </div>
+                            <p className="font-semibold text-stone-900 dark:text-stone-100 leading-snug">
+                              {item.domain_clarification.question || (language === 'en' ? 'Multiple professional fields detected. Which domain procedure should be applied?' : 'Birden fazla mesleki jargon tespit edildi. Hangi uzmanlık prosedürü uygulansın?')}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Tek Dokunuşla Sektör Seçim Butonları */}
+                        <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-amber-500/20">
+                          {item.domain_clarification.candidates.map((cand, candIdx) => (
+                            <button
+                              key={candIdx}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelectDomainClarification(item.id, cand.domain);
+                              }}
+                              className="inline-flex items-center gap-1 text-[10.5px] sm:text-[11px] font-medium px-2.5 py-1 rounded-lg bg-white/95 dark:bg-stone-900/95 text-stone-900 dark:text-stone-100 hover:bg-amber-100 dark:hover:bg-amber-950/80 border border-stone-300 dark:border-stone-700 hover:border-amber-400 active:scale-95 transition-all shadow-2xs cursor-pointer"
+                              title={`${cand.domainLabel} olarak ayarla`}
+                            >
+                              <span>{cand.icon}</span>
+                              <span className="whitespace-nowrap font-semibold">{cand.domainLabel}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Netleştirme Sorusu / Eksik Bilgi Uyarısı - İnteraktif IVR Clarification Bubble */}
-                    {(item.eksik_bilgi || item.netlestirme_sorusu || item.soru) && (
+                    {(!item.domain_clarification?.isAmbiguous) && (item.eksik_bilgi || item.netlestirme_sorusu || item.soru) && (
                       <div className={`rounded-xl bg-amber-500/10 dark:bg-amber-400/10 border border-amber-500/30 text-stone-900 dark:text-stone-100 flex flex-col gap-2 shadow-xs transition-all animate-in fade-in slide-in-from-top-1 duration-200 ${
                         viewMode === 'grid' ? 'p-2 text-[10px]' : 'p-2.5 sm:p-3 text-xs'
                       }`}>
@@ -5077,6 +5307,8 @@ export default function App() {
         driveSyncTime={driveSyncTime}
         isDriveConnected={Boolean(getGoogleAccessToken() || googleAccessToken)}
         onConnectDrive={handleConnectDriveCalendar}
+        onSyncAllCalendar={handleSyncAllGoogleCalendar}
+        isSyncingCalendar={isSyncingCalendar}
         viewMode={viewMode}
         onToggleViewMode={toggleViewMode}
         onOpenRecycleBin={() => {

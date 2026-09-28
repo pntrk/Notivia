@@ -113,6 +113,21 @@ export interface NotiviaTriggerInfo {
   etiket?: string;
 }
 
+export interface DomainClarificationCandidate {
+  domain: ProfessionDomain;
+  domainLabel: string;
+  icon: string;
+  color: string;
+  title: string;
+  keywords: string[];
+}
+
+export interface DomainClarificationInfo {
+  isAmbiguous: boolean;
+  question: string;
+  candidates: DomainClarificationCandidate[];
+}
+
 export interface NotiviaSimpleNote {
   baslik: string;
   zaman: string | null;
@@ -125,6 +140,7 @@ export interface NotiviaSimpleNote {
   netlestirme_sorusu?: string | null;
   teshis_notu?: string | null;
   baglantili_hatirlatma?: string | null;
+  domain_clarification?: DomainClarificationInfo | null;
   tetikleyici?: NotiviaTriggerInfo | null;
   periyodik?: {
     tip: 'aylik_son_hafta' | 'aylik' | 'haftalik' | 'yillik' | 'gunluk';
