@@ -1,3 +1,17 @@
+export function formatCreatedTime(rawTime: any, lang: string = 'tr'): string {
+  if (!rawTime) return '';
+  const date = rawTime.toDate ? rawTime.toDate() : new Date(rawTime);
+  if (isNaN(date.getTime())) return '';
+  const isCurrentYear = date.getFullYear() === new Date().getFullYear();
+  return date.toLocaleDateString(lang === 'en' ? 'en-US' : 'tr-TR', {
+    day: 'numeric',
+    month: 'short',
+    ...(isCurrentYear ? {} : { year: 'numeric' }),
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export function formatTurkishDateTime(isoString: string | null | undefined): string {
   if (!isoString) return 'Belirtilmedi';
   try {

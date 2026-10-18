@@ -1,0 +1,6 @@
+{
+  "summary": "Notivia Kod Tabanı Sadeleştirme ve Modülerleştirme Uygulama Raporu:\n- 5.454 satırlık App.tsx'den NoteCard (React.memo ile optimize edilmiş), AppHeader, BatchActionBar, BottomInputBar ve bağımsız modallar (MediaViewerModal, DraftMessageModal, CalendarEventsModal, PushBannerToast, DeleteConfirmModal) ayrı modüllere taşındı.\n- React \"Expected static flag was missing\" hatası memoize kart mimarisiyle çözüldü.\n- scenarioDatabase ve 35.000 satırlık sektör verileri lazy getter ve domain-specific lookup fonksiyonları ile optimize edildi.\n- TypeScript lint ve derleme testleri (tsc --noEmit ve vite build) sıfır hata ile doğrulandı.",
+  "updatedAt": "2026-10-18T16:45:52.179151916Z",
+  "requestFeedback": true,
+  "userFacing": true
+}

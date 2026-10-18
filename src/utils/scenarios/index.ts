@@ -17,12 +17,84 @@ export {
   AGRICULTURE_GASTRONOMY_SCENARIOS
 };
 
-export const ALL_CONSOLIDATED_SCENARIOS: ShortScenarioMatch[] = [
-  ...LEGAL_FINANCE_SCENARIOS,
-  ...HEALTH_LIFE_SCENARIOS,
-  ...ENGINEERING_TECH_SCENARIOS,
-  ...EDUCATION_PUBLIC_SCENARIOS,
-  ...DEFENSE_SAFETY_SCENARIOS,
-  ...TRADE_TRANSPORT_SCENARIOS,
-  ...AGRICULTURE_GASTRONOMY_SCENARIOS
-];
+/**
+ * Belirli bir mesleki uzmanlık veya yaşam alanı için ilgili senaryo paketini
+ * doğrudan ve anında döndürür. Gereksiz 35.000 elemanlık taranmayı engeller.
+ */
+export function getDomainConsolidatedScenarios(domain?: string): ShortScenarioMatch[] {
+  if (!domain) return [];
+  const d = domain.toUpperCase();
+  switch (d) {
+    case 'HUKUK':
+    case 'YARGI':
+    case 'FINANS':
+    case 'MALIYE':
+    case 'NOTER':
+      return LEGAL_FINANCE_SCENARIOS;
+    case 'SAGLIK':
+    case 'HEKIM':
+    case 'HEMSIRE':
+    case 'ECZACILIK':
+    case 'DIS_HEKIMI':
+    case 'VETERINER':
+      return HEALTH_LIFE_SCENARIOS;
+    case 'TEKNIK':
+    case 'INSAAT':
+    case 'ELEKTRIK':
+    case 'MAKINE':
+    case 'YAZILIM':
+      return ENGINEERING_TECH_SCENARIOS;
+    case 'EGITIM':
+    case 'OGRETMEN':
+    case 'AKADEMI':
+    case 'OKUL_YONETIMI':
+    case 'KAMU':
+      return EDUCATION_PUBLIC_SCENARIOS;
+    case 'SAVUNMA':
+    case 'POLIS':
+    case 'ASAYIS':
+    case 'ITFAIYE':
+    case 'ASKERI':
+    case 'GUVENLIK':
+      return DEFENSE_SAFETY_SCENARIOS;
+    case 'TICARET':
+    case 'LOJISTIK':
+    case 'TASIMACILIK':
+    case 'SOFOR':
+    case 'KASIYER':
+    case 'SATIS':
+      return TRADE_TRANSPORT_SCENARIOS;
+    case 'ZIRAAT':
+    case 'TARIM':
+    case 'MUTFAK':
+    case 'GASTRONOMI':
+    case 'ASCI':
+      return AGRICULTURE_GASTRONOMY_SCENARIOS;
+    default:
+      return [];
+  }
+}
+
+let _cachedAllScenarios: ShortScenarioMatch[] | null = null;
+
+export function getAllConsolidatedScenarios(): ShortScenarioMatch[] {
+  if (!_cachedAllScenarios) {
+    _cachedAllScenarios = [
+      ...LEGAL_FINANCE_SCENARIOS,
+      ...HEALTH_LIFE_SCENARIOS,
+      ...ENGINEERING_TECH_SCENARIOS,
+      ...EDUCATION_PUBLIC_SCENARIOS,
+      ...DEFENSE_SAFETY_SCENARIOS,
+      ...TRADE_TRANSPORT_SCENARIOS,
+      ...AGRICULTURE_GASTRONOMY_SCENARIOS
+    ];
+  }
+  return _cachedAllScenarios;
+}
+
+export const ALL_CONSOLIDATED_SCENARIOS: ShortScenarioMatch[] = new Proxy([] as ShortScenarioMatch[], {
+  get(_target, prop, receiver) {
+    const list = getAllConsolidatedScenarios();
+    return Reflect.get(list, prop, receiver);
+  }
+});

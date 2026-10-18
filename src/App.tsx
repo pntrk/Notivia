@@ -82,6 +82,15 @@ import { SettingsModal } from './components/SettingsModal.tsx';
 import { RecycleBinModal, RETENTION_MS } from './components/RecycleBinModal.tsx';
 import type { TrashNoteItem } from './types/notivia.ts';
 import { EditNoteModal } from './components/EditNoteModal.tsx';
+import { NoteCard } from './components/NoteCard.tsx';
+import { AppHeader } from './components/AppHeader.tsx';
+import { BatchActionBar } from './components/BatchActionBar.tsx';
+import { BottomInputBar } from './components/BottomInputBar.tsx';
+import { DraftMessageModal } from './components/modals/DraftMessageModal.tsx';
+import { CalendarEventsModal } from './components/modals/CalendarEventsModal.tsx';
+import { DeleteConfirmModal } from './components/modals/DeleteConfirmModal.tsx';
+import { MediaViewerModal } from './components/modals/MediaViewerModal.tsx';
+import { PushBannerToast } from './components/modals/PushBannerToast.tsx';
 import { DOMAIN_REGISTRY, WORK_DOMAIN_OPTIONS, detectDomainFromNote, type ProfessionDomain } from './types/domainThemes.ts';
 import { translations, type Language } from './utils/i18n.ts';
 import { checkLocalWeather, checkWeatherTaskCompatibility, type WeatherCondition } from './utils/weather.ts';
@@ -345,38 +354,7 @@ function sortNotiviaCards(cards: SimpleCardItem[]): SimpleCardItem[] {
   });
 }
 
-function CardMediaThumbnail({ mediaId, onClick }: { mediaId: string; onClick: () => void }) {
-  const [mediaData, setMediaData] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-    getLocalMedia(mediaId).then((data) => {
-      if (isMounted && data) {
-        setMediaData(data);
-      }
-    });
-    return () => {
-      isMounted = false;
-    };
-  }, [mediaId]);
-
-  if (!mediaData) {
-    return (
-      <span className="w-11 h-11 rounded-xl bg-stone-200/50 animate-pulse shrink-0 flex items-center justify-center text-xs text-stone-400">
-        📷
-      </span>
-    );
-  }
-
-  return (
-    <img
-      src={mediaData}
-      alt="Not görseli"
-      onClick={onClick}
-      className="w-11 h-11 rounded-xl object-cover border border-white/80 shadow-xs cursor-pointer active:scale-95 shrink-0"
-    />
-  );
-}
 
 export default function App() {
   // Anında (0ms) yerel hafızadan kartları yükle - ekran asla boş veya gecikmeli açılmaz
@@ -3667,140 +3645,21 @@ export default function App() {
       }`}>
         
         {/* Üst Bar: Başlık & Ayarlar */}
-        <header className="px-6 pt-6 pb-2 flex justify-between items-center">
-          <div className="flex items-center gap-2.5">
-            <img
-              src="/icon.svg"
-              alt="Notivia Logo"
-              className="w-7 h-7 rounded-lg shadow-xs ring-1 ring-stone-900/10 dark:ring-white/15 shrink-0 object-contain"
-              width={28}
-              height={28}
-            />
-            <h1 className={`text-2xl font-bold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-stone-900'}`}>Notivia</h1>
-          </div>
-
-          <div id="auth-container" className="flex items-center gap-2">
-            {/* Görünüm Modu Toggle (Tekli / İkili Izgara) */}
-            <button
-              id="view-mode-toggle-btn"
-              type="button"
-              onClick={toggleViewMode}
-              title={viewMode === 'grid' ? t.singleView : t.dualGridView}
-              className={`p-1.5 rounded-full transition-all cursor-pointer active:scale-95 ${
-                viewMode === 'grid'
-                  ? theme === 'dark' ? 'text-amber-300 bg-stone-800 ring-1 ring-amber-400/30' : 'text-stone-900 bg-stone-200 ring-1 ring-stone-300'
-                  : theme === 'dark' ? 'text-stone-400 hover:text-stone-200 hover:bg-stone-800' : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100'
-              }`}
-            >
-              {viewMode === 'grid' ? (
-                /* 2-column grid icon */
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                  <rect x="14" y="3" width="7" height="7" rx="1.5" />
-                  <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                  <rect x="14" y="14" width="7" height="7" rx="1.5" />
-                </svg>
-              ) : (
-                /* Single list icon */
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="3" y1="6" x2="21" y2="6" />
-                  <line x1="3" y1="12" x2="21" y2="12" />
-                  <line x1="3" y1="18" x2="21" y2="18" />
-                </svg>
-              )}
-            </button>
-
-            {/* Arama Toggle */}
-            <button
-              type="button"
-              onClick={() => {
-                setShowSearch((prev) => !prev);
-                if (showSearch) setSearchQuery('');
-              }}
-              title={t.searchTitle}
-              className={`p-1.5 rounded-full transition-colors cursor-pointer active:scale-95 ${
-                showSearch 
-                  ? theme === 'dark' ? 'text-white bg-stone-800' : 'text-stone-900 bg-stone-200'
-                  : theme === 'dark' ? 'text-stone-400 hover:text-stone-200 hover:bg-stone-800' : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-
-            {/* Geri Dönüşüm Kutusu Butonu (30 Günlük Saklama) */}
-            <button
-              id="recycle-bin-top-btn"
-              type="button"
-              onClick={() => setShowRecycleBinModal(true)}
-              title={t.recycleBinTitle}
-              className={`relative p-1.5 rounded-full transition-all cursor-pointer active:scale-95 ${
-                trashNotes.length > 0
-                  ? theme === 'dark'
-                    ? 'text-amber-400 hover:bg-stone-800 hover:text-amber-300'
-                    : 'text-amber-600 hover:bg-stone-100 hover:text-amber-700'
-                  : theme === 'dark'
-                    ? 'text-stone-400 hover:text-stone-200 hover:bg-stone-800'
-                    : 'text-stone-400 hover:text-stone-700 hover:bg-stone-100'
-              }`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              {trashNotes.length > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] px-0.5 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center border border-white dark:border-stone-900 leading-none">
-                  {trashNotes.length > 99 ? '99+' : trashNotes.length}
-                </span>
-              )}
-            </button>
-
-
-            {/* Ayarlar ve Profil Butonu (Focus-mode & User Request) */}
-            <button
-              id="user-avatar-btn"
-              type="button"
-              onClick={() => setIsSettingsOpen(true)}
-              title={t.settingsTitle}
-              className={`relative p-1.5 rounded-full border transition-all active:scale-95 cursor-pointer ${
-                theme === 'dark'
-                  ? 'border-stone-700 bg-stone-800/80 text-stone-200 hover:bg-stone-700 hover:border-stone-600'
-                  : 'border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100 hover:border-stone-300'
-              }`}
-            >
-              {activeUser ? (
-                <div className="w-5 h-5 rounded-full overflow-hidden relative">
-                  <img
-                    id="user-avatar"
-                    src={
-                      activeUser.photoURL ||
-                      `https://api.dicebear.com/7.x/identicon/svg?seed=${activeUser.uid}`
-                    }
-                    alt={activeUser.displayName || 'Profile'}
-                    className="w-full h-full object-cover"
-                  />
-                  {/* Minik ayar rozeti */}
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-500 rounded-full border border-white" />
-                </div>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-              )}
-            </button>
-          </div>
-        </header>
+        <AppHeader
+          theme={theme}
+          viewMode={viewMode}
+          showSearch={showSearch}
+          trashCount={trashNotes.length}
+          activeUser={activeUser}
+          t={t}
+          onToggleViewMode={toggleViewMode}
+          onToggleSearch={() => {
+            setShowSearch((prev) => !prev);
+            if (showSearch) setSearchQuery('');
+          }}
+          onOpenTrash={() => setShowRecycleBinModal(true)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+        />
 
         {/* Kart Listesi Alanı */}
         <section
@@ -3828,133 +3687,32 @@ export default function App() {
             />
           </div>
 
-          {/* Çoklu Seçim, Taşıma ve Toplu Silme Barı (Sticky & Mobile Optimized) */}
-          {isSelectMode && (
-            <div className="sticky top-0 z-20 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-stone-900/95 dark:bg-stone-950/95 backdrop-blur-md text-white text-xs p-3 rounded-2xl mb-3 shadow-xl border border-stone-800 animate-in fade-in slide-in-from-top-1 duration-150">
-              <div className="flex items-center justify-between sm:justify-start gap-2">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (selectedCardIds.length === filteredCards.length) {
-                        setSelectedCardIds([]);
-                      } else {
-                        setSelectedCardIds(filteredCards.map((c) => c.id));
-                      }
-                    }}
-                    className="text-stone-300 hover:text-white underline font-medium cursor-pointer"
-                  >
-                    {selectedCardIds.length === filteredCards.length ? t.clearSelection : t.selectAll}
-                  </button>
-                  <span className="text-stone-300 font-medium bg-white/15 px-2 py-0.5 rounded-md text-[11px]">
-                    {selectedCardIds.length} {t.selectedCount}
-                  </span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsSelectMode(false);
-                    setSelectedCardIds([]);
-                  }}
-                  className="sm:hidden px-2 py-1 text-stone-300 hover:text-white rounded-lg hover:bg-stone-800 transition-colors cursor-pointer text-xs"
-                >
-                  {t.cancelSelection}
-                </button>
-              </div>
-
-              {/* Hızlı Taşıma (Üst/Alt), Toplu Tamamlama ve Silme Butonları */}
-              <div className="flex items-center justify-between sm:justify-end gap-1.5 flex-wrap pt-1.5 sm:pt-0 border-t sm:border-t-0 border-white/10">
-                {/* Sıralama & Taşıma Butonları */}
-                <div className="flex items-center gap-1 bg-white/10 p-0.5 rounded-xl">
-                  <button
-                    type="button"
-                    disabled={selectedCardIds.length === 0}
-                    onClick={() => moveSelectedNotes('top')}
-                    className="px-2 py-1 bg-white/10 hover:bg-white/20 disabled:opacity-30 text-stone-100 rounded-lg text-[11px] font-medium transition-all flex items-center gap-1 cursor-pointer active:scale-95"
-                    title={t.moveToTop}
-                  >
-                    <span>🔝</span>
-                    <span className="hidden xs:inline">{t.moveToTop}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={selectedCardIds.length === 0}
-                    onClick={() => moveSelectedNotes('up')}
-                    className="px-2 py-1 bg-white/10 hover:bg-white/20 disabled:opacity-30 text-stone-100 rounded-lg text-[11px] font-medium transition-all flex items-center gap-1 cursor-pointer active:scale-95"
-                    title={t.moveSelectedUp}
-                  >
-                    <span>⬆️</span>
-                    <span>{t.moveUp}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={selectedCardIds.length === 0}
-                    onClick={() => moveSelectedNotes('down')}
-                    className="px-2 py-1 bg-white/10 hover:bg-white/20 disabled:opacity-30 text-stone-100 rounded-lg text-[11px] font-medium transition-all flex items-center gap-1 cursor-pointer active:scale-95"
-                    title={t.moveSelectedDown}
-                  >
-                    <span>⬇️</span>
-                    <span>{t.moveDown}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={selectedCardIds.length === 0}
-                    onClick={() => moveSelectedNotes('bottom')}
-                    className="px-2 py-1 bg-white/10 hover:bg-white/20 disabled:opacity-30 text-stone-100 rounded-lg text-[11px] font-medium transition-all flex items-center gap-1 cursor-pointer active:scale-95"
-                    title={t.moveToBottom}
-                  >
-                    <span>🔚</span>
-                    <span className="hidden xs:inline">{t.moveToBottom}</span>
-                  </button>
-                </div>
-
-                {/* Toplu Tamamla / Geri Al Butonu */}
-                <button
-                  type="button"
-                  disabled={selectedCardIds.length === 0}
-                  onClick={() => {
-                    selectedCardIds.forEach((id) => toggleCardCompleted(id));
-                    setStatusText(language === 'tr' ? `${selectedCardIds.length} kart güncellendi ✓` : `${selectedCardIds.length} cards updated ✓`);
-                    setTimeout(() => setStatusText(language === 'tr' ? 'Söyle, çek ya da yaz' : 'Speak, capture or write'), 2000);
-                  }}
-                  className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 text-white font-semibold rounded-xl shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 text-[11px]"
-                  title={language === 'tr' ? 'Seçilenleri Tamamla / Geri Al' : 'Complete / Undo Selected'}
-                >
-                  <span>✓</span>
-                  <span>{language === 'tr' ? 'Tamamla' : 'Done'}</span>
-                </button>
-
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    disabled={selectedCardIds.length === 0}
-                    onClick={deleteSelectedNotes}
-                    className="px-2.5 py-1.5 bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white font-semibold rounded-xl shadow-xs transition-all flex items-center gap-1 cursor-pointer active:scale-95 text-[11px]"
-                  >
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    <span>{t.deleteSelected}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsSelectMode(false);
-                      setSelectedCardIds([]);
-                    }}
-                    className="hidden sm:inline-flex px-2.5 py-1.5 text-stone-300 hover:text-white rounded-xl hover:bg-stone-800 transition-colors cursor-pointer text-xs"
-                  >
-                    {t.cancelSelection}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Çoklu Seçim, Taşıma ve Toplu Silme Barı */}
+          <BatchActionBar
+            isSelectMode={isSelectMode}
+            selectedCardIds={selectedCardIds}
+            filteredCards={filteredCards}
+            language={language}
+            t={t}
+            onSelectAllToggle={() => {
+              if (selectedCardIds.length === filteredCards.length) {
+                setSelectedCardIds([]);
+              } else {
+                setSelectedCardIds(filteredCards.map((c) => c.id));
+              }
+            }}
+            onCancelSelection={() => {
+              setIsSelectMode(false);
+              setSelectedCardIds([]);
+            }}
+            onMoveSelected={moveSelectedNotes}
+            onToggleCompleteSelected={() => {
+              selectedCardIds.forEach((id) => toggleCardCompleted(id));
+              setStatusText(language === 'tr' ? `${selectedCardIds.length} kart güncellendi ✓` : `${selectedCardIds.length} cards updated ✓`);
+              setTimeout(() => setStatusText(language === 'tr' ? 'Söyle, çek ya da yaz' : 'Speak, capture or write'), 2000);
+            }}
+            onDeleteSelected={deleteSelectedNotes}
+          />
 
           {/* ⚡ Bilişsel Yük ve Odak Bildirimi */}
           {dailyLoad.isOverloaded && (
@@ -3990,1007 +3748,115 @@ export default function App() {
                   : (currentDragOffset !== undefined ? currentDragOffset : (isSwipedOpen ? -144 : 0));
 
                 return (
-                  <React.Fragment key={item.id}>
-                    {/* Yukarıya Yerleştirme Göstergesi (Drop Indicator Before) */}
-                    {dragOverCardId === item.id && dragPosition === 'before' && (
-                      <div className="w-full col-span-full py-1 flex items-center justify-center animate-in fade-in zoom-in-95 duration-100">
-                        <div className="w-full h-1.5 bg-indigo-600 dark:bg-indigo-400 rounded-full shadow-md flex items-center justify-center relative">
-                          <span className="absolute bg-indigo-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-xs -top-2.5 flex items-center gap-1">
-                            <span>⬆️</span> {language === 'tr' ? 'Buraya Taşı' : 'Move Here'}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Sola Kaydırılabilir Kart Dış Kapsayıcısı */}
-                    <div
-                      className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl group/swipe select-none card-swipe-container"
-                      data-card-id={item.id}
-                    >
-                      {/* Tek Sütun Görünümünde (Single View) Arkadan Açılan Mobil Aksiyon Çekmecesi (Düzenle, Sil) */}
-                      {viewMode !== 'grid' && (
-                        <div className="absolute inset-y-0 right-0 flex items-stretch z-0 bg-stone-900 dark:bg-stone-950 rounded-xl sm:rounded-2xl overflow-hidden shadow-inner">
-                          {/* 1. Düzenle */}
-                          <button
-                            type="button"
-                            id={`swipe-edit-${item.id}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingNote(item);
-                              setSwipedCardId(null);
-                              setSwipeOffsets({});
-                              if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                                try { navigator.vibrate(25); } catch {}
-                              }
-                            }}
-                            className="w-18 sm:w-20 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer px-1 text-center select-none border-r border-white/10 min-h-[48px]"
-                            title={language === 'tr' ? 'Kartı Düzenle' : 'Edit'}
-                          >
-                            <span className="text-lg sm:text-xl">✏️</span>
-                            <span className="text-[10px] sm:text-[11px] font-bold tracking-tight">
-                              {language === 'tr' ? 'Düzenle' : 'Edit'}
-                            </span>
-                          </button>
-
-                          {/* 2. Sil (Öncesinde Onay İster) */}
-                          <button
-                            type="button"
-                            id={`swipe-delete-${item.id}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteConfirmNote(item);
-                              setSwipedCardId(null);
-                              setSwipeOffsets({});
-                              if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                                try { navigator.vibrate(30); } catch {}
-                              }
-                            }}
-                            className="w-18 sm:w-20 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white flex flex-col items-center justify-center gap-1 transition-colors cursor-pointer px-1 text-center select-none min-h-[48px]"
-                            title={language === 'tr' ? 'Notu Sil' : 'Delete'}
-                          >
-                            <span className="text-lg sm:text-xl">🗑️</span>
-                            <span className="text-[10px] sm:text-[11px] font-bold tracking-tight">
-                              {language === 'tr' ? 'Sil' : 'Delete'}
-                            </span>
-                          </button>
-                        </div>
-                      )}
-
-                      {/* İkili Izgarada (Grid View) Kaydırma Esnasında Gösterilen Sağ Çekme İpucu */}
-                      {viewMode === 'grid' && (
-                        <div className="absolute inset-y-0 right-0 w-10 bg-stone-900 text-white flex items-center justify-center rounded-r-xl z-0 text-xs font-bold shadow-inner opacity-80">
-                          <span>⚙️</span>
-                        </div>
-                      )}
-
-                      {/* İKİLİ IZGARADA (Grid View) Sola Çekince Açılan Pratik Yüzen Aksiyon HUD'ı */}
-                      {/* Kartın boyutlarına kusursuz oturan 2 hızlı aksiyon: Düzenle, Sil */}
-                      {viewMode === 'grid' && isSwipedOpen && (
-                        <div
-                          className="absolute inset-0 z-30 bg-stone-900/95 dark:bg-stone-950/95 backdrop-blur-md rounded-xl sm:rounded-2xl p-2 sm:p-2.5 flex flex-col justify-between text-white shadow-2xl animate-in fade-in zoom-in-95 duration-150 border border-white/15"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {/* Başlık ve Kapat Butonu */}
-                          <div className="flex items-center justify-between gap-1 border-b border-white/10 pb-1 px-0.5">
-                            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                              <span className="text-xs shrink-0">{item.ikon || '📌'}</span>
-                              <span className="text-[11px] font-bold truncate text-stone-100" title={item.baslik}>
-                                {item.baslik}
-                              </span>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSwipedCardId(null);
-                                setSwipeOffsets({});
-                              }}
-                              className="w-5 h-5 rounded-full bg-white/15 hover:bg-white/25 active:bg-white/35 flex items-center justify-center text-[10px] text-stone-300 hover:text-white cursor-pointer transition-colors shrink-0"
-                              title={language === 'tr' ? 'Kapat' : 'Close'}
-                            >
-                              ✕
-                            </button>
-                          </div>
-
-                          {/* 2 Pratik ve Ergonomik Aksiyon Butonu */}
-                          <div className="flex flex-col gap-1.5 flex-1 justify-center py-1">
-                            {/* 1. Düzenle */}
-                            <button
-                              type="button"
-                              id={`grid-swipe-edit-${item.id}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingNote(item);
-                                setSwipedCardId(null);
-                                setSwipeOffsets({});
-                                if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                                  try { navigator.vibrate(25); } catch {}
-                                }
-                              }}
-                              className="w-full flex-1 min-h-[32px] max-h-[42px] px-2.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 active:from-indigo-800 active:to-indigo-900 text-white flex items-center justify-between shadow-2xs active:scale-95 transition-all text-left cursor-pointer"
-                            >
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-xs sm:text-sm shrink-0">✏️</span>
-                                <span className="text-[10px] sm:text-[11px] font-bold truncate">
-                                  {language === 'tr' ? 'Düzenle' : 'Edit'}
-                                </span>
-                              </div>
-                              <span className="text-[10px] opacity-70 font-mono">›</span>
-                            </button>
-
-                            {/* 2. Sil */}
-                            <button
-                              type="button"
-                              id={`grid-swipe-delete-${item.id}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteConfirmNote(item);
-                                setSwipedCardId(null);
-                                setSwipeOffsets({});
-                                if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                                  try { navigator.vibrate(30); } catch {}
-                                }
-                              }}
-                              className="w-full flex-1 min-h-[32px] max-h-[42px] px-2.5 rounded-lg sm:rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 active:from-red-800 active:to-red-900 text-white flex items-center justify-between shadow-2xs active:scale-95 transition-all text-left cursor-pointer"
-                            >
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-xs sm:text-sm shrink-0">🗑️</span>
-                                <span className="text-[10px] sm:text-[11px] font-bold truncate">
-                                  {language === 'tr' ? 'Notu Sil' : 'Delete'}
-                                </span>
-                              </div>
-                              <span className="text-[10px] opacity-70 font-mono">›</span>
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Ön Plandaki Kaydırılabilir Not Kartı */}
-                      <div
-                        draggable={!isSelectMode}
-                        onDragStart={(e) => handleDesktopDragStart(e, item.id)}
-                        onDragOver={(e) => handleDesktopDragOver(e, item.id)}
-                        onDragLeave={(e) => handleDesktopDragLeave(e, item.id)}
-                        onDrop={(e) => handleDesktopDrop(e, item.id)}
-                        onDragEnd={handleDesktopDragEnd}
-                        onTouchStart={(e) => handleCardTouchStart(item.id, e)}
-                        onTouchMove={(e) => handleCardTouchMove(item.id, e)}
-                        onTouchEnd={() => handleCardTouchEnd(item.id)}
-                        onTouchCancel={() => handleCardTouchEnd(item.id)}
-                        onMouseDown={(e) => handleCardMouseDown(item.id, e)}
-                        onMouseMove={(e) => handleCardMouseMove(item.id, e)}
-                        onMouseUp={() => handleCardMouseUp(item.id)}
-                        onMouseLeave={() => handleCardMouseUp(item.id)}
-                        onContextMenu={(e) => {
-                          if (isLongPressFiredRef.current || isSelectMode) {
-                            e.preventDefault();
-                          }
-                        }}
-                        onClick={(e) => handleCardClick(item.id, e)}
-                        className={`card relative z-10 w-full max-w-full overflow-hidden flex flex-col transition-all duration-300 hover:shadow-md ${
-                          viewMode === 'grid'
-                            ? 'p-2.5 sm:p-3 rounded-xl sm:rounded-2xl gap-1.5'
-                            : 'p-3.5 sm:p-4 rounded-2xl gap-2 sm:gap-2.5'
-                        } ${
-                          item.isRemoving ? 'scale-95 opacity-0' : 'scale-100'
-                        } ${
-                          draggingCardId === item.id
-                            ? 'opacity-50 scale-[1.02] ring-2 ring-indigo-500 shadow-2xl z-30 cursor-grabbing'
-                            : ''
-                        } ${
-                          isWeatherTriggered
-                            ? 'ring-2 ring-red-500 bg-red-50 animate-pulse'
-                            : isCompleted
-                            ? 'opacity-70 saturate-50 border-solid border-stone-300/80 shadow-none'
-                            : isExpired 
-                            ? 'opacity-95 border-dashed border-amber-300/80 shadow-xs' 
-                            : 'opacity-100 border-solid border-black/8 dark:border-white/10 shadow-xs'
-                        } ${isSelected ? 'ring-2 ring-stone-800 dark:ring-stone-200' : ''} ${
-                          isSelectMode ? 'cursor-pointer select-none active:scale-[0.99]' : ''
-                        }`}
-                        style={{
-                          backgroundColor: cardBgColor,
-                          borderWidth: '1px',
-                          transform: `translateX(${cardOffset}px)`,
-                          transition: isDraggingThis ? 'none' : 'transform 0.28s cubic-bezier(0.2, 0.85, 0.32, 1.05)',
-                          WebkitTouchCallout: 'none',
-                        }}
-                      >
-                    {/* Üst Kısım: Başlık ve İkon (Sade, Geniş ve Mobil Uyumlu Düzen) */}
-                    <div className="flex items-start justify-between gap-2 sm:gap-2.5 w-full">
-                      {/* Başlık ve İkon */}
-                      <div className="flex items-start gap-2 sm:gap-2.5 min-w-0 flex-1 w-full">
-                        {/* Çoklu Seçim Modunda Seçim Kutucuğu ve Sürükleme Kulpu */}
-                        {isSelectMode && (
-                          <div className="flex items-center gap-1 shrink-0 mt-0.5">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedCardIds((prev) =>
-                                  prev.includes(item.id)
-                                    ? prev.filter((id) => id !== item.id)
-                                    : [...prev, item.id]
-                                );
-                              }}
-                              className={`rounded-md border flex items-center justify-center shrink-0 cursor-pointer transition-colors ${
-                                viewMode === 'grid' ? 'w-4 h-4 text-[9px]' : 'w-5 h-5 text-xs'
-                              } ${
-                                isSelected
-                                  ? 'bg-stone-900 border-stone-900 text-white'
-                                  : 'border-stone-400 bg-white/70 hover:bg-white text-transparent'
-                              }`}
-                              title={isSelected ? (language === 'en' ? 'Deselect' : 'Seçimi kaldır') : (language === 'en' ? 'Select' : 'Seç')}
-                            >
-                              ✓
-                            </button>
-                            <span
-                              className="text-stone-400 dark:text-stone-500 text-xs font-mono font-bold tracking-tighter select-none cursor-grab active:cursor-grabbing px-0.5"
-                              title={language === 'tr' ? 'Sürükleyerek sırasını değiştirin' : 'Drag to reorder'}
-                            >
-                              ⋮⋮
-                            </span>
-                          </div>
-                        )}
-
-                        {/* İkon / Medya Rozeti */}
-                        <div className="relative shrink-0">
-                          {item.mediaId ? (
-                            <CardMediaThumbnail
-                              mediaId={item.mediaId}
-                              onClick={() => viewFullImage(item.mediaId!)}
-                            />
-                          ) : (
-                            <div className={`${viewMode === 'grid' ? 'w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-lg' : 'w-9 h-9 sm:w-10 sm:h-10 rounded-xl'} flex items-center justify-center bg-white/85 dark:bg-black/25 border border-black/5 shadow-2xs select-none shrink-0 ${isCompleted ? 'grayscale opacity-60' : ''}`}>
-                              <span className={viewMode === 'grid' ? 'text-sm sm:text-base' : 'text-xl sm:text-2xl'}>
-                                {item.ikon || '📌'}
-                              </span>
-                            </div>
-                          )}
-                          {/* Küçük Durum Gösterge Noktası */}
-                          {isWeatherTriggered ? (
-                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white animate-ping" />
-                          ) : isExpired ? (
-                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white" title={language === 'en' ? 'Overdue' : 'Süresi doldu'} />
-                          ) : isCompleted ? (
-                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-stone-700 ring-2 ring-white flex items-center justify-center text-[7px] text-white">✓</span>
-                          ) : null}
-                        </div>
-
-                        {/* Kart Başlığı ve Zaman Damgası */}
-                        <div className="min-w-0 flex-1">
-                          <h2
-                            contentEditable={!isCompleted && !isSelectMode}
-                            suppressContentEditableWarning={true}
-                            spellCheck={false}
-                            className={`font-semibold leading-snug tracking-tight outline-hidden break-words hyphens-auto w-full ${
-                              viewMode === 'grid' ? 'text-[11.5px] sm:text-xs line-clamp-2' : 'text-[15px] sm:text-base'
-                            } ${
-                              isCompleted
-                                ? 'text-stone-500 line-through decoration-stone-500/70'
-                                : isExpired
-                                ? 'text-stone-800 cursor-text'
-                                : 'text-stone-900 dark:text-stone-100 cursor-text'
-                            }`}
-                            style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                (e.currentTarget as HTMLElement).blur();
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const newTitle = e.currentTarget.innerText?.trim();
-                              if (newTitle && newTitle !== item.baslik) {
-                                updateNoteTitle(
-                                  item.id,
-                                  newTitle,
-                                  item.calendarEventId || item.calendar_event_id,
-                                  item.ikon || '📌'
-                                );
-                              } else if (!newTitle) {
-                                e.currentTarget.innerText = item.baslik;
-                              }
-                            }}
-                          >
-                            {item.baslik}
-                          </h2>
-
-                          {/* Zaman Damgası & Google Takvim Rozeti */}
-                          {(item.zaman || item.tarih_iso) && (
-                            <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                              {item.zaman && (
-                                <span
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingNote(item);
-                                    setEditingNoteInitialTab('alarm');
-                                  }}
-                                  className={`inline-flex items-center gap-1 font-semibold rounded-md transition-colors cursor-pointer hover:opacity-80 select-none ${
-                                    viewMode === 'grid' ? 'text-[9.5px] px-1.5 py-0.5' : 'text-[11px] px-2 py-0.5'
-                                  } ${
-                                    isExpired
-                                      ? 'bg-amber-500/20 text-amber-900 dark:text-amber-200 border border-amber-500/30'
-                                      : 'bg-black/8 dark:bg-white/10 text-stone-800 dark:text-stone-200'
-                                  }`}
-                                  title={language === 'tr' ? 'Zamanı düzenlemek için tıkla' : 'Click to edit time'}
-                                >
-                                  <span>{item.isAlarm ? '⏰' : '🗓️'}</span>
-                                  <span className="truncate">{item.zaman}</span>
-                                </span>
-                              )}
-
-                              {/* Google Takvim Doğrudan Senkronizasyon Rozeti */}
-                              {item.tarih_iso && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    autoSyncCardToDeviceCalendar(item);
-                                  }}
-                                  className={`inline-flex items-center gap-1 font-semibold rounded-md border transition-all cursor-pointer select-none active:scale-95 ${
-                                    viewMode === 'grid' ? 'text-[9px] px-1.5 py-0.5' : 'text-[10.5px] px-2 py-0.5'
-                                  } ${
-                                    item.calendarEventId || item.calendar_event_id
-                                      ? 'bg-blue-500/15 border-blue-500/30 text-blue-700 dark:text-blue-300'
-                                      : 'bg-stone-500/10 border-stone-500/20 text-stone-600 dark:text-stone-400 hover:bg-blue-500/15 hover:border-blue-500/30 hover:text-blue-700'
-                                  }`}
-                                  title={
-                                    item.calendarEventId || item.calendar_event_id
-                                      ? (language === 'tr' ? 'Google Takvimde otomatik eşitlendi (Yenilemek için tıkla)' : 'Synced in Google Calendar (Click to refresh)')
-                                      : (language === 'tr' ? 'Google Takvime otomatik aktarmak için tıkla' : 'Click to auto-sync to Google Calendar')
-                                  }
-                                >
-                                  <span>📅</span>
-                                  <span>
-                                    {syncingCalendarCardId === item.id
-                                      ? (language === 'tr' ? 'Aktarılıyor...' : 'Syncing...')
-                                      : (item.calendarEventId || item.calendar_event_id)
-                                      ? (language === 'tr' ? 'Google Takvimde ✓' : 'Google Calendar ✓')
-                                      : (language === 'tr' ? 'Takvime Eşitle' : 'Sync to Cal')}
-                                  </span>
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                  {/* Kart Gövdesi: Rozetler, Uyarılar ve Alt Görevler (Kartın Tam Genişliğini Kullanır) */}
-                  <div className={`w-full ${viewMode === 'grid' ? 'space-y-1.5' : 'space-y-2'}`}>
-                    {/* Çakışma Uyarısı */}
-                    {(item.conflictWith || item.conflictWarning) && (
-                      <div className={`flex items-center gap-1 text-amber-900 bg-amber-500/15 border border-amber-500/30 rounded-lg break-words ${
-                        viewMode === 'grid' ? 'text-[10px] p-1.5' : 'text-xs px-2.5 py-1'
-                      }`}>
-                        <span className="shrink-0">⚠️</span>
-                        <span className="leading-tight">'{item.conflictWith || item.conflictWarning}' {t.conflictsWith}</span>
-                      </div>
-                    )}
-
-                    {/* Jargon İkilemi / "Bunu mu demek istediniz?" Çoklu Mesleki Geri Bildirim */}
-                    {item.domain_clarification?.isAmbiguous && item.domain_clarification.candidates?.length > 0 && (
-                      <div className={`rounded-xl bg-amber-500/15 dark:bg-amber-400/15 border border-amber-500/40 text-stone-900 dark:text-stone-100 flex flex-col gap-2 shadow-xs transition-all animate-in fade-in slide-in-from-top-1 duration-200 ${
-                        viewMode === 'grid' ? 'p-2 text-[10px]' : 'p-2.5 sm:p-3 text-xs'
-                      }`}>
-                        <div className="flex items-start gap-2">
-                          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-amber-500/25 text-amber-900 dark:text-amber-100 flex items-center justify-center shrink-0 text-xs font-bold mt-0.5">
-                            🤔
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
-                                {language === 'en' ? 'Did You Mean?' : 'Bunu mu Demek İstediniz?'}
-                              </span>
-                              <span className="text-[8.5px] px-1.5 py-0.2 rounded-full bg-amber-500/25 text-amber-950 dark:text-amber-100 font-semibold font-mono">
-                                Jargon
-                              </span>
-                            </div>
-                            <p className="font-semibold text-stone-900 dark:text-stone-100 leading-snug">
-                              {item.domain_clarification.question || (language === 'en' ? 'Multiple professional fields detected. Which domain procedure should be applied?' : 'Birden fazla mesleki jargon tespit edildi. Hangi uzmanlık prosedürü uygulansın?')}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Tek Dokunuşla Sektör Seçim Butonları */}
-                        <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-amber-500/20">
-                          {item.domain_clarification.candidates.map((cand, candIdx) => (
-                            <button
-                              key={candIdx}
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSelectDomainClarification(item.id, cand.domain);
-                              }}
-                              className="inline-flex items-center gap-1 text-[10.5px] sm:text-[11px] font-medium px-2.5 py-1 rounded-lg bg-white/95 dark:bg-stone-900/95 text-stone-900 dark:text-stone-100 hover:bg-amber-100 dark:hover:bg-amber-950/80 border border-stone-300 dark:border-stone-700 hover:border-amber-400 active:scale-95 transition-all shadow-2xs cursor-pointer"
-                              title={`${cand.domainLabel} olarak ayarla`}
-                            >
-                              <span>{cand.icon}</span>
-                              <span className="whitespace-nowrap font-semibold">{cand.domainLabel}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Netleştirme Sorusu / Eksik Bilgi Uyarısı - İnteraktif IVR Clarification Bubble */}
-                    {(!item.domain_clarification?.isAmbiguous) && (item.eksik_bilgi || item.netlestirme_sorusu || item.soru) && (
-                      <div className={`rounded-xl bg-amber-500/10 dark:bg-amber-400/10 border border-amber-500/30 text-stone-900 dark:text-stone-100 flex flex-col gap-2 shadow-xs transition-all animate-in fade-in slide-in-from-top-1 duration-200 ${
-                        viewMode === 'grid' ? 'p-2 text-[10px]' : 'p-2.5 sm:p-3 text-xs'
-                      }`}>
-                        <div className="flex items-start gap-2">
-                          <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 flex items-center justify-center shrink-0 text-xs font-bold mt-0.5">
-                            🎙️
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
-                                {language === 'en' ? 'Voice Clarification' : 'Sesli Netleştirme'}
-                              </span>
-                              <span className="text-[8.5px] px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-900 dark:text-amber-200 font-semibold font-mono">
-                                IVR
-                              </span>
-                            </div>
-                            <p className="font-semibold text-stone-900 dark:text-stone-100 leading-snug">
-                              {item.netlestirme_sorusu || item.soru || (language === 'en' ? 'Which day and time should we plan for?' : 'Hangi gün ve saat için planlayalım?')}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Tek dokunuşluk interaktif hızlı yanıt butonları */}
-                        <div className="flex flex-wrap gap-1.5 pt-1.5 border-t border-amber-500/20">
-                          {getQuickClarificationOptions().map((opt, optIdx) => (
-                            <button
-                              key={optIdx}
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleResolveClarification(item.id, opt);
-                              }}
-                              className="inline-flex items-center gap-1 text-[10.5px] sm:text-[11px] font-medium px-2.5 py-1 rounded-lg bg-white/90 dark:bg-stone-900/90 text-stone-800 dark:text-stone-200 hover:bg-amber-100 dark:hover:bg-amber-950/70 border border-stone-200 dark:border-stone-700 hover:border-amber-400 active:scale-95 transition-all shadow-2xs cursor-pointer"
-                              title={`${opt.label} olarak kaydet`}
-                            >
-                              <span>{opt.icon}</span>
-                              <span className="whitespace-nowrap">{opt.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Anomali veya Bilişsel Zeka Notu */}
-                    {item.anomali_notu && (
-                      <div className={`flex items-start gap-1 bg-amber-500/10 text-amber-950 border border-amber-500/20 rounded-lg leading-tight break-words ${
-                        viewMode === 'grid' ? 'text-[10px] p-1.5' : 'text-xs px-2.5 py-1.5'
-                      }`}>
-                        <span className="shrink-0 text-xs mt-0.5">💡</span>
-                        <p className="font-normal">{item.anomali_notu}</p>
-                      </div>
-                    )}
-
-                    {/* 1. Çıkarılan Metrik ve Parametre Rozetleri (Extracted Entity Metrics) */}
-                    {item.extracted_metrics && item.extracted_metrics.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-0.5">
-                        {item.extracted_metrics.map((m, mIdx) => (
-                          <div
-                            key={mIdx}
-                            className={`inline-flex items-center gap-1 rounded-md bg-stone-900/10 dark:bg-white/10 text-stone-900 dark:text-stone-100 font-medium border border-black/5 dark:border-white/10 ${
-                              viewMode === 'grid' ? 'text-[9px] px-1.5 py-0.5' : 'text-[11px] px-2 py-0.5'
-                            }`}
-                          >
-                            <span className="opacity-70 text-[8.5px] uppercase tracking-wider">{m.label}:</span>
-                            <span className="font-bold">{m.value} {m.unit}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* 2. Kilometre Taşı İlerleme Zinciri (Sequential Milestone Chain) */}
-                    {item.milestone_chain && item.milestone_chain.steps.length > 0 && (
-                      <div className="mt-1 p-1.5 sm:p-2 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5">
-                        <div className="flex items-center justify-between text-[10px] sm:text-[11px] font-bold text-stone-800 dark:text-stone-200 mb-1">
-                          <span className="flex items-center gap-1 truncate">
-                            <span>⛓️</span>
-                            <span className="truncate">{item.milestone_chain.chainName}</span>
-                          </span>
-                          <span className="text-[9px] text-stone-500 font-mono shrink-0 ml-1">
-                            {item.milestone_chain.currentStepIndex + 1}/{item.milestone_chain.steps.length}
-                          </span>
-                        </div>
-
-                        {/* Yatay Adım Çizgisi */}
-                        <div className="space-y-1">
-                          {item.milestone_chain.steps.map((step, sIdx) => (
-                            <div
-                              key={sIdx}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleMilestoneStep(item.id, sIdx);
-                              }}
-                              className="flex items-center gap-1.5 text-xs py-0.5 px-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer transition-colors"
-                            >
-                              <span
-                                className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8.5px] font-bold shrink-0 transition-colors ${
-                                  step.isCompleted
-                                    ? 'bg-emerald-600 text-white shadow-2xs'
-                                    : sIdx === item.milestone_chain?.currentStepIndex
-                                    ? 'border-2 border-indigo-600 bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold'
-                                    : 'border border-stone-400 text-stone-500 bg-white/70 dark:bg-stone-800'
-                                }`}
-                              >
-                                {step.isCompleted ? '✓' : sIdx + 1}
-                              </span>
-                              <span
-                                className={`flex-1 text-[10px] sm:text-[11px] select-none truncate ${
-                                  step.isCompleted
-                                    ? 'line-through text-stone-400 dark:text-stone-500'
-                                    : sIdx === item.milestone_chain?.currentStepIndex
-                                    ? 'font-bold text-stone-900 dark:text-white'
-                                    : 'text-stone-700 dark:text-stone-300'
-                                }`}
-                              >
-                                {step.title}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 3. Proaktif Sıradaki Eylem Önerisi (Next-Action Suggestion) */}
-                    {item.next_action && (
-                      <div className="mt-1 p-1.5 sm:p-2 rounded-xl bg-indigo-500/10 dark:bg-indigo-500/15 border border-indigo-500/20 text-indigo-950 dark:text-indigo-100 flex items-center justify-between gap-1.5 text-xs">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1 font-semibold text-[10px] sm:text-[11px] text-indigo-700 dark:text-indigo-300">
-                            <span>⚡</span>
-                            <span className="truncate">{item.next_action.title}</span>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAdoptNextAction(item.next_action!);
-                          }}
-                          className="px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-[9px] sm:text-[10px] rounded-md shadow-2xs cursor-pointer active:scale-95 transition-all shrink-0"
-                          title="Bu öneriyi yeni görev olarak ekle"
-                        >
-                          + Ekle
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Alt Görevler: Görsel İlerleme Çubuğu ve Liste */}
-                    {item.action_items && item.action_items.length > 0 && (() => {
-                      const completedCount = item.action_items.filter(t => t.is_completed).length;
-                      const totalCount = item.action_items.length;
-                      const percent = Math.round((completedCount / totalCount) * 100);
-
-                      return (
-                        <div className="mt-1 pt-1 border-t border-black/5 dark:border-white/5">
-                          <details className="group" open>
-                            <summary className="flex items-center justify-between cursor-pointer list-none select-none py-0.5">
-                              {/* İlerleme Çubuğu ve İkonik İndikatör */}
-                              <div className="flex items-center gap-1.5 flex-1 mr-2 min-w-0">
-                                <span className="text-[10px] font-semibold text-stone-700 dark:text-stone-300 flex items-center gap-0.5 shrink-0">
-                                  <span>📋</span>
-                                  <span>{completedCount}/{totalCount}</span>
-                                </span>
-                                {/* Görsel Mini Progress Bar */}
-                                <div className="flex-1 max-w-[45px] sm:max-w-[70px] h-1.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden shrink-0">
-                                  <div
-                                    className="h-full bg-stone-800 dark:bg-stone-200 rounded-full transition-all duration-300"
-                                    style={{ width: `${percent}%` }}
-                                  />
-                                </div>
-                                <span className="text-[9px] font-mono text-stone-500 shrink-0">%{percent}</span>
-                              </div>
-                              <span className="text-[9px] text-stone-400 group-open:rotate-180 transition-transform">▼</span>
-                            </summary>
-
-                            <div className="mt-1 space-y-0.5 sm:space-y-1 bg-white/50 dark:bg-black/20 p-1.5 rounded-lg border border-black/5 dark:border-white/5">
-                              {item.action_items.map((task, tIdx) => (
-                                <div
-                                  key={tIdx}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    toggleActionItem(item.id, tIdx);
-                                  }}
-                                  className="flex items-center gap-2 cursor-pointer py-1.5 px-2 rounded-lg hover:bg-white/70 dark:hover:bg-white/10 active:scale-[0.99] transition-all group/task min-h-[36px]"
-                                >
-                                  {/* Özel Tiklenebilir Şekil */}
-                                  <span className={`w-4 h-4 sm:w-4.5 sm:h-4.5 rounded-md border flex items-center justify-center text-[10px] sm:text-xs font-bold transition-all shrink-0 ${
-                                    task.is_completed 
-                                      ? 'bg-stone-800 border-stone-800 text-white shadow-2xs dark:bg-white dark:text-stone-900' 
-                                      : 'border-stone-400 bg-white group-hover/task:border-stone-700 shadow-2xs'
-                                  }`}>
-                                    {task.is_completed ? '✓' : ''}
-                                  </span>
-                                  <span
-                                    className={`text-xs sm:text-[13px] leading-snug select-none break-words flex-1 min-w-0 transition-all ${
-                                      task.is_completed
-                                        ? 'line-through text-stone-400 dark:text-stone-500 opacity-60'
-                                        : 'text-stone-900 dark:text-white font-medium'
-                                    }`}
-                                  >
-                                    {task.task}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </details>
-                        </div>
+                  <NoteCard
+                    key={item.id}
+                    item={item}
+                    viewMode={viewMode}
+                    language={language}
+                    isSelectMode={isSelectMode}
+                    isSelected={isSelected}
+                    isSwipedOpen={isSwipedOpen}
+                    cardBgColor={cardBgColor}
+                    cardOffset={cardOffset}
+                    isDraggingThis={isDraggingThis}
+                    draggingCardId={draggingCardId}
+                    dragOverCardId={dragOverCardId}
+                    dragPosition={dragPosition}
+                    isWeatherTriggered={Boolean(isWeatherTriggered)}
+                    isCompleted={isCompleted}
+                    isExpired={isExpired}
+                    syncingCalendarCardId={syncingCalendarCardId}
+                    t={t}
+                    onSelect={(id) => {
+                      setSelectedCardIds((prev) =>
+                        prev.includes(id) ? prev.filter((cId) => cId !== id) : [...prev, id]
                       );
-                    })()}
-                  </div>
-
-                  {/* Kartın Kaydedildiği Tarih ve Saat (Sağ Alt Köşe) */}
-                  <div className="flex items-center justify-end w-full pt-1 mt-auto select-none pointer-events-none">
-                    <span
-                      className={`font-mono text-stone-500/80 dark:text-stone-400/80 tracking-tight flex items-center gap-1 ${
-                        viewMode === 'grid' ? 'text-[8.5px]' : 'text-[9.5px]'
-                      }`}
-                      title={language === 'tr' ? 'Kaydedilme Tarihi ve Saati' : 'Saved Date & Time'}
-                    >
-                      <span>{formatCreatedTime(item.createdAt || (!isNaN(Number(item.id)) ? Number(item.id) : item.tarih_iso) || Date.now(), language)}</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-                {/* Aşağıya Yerleştirme Göstergesi (Drop Indicator After) */}
-                {dragOverCardId === item.id && dragPosition === 'after' && (
-                  <div className="w-full col-span-full py-1 flex items-center justify-center animate-in fade-in zoom-in-95 duration-100">
-                    <div className="w-full h-1.5 bg-indigo-600 dark:bg-indigo-400 rounded-full shadow-md flex items-center justify-center relative">
-                      <span className="absolute bg-indigo-600 text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-xs -top-2.5 flex items-center gap-1">
-                        <span>⬇️</span> {language === 'tr' ? 'Buraya Taşı' : 'Move Here'}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </React.Fragment>
-            );
+                    }}
+                    onEdit={(note) => {
+                      setEditingNote(note);
+                      setSwipedCardId(null);
+                      setSwipeOffsets({});
+                    }}
+                    onDelete={(note) => {
+                      setDeleteConfirmNote(note);
+                      setSwipedCardId(null);
+                      setSwipeOffsets({});
+                    }}
+                    onCloseSwipe={() => {
+                      setSwipedCardId(null);
+                      setSwipeOffsets({});
+                    }}
+                    onUpdateTitle={updateNoteTitle}
+                    onOpenAlarmEdit={(note) => {
+                      setEditingNote(note);
+                      setEditingNoteInitialTab('alarm');
+                    }}
+                    onSyncCalendar={autoSyncCardToDeviceCalendar}
+                    onSelectDomainClarification={handleSelectDomainClarification}
+                    onResolveClarification={handleResolveClarification}
+                    onToggleMilestoneStep={toggleMilestoneStep}
+                    onAdoptNextAction={handleAdoptNextAction}
+                    onToggleActionItem={toggleActionItem}
+                    onViewFullImage={viewFullImage}
+                    onDesktopDragStart={handleDesktopDragStart}
+                    onDesktopDragOver={handleDesktopDragOver}
+                    onDesktopDragLeave={handleDesktopDragLeave}
+                    onDesktopDrop={handleDesktopDrop}
+                    onDesktopDragEnd={handleDesktopDragEnd}
+                    onTouchStart={handleCardTouchStart}
+                    onTouchMove={handleCardTouchMove}
+                    onTouchEnd={handleCardTouchEnd}
+                    onTouchCancel={handleCardTouchEnd}
+                    onMouseDown={handleCardMouseDown}
+                    onMouseMove={handleCardMouseMove}
+                    onMouseUp={handleCardMouseUp}
+                    onMouseLeave={handleCardMouseUp}
+                    onCardClick={handleCardClick}
+                    isLongPressFired={isLongPressFiredRef.current}
+                  />
+                );
             })}
           </div>
           )}
         </section>
 
         {/* Alt Kontrol Barı (Kamera + Mikrofon + Klavye) */}
-        <footer
-          className={`shrink-0 z-20 w-full px-4 pt-3 android-footer-safe flex flex-col items-center border-t backdrop-blur-md transition-colors duration-200 ${
-            theme === 'dark'
-              ? 'bg-stone-900/95 border-stone-800 text-stone-100 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]'
-              : 'bg-white/95 border-stone-200/80 text-stone-900 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]'
-          }`}
-          style={{
-            paddingBottom: 'max(1.75rem, calc(env(safe-area-inset-bottom, 0px) + 1.25rem))',
+        <BottomInputBar
+          theme={theme}
+          language={language}
+          statusText={statusText}
+          isListening={isListening}
+          liveSpeechTranscript={liveSpeechTranscript}
+          pendingImage={pendingImage}
+          showTextInput={showTextInput}
+          textInput={textInput}
+          liveIntentRoute={liveIntentRoute}
+          sortedInstantJargonChips={sortedInstantJargonChips}
+          t={t}
+          onMicClick={handleMicClick}
+          onToggleTextInput={handleToggleTextInput}
+          onTextInputChange={setTextInput}
+          onTextSubmit={handleManualTextSubmit}
+          onCloseTextInput={() => {
+            setShowTextInput(false);
+            setTextInput('');
           }}
-        >
-          {/* Bekleyen Görsel Önizleme Kartı */}
-          {pendingImage && (
-            <div
-              id="pending-image-card"
-              className="w-full mb-3 p-2.5 bg-amber-50 dark:bg-amber-950/70 border border-amber-200 dark:border-amber-800/80 rounded-2xl flex items-center justify-between gap-3 shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-200"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <img
-                  src={pendingImage}
-                  alt={language === 'en' ? 'Preview' : 'Önizleme'}
-                  onClick={() => setModalImgSrc(pendingImage)}
-                  className="w-12 h-12 rounded-xl object-cover border border-amber-300 dark:border-amber-700 shrink-0 cursor-pointer shadow-xs active:scale-95"
-                  title={language === 'en' ? 'Click to enlarge' : 'Büyütmek için tıkla'}
-                />
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-amber-950 dark:text-amber-100 truncate flex items-center gap-1">
-                    <span>📷</span> <span>{language === 'en' ? 'Image Uploaded' : 'Görsel Yüklendi'}</span>
-                  </p>
-                  <p className="text-[11px] text-amber-800 dark:text-amber-300 truncate">
-                    {language === 'en' ? 'Explain by voice or analyze directly' : 'İster sesle anlat, ister hemen teşhis et'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button
-                  type="button"
-                  id="diagnose-pending-image-btn"
-                  onClick={async () => {
-                    const img = pendingImage;
-                    setPendingImage(null);
-                    pendingCapturedImageRef.current = null;
-                    setStatusText(language === 'en' ? 'Analyzing image...' : 'Görsel teşhis ediliyor...');
-                    await processWithAI(textInput.trim(), img, true);
-                    setTextInput('');
-                  }}
-                  className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer flex items-center gap-1"
-                >
-                  <span>✨ {language === 'en' ? 'Analyze' : 'Teşhis Et'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPendingImage(null);
-                    pendingCapturedImageRef.current = null;
-                    setStatusText(language === 'en' ? 'Speak, capture, or type' : 'Söyle, çek ya da yaz');
-                  }}
-                  className="w-7 h-7 flex items-center justify-center text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 rounded-lg cursor-pointer text-sm"
-                  title={language === 'en' ? 'Cancel Image' : 'Görseli İptal Et'}
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Tek ve Bütünleşik Metin/Görev Giriş Formu (Alt Bölümde Toplu ve Rahat Kullanım) */}
-          {showTextInput && (
-            <form
-              id="text-input-form"
-              onSubmit={handleManualTextSubmit}
-              className={`w-full mb-3 p-3 rounded-2xl border shadow-md transition-all duration-200 animate-in fade-in slide-in-from-bottom-2 ${
-                theme === 'dark'
-                  ? 'bg-stone-900/95 border-stone-700 text-stone-100'
-                  : 'bg-white border-stone-200 text-stone-900'
-              }`}
-            >
-              {/* 1. Canlı Niyet Radar Barı (Live Intent Waveform) */}
-              {liveIntentRoute.hasActiveMatch && (
-                <div
-                  className="mb-2 px-3 py-1.5 rounded-xl border flex items-center justify-between gap-2 shadow-xs transition-all animate-in fade-in duration-200"
-                  style={{
-                    backgroundColor: `${liveIntentRoute.color}20`,
-                    borderColor: `${liveIntentRoute.color}60`
-                  }}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="flex items-end gap-0.5 h-3 px-0.5 shrink-0">
-                      <span className="w-1 bg-stone-800 dark:bg-stone-200 rounded-full animate-pulse h-2" style={{ animationDuration: '400ms' }} />
-                      <span className="w-1 bg-stone-800 dark:bg-stone-200 rounded-full animate-pulse h-3" style={{ animationDuration: '600ms', animationDelay: '150ms' }} />
-                      <span className="w-1 bg-stone-800 dark:bg-stone-200 rounded-full animate-pulse h-2" style={{ animationDuration: '450ms', animationDelay: '300ms' }} />
-                    </div>
-                    <span className="text-base shrink-0">{liveIntentRoute.icon}</span>
-                    <div className="min-w-0 flex items-center gap-1.5 truncate">
-                      <span className="text-[11px] font-bold text-stone-900 dark:text-stone-100 truncate">
-                        {liveIntentRoute.domainLabel}:
-                      </span>
-                      <span className="text-[11px] font-medium text-stone-700 dark:text-stone-300 truncate">
-                        {liveIntentRoute.routeTitle}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <span className="hidden sm:inline-block text-[9.5px] font-medium bg-white/80 dark:bg-stone-800/80 px-2 py-0.5 rounded-full border border-black/5 dark:border-white/10 text-stone-600 dark:text-stone-300">
-                      🏛️ {liveIntentRoute.institution}
-                    </span>
-                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-stone-900/10 dark:bg-white/10 text-stone-800 dark:text-stone-200">
-                      %{Math.round(liveIntentRoute.confidence * 100)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* 2 Kelimelik Akıllı Tamamlayıcı Çipler (Instant Jargon Chips) */}
-              <div className="flex items-center gap-1.5 overflow-x-auto py-1 mb-2 scrollbar-none -mx-1 px-1">
-                <span className="text-[10px] uppercase font-bold text-stone-400 dark:text-stone-500 tracking-wider shrink-0 flex items-center gap-1 mr-0.5">
-                  <span>⚡</span>
-                  <span>{language === 'en' ? 'Quick:' : 'Hızlı:'}</span>
-                </span>
-                {sortedInstantJargonChips.slice(0, 8).map((chip, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => {
-                      setTextInput(chip.fullPrompt || chip.prompt || chip.label);
-                      setTimeout(() => manualTextInputRef.current?.focus(), 50);
-                    }}
-                    className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-full whitespace-nowrap bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700 transition-all active:scale-95 shadow-2xs cursor-pointer"
-                  >
-                    <span>{chip.icon}</span>
-                    <span>{chip.label || chip.chipText}</span>
-                  </button>
-                ))}
-              </div>
-
-              <textarea
-                id="manual-text-input"
-                ref={manualTextInputRef}
-                value={textInput}
-                onChange={(e) => setTextInput(e.target.value)}
-                placeholder={
-                  language === 'tr'
-                    ? 'Notunuzu yazın veya maddeleri alt alta ekleyin...\n(Shift+Enter ile alt satır, Enter veya Ekle butonu ile kaydet)'
-                    : 'Write your note or list items line by line...\n(Shift+Enter for new line, Enter or Add to save)'
-                }
-                rows={2}
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleManualTextSubmit(e);
-                  }
-                }}
-                className="w-full bg-transparent text-sm outline-none resize-none placeholder-stone-400 dark:placeholder-stone-500 leading-relaxed min-h-[48px] max-h-[120px]"
-              />
-              <div className="flex items-center justify-between pt-2 border-t border-stone-100 dark:border-stone-800/80 mt-1">
-                <span className="text-[11px] text-stone-400 dark:text-stone-500">
-                  {textInput.includes('\n') 
-                    ? (language === 'tr' ? '📋 Görev Listesi olarak kaydedilecek' : '📋 Will save as Task List') 
-                    : (language === 'tr' ? '💡 Çoklu madde için satır başı yapın' : '💡 Use new lines for checklist')}
-                </span>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowTextInput(false);
-                      setTextInput('');
-                    }}
-                    className="px-2.5 py-1 text-xs text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer"
-                  >
-                    {language === 'tr' ? 'Kapat' : 'Close'}
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={!textInput.trim() && !pendingImage}
-                    className="px-3.5 py-1.5 bg-stone-900 dark:bg-white text-white dark:text-stone-900 text-xs font-semibold rounded-xl active:scale-95 disabled:opacity-40 transition-all shrink-0 cursor-pointer shadow-xs"
-                  >
-                    {textInput.includes('\n')
-                      ? (language === 'tr' ? 'Listeyi Kaydet' : 'Save List')
-                      : t.addButton}
-                  </button>
-                </div>
-              </div>
-            </form>
-          )}
-
-          {/* Mikrofon açıkken Canlı Niyet Radar Barı (Live Intent Waveform) */}
-          {isListening && liveIntentRoute.hasActiveMatch && (
-            <div
-              className="mb-2 px-3 py-1.5 rounded-2xl border flex items-center justify-between gap-2 shadow-sm backdrop-blur-md transition-all animate-in fade-in slide-in-from-bottom-1 max-w-lg mx-auto w-full"
-              style={{
-                backgroundColor: `${liveIntentRoute.color}25`,
-                borderColor: `${liveIntentRoute.color}70`
-              }}
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="flex items-end gap-0.5 h-3.5 px-0.5 shrink-0">
-                  <span className="w-1 bg-red-600 dark:bg-red-400 rounded-full animate-pulse h-2" style={{ animationDuration: '400ms' }} />
-                  <span className="w-1 bg-red-600 dark:bg-red-400 rounded-full animate-pulse h-3.5" style={{ animationDuration: '550ms', animationDelay: '120ms' }} />
-                  <span className="w-1 bg-red-600 dark:bg-red-400 rounded-full animate-pulse h-2.5" style={{ animationDuration: '480ms', animationDelay: '250ms' }} />
-                  <span className="w-1 bg-red-600 dark:bg-red-400 rounded-full animate-pulse h-3" style={{ animationDuration: '520ms', animationDelay: '60ms' }} />
-                </div>
-                <span className="text-base shrink-0">{liveIntentRoute.icon}</span>
-                <div className="min-w-0 flex items-center gap-1.5 truncate">
-                  <span className="text-[11.5px] font-bold text-stone-900 dark:text-stone-100 truncate">
-                    {liveIntentRoute.domainLabel}:
-                  </span>
-                  <span className="text-[11.5px] font-semibold text-stone-800 dark:text-stone-200 truncate">
-                    {liveIntentRoute.routeTitle}
-                  </span>
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-[10px] font-medium text-stone-700 dark:text-stone-300 bg-white/80 dark:bg-stone-900/80 px-2 py-0.5 rounded-full border border-black/5 dark:border-white/10 shadow-2xs">
-                  🏛️ {liveIntentRoute.institution}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Sesli Asistan Durum ve Dalga Göstergesi */}
-          {isListening ? (
-            <div className="mb-3 px-3.5 py-1.5 bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800/80 rounded-full flex items-center gap-2.5 shadow-sm animate-in fade-in duration-200">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-              <span className="text-xs font-semibold text-red-600 dark:text-red-400 tracking-tight">
-                {liveSpeechTranscript ? `"${liveSpeechTranscript}"` : (statusText || 'Dinliyorum...')}
-              </span>
-              <div className="flex items-center gap-0.5 ml-1">
-                <span className="w-0.5 h-2 bg-red-500 rounded-full animate-pulse" style={{ animationDuration: '600ms', animationDelay: '0ms' }} />
-                <span className="w-0.5 h-3.5 bg-red-500 rounded-full animate-pulse" style={{ animationDuration: '600ms', animationDelay: '150ms' }} />
-                <span className="w-0.5 h-2.5 bg-red-500 rounded-full animate-pulse" style={{ animationDuration: '600ms', animationDelay: '300ms' }} />
-                <span className="w-0.5 h-4 bg-red-500 rounded-full animate-pulse" style={{ animationDuration: '600ms', animationDelay: '75ms' }} />
-              </div>
-            </div>
-          ) : statusText && statusText !== 'Söyle, çek ya da yaz' ? (
-            <div className="mb-2 px-3 py-1 bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 text-[11px] font-medium rounded-full border border-stone-200 dark:border-stone-700 shadow-2xs animate-in fade-in duration-200 max-w-[280px] truncate text-center">
-              {statusText}
-            </div>
-          ) : null}
-
-          <div className="flex items-center justify-center gap-5 sm:gap-6 py-1 z-10 w-full max-w-xs mx-auto">
-            {/* Kamera / Galeri Butonu */}
-            <label
-              htmlFor="camera-input"
-              className={`w-12 h-12 border rounded-full flex items-center justify-center shadow-xs active:scale-90 transition-all cursor-pointer touch-manipulation select-none shrink-0 ${
-                theme === 'dark'
-                  ? 'bg-stone-800 border-stone-700 text-stone-200 hover:bg-stone-700 active:bg-stone-600'
-                  : 'bg-stone-100 border-stone-200 text-stone-700 hover:bg-stone-200/80 active:bg-stone-300'
-              }`}
-              title={t.cameraTitle}
-              style={{
-                marginBottom: 'env(safe-area-inset-bottom, 0px)',
-              }}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-            </label>
-            <input
-              id="camera-input"
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={handleCameraChange}
-            />
-
-            {/* Ana Mikrofon Butonu */}
-            <div
-              className="relative flex items-center justify-center shrink-0"
-              style={{
-                marginBottom: 'env(safe-area-inset-bottom, 0px)',
-              }}
-            >
-              {isListening && (
-                <>
-                  <span className="absolute -inset-2.5 rounded-full bg-red-400/30 animate-ping pointer-events-none" />
-                  <span className="absolute -inset-1 rounded-full bg-red-500/20 animate-pulse pointer-events-none" />
-                </>
-              )}
-              <button
-                id="mic-btn"
-                type="button"
-                onClick={handleMicClick}
-                className={`relative w-16 h-16 rounded-full flex items-center justify-center shadow-xl active:scale-95 transition-all duration-200 cursor-pointer touch-manipulation select-none ${
-                  isListening
-                    ? 'bg-red-500 scale-105 text-white shadow-red-500/30 ring-4 ring-red-400/20'
-                    : theme === 'dark' ? 'bg-white text-stone-900 hover:bg-stone-100 shadow-stone-950/40' : 'bg-stone-900 text-white hover:bg-stone-800 shadow-stone-900/30'
-                }`}
-              >
-                <Mic
-                  id="mic-icon"
-                  className="w-7 h-7"
-                />
-              </button>
-            </div>
-
-            {/* Klavye / Metin Girişi Toggle Butonu */}
-            <button
-              id="keyboard-toggle-btn"
-              type="button"
-              onClick={handleToggleTextInput}
-              title={t.keyboardToggleTitle}
-              className={`w-12 h-12 rounded-full flex items-center justify-center border shadow-xs active:scale-90 transition-all cursor-pointer touch-manipulation select-none shrink-0 ${
-                showTextInput
-                  ? theme === 'dark' ? 'bg-white text-stone-900 border-white' : 'bg-stone-800 text-white border-stone-800'
-                  : theme === 'dark' ? 'bg-stone-800 text-stone-200 border-stone-700 hover:bg-stone-700' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200/70'
-              }`}
-              style={{
-                marginBottom: 'env(safe-area-inset-bottom, 0px)',
-              }}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-              </svg>
-            </button>
-          </div>
-        </footer>
+          onCameraChange={handleCameraChange}
+          onViewPendingImage={(img) => setModalImgSrc(img)}
+          onDiagnosePendingImage={async () => {
+            const img = pendingImage;
+            setPendingImage(null);
+            pendingCapturedImageRef.current = null;
+            setStatusText(language === 'en' ? 'Analyzing image...' : 'Görsel teşhis ediliyor...');
+            await processWithAI(textInput.trim(), img, true);
+            setTextInput('');
+          }}
+          onCancelPendingImage={() => {
+            setPendingImage(null);
+            pendingCapturedImageRef.current = null;
+            setStatusText(language === 'en' ? 'Speak, capture, or type' : 'Söyle, çek ya da yaz');
+          }}
+        />
 
         {/* Geri Alma (Undo Toast) Bildirimi */}
         {undoToast && (
@@ -5091,220 +3957,47 @@ export default function App() {
       </div>
 
       {/* Görsel Büyütme Modalı */}
-      <div
-        id="image-modal"
-        className={`fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 cursor-pointer transition-opacity duration-200 ${
-          modalImgSrc ? 'opacity-100' : 'hidden opacity-0 pointer-events-none'
-        }`}
-        onClick={() => setModalImgSrc(null)}
-      >
-        {modalImgSrc && (
-          <img
-            id="modal-img"
-            src={modalImgSrc}
-            alt="Büyütülmüş Görsel"
-            className="max-w-full max-h-[85vh] rounded-2xl shadow-2xl object-contain"
-          />
-        )}
-      </div>
+      <MediaViewerModal
+        modalImgSrc={modalImgSrc}
+        onClose={() => setModalImgSrc(null)}
+      />
 
       {/* PWA Çevrimdışı Durum Göstergesi */}
       <OfflineIndicator />
 
       {/* Otonom Ajan: İletişim & Taslak Mesaj Modalı (draft_message) */}
-      {draftedMessage && (
-        <div
-          id="draft-message-modal"
-          className={`fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 ${theme === 'dark' ? 'dark' : ''}`}
-        >
-          <div className="w-full max-w-md bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded-md">
-                  ✉️ İletişim Taslağı ({draftedMessage.kanal.toUpperCase()})
-                </span>
-                <h3 className="text-base font-semibold text-stone-900 dark:text-stone-100 mt-1">
-                  Kime: {draftedMessage.alici}
-                </h3>
-                {draftedMessage.konu && (
-                  <p className="text-xs text-stone-500 dark:text-stone-400">Konu: {draftedMessage.konu}</p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => setDraftedMessage(null)}
-                className="w-7 h-7 rounded-full text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 flex items-center justify-center cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="p-3 bg-stone-50 dark:bg-stone-800/80 rounded-xl border border-stone-200/80 dark:border-stone-700/80 text-sm text-stone-800 dark:text-stone-200 leading-relaxed select-all whitespace-pre-wrap">
-              {draftedMessage.metin}
-            </div>
-
-            <div className="flex items-center gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => {
-                  navigator.clipboard.writeText(draftedMessage.metin);
-                  setStatusText('Metin panoya kopyalandı ✓');
-                  setTimeout(() => setStatusText('Söyle, çek ya da yaz'), 2500);
-                }}
-                className="flex-1 py-2 px-3 bg-stone-900 dark:bg-white text-white dark:text-stone-900 text-xs font-semibold rounded-xl active:scale-95 transition-all text-center cursor-pointer"
-              >
-                📋 Metni Kopyala
-              </button>
-
-              {draftedMessage.kanal === 'email' ? (
-                <a
-                  href={`mailto:?subject=${encodeURIComponent(draftedMessage.konu || 'Bilgilendirme')}&body=${encodeURIComponent(draftedMessage.metin)}`}
-                  className="py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl active:scale-95 transition-all text-center"
-                >
-                  ✉️ E-postayı Aç
-                </a>
-              ) : (
-                <a
-                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(draftedMessage.metin)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl active:scale-95 transition-all text-center"
-                >
-                  🟢 WhatsApp
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <DraftMessageModal
+        draftedMessage={draftedMessage}
+        onClose={() => setDraftedMessage(null)}
+        onCopySuccess={() => {
+          setStatusText(language === 'tr' ? 'Metin panoya kopyalandı ✓' : 'Text copied to clipboard ✓');
+          setTimeout(() => setStatusText(language === 'tr' ? 'Söyle, çek ya da yaz' : 'Speak, capture or write'), 2500);
+        }}
+        theme={theme}
+      />
 
       {/* Otonom Ajan: Takvim & Ajanda Sorgu Sonucu Modalı (get_calendar_events) */}
-      {calendarQueryResults && (
-        <div
-          id="calendar-query-modal"
-          className={`fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 ${theme === 'dark' ? 'dark' : ''}`}
-        >
-          <div className="w-full max-w-md bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-5 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md">
-                  🗓️ Ajanda Taraması
-                </span>
-                <h3 className="text-base font-semibold text-stone-900 dark:text-stone-100 mt-1">
-                  {calendarQueryResults.sorgu_tipi === 'bugun'
-                    ? 'Bugünkü Programınız'
-                    : calendarQueryResults.sorgu_tipi === 'yarin'
-                    ? 'Yarınki Randevularınız'
-                    : 'Takvim Planlarınız'}
-                </h3>
-                <p className="text-xs text-stone-500 dark:text-stone-400">
-                  {calendarQueryResults.matchingCount === 0
-                    ? 'Belirtilen zaman aralığında kayıtlı plan bulunamadı.'
-                    : `Toplam ${calendarQueryResults.matchingCount} kayıt tespit edildi:`}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCalendarQueryResults(null)}
-                className="w-7 h-7 rounded-full text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 flex items-center justify-center cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-
-            {calendarQueryResults.matchingCount > 0 ? (
-              <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
-                {calendarQueryResults.matchingNotes.map((note) => (
-                  <div
-                    key={note.id}
-                    className="p-2.5 rounded-xl border border-stone-200/80 dark:border-stone-700/80 bg-stone-50 dark:bg-stone-800/60 flex items-center gap-3"
-                  >
-                    <span className="text-xl shrink-0">{note.ikon || '📌'}</span>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-semibold text-stone-900 dark:text-stone-100 truncate">
-                        {note.baslik}
-                      </h4>
-                      <p className="text-[11px] text-stone-500 dark:text-stone-400 truncate">
-                        {note.zaman || 'Saat belirtilmemiş'}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-4 text-center rounded-xl bg-stone-50 dark:bg-stone-800/40 border border-stone-200 dark:border-stone-800 text-xs text-stone-500">
-                Bu zaman aralığı için ajandanız tamamen boş.
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setCalendarQueryResults(null)}
-              className="w-full py-2 bg-stone-900 dark:bg-white text-white dark:text-stone-900 text-xs font-semibold rounded-xl active:scale-95 transition-all cursor-pointer"
-            >
-              Tamam
-            </button>
-          </div>
-        </div>
-      )}
+      <CalendarEventsModal
+        calendarQueryResults={calendarQueryResults}
+        onClose={() => setCalendarQueryResults(null)}
+        theme={theme}
+      />
 
       {/* Ekran Üstü Canlı Bildirim Kartı (Push Banner Toast) */}
-      {activeBannerNotification && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-60 w-full max-w-sm px-4 pointer-events-auto">
-          <div className={`backdrop-blur-md p-3.5 rounded-2xl shadow-2xl flex items-start gap-3 animate-in slide-in-from-top-4 duration-250 ${
-            activeBannerNotification.isAlarm
-              ? 'bg-red-950/95 text-white border-2 border-red-500 ring-4 ring-red-500/20 animate-pulse'
-              : 'bg-stone-900/95 dark:bg-stone-100/95 text-white dark:text-stone-900 border border-stone-700/80 dark:border-stone-300/80'
-          }`}>
-            <span className={`text-2xl shrink-0 leading-none mt-0.5 ${activeBannerNotification.isAlarm ? 'animate-bounce' : ''}`}>
-              {activeBannerNotification.icon || (activeBannerNotification.isAlarm ? '⏰' : '🔔')}
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-1">
-                <h4 className="text-xs font-bold truncate tracking-tight flex items-center gap-1.5">
-                  <span>{activeBannerNotification.title}</span>
-                  {activeBannerNotification.isAlarm && (
-                    <span className="text-[9px] bg-red-500 text-white font-black px-1.5 py-0.2 rounded-full uppercase tracking-wider">
-                      Alarm
-                    </span>
-                  )}
-                </h4>
-                <span className="text-[10px] opacity-60 shrink-0 font-medium">Notivia</span>
-              </div>
-              <p className="text-[11px] opacity-90 leading-relaxed mt-0.5 line-clamp-2">{activeBannerNotification.body}</p>
-
-              {activeBannerNotification.isAlarm && (
-                <div className="mt-2.5 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      alarmSound.stopAlarm();
-                      setActiveBannerNotification(null);
-                    }}
-                    className="w-full py-1.5 px-3 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white text-xs font-bold rounded-xl shadow-md flex items-center justify-center gap-1.5 cursor-pointer transition-colors"
-                  >
-                    <span>⏹️</span>
-                    <span>{language === 'tr' ? 'Alarmı Kapat / Sustur' : 'Stop Alarm'}</span>
-                  </button>
-                </div>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                if (activeBannerNotification.isAlarm) {
-                  alarmSound.stopAlarm();
-                }
-                setActiveBannerNotification(null);
-              }}
-              aria-label="Kapat"
-              className="text-stone-400 hover:text-white dark:hover:text-stone-900 p-1 rounded-md transition-colors cursor-pointer shrink-0"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
+      <PushBannerToast
+        notification={activeBannerNotification}
+        language={language}
+        onDismiss={() => {
+          if (activeBannerNotification?.isAlarm) {
+            alarmSound.stopAlarm();
+          }
+          setActiveBannerNotification(null);
+        }}
+        onStopAlarm={() => {
+          alarmSound.stopAlarm();
+          setActiveBannerNotification(null);
+        }}
+      />
 
       {/* useAlarmWatcher Aktif Alarm Kartı */}
       {activeAlarm && (
@@ -5386,68 +4079,13 @@ export default function App() {
         language={language}
       />
 
-      {/* Not Silme Onay Modalı (Mobil Ergonomik ve Güvenli Onay Penceresi) */}
-      {deleteConfirmNote && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
-          onClick={() => setDeleteConfirmNote(null)}
-        >
-          <div
-            className="w-full sm:max-w-md bg-white dark:bg-stone-900 rounded-t-3xl sm:rounded-2xl p-5 sm:p-6 shadow-2xl border border-stone-200 dark:border-stone-800 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 select-none"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Mobil Çekme Çizgisi */}
-            <div className="w-12 h-1.5 bg-stone-300 dark:bg-stone-700 rounded-full mx-auto mb-4 sm:hidden" />
-
-            <div className="flex items-start gap-3.5">
-              <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 text-2xl shadow-xs">
-                🗑️
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-base sm:text-lg font-bold text-stone-900 dark:text-white leading-snug">
-                  {language === 'tr' ? 'Notu Çöp Kutusuna Taşı?' : 'Move note to trash?'}
-                </h3>
-                <p className="text-xs sm:text-sm text-stone-500 dark:text-stone-400 mt-1 line-clamp-2">
-                  <span className="font-semibold text-stone-800 dark:text-stone-200">
-                    {deleteConfirmNote.ikon || '📌'} {deleteConfirmNote.baslik}
-                  </span>
-                  {language === 'tr' 
-                    ? ' başlıklı not geri dönüşüm kutusuna taşınacak ve 30 gün boyunca saklanacaktır.' 
-                    : ' will be moved to the recycle bin and kept for 30 days.'}
-                </p>
-              </div>
-            </div>
-
-            {/* Butonlar: Mobil Ergonomik ve Kolay Dokunulabilir */}
-            <div className="mt-6 flex flex-col-reverse sm:flex-row items-center gap-2.5 sm:justify-end">
-              <button
-                type="button"
-                onClick={() => setDeleteConfirmNote(null)}
-                className="w-full sm:w-auto px-5 py-3 rounded-xl border border-stone-300 dark:border-stone-700 text-stone-700 dark:text-stone-200 font-medium text-sm hover:bg-stone-100 dark:hover:bg-stone-800 active:scale-95 transition-all cursor-pointer text-center"
-              >
-                {language === 'tr' ? 'Vazgeç' : 'Cancel'}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const idToDelete = deleteConfirmNote.id;
-                  setDeleteConfirmNote(null);
-                  directDeleteNote(idToDelete);
-                  if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                    try { navigator.vibrate([20, 50, 20]); } catch {}
-                  }
-                }}
-                className="w-full sm:w-auto px-5 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 active:bg-amber-800 text-white font-semibold text-sm shadow-md shadow-amber-600/20 active:scale-95 transition-all cursor-pointer text-center flex items-center justify-center gap-2"
-              >
-                <span>🗑️</span>
-                <span>{language === 'tr' ? 'Çöp Kutusuna Taşı' : 'Move to Trash'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Not Silme Onay Modalı */}
+      <DeleteConfirmModal
+        note={deleteConfirmNote}
+        language={language}
+        onClose={() => setDeleteConfirmNote(null)}
+        onConfirm={(idToDelete) => directDeleteNote(idToDelete)}
+      />
     </div>
   );
 }

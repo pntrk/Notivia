@@ -1,5 +1,5 @@
 import type { ProfessionDomain } from '../types/domainThemes.ts';
-import { ALL_CONSOLIDATED_SCENARIOS } from './scenarios/index.ts';
+import { ALL_CONSOLIDATED_SCENARIOS, getDomainConsolidatedScenarios } from './scenarios/index.ts';
 
 /**
  * Notivia Bilişsel Çıkarım Motoru: "Leb Demeden Leblebiyi Anlama" Senaryo Veritabanı
@@ -7130,7 +7130,10 @@ export function matchShortScenario(text: string, userDomain?: ProfessionDomain |
   // 1. ÖNCELİKLİ AŞAMA: Eğer kullanıcı belirli bir mesleki/yaşam alanı seçtiyse,
   // ilk olarak O ALANA ait senaryoları test et!
   if (hasDomainPriority) {
-    const domainScenarios = SCENARIO_DATABASE.filter(s => s.domain === userDomain);
+    const domainConsolidated = getDomainConsolidatedScenarios(userDomain as string);
+    const domainScenarios = domainConsolidated.length > 0
+      ? domainConsolidated
+      : SCENARIO_DATABASE.filter(s => s.domain === userDomain);
 
     for (const scenario of domainScenarios) {
       if (scenario.matcher && scenario.matcher(lower, words)) {
