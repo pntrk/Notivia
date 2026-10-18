@@ -33,15 +33,24 @@
     <style>
       :root {
         --font-family-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
       }
-      body {
+      html, body {
         font-family: var(--font-family-sans);
-        padding-top: env(safe-area-inset-top);
-        padding-bottom: env(safe-area-inset-bottom);
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        height: 100dvh;
+        overflow: hidden;
         -webkit-tap-highlight-color: transparent;
         touch-action: pan-y pinch-zoom;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+      }
+      #root {
+        height: 100%;
+        height: 100dvh;
+        overflow: hidden;
       }
     </style>
   </head>

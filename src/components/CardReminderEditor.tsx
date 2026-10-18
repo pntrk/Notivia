@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Calendar,
   Clock,
@@ -98,21 +98,36 @@ export const CardReminderEditor: React.FC<CardReminderEditorProps> = ({
   language = 'tr',
   theme = 'light',
 }) => {
-  if (!isOpen) return null;
-
-  // Başlangıç tarihi belirleme
-  const initialDate = note.tarih_iso ? new Date(note.tarih_iso) : (() => {
+  // Başlangıç tarihi belirleme (Hooks unconditionally at the top)
+  const initialDate = note?.tarih_iso ? new Date(note.tarih_iso) : (() => {
     const d = new Date();
     d.setHours(d.getHours() + 1, 0, 0, 0);
     return d;
   })();
 
   const [datetimeInput, setDatetimeInput] = useState<string>(toLocalDatetimeString(initialDate));
-  const [customLabel, setCustomLabel] = useState<string>(note.zaman || formatTurkishFriendlyDate(initialDate, language));
-  const [notifyEnabled, setNotifyEnabled] = useState<boolean>(note.deviceNotificationEnabled !== false);
-  const [periodicType, setPeriodicType] = useState<string>(note.periyodik?.tip || 'none');
+  const [customLabel, setCustomLabel] = useState<string>(note?.zaman || formatTurkishFriendlyDate(initialDate, language));
+  const [notifyEnabled, setNotifyEnabled] = useState<boolean>(note?.deviceNotificationEnabled !== false);
+  const [periodicType, setPeriodicType] = useState<string>(note?.periyodik?.tip || 'none');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'info' | 'error'; text: string } | null>(null);
   const [isSyncingCalendar, setIsSyncingCalendar] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isOpen && note) {
+      const initDate = note.tarih_iso ? new Date(note.tarih_iso) : (() => {
+        const d = new Date();
+        d.setHours(d.getHours() + 1, 0, 0, 0);
+        return d;
+      })();
+      setDatetimeInput(toLocalDatetimeString(initDate));
+      setCustomLabel(note.zaman || formatTurkishFriendlyDate(initDate, language));
+      setNotifyEnabled(note.deviceNotificationEnabled !== false);
+      setPeriodicType(note.periyodik?.tip || 'none');
+      setFeedback(null);
+    }
+  }, [isOpen, note, language]);
+
+  if (!isOpen || !note) return null;
 
   // Cihaz bildirim durumunu değiştir
   const handleToggleNotification = async (enable: boolean) => {

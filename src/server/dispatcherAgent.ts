@@ -3,6 +3,7 @@ import { extractSimpleNoteFromText } from '../utils/simpleNote.ts';
 import { matchShortScenario } from '../utils/scenarioDatabase.ts';
 import { sanitizeSpokenText, sanitizeCardTitle } from '../utils/speechSanitizer.ts';
 import { detectDomainFromJargon } from '../utils/jargonRadar.ts';
+import { buildModularDispatcherPrompt } from './modularDomainPrompts.ts';
 
 // 1. Otonom Ajan Araç Tanımları (Function Declarations - Exact Formal Schema)
 export const getCalendarEventsDeclaration: FunctionDeclaration = {
@@ -49,6 +50,7 @@ export const createNoteOrEventDeclaration: FunctionDeclaration = {
       },
       tarih_iso: {
         type: Type.STRING,
+        nullable: true,
         description: 'Etkinliğin kesin ISO-8601 tarihi veya null',
       },
       eksik_bilgi: {
@@ -57,6 +59,7 @@ export const createNoteOrEventDeclaration: FunctionDeclaration = {
       },
       netlestirme_sorusu: {
         type: Type.STRING,
+        nullable: true,
         description: "Eksik bilgi varsa kullanıcıya sesli yöneltilecek soru (Örn: 'Hangi gün için planlayalım?')",
       },
       action_items: {
@@ -87,6 +90,7 @@ export const createNoteOrEventDeclaration: FunctionDeclaration = {
       },
       anomali_notu: {
         type: Type.STRING,
+        nullable: true,
         description: 'Teknik uyarı, botanik tüyo veya operasyonel risk notu',
       },
       ikon: {
@@ -95,7 +99,21 @@ export const createNoteOrEventDeclaration: FunctionDeclaration = {
       },
       renk: {
         type: Type.STRING,
-        description: 'Pastel kart arka plan HEX kodu (#FEF3C7, #E0F2FE, #DCFCE7, #FEE2E2, #F3E8FF)',
+        enum: [
+          '#FEF3C7',
+          '#E0F2FE',
+          '#DCFCE7',
+          '#FEE2E2',
+          '#F3E8FF',
+          '#EDE9FE',
+          '#FEF08A',
+          '#FED7AA',
+          '#E2E8D5',
+          '#CFFAFE',
+          '#F1F5F9',
+          '#BFDBFE',
+        ],
+        description: 'Pastel kart arka plan HEX kodu (#FEF3C7, #E0F2FE, #DCFCE7, #FEE2E2, #F3E8FF vb.)',
       },
       sesli_fisilti: {
         type: Type.STRING,
@@ -221,7 +239,7 @@ TEMEL ÇALIŞMA KURALLARI VE BİLİŞSEL ALANLAR:
 6. EKSİK BİLGİ DİYALOG DÖNGÜSÜ (CLARIFICATION):
 - Randevu/buluşma bildirildiği halde gün/saat verilmediyse:
   * "eksik_bilgi": true
-  * "soru": "Hangi gün ve saatte planlayalım?"
+  * "netlestirme_sorusu": "Hangi gün ve saatte planlayalım?"
   * "tarih_iso": null
   * "zaman": null
   * "sesli_fisilti": "Hangi gün ve saatte planlayalım?"
@@ -615,6 +633,7 @@ export async function dispatchWithGemini(
       ? `\nKULLANICININ ÇALIŞMA / UZMANLIK ALANI ODAĞI: ${userDomain}`
       : (userDomain === 'OTOMATIK_JARGON' ? '\nKULLANICI MODU: Otomatik Jargon (Tüm mesleki ve kurumsal jargonları otomatik tanı)' : '');
 
+    const { systemInstruction: modularPrompt } = buildModularDispatcherPrompt(cleanInput, userDomain, language);
     const userPrompt = `Kullanıcı Girdisi: "${input}"\nCURRENT_DATETIME: ${currentDatetime}${domainPromptPart}${langInstruction}`;
 
     let functionCalls: any[] | undefined;
@@ -631,7 +650,7 @@ export async function dispatchWithGemini(
           model: modelName,
           contents: userPrompt,
           config: {
-            systemInstruction: DISPATCHER_SYSTEM_PROMPT,
+            systemInstruction: modularPrompt,
             tools: [
               {
                 functionDeclarations: [
@@ -677,6 +696,13 @@ export async function dispatchWithGemini(
       } else if (toolName === 'create_note_or_event') {
         if (args.baslik) {
           args.baslik = sanitizeCardTitle(args.baslik);
+        }
+        // Alan Adı Uyuşmazlığı Çözümü: netlestirme_sorusu ve soru tam senkronizasyonu
+        const resolvedQuestion = args.netlestirme_sorusu || args.soru || null;
+        args.netlestirme_sorusu = resolvedQuestion;
+        args.soru = resolvedQuestion;
+        if (args.tarih_iso === 'null' || args.tarih_iso === '' || args.tarih_iso === undefined) {
+          args.tarih_iso = null;
         }
       }
 

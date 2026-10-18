@@ -49,6 +49,7 @@ Görevin: Kullanıcının ayaküstü, devrik, sesli veya yazılı girdilerini an
         },
         "tarih_iso": {
           "type": "STRING",
+          "nullable": true,
           "description": "Etkinliğin kesin ISO-8601 tarihi veya null"
         },
         "eksik_bilgi": {
@@ -57,6 +58,7 @@ Görevin: Kullanıcının ayaküstü, devrik, sesli veya yazılı girdilerini an
         },
         "netlestirme_sorusu": {
           "type": "STRING",
+          "nullable": true,
           "description": "Eksik bilgi varsa kullanıcıya sesli yöneltilecek soru (Örn: 'Hangi gün için planlayalım?')"
         },
         "action_items": {
@@ -82,6 +84,7 @@ Görevin: Kullanıcının ayaküstü, devrik, sesli veya yazılı girdilerini an
         },
         "anomali_notu": {
           "type": "STRING",
+          "nullable": true,
           "description": "Teknik uyarı, botanik tüyo veya operasyonel risk notu"
         },
         "ikon": {
@@ -90,7 +93,21 @@ Görevin: Kullanıcının ayaküstü, devrik, sesli veya yazılı girdilerini an
         },
         "renk": {
           "type": "STRING",
-          "description": "Pastel kart arka plan HEX kodu (#FEF3C7, #E0F2FE, #DCFCE7, #FEE2E2, #F3E8FF)"
+          "enum": [
+            "#FEF3C7",
+            "#E0F2FE",
+            "#DCFCE7",
+            "#FEE2E2",
+            "#F3E8FF",
+            "#EDE9FE",
+            "#FEF08A",
+            "#FED7AA",
+            "#E2E8D5",
+            "#CFFAFE",
+            "#F1F5F9",
+            "#BFDBFE"
+          ],
+          "description": "Pastel kart arka plan HEX kodu"
         },
         "sesli_fisilti": {
           "type": "STRING",
@@ -166,7 +183,7 @@ Kullanıcı sadece ana hedefi söylediğinde, arka plandaki zorunlu hazırlıkla
 6. EKSİK BİLGİ DİYALOG DÖNGÜSÜ (CLARIFICATION):
 - Kullanıcı kesin bir randevu/buluşma bildirip ("Ahmet'le buluşacağız", "Dişçiye gideceğim") gün ve saat hiç vermediyse:
   * "eksik_bilgi": true
-  * "soru" / "netlestirme_sorusu": "Hangi gün ve saatte planlayalım?"
+  * "netlestirme_sorusu": "Hangi gün ve saatte planlayalım?"
   * "tarih_iso": null
 
 7. ÇOKLU İLAÇ VE MEDİKAL DOZ YÖNETİMİ:

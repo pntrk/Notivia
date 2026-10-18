@@ -16,12 +16,16 @@ import {
   List,
   ChevronRight,
   Sparkles,
-  CheckCircle2
+  CheckCircle2,
+  Brain,
+  Shield,
+  Clock
 } from 'lucide-react';
 import type { Language } from '../utils/i18n';
 import { translations } from '../utils/i18n';
 import type { ProfessionDomain } from '../types/domainThemes.ts';
 import { getLocalizedWorkDomainOptions } from '../types/domainThemes.ts';
+import { loadUserCognitiveProfile, type UserCognitiveProfile } from '../services/userLearningService.ts';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -38,6 +42,8 @@ interface SettingsModalProps {
   notificationSupported: boolean;
   onSendTestNotification?: () => void;
   onRemindTodayTasks?: () => void;
+  onTriggerEveningSummary?: () => void;
+  isTriggeringEveningSummary?: boolean;
   workDomain?: ProfessionDomain;
   onSelectWorkDomain?: (domain: ProfessionDomain) => void;
   onSyncDrive?: () => void;
@@ -68,6 +74,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   notificationSupported,
   onSendTestNotification,
   onRemindTodayTasks,
+  onTriggerEveningSummary,
+  isTriggeringEveningSummary = false,
   workDomain = 'GENEL',
   onSelectWorkDomain,
   onSyncDrive,
@@ -82,6 +90,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onOpenRecycleBin,
   trashCount = 0,
 }) => {
+  const [cognitiveProfile, setCognitiveProfile] = React.useState<UserCognitiveProfile>(() => loadUserCognitiveProfile());
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setCognitiveProfile(loadUserCognitiveProfile());
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const t = translations[language];
@@ -459,7 +475,96 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
-          {/* 3. UYGULAMA TERCİHLERİ (Görünüm, Düzen, Bildirimler, Dil) */}
+          {/* 3. KİŞİYE ÖZEL BİLİŞSEL PROFİL & YAŞAM RİTMİ (CİHAZ İÇİ ÖĞRENME) */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[11px] font-bold tracking-wider uppercase text-stone-400 dark:text-stone-500 flex items-center gap-1.5">
+                <Brain className="w-3.5 h-3.5 text-indigo-500" />
+                <span>{language === 'tr' ? 'Kişisel Asistan Öğrenme Profili' : 'Personal Cognitive Profile'}</span>
+              </span>
+              <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200 dark:border-emerald-800/50">
+                <Shield className="w-3 h-3" />
+                <span>{language === 'tr' ? 'Cihaz İçi Gizlilik ✓' : 'On-Device Privacy ✓'}</span>
+              </span>
+            </div>
+
+            <div className={`p-3.5 sm:p-4 rounded-2xl border transition-colors space-y-3.5 ${
+              isDark ? 'bg-stone-850/90 border-stone-800' : 'bg-white border-stone-200/90 shadow-2xs'
+            }`}>
+              {/* Açıklama & Mahremiyet Güvencesi */}
+              <div className="flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 text-base">
+                  ✨
+                </div>
+                <div className="text-[11px] leading-relaxed text-stone-600 dark:text-stone-300">
+                  <p className="font-semibold text-stone-800 dark:text-stone-100">
+                    {language === 'tr' ? 'Size Özgü Yaşam Ritmi Öğrenildi' : 'Your Custom Life Rhythm Learned'}
+                  </p>
+                  <p className="text-stone-500 dark:text-stone-400 mt-0.5">
+                    {language === 'tr'
+                      ? 'Notivia, girdiğiniz eylemler ve günlük temponuzdan alışkanlıklarınızı çıkarır. Banka veya şifre gibi hassas veriler asla işlenmez ve tüm profil yalnızca telefonunuzda saklanır.'
+                      : 'Notivia extracts your habits from notes and daily flow. Bank or OTP data is never touched and remains purely on-device.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Öğrenilen Yaşam Çapaları (Ritim Izgarası) */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                <div className={`p-2.5 rounded-xl border text-center ${
+                  isDark ? 'bg-stone-800/60 border-stone-750' : 'bg-stone-50 border-stone-200'
+                }`}>
+                  <span className="text-[10px] font-medium text-stone-400 block">{language === 'tr' ? 'Mesai / Başlangıç' : 'Work Start'}</span>
+                  <span className="text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 block flex items-center justify-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    <span>{cognitiveProfile?.rhythm?.workStart || '08:30'}</span>
+                  </span>
+                </div>
+                <div className={`p-2.5 rounded-xl border text-center ${
+                  isDark ? 'bg-stone-800/60 border-stone-750' : 'bg-stone-50 border-stone-200'
+                }`}>
+                  <span className="text-[10px] font-medium text-stone-400 block">{language === 'tr' ? 'Mesai Bitişi' : 'Work End'}</span>
+                  <span className="text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400 mt-0.5 block flex items-center justify-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    <span>{cognitiveProfile?.rhythm?.workEnd || '17:30'}</span>
+                  </span>
+                </div>
+                <div className={`p-2.5 rounded-xl border text-center ${
+                  isDark ? 'bg-stone-800/60 border-stone-750' : 'bg-stone-50 border-stone-200'
+                }`}>
+                  <span className="text-[10px] font-medium text-stone-400 block">{language === 'tr' ? 'Eve Varış & Akşam' : 'Evening'}</span>
+                  <span className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 block flex items-center justify-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    <span>{cognitiveProfile?.rhythm?.eveningHome || '19:00'}</span>
+                  </span>
+                </div>
+                <div className={`p-2.5 rounded-xl border text-center ${
+                  isDark ? 'bg-stone-800/60 border-stone-750' : 'bg-stone-50 border-stone-200'
+                }`}>
+                  <span className="text-[10px] font-medium text-stone-400 block">{language === 'tr' ? 'Gece Dinlenme' : 'Night Rest'}</span>
+                  <span className="text-xs sm:text-sm font-bold text-purple-600 dark:text-purple-400 mt-0.5 block flex items-center justify-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    <span>{cognitiveProfile?.rhythm?.nightRest || '23:30'}</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Bilişsel İpuçları & Sık Odaklanılan Konular */}
+              {cognitiveProfile?.personalTips && cognitiveProfile.personalTips.length > 0 && (
+                <div className={`p-2.5 rounded-xl space-y-1.5 text-[11px] ${
+                  isDark ? 'bg-indigo-950/20 border border-indigo-900/40 text-indigo-200' : 'bg-indigo-50/70 border border-indigo-100 text-indigo-900'
+                }`}>
+                  {cognitiveProfile.personalTips.map((tip, idx) => (
+                    <div key={idx} className="flex items-start gap-1.5">
+                      <span className="text-indigo-500 font-bold shrink-0">•</span>
+                      <span className="leading-snug">{tip}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 4. UYGULAMA TERCİHLERİ (Görünüm, Düzen, Bildirimler, Dil) */}
           <div className="space-y-1.5">
             <span className="text-[11px] font-bold tracking-wider uppercase px-1 text-stone-400 dark:text-stone-500">
               {language === 'tr' ? 'Uygulama Tercihleri' : 'Preferences'}
@@ -627,6 +732,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       >
                         <span>📅</span>
                         <span>{language === 'tr' ? 'Bugünün Görevlerini Bildir' : 'Remind Today Tasks'}</span>
+                      </button>
+                    )}
+                    {onTriggerEveningSummary && (
+                      <button
+                        type="button"
+                        onClick={onTriggerEveningSummary}
+                        disabled={isTriggeringEveningSummary}
+                        className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50"
+                      >
+                        <span>📬</span>
+                        <span>
+                          {isTriggeringEveningSummary
+                            ? (language === 'tr' ? 'Özetleniyor...' : 'Summarizing...')
+                            : (language === 'tr' ? '20:00 Günün Özetini Çalıştır' : 'Run 20:00 Daily Summary')}
+                        </span>
                       </button>
                     )}
                   </div>

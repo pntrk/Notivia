@@ -2,6 +2,7 @@ import { GoogleGenAI, Type } from '@google/genai';
 import type { NotiviaParsedNote, NotiviaCategory, NotiviaPriority, NotiviaSimpleNote } from '../types/notivia.ts';
 import { extractSimpleNoteFromText } from '../utils/simpleNote.ts';
 import { matchShortScenario } from '../utils/scenarioDatabase.ts';
+import { classifyDomainCluster, getDomainPromptSlice } from './modularDomainPrompts.ts';
 
 const SYSTEM_INSTRUCTION = `Sen "Notivia" adlı bilişsel yaşam asistanının çekirdek niyet çözümleme ve veri ayrıştırma (parser) motorusun.
 Görevin: Kullanıcının ayaküstü, devrik, dağınık, imalı veya sesle kaydedilmiş girdilerini analiz etmek; söylenmeyen gereksinimleri ("leb demeden leblebiyi anlayarak") alt görevlere dönüştürmek ve arayüzde görselleştirilmeye hazır katı bir JSON nesnesi üretmektir.
@@ -821,8 +822,10 @@ export async function parseSimpleWithGemini(
           ? `\nGEÇMİŞ NOTLAR:\n${JSON.stringify(pastNotes.slice(0, 20).map((n) => ({ baslik: n.baslik, zaman: n.zaman, tarih_iso: n.tarih_iso, createdAt: n.createdAt })), null, 2)}`
           : '';
 
-        const domainPrompt = userDomain && userDomain !== 'GENEL'
-          ? `\nKULLANICININ ÇALIŞMA / UZMANLIK ALANI: ${userDomain}\nBu alandaki terminolojiyi ve mesleki gereksinimleri öncelikle gözet.`
+        const { cluster, detectedDomain } = classifyDomainCluster(text, userDomain);
+        const domainRulesSlice = getDomainPromptSlice(cluster);
+        const domainPrompt = (userDomain && userDomain !== 'GENEL')
+          ? `\nKULLANICININ ÇALIŞMA / UZMANLIK ALANI: ${userDomain} (${detectedDomain})\nBu alandaki terminolojiyi ve mesleki gereksinimleri öncelikle gözet.`
           : '';
 
         const prompt = `Sen "Notivia" bilişsel yaşam asistanının Evrensel Niyet Çözümleme ve Eylem Grafiği (Cognitive Action Graph) motorusun.
@@ -863,20 +866,20 @@ TEMEL BİLİŞSEL PROTOKOLLER:
 6. EKSİK BİLGİ DİYALOG DÖNGÜSÜ (CLARIFICATION):
 - Kullanıcı kesin bir randevu/buluşma bildirip ("Ahmet'le buluşacağız", "Dişçiye gideceğim") gün ve saat hiç vermediyse:
   * "eksik_bilgi": true
-  * "soru" / "netlestirme_sorusu": "Hangi gün ve saatte planlayalım?"
+  * "netlestirme_sorusu": "Hangi gün ve saatte planlayalım?"
   * "tarih_iso": null
   * "zaman": null
   * "sesli_fisilti": "Hangi gün ve saatte planlayalım?"
 
 7. SESLİ FISILTI PROTOKOLÜ (SESLİ GERİ BİLDİRİM):
 - 'sesli_fisilti' alanında kullanıcının kulaklığına fısıldanacak sıcak, kısa (en fazla 1 cümle), robotik olmayan net bir teyit cümlesi üret.
-
+${domainRulesSlice}
 ZAMAN REFERANSI:
 - Tüm saat hesaplamalarını CURRENT_DATETIME değerini (${now}) referans alarak yap.${domainPrompt}${historyContext}
 
 Kullanıcı girdisi: "${text}".
 
-JSON ÇIKTI ŞEMASI (Yalnızca aşağıdaki şemaya uyan ham JSON üret, markdown blokları veya fazladan karşılama metni ekleme):
+JSON ÇIKTI ŞEMASI:
 {
   "baslik": "Net eylem başlığı (Maksimum 4 kelime)",
   "zaman": "Kullanıcıya gösterilecek zaman ifadesi (Örn: 'Salı 09:00', 'Vade Belirtilmedi')",
@@ -884,16 +887,16 @@ JSON ÇIKTI ŞEMASI (Yalnızca aşağıdaki şemaya uyan ham JSON üret, markdow
   "hazirlik_zamani": "Ön hazırlık alarm vakti (Örn: '1 Gün Önce 20:00')",
   "hazirlik_iso": "Ön hazırlık alarmının çalacağı ISO-8601 string veya null",
   "eksik_bilgi": false,
-  "soru": null,
+  "netlestirme_sorusu": null,
   "action_items": [
     {
-      "task": "Somut, uygulanabilir gizli kontrol adımı",
+      "task": "Somut, uygulanabilir kontrol adımı",
       "is_completed": false
     }
   ],
   "anomali_notu": "Kritik pratik fısıltı veya yasal/teknik uyarı",
   "ikon": "Konuya tam uyan tek emoji",
-  "renk": "Pastel HEX kodu (#E0F2FE, #DCFCE7, #FEF3C7, #FEE2E2, #F3E8FF)",
+  "renk": "Pastel HEX kodu (#E0F2FE, #DCFCE7, #FEF3C7, #FEE2E2, #F3E8FF vb.)",
   "sesli_fisilti": "Kulaklıktan seslendirilecek 1 cümlelik teyit"
 }`;
 
@@ -908,10 +911,10 @@ JSON ÇIKTI ŞEMASI (Yalnızca aşağıdaki şemaya uyan ham JSON üret, markdow
               properties: {
                 baslik: { type: Type.STRING, description: 'Kısa eylem (max 4 kelime)' },
                 zaman: { type: Type.STRING, description: 'Arayüzde görünecek sade metin' },
-                tarih_iso: { type: Type.STRING, description: 'Yalnızca kesin randevularda ISO-8601, koşulluysa null' },
+                tarih_iso: { type: Type.STRING, nullable: true, description: 'Yalnızca kesin randevularda ISO-8601, koşulluysa veya belirsizse null' },
                 eksik_bilgi: { type: Type.BOOLEAN, description: 'Randevu/görüşme bildirildiği halde zaman belirtilmemişse true' },
-                soru: { type: Type.STRING, description: 'Eksik bilgi varsa sorulacak soru (Örn: Hangi gün ve saatte planlayalım?)' },
-                netlestirme_sorusu: { type: Type.STRING, description: 'Eksik bilgi varsa sorulacak soru' },
+                netlestirme_sorusu: { type: Type.STRING, nullable: true, description: 'Eksik bilgi varsa sorulacak soru' },
+                soru: { type: Type.STRING, nullable: true, description: 'Eksik bilgi varsa sorulacak soru (geriye dönük uyumluluk)' },
                 tetikleyici: {
                   type: Type.OBJECT,
                   properties: {
@@ -922,8 +925,8 @@ JSON ÇIKTI ŞEMASI (Yalnızca aşağıdaki şemaya uyan ham JSON üret, markdow
                   },
                 },
                 hazirlik_zamani: { type: Type.STRING, description: 'Ön hazırlık zamanı' },
-                hazirlik_iso: { type: Type.STRING, description: 'Takvim/bildirim için hazırlık tarihi (ISO-8601)' },
-                anomali_notu: { type: Type.STRING, description: 'Kısa zeka tespiti veya null' },
+                hazirlik_iso: { type: Type.STRING, nullable: true, description: 'Takvim/bildirim için hazırlık tarihi (ISO-8601)' },
+                anomali_notu: { type: Type.STRING, nullable: true, description: 'Kısa zeka tespiti veya null' },
                 action_items: {
                   type: Type.ARRAY,
                   items: {
@@ -943,7 +946,24 @@ JSON ÇIKTI ŞEMASI (Yalnızca aşağıdaki şemaya uyan ham JSON üret, markdow
                   },
                 },
                 ikon: { type: Type.STRING, description: 'tek emoji' },
-                renk: { type: Type.STRING, description: 'pastel hex' },
+                renk: {
+                  type: Type.STRING,
+                  enum: [
+                    '#FEF3C7',
+                    '#E0F2FE',
+                    '#DCFCE7',
+                    '#FEE2E2',
+                    '#F3E8FF',
+                    '#EDE9FE',
+                    '#FEF08A',
+                    '#FED7AA',
+                    '#E2E8D5',
+                    '#CFFAFE',
+                    '#F1F5F9',
+                    '#BFDBFE',
+                  ],
+                  description: 'Pastel hex kodu',
+                },
                 sesli_fisilti: { type: Type.STRING, description: 'Kulaktan fısıldanacak 1 cümlelik teyit' },
               },
               required: ['baslik', 'ikon', 'renk'],

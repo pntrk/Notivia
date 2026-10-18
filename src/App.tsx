@@ -1565,6 +1565,44 @@ export default function App() {
     };
   }, []);
 
+  // Android Mobil Sürümde Navigasyon Tuşlarını Gizleme ve İmmersive Modu
+  useEffect(() => {
+    const isAndroid = typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent || '');
+    if (!isAndroid) return;
+
+    // Android cihaz sınıfını body'ye ekle
+    document.body.classList.add('android-device');
+
+    // Android Web & PWA tam ekran / tuş gizleme fonksiyonu
+    const requestAndroidImmersive = async () => {
+      try {
+        if (!document.fullscreenElement && document.fullscreenEnabled) {
+          const docEl = document.documentElement;
+          if (docEl.requestFullscreen) {
+            await docEl.requestFullscreen({ navigationUI: 'hide' } as FullscreenOptions);
+          } else if ((docEl as any).webkitRequestFullscreen) {
+            await (docEl as any).webkitRequestFullscreen();
+          }
+        }
+      } catch {
+        // Tarayıcı güvenlik modeli jest bekler, sessizce geçilir
+      }
+    };
+
+    // İlk kullanıcı etkileşiminde (dokunma/tıklama) Android gezinme tuşlarını gizle
+    const handleAndroidTouch = () => {
+      requestAndroidImmersive();
+    };
+
+    window.addEventListener('touchstart', handleAndroidTouch, { passive: true, once: true });
+    window.addEventListener('click', handleAndroidTouch, { once: true });
+
+    return () => {
+      window.removeEventListener('touchstart', handleAndroidTouch);
+      window.removeEventListener('click', handleAndroidTouch);
+    };
+  }, []);
+
   // Yeni bir girdi geldiğinde pasif koşullu kartları tarama
   const checkReactiveTriggers = (newInputText: string, existingCards: SimpleCardItem[]) => {
     const lowerInput = newInputText.toLowerCase();
@@ -3282,7 +3320,7 @@ export default function App() {
             if (tool === 'create_note_or_event') {
               const isMissingTime = args.eksik_bilgi || (!args.zaman && !args.tarih_iso && (args.baslik?.toLowerCase().includes('randevu') || args.baslik?.toLowerCase().includes('görüşme') || args.baslik?.toLowerCase().includes('buluşma') || args.baslik?.toLowerCase().includes('toplantı') || args.baslik?.toLowerCase().includes('meeting') || args.baslik?.toLowerCase().includes('appointment')));
               const defaultClarify = language === 'en' ? 'Which day and time should we schedule this for?' : 'Hangi gün ve saatte planlayalım?';
-              const questionToAsk = args.soru || (isMissingTime ? (args.netlestirme_sorusu || defaultClarify) : null);
+              const questionToAsk = args.netlestirme_sorusu || args.soru || (isMissingTime ? defaultClarify : null);
 
               const createdNote = {
                 baslik: sanitizeCardTitle(args.baslik) || args.baslik,
@@ -3293,6 +3331,7 @@ export default function App() {
                 action_items: args.action_items,
                 anomali_notu: args.anomali_notu,
                 eksik_bilgi: isMissingTime,
+                netlestirme_sorusu: questionToAsk,
                 soru: questionToAsk,
                 domain_clarification: args.domain_clarification || null,
                 ikon: args.ikon || '📌',
@@ -4618,11 +4657,16 @@ export default function App() {
         </section>
 
         {/* Alt Kontrol Barı (Kamera + Mikrofon + Klavye) */}
-        <footer className={`shrink-0 z-20 w-full px-4 pt-3 pb-4 sm:pb-5 flex flex-col items-center border-t backdrop-blur-md transition-colors duration-200 ${
-          theme === 'dark'
-            ? 'bg-stone-900/95 border-stone-800 text-stone-100 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]'
-            : 'bg-white/95 border-stone-200/80 text-stone-900 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]'
-        }`}>
+        <footer
+          className={`shrink-0 z-20 w-full px-4 pt-3 android-footer-safe flex flex-col items-center border-t backdrop-blur-md transition-colors duration-200 ${
+            theme === 'dark'
+              ? 'bg-stone-900/95 border-stone-800 text-stone-100 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]'
+              : 'bg-white/95 border-stone-200/80 text-stone-900 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]'
+          }`}
+          style={{
+            paddingBottom: 'max(1.75rem, calc(env(safe-area-inset-bottom, 0px) + 1.25rem))',
+          }}
+        >
           {/* Bekleyen Görsel Önizleme Kartı */}
           {pendingImage && (
             <div
@@ -4852,16 +4896,19 @@ export default function App() {
             </div>
           ) : null}
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-center gap-5 sm:gap-6 py-1 z-10 w-full max-w-xs mx-auto">
             {/* Kamera / Galeri Butonu */}
             <label
               htmlFor="camera-input"
-              className={`w-12 h-12 border rounded-full flex items-center justify-center shadow-xs active:scale-90 transition-all cursor-pointer ${
+              className={`w-12 h-12 border rounded-full flex items-center justify-center shadow-xs active:scale-90 transition-all cursor-pointer touch-manipulation select-none shrink-0 ${
                 theme === 'dark'
-                  ? 'bg-stone-800 border-stone-700 text-stone-200 hover:bg-stone-700'
-                  : 'bg-stone-100 border-stone-200 text-stone-700 hover:bg-stone-200/80'
+                  ? 'bg-stone-800 border-stone-700 text-stone-200 hover:bg-stone-700 active:bg-stone-600'
+                  : 'bg-stone-100 border-stone-200 text-stone-700 hover:bg-stone-200/80 active:bg-stone-300'
               }`}
               title={t.cameraTitle}
+              style={{
+                marginBottom: 'env(safe-area-inset-bottom, 0px)',
+              }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -4889,7 +4936,12 @@ export default function App() {
             />
 
             {/* Ana Mikrofon Butonu */}
-            <div className="relative flex items-center justify-center">
+            <div
+              className="relative flex items-center justify-center shrink-0"
+              style={{
+                marginBottom: 'env(safe-area-inset-bottom, 0px)',
+              }}
+            >
               {isListening && (
                 <>
                   <span className="absolute -inset-2.5 rounded-full bg-red-400/30 animate-ping pointer-events-none" />
@@ -4900,10 +4952,10 @@ export default function App() {
                 id="mic-btn"
                 type="button"
                 onClick={handleMicClick}
-                className={`relative w-16 h-16 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all duration-200 cursor-pointer ${
+                className={`relative w-16 h-16 rounded-full flex items-center justify-center shadow-xl active:scale-95 transition-all duration-200 cursor-pointer touch-manipulation select-none ${
                   isListening
-                    ? 'bg-red-500 scale-105 text-white shadow-red-500/30'
-                    : theme === 'dark' ? 'bg-white text-stone-900 hover:bg-stone-100' : 'bg-stone-900 text-white hover:bg-stone-800'
+                    ? 'bg-red-500 scale-105 text-white shadow-red-500/30 ring-4 ring-red-400/20'
+                    : theme === 'dark' ? 'bg-white text-stone-900 hover:bg-stone-100 shadow-stone-950/40' : 'bg-stone-900 text-white hover:bg-stone-800 shadow-stone-900/30'
                 }`}
               >
                 <Mic
@@ -4919,11 +4971,14 @@ export default function App() {
               type="button"
               onClick={handleToggleTextInput}
               title={t.keyboardToggleTitle}
-              className={`w-12 h-12 rounded-full flex items-center justify-center border shadow-xs active:scale-90 transition-all cursor-pointer ${
+              className={`w-12 h-12 rounded-full flex items-center justify-center border shadow-xs active:scale-90 transition-all cursor-pointer touch-manipulation select-none shrink-0 ${
                 showTextInput
                   ? theme === 'dark' ? 'bg-white text-stone-900 border-white' : 'bg-stone-800 text-white border-stone-800'
                   : theme === 'dark' ? 'bg-stone-800 text-stone-200 border-stone-700 hover:bg-stone-700' : 'bg-stone-100 text-stone-700 border-stone-200 hover:bg-stone-200/70'
               }`}
+              style={{
+                marginBottom: 'env(safe-area-inset-bottom, 0px)',
+              }}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
