@@ -59,7 +59,19 @@ export const DOMAIN_KEYWORDS: Record<ProfessionDomain, RegExp> = {
   TURIZM_KONAKLAMA_YIYECEK: /(otel|resepsiyon|front office|housekeeping|oda temizliği|kat şefi|overbooking|folyo|giriş çıkış|check-in|check-out|restoran|şef|aşçı|garson|komi|barmen|mise en place|servis hazırlık|haccp|alakart|açık büfe|ziyafet)/i,
   ULASTIRMA_LOJISTIK: /(tır|kamyon|çekici|dorse|şoför|kurye|dağıtım|kargo|sevk|irsaliye|cmr|aetr|takograf|4.5 saat mola|kantar|yükleme|boşaltma|antrepo|depo|forklift|konşimento|gemi|kaptan|psc denetim|uçak|pilot|kokpit|havalimanı)/i,
 
-  GENEL: /(taahhüt|abonelik|gss|işkur|su arıtma|kombi bakımı|derin dondurucu|ecza dolabı|kira|aidat|iş başvurusu|mülakat|cv güncelle|özgeçmiş|emekli|günlük rutin|fatura)/i
+  GENEL: /(taahhüt|abonelik|gss|işkur|su arıtma|kombi bakımı|derin dondurucu|ecza dolabı|kira|aidat|iş başvurusu|mülakat|cv güncelle|özgeçmiş|emekli|günlük rutin|fatura)/i,
+
+  // 10 Odak Küme (Consolidated Clusters)
+  GENEL_CLUSTER: /(taahhüt|abonelik|kira|aidat|fatura|alışveriş|günlük|çöp|ilaç|alarm)/i,
+  BILISIM_CLUSTER: /(yazılım|software|frontend|backend|devops|prod deploy|pr review|db migration|api|siber güvenlik|call sheet|kurgu|montaj|-23 lufs)/i,
+  SANAYI_CLUSTER: /(loto|şalter|kaçak akım|kompanzasyon|trafo|cnc|torna|hidrostatik|vibrasyon|msds|wps|pqr|kaynak|maden|çimento)/i,
+  YAPI_CLUSTER: /(inşaat|şantiye|donatı|beton döküm|kırım testi|metraj|hakediş|ruhsat|mimari|pafta|web-tapu|emlak)/i,
+  SAGLIK_CLUSTER: /(hasta|doktor|hemşire|serum|epikriz|konsültasyon|sbar|ilaç|dekübitus|soğuk zincir|medula|eczane|diş|otoklav)/i,
+  HUKUK_FINANS_CLUSTER: /(uyap|duruşma|istinaf|tebligat|hâkim|hakim|savcı|icra|smmm|kdv|muhsgk|e-defter|berat|ebys|cimer|antrepo)/i,
+  EGITIM_CLUSTER: /(okul|öğretmen|müdür|kbs|ek ders|dys|e-okul|vize|final|büt|tez|jüri|turnitin|öğrenci)/i,
+  GUVENLIK_CLUSTER: /(gözaltı|fezleke|polis|asker|emniyet|itfaiye|scba|içtima|tekmil|silahlık|özel güvenlik|isg|ibys)/i,
+  ULASIM_CLUSTER: /(tır|kamyon|çekici|dorse|şoför|kurye|takograf|aetr|kantar|cmr|irsaliye|pilot|uçuş|kokpit|gemi|kaptan|psc denetim)/i,
+  HIZMET_CLUSTER: /(mise en place|haccp|soğuk oda|aşçı|mutfak|otel|resepsiyon|kasa|z raporu|pos gün sonu|satış teklif|çks|tarsim|sulama)/i,
 };
 
 export function detectDomainFromText(text: string, fallback: ProfessionDomain = 'GENEL'): ProfessionDomain {

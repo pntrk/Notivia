@@ -3,22 +3,26 @@ import { detectDomainFromJargon } from '../utils/jargonRadar.ts';
 
 export type DomainCluster =
   | 'GENEL_YASAM'
-  | 'HUKUK_FINANS'
-  | 'SAGLIK_KLINIK'
+  | 'BILISIM_MEDYA'
+  | 'SANAYI_URETIM'
+  | 'YAPI_MIMARLIK'
+  | 'SAGLIK_MEDIKAL'
+  | 'HUKUK_FINANS_YONETIM'
   | 'EGITIM_AKADEMI'
-  | 'KAMU_GUVENLIK'
-  | 'TEKNIK_SAHA';
+  | 'GUVENLIK_SAVUNMA'
+  | 'ULASIM_LOJISTIK'
+  | 'TICARET_HIZMET_GIDA';
 
 /**
  * Seviye 1: Dispatcher / Router
- * Kullanıcının girdisini ve profil seçimini hafif ve anlık olarak 6 ana sektör kümesinden birine eşler.
+ * Kullanıcının girdisini ve profil seçimini anlık olarak 10 ana odak kümesinden birine eşler.
  */
 export function classifyDomainCluster(
   input: string,
   userDomain?: string
 ): { cluster: DomainCluster; detectedDomain: ProfessionDomain; confidence: number } {
-  // 1. Kullanıcı profilden doğrudan bir sektör seçtiyse
-  if (userDomain && userDomain !== 'GENEL' && userDomain !== 'OTOMATIK_JARGON' && userDomain !== 'CALISMIYORUM') {
+  // 1. Kullanıcı profilden doğrudan bir sektör veya çatı küme seçtiyse
+  if (userDomain && userDomain !== 'GENEL' && userDomain !== 'OTOMATIK_JARGON' && userDomain !== 'CALISMIYORUM' && userDomain !== 'SADE') {
     const cluster = mapDomainToCluster(userDomain as ProfessionDomain);
     return { cluster, detectedDomain: userDomain as ProfessionDomain, confidence: 1.0 };
   }
@@ -35,67 +39,86 @@ export function classifyDomainCluster(
 }
 
 /**
- * Spesifik meslek alanını ilgili ana modül kümesine yönlendirir.
+ * Spesifik meslek alanını veya çatı küme ID'sini ilgili ana modül kümesine yönlendirir.
  */
-export function mapDomainToCluster(domain: ProfessionDomain): DomainCluster {
-  switch (domain) {
-    case 'ADALET_GUVENLIK':
-    case 'HUKUK':
-    case 'FINANS':
-    case 'MALIYE':
-      return 'HUKUK_FINANS';
+export function mapDomainToCluster(domain: ProfessionDomain | string): DomainCluster {
+  const d = String(domain || '').toUpperCase();
+  switch (d) {
+    case 'BILISIM_CLUSTER':
+    case 'BILISIM':
+    case 'MEDYA_ILETISIM_YAYIN':
+    case 'KULTUR_SANAT_TASARIM':
+    case 'SANAT_MEDYA':
+      return 'BILISIM_MEDYA';
 
+    case 'SANAYI_CLUSTER':
+    case 'MAKINE':
+    case 'ELEKTRIK_ELEKTRONIK':
+    case 'ENERJI':
+    case 'METAL':
+    case 'MADEN':
+    case 'KIMYA_PETROL_PLASTIK':
+    case 'TEKSTIL_GIYIM_DERI':
+    case 'AGAC_KAGIT':
+    case 'CEVRE':
+    case 'CAM_CIMENTO_TOPRAK':
+    case 'TEKNIK':
+    case 'MUHENDISLIK':
+      return 'SANAYI_URETIM';
+
+    case 'YAPI_CLUSTER':
+    case 'INSAAT':
+    case 'EMLAK':
+      return 'YAPI_MIMARLIK';
+
+    case 'SAGLIK_CLUSTER':
     case 'SAGLIK_SOSYAL':
     case 'SAGLIK':
     case 'ECZACILIK':
     case 'VETERINER':
-      return 'SAGLIK_KLINIK';
+      return 'SAGLIK_MEDIKAL';
 
+    case 'HUKUK_FINANS_CLUSTER':
+    case 'HUKUK':
+    case 'ADALET_GUVENLIK':
+    case 'FINANS':
+    case 'MALIYE':
+    case 'IS_YONETIM':
+    case 'KAMU':
+    case 'GUMRUK':
+      return 'HUKUK_FINANS_YONETIM';
+
+    case 'EGITIM_CLUSTER':
     case 'EGITIM':
     case 'OGRENCI':
       return 'EGITIM_AKADEMI';
 
-    case 'KAMU':
+    case 'GUVENLIK_CLUSTER':
     case 'SAVUNMA':
     case 'ISG':
-      return 'KAMU_GUVENLIK';
+      return 'GUVENLIK_SAVUNMA';
 
-    case 'BILISIM':
-    case 'ELEKTRIK_ELEKTRONIK':
-    case 'MAKINE':
-    case 'INSAAT':
-    case 'TEKNIK':
-    case 'MUHENDISLIK':
-    case 'HAVACILIK':
+    case 'ULASIM_CLUSTER':
     case 'ULASTIRMA_LOJISTIK':
-    case 'LOJISTIK':
-    case 'GIDA':
-    case 'GASTRONOMI':
-    case 'TICARET':
     case 'OTOMOTIV':
-    case 'TARIM_AV_BALIK':
-    case 'ZIRAAT':
+    case 'HAVACILIK':
     case 'DENIZCILIK':
-    case 'MADEN':
-    case 'ENERJI':
-    case 'KIMYA_PETROL_PLASTIK':
-    case 'METAL':
-    case 'CAM_CIMENTO_TOPRAK':
-    case 'AGAC_KAGIT':
-    case 'TEKSTIL_GIYIM_DERI':
+    case 'LOJISTIK':
+      return 'ULASIM_LOJISTIK';
+
+    case 'HIZMET_CLUSTER':
+    case 'TICARET':
     case 'TURIZM_KONAKLAMA_YIYECEK':
-    case 'CEVRE':
-    case 'KULTUR_SANAT_TASARIM':
-    case 'MEDYA_ILETISIM_YAYIN':
-    case 'SANAT_MEDYA':
+    case 'GIDA':
+    case 'TARIM_AV_BALIK':
     case 'TOPLUMSAL_KISISEL':
     case 'SPOR_REKREASYON':
+    case 'GASTRONOMI':
     case 'KUAFOR':
-    case 'EMLAK':
-    case 'GUMRUK':
-    case 'IS_YONETIM':
-      return 'TEKNIK_SAHA';
+    case 'ZIRAAT':
+      return 'TICARET_HIZMET_GIDA';
 
+    case 'GENEL_CLUSTER':
     case 'GENEL':
     case 'SADE':
     case 'CALISMIYORUM':
@@ -107,42 +130,65 @@ export function mapDomainToCluster(domain: ProfessionDomain): DomainCluster {
 
 /**
  * Seviye 2: Dinamik Modüler Prompt Enjeksiyonu (Lazy Loading)
- * Sadece kullanıcının odağına veya girdisine uyan sektör kurallarını döndürür.
- * Genel girdilerde ("marketten süt al", "fırını kapat") meslek kurallarını yüklemeyerek token tüketimini %70+ düşürür.
+ * 10 Ana Odak Grubu için özel kural paketlerini anında döndürür.
  */
 export function getDomainPromptSlice(cluster: DomainCluster): string {
   switch (cluster) {
-    case 'HUKUK_FINANS':
+    case 'BILISIM_MEDYA':
       return `
-[MODÜL: HUKUK VE MALİ İŞLER MOTORU (LEGAL & FINANCIAL SUITE: LAWYER, JUDGE, CPA, NOTARY)]
-1. AVUKAT & ADALET:
-   - "UYAP tebligatı geldi": Tebligat Kanunu 7/a (elektronik tebligatta 5 gün sonra tebliğ edilmiş sayılma) kuralını işleterek yasal itiraz/istinaf süresini başlat.
-   - Duruşma günlerine 30 dk önce adliye alarmı kur; çakışma riski varsa mazeret dilekçesi adımı üret.
-   - İkon: ⚖️ | Renk: #E0E7FF | Kategori: Hukuk / Avukat.
-2. HAKİM & YARGI:
-   - "Hüküm kuruldu / karar verildi": HMK 30 günlük gerekçeli karar yazım sayacı başlat.
-   - Müzekkere ve bilirkişi rapor sürelerine tekit kontrolü ata.
-   - İkon: 🏛️ | Renk: #FEF3C7 | Kategori: Hukuk / Yargı.
-3. MALİ MÜŞAVİR & SMMM / YMM:
-   - Ayın 26'sına KDV/MUHSGK beyanname onay alarmı, ayın son gününe SGK prim ve e-Defter berat kontrolü kur.
-   - Ayın ilk yarısına "Mükellef fatura ve ekstre toplama" rutini ata. Karşıt inceleme ve İVD tasdik kontrollerini ekle.
-   - İkon: 📊 | Renk: #DCFCE7 | Kategori: Mali Müşavir / Finans.
-4. NOTERLİK:
-   - İhtarnamelerde PTT tebliğ şerhi takibi ata.
-   - Aralık ayı açılış, Haziran ayı yevmiye kapanış defter tasdik sayaçlarını denetle. Gün sonunda yevmiye kapama hatırlat.
-   - İkon: 📜 | Renk: #F1F5F9 | Kategori: Noterlik / Tasdik.
-5. ARABULUCULUK & İCRA:
-   - Arabuluculuk (3+1 Hafta) yasal süresi, ilk oturum daveti ve son tutanak kontrolü. 2 yıllık icra kıymet takdiri süresi.`;
+[MODÜL: BİLİŞİM, YAZILIM VE MEDYA MOTORU (IT, DEVOPS, CYBERSECURITY & MEDIA)]
+1. YAZILIM & DEVOPS MÜHENDİSLİĞİ:
+   - "Prod deploy / canlıya alma": DB migration yedeği, staging onayı, rollback planı ve sürüm etiketi (SemVer) zorunludur. Cuma deploy risk uyarısı yap.
+   - PR & Kod İnceleme: CI/CD test geçişi, linter ve branch merge kontrolleri.
+   - İkon: 💻 | Renk: #E0F2FE | Kategori: Yazılım / IT.
+2. MEDYA & VİDEO KURGU:
+   - "Call sheet / çekim günü": Ekip toplanma saati (call time), hava durumu ve teknik rider kontrolü.
+   - Post-Prodüksiyon: Yayın standartlarında ses -23 LUFS / EBU R128 kuralı, renk derecelendirme (color grading) ve master export kontrolleri.
+   - Basın Bülteni & Ambargo: Ambargo saati geri sayımı ve dağıtım listesi.
+   - İkon: 🎬 | Renk: #EDE9FE | Kategori: Medya / İletişim.`;
 
-    case 'SAGLIK_KLINIK':
+    case 'SANAYI_URETIM':
+      return `
+[MODÜL: MÜHENDİSLİK, SANAYİ VE İMALAT MOTORU (ENGINEERING & MANUFACTURING)]
+1. MAKİNE & MEKANİK:
+   - Basınçlı kap, kompresör, kazan bakımlarında yıllık hidrostatik test ve emniyet ventili kontrolü.
+   - Titreşim ve yağ analizi ile kestirimci bakım adımlarını listele.
+   - İkon: ⚙️ | Renk: #E2E8F0 | Kategori: Makine / Bakım.
+2. ELEKTRİK & ENERJİ ŞEBEKESİ:
+   - Pano ve yüksek gerilimde LOTO (Kilitleme-Etiketleme) can güvenliği gereği 1. sıraya konulmalıdır.
+   - Kompanzasyon / sayaç sınırları: Endüktif %20, kapasitif %15 sınır kontrolü yap.
+   - İkon: ⚡ | Renk: #FEE2E2 | Kategori: Elektrik / Enerji.
+3. KİMYA, PETROL & PLASTİK:
+   - MSDS / Güvenlik Bilgi Formu (GBF) risk ibareleri, parlama noktası ve KKD teyidi.
+   - İkon: 🧪 | Renk: #CFFAFE | Kategori: Kimya / Laboratuvar.
+4. METAL, MADEN & TEKSTİL:
+   - WPS/PQR kaynak onay prosedürü, NDT muayenesi; madende metan/CO ölçümü ve tahkimat teyidi.
+   - İkon: 🔩 / ⛏️ | Renk: #F1F5F9.`;
+
+    case 'YAPI_MIMARLIK':
+      return `
+[MODÜL: İNŞAAT, MİMARLIK VE ŞANTİYE MOTORU (CONSTRUCTION & ARCHITECTURE)]
+1. İNŞAAT MÜHENDİSLİĞİ & ŞANTİYE:
+   - "Beton döküldü / döküm": Döküm anından itibaren 7. ve 28. günlere laboratuvar kırım testi ata. Kür sulaması için 3 günlük periyot kur.
+   - 'action_items': "Küp/silindir numune etiketleme", "Kür sulaması", "Yapı denetim donatı teslim tutanağı", "Metraj ve hakediş kontrolü".
+   - İkon: 🏗️ | Renk: #FEF3C7 | Kategori: İnşaat / Şantiye.
+2. MİMARLIK & TASARIM:
+   - Belediye ruhsat revizyonlarında 30 günlük yasal düzeltme sayacı başlat; statik/mekanik müellif çakışma (clash) kontrolü ata.
+   - Müşteri sunumundan 24 saat önceye render kilidi koy.
+   - İkon: 📐 | Renk: #FEF08A | Kategori: Mimarlık / Proje.
+3. EMLAK & GAYRİMENKUL:
+   - Web-Tapu başvuru takibi, tapu harcı, DASK ve taşınmaz ticareti sözleşme kontrolleri.
+   - İkon: 🏢 | Renk: #FEF9C3.`;
+
+    case 'SAGLIK_MEDIKAL':
       return `
 [MODÜL: SAĞLIK VE KLİNİK MOTORU (CLINICAL SUITE: DOCTOR, NURSE, PHARMACIST, DENTIST)]
 1. DOKTOR & CERRAHİ:
    - Acil konsültasyonlarda 30 dk, rutin konsültasyonlarda 24 saatlik süre kurgula.
    - Taburculukta epikriz ve patoloji/tetkik kapama adımlarını zorunlu tut.
-   - Ameliyat/girişim öncesi kan sulandırıcı kesilme ve açlık süresi kontrolleri koy.
+   - Ameliyat öncesi kan sulandırıcı kesilme ve açlık süresi kontrolleri koy.
    - İkon: 🩺 | Renk: #E0F2FE | Kategori: Sağlık / Hekim.
-2. HEMŞİRE & KLİNİK BAKIM:
+2. HEMŞİRE & BAKIM:
    - İlaç uygulamalarında 5 Doğru Kuralı ve order kontrolü sağla.
    - 2 saatte bir dekübitus pozisyon değişimi ve vardiya bitimine 45 dk kala SBAR devir alarmı kur.
    - İkon: 💉 | Renk: #CCFBF1 | Kategori: Sağlık / Hemşire.
@@ -152,26 +198,41 @@ export function getDomainPromptSlice(cluster: DomainCluster): string {
    - İkon: 💊 | Renk: #FEE2E2 | Kategori: Sağlık / Eczane.
 4. DİŞ HEKİMİ:
    - İmplant/cerrahi sonrası 7. güne dikiş alma; protez ölçülerinde laboratuvar prova zinciri kur.
-   - Otoklav sterilizasyonunda haftalık biyolojik spor testi ve rulo paket indikatör teyidi ata.
+   - Otoklav sterilizasyonunda haftalık biyolojik spor testi ve rulo indikatör teyidi ata.
    - İkon: 🦷 | Renk: #EDE9FE | Kategori: Sağlık / Diş Hekimi.
 5. ÇOKLU İLAÇ VE MEDİKAL DOZ YÖNETİMİ:
-   - Tek cümlede birden fazla ilaç sayıldığında biyolojik saatlere böl:
-     * Sabah Aç: 08:00 (Mide koruyucu, tiroit - yemekten 30 dk önce)
-     * Sabah Tok: 09:00 (Tansiyon, vitamin, kahvaltı sonrası)
-     * Öğlen Tok: 13:30 (Öğle yemeği sonrası)
-     * Akşam Tok: 19:30 (Akşam yemeği sonrası)
-     * Gece/Yatarken: 22:30 (Magnezyum, melatonin)
+   - Tek cümlede birden fazla ilaç sayıldığında biyolojik saatlere böl (08:00 Sabah Aç, 09:00 Sabah Tok, 13:30 Öğlen, 19:30 Akşam, 22:30 Gece Yatarken).
    - 'anomali_notu' içine kritik farmakolojik uyarıları ekle. İkon: 💊 | Renk: #F3E8FF.`;
+
+    case 'HUKUK_FINANS_YONETIM':
+      return `
+[MODÜL: HUKUK, FİNANS VE YÖNETİM MOTORU (LEGAL, FINANCE & CORPORATE)]
+1. AVUKAT & ADALET:
+   - "UYAP tebligatı geldi": Tebligat Kanunu 7/a (elektronik tebligatta 5 gün sonra tebliğ edilmiş sayılma) kuralını işleterek yasal itiraz/istinaf süresini başlat.
+   - Duruşma günlerine 30 dk önce adliye alarmı kur; çakışma riski varsa mazeret dilekçesi adımı üret.
+   - İkon: ⚖️ | Renk: #E0E7FF | Kategori: Hukuk / Avukat.
+2. HAKİM & YARGI:
+   - "Hüküm kuruldu / karar verildi": HMK 30 günlük gerekçeli karar yazım sayacı başlat.
+   - Müzekkere ve bilirkişi rapor sürelerine tekit kontrolü ata.
+   - İkon: 🏛️ | Renk: #FEF3C7 | Kategori: Hukuk / Yargı.
+3. MALİ MÜŞAVİR (SMMM) & YMM:
+   - Ayın 26'sına KDV/MUHSGK beyanname onay alarmı, ayın son gününe SGK prim ve e-Defter berat kontrolü kur.
+   - Ayın ilk yarısına "Mükellef fatura ve ekstre toplama" rutini ata. Karşıt inceleme ve İVD tasdik kontrolleri ekle.
+   - İkon: 📊 | Renk: #DCFCE7 | Kategori: Mali Müşavir / Finans.
+4. KAMU & YÖNETİM (EBYS / CİMER / İK):
+   - "Günlü/acele evrak": Son teslimden 1 gün önce iç onay alarmı kur; SDP kodu ve e-İmza adımlarını koy.
+   - CİMER ve Bilgi Edinme: Yasal 15-30 gün cevap süresi sayacı başlat.
+   - İşe giriş/çıkışta yasal bildirim süreleri ve SGK kontrolleri.
+   - İkon: 🗂️ / 🏛️ | Renk: #FEF9C3 | Kategori: Bürokrasi / Kamu.`;
 
     case 'EGITIM_AKADEMI':
       return `
-[MODÜL: EĞİTİM VE OKUL YÖNETİMİ MOTORU (EDUCATION & ACADEMIA SUITE)]
+[MODÜL: EĞİTİM, MAARİF VE AKADEMİ MOTORU (EDUCATION & ACADEMIA SUITE)]
 1. OKUL MÜDÜRÜ & MÜDÜR YARDIMCISI:
    - KBS / Ek Ders: Her ayın 20-27'si arasına ek ders onay alarmı kur; sevkli/raporlu kesintileri, DYK ve nöbet puantajlarını denetle. (İkon: 📋 | Renk: #FEF3C7)
-   - DYS & Resmi Yazışma: "Günlü/ivedi" yazılarda son cevap tarihine geri sayım aç; resmi yazı taslak adımı oluştur. (İkon: 🏛️ | Renk: #E0E7FF)
+   - DYS & Resmi Yazışma: "Günlü/ivedi" yazılarda son cevap tarihine geri sayım aç; resmi yazı taslağı oluştur. (İkon: 🏛️ | Renk: #E0E7FF)
    - Nöbet ve Taşımalı Yemek: Taşımalı eğitimde yemek numunelerinin 72 saat (+4°C) saklanmasını zorunlu ilk görev yap. (İkon: 🍱 | Renk: #DCFCE7)
-   - e-Okul Devamsızlık & Disiplin: Özürsüz 5 ve 10 gün devamsızlık mektuplarının veliye tebliğini işlet. (İkon: 🏫 | Renk: #FEE2E2)
-   - İSG & Okul Güvenliği: Dönemlik yangın tatbikat tutanağı ve yangın tüpü basınç takibi. (İkon: 🛡️ | Renk: #F1F5F9)
+   - e-Okul Devamsızlık: Özürsüz 5 ve 10 gün devamsızlık mektuplarının veliye tebliğini işlet. (İkon: 🏫 | Renk: #FEE2E2)
 2. K-12 ÖĞRETMEN & MAARİF MODELİ:
    - "Sınav yaptık / sınav bitti": Sınav tarihinden itibaren 10 günlük e-Okul not giriş sayacı başlat.
    - 'action_items': "Yazılı kağıtlarının okunması ve cevap anahtarı/barem kontrolü", "e-Okul sistemine not ve kazanım analizlerinin girilmesi", "Evrakların zümre başkanına teslimi".
@@ -182,11 +243,11 @@ export function getDomainPromptSlice(cluster: DomainCluster): string {
    - "Gözetmenlik": Sınav saatinden 25 dakika öncesine "Sınav evrakı teslim alma ve salon hazırlığı" alarmı kur.
    - "Makale revizyonu / hakemlik": Belirtilen teslim tarihine geri sayım; son 3 güne "Response to Reviewers mektubu hazırlığı" ekle.
    - "TÜBİTAK / BAP / Tez Jürisi": Ara rapor, fatura kapanış ve savunma tutanağı yasal takvimi.
-   - İkon: 🎓 / 🔬 | Renk: #DDD6FE veya #E0E7FF | Kategori: Akademi / Üniversite.`;
+   - İkon: 🎓 / 🔬 | Renk: #DDD6FE | Kategori: Akademi / Üniversite.`;
 
-    case 'KAMU_GUVENLIK':
+    case 'GUVENLIK_SAVUNMA':
       return `
-[MODÜL: OPERASYON, GÜVENLİK VE KAMU MOTORU (POLICE, FIREFIGHTER, MILITARY, CIVIL SERVANT)]
+[MODÜL: OPERASYON, GÜVENLİK VE SAVUNMA MOTORU (SECURITY & DEFENSE)]
 1. POLİS & EMNİYET:
    - "Gözaltı / yakalama": 24 saatlik yasal gözaltı süresini başlat (Toplu suçlarda 48s). Süre bitimine 6 saat kala savcılık fezlekesi alarmı kur.
    - Giriş-çıkış adli muayene raporu ve adli emanet teslim tutanaklarını zorunlu alt görev yap.
@@ -200,47 +261,46 @@ export function getDomainPromptSlice(cluster: DomainCluster): string {
    - 'action_items': "Mevcut ve künye kontrolü", "Teçhizat ve kılık-kıyafet denetimi", "Komutana tekmil verme hazırlığı".
    - Silahlık ve Mühimmat: Islak imzalı silahlık sayım cetveli, mühimmat sandığı kurşun mühürleri, doldur-boşalt emniyeti.
    - İkon: 🪖 / 🛡️ | Renk: #E2E8D5 | Kategori: Askeri / Savunma.
-4. KAMU & DEVLET MEMURU (EBYS / 4734 / CİMER):
-   - "Günlü/acele evrak": Belirtilen son teslim gününden 1 iş günü öncesine iç onay alarmı kur; SDP kodu ve e-İmza adımlarını koy.
-   - CİMER ve Bilgi Edinme: Yasal 15-30 gün cevap süresi sayacı başlat.
-   - Doğrudan Temin (4734 - 22/d) ve Taşınır (TİF): Piyasa fiyat araştırma teklifleri, muayene kabul komisyonu, TİF fişi ve MYS ödeme emri teslimi.
-   - İkon: 🗂️ / 🏛️ | Renk: #FEF9C3 | Kategori: Bürokrasi / Kamu.`;
+4. İŞ SAĞLIĞI VE GÜVENLİĞİ (İSG):
+   - İBYS noter onaylı defter tanzimi, ramak kala kayıtları, periyodik muayene takipleri.
+   - İkon: 🦺 | Renk: #FEF3C7.`;
 
-    case 'TEKNIK_SAHA':
+    case 'ULASIM_LOJISTIK':
       return `
-[MODÜL: MÜHENDİSLİK, SAHA, TİCARET VE OPERASYON MOTORU]
-1. İNŞAAT MÜHENDİSLİĞİ:
-   - "Beton döküldü / döküm": Döküm anından itibaren 7. ve 28. günlere laboratuvar kırım testi ata. 3 günlük kür sulaması kur.
-   - İkon: 🏗️ | Renk: #FEF3C7 | Kategori: İnşaat / Şantiye.
-2. ELEKTRİK & ENERJİ:
-   - Pano/trafo müdahalelerinde LOTO (Kilitleme-Etiketleme) adımlarını 1. sıraya koy.
-   - Kompanzasyon sayaç sınır kontrolü: Endüktif %20, kapasitif %15.
-   - İkon: ⚡ | Renk: #FEE2E2 | Kategori: Elektrik.
-3. MAKİNE & TESİSAT:
-   - Basınçlı kap, kompresör, kazan yıllık hidrostatik test kontrolü; titreşim ve yağ analizi.
-   - İkon: ⚙️ | Renk: #E2E8F0 | Kategori: Makine.
-4. YAZILIM & IT DEVOPS:
-   - "Prod deploy / canlıya alma": DB migration yedeği, staging onayı ve rollback planını zorunlu tut. Cuma günü deploy risk uyarısı yap.
-   - İkon: 💻 | Renk: #E0F2FE | Kategori: Yazılım / IT.
-5. MİMARLIK & TASARIM:
-   - Belediye ruhsat revizyonlarında 30 günlük yasal düzeltme sayacı başlat; disiplinler arası çakışma (clash) kontrolü ata.
-   - Sunumdan 24 saat önce render kilidi koy.
-   - İkon: 📐 | Renk: #FEF08A | Kategori: Proje / Mimarlık.
-6. ŞOFÖR & LOJİSTİK:
-   - AETR ve takograf: 4.5 saat sürüşe 45 dk mola, günlük 9 saat limiti denetle. Pre-trip lastik basıncı ve CMR evrak kontrolü.
-   - İkon: 🚛 | Renk: #FED7AA | Kategori: Lojistik.
-7. SAHA TEKNİSYENİ & TAMİRCİ (USTA):
-   - Müşteri onayı alınmadan parça değişimine izin verme; teslimattan 45 dk önce OBD arıza kodu silme ve kaçak testi.
-   - İkon: 🔧 | Renk: #FEF3C7 | Kategori: Saha / Tamirat.
-8. MUTFAK ŞEFİ (AŞÇI):
-   - Servis saatinden 3-4 saat öncesine "Mise en place" bitişi, 45 dk öncesine servis tadım brifingi planla. HACCP (+4°C / -18°C) kontrolleri.
-   - İkon: 👨‍🍳 | Renk: #FED7AA | Kategori: Gastronomi.
-9. PİLOT & HAVACILIK:
-   - Uçuş saatinin 90 dk öncesine Dispatch/OFP/METAR-TAF, 45 dk öncesine kokpit walkaround alarmı kur. 12 saatlik FDP dinlenme süresi denetle.
-   - İkon: ✈️ | Renk: #E0E7FF | Kategori: Havacılık.
-10. KASİYER & ESNAF:
-    - Vardiya başı avans sayımı, kapanışta Z raporu, POS gün sonu ve nakit mutabakatı. Veresiye 14 gün vade kontrolü.
-    - İkon: 🧾 / 🏪 | Renk: #DCFCE7 veya #FEF3C7.`;
+[MODÜL: ULAŞIM, LOJİSTİK VE SAHA OPERASYONLARI MOTORU (TRANSPORT & LOGISTICS)]
+1. AĞIR VASITA & LOJİSTİK (AETR & TAKOGRAF):
+   - AETR ve takograf kuralları: 4.5 saatlik sürüşe 45 dk mola, günlük 9 saat sürüş limitini denetle.
+   - Yük teslim slotuna göre kantar ve zorunlu mola sürelerini ekleyerek tersine kalkış saati hesapla.
+   - Pre-trip lastik basıncı, dorse king-pin kilidi, takograf kartı ve CMR/irsaliye kontrolleri zorunludur.
+   - İkon: 🚛 | Renk: #FED7AA | Kategori: Ulaştırma / Lojistik.
+2. HAVACILIK & PİLOT:
+   - Uçuş saatinin 90 dk öncesine Dispatch/OFP/Hava durumu (METAR-TAF), 45 dk öncesine kokpit walkaround alarmı kur.
+   - Uçuştan önceki 12 saatlik FDP dinlenme süresi ihlalini denetle.
+   - İkon: ✈️ | Renk: #E0F2FE | Kategori: Havacılık / Uçuş.
+3. DENİZCİLİK & LİMAN:
+   - PSC survey denetimi, draft survey, sintine/balast kayıtları ve bunkering hazırlığı.
+   - İkon: ⚓ | Renk: #CFFAFE | Kategori: Denizcilik.
+4. OTOMOTİV SERVİS & TEKNİSYEN:
+   - Müşteri onayı alınmadan parça değişimine izin verme; teslimattan 45 dk önce OBD arıza kodu silme, rot-balans ve kaçak testi.
+   - İkon: 🚗 / 🔧 | Renk: #FEF3C7 | Kategori: Otomotiv / Servis.`;
+
+    case 'TICARET_HIZMET_GIDA':
+      return `
+[MODÜL: TİCARET, HİZMET VE GASTRONOMİ MOTORU (COMMERCE & HOSPITALITY)]
+1. MUTFAK ŞEFİ (GASTRONOMİ & AŞÇILIK):
+   - Servis saatinden 3-4 saat öncesine "Mise en place" bitişi, 45 dk öncesine servis tadım brifingi planla.
+   - HACCP (+4°C / -18°C) soğuk oda sıcaklık kontrolleri ve FIFO rotasyonunu görevlere ekle.
+   - İkon: 👨‍🍳 | Renk: #FED7AA | Kategori: Gastronomi / Mutfak.
+2. TİCARET, SATIŞ VE KASA:
+   - Teklif verildiğinde 24-48 saatlik sıcak takip (follow-up) sayacı aç.
+   - Kasiyerlikte vardiya başında avans sayımı, gün sonunda Z raporu, POS gün sonu ve nakit mutabakatı.
+   - İkon: 💼 / 🧾 | Renk: #DCFCE7 | Kategori: Ticaret / Satış.
+3. TURİZM, OTELCİLİK & HİZMET:
+   - Overbooking riski kontrolü, VIP misafir karşılama ve kat şefi oda denetim föyü.
+   - İkon: 🏨 | Renk: #FEF08A.
+4. TARIM & ZİRAAT:
+   - ÇKS ve TARSİM zirai don bildirimleri; damlama sulama, gübreleme ve güneş kuralı (19:30 akşam serinliği).
+   - İkon: 🌿 | Renk: #DCFCE7 | Kategori: Tarım / Ziraat.`;
 
     case 'GENEL_YASAM':
     default:
@@ -251,7 +311,7 @@ export function getDomainPromptSlice(cluster: DomainCluster): string {
 /**
  * Temel Çekirdek Sistem Talimatı (Core Dispatcher System Prompt)
  * Boyut: ~2KB (Monolitik 24KB prompt yerine).
- * Gerektiğinde sektör modülü enjekte edilir.
+ * İlgili sektör kümesi dinamik olarak eklenir.
  */
 export function buildModularDispatcherPrompt(
   input: string,

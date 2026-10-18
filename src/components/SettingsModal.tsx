@@ -15,16 +15,25 @@ import {
   LayoutGrid,
   List,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
+  Layers,
+  Check,
   Sparkles,
   CheckCircle2,
   Brain,
   Shield,
-  Clock
+  Clock,
+  Search
 } from 'lucide-react';
 import type { Language } from '../utils/i18n';
 import { translations } from '../utils/i18n';
-import type { ProfessionDomain } from '../types/domainThemes.ts';
-import { getLocalizedWorkDomainOptions } from '../types/domainThemes.ts';
+import type { ProfessionDomain, WorkDomainCluster } from '../types/domainThemes.ts';
+import {
+  getLocalizedWorkDomainOptions,
+  getLocalizedWorkDomainClusters,
+  getDomainCluster
+} from '../types/domainThemes.ts';
 import { loadUserCognitiveProfile, type UserCognitiveProfile } from '../services/userLearningService.ts';
 
 interface SettingsModalProps {
@@ -91,30 +100,42 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   trashCount = 0,
 }) => {
   const [cognitiveProfile, setCognitiveProfile] = React.useState<UserCognitiveProfile>(() => loadUserCognitiveProfile());
+  const [expandedClusterId, setExpandedClusterId] = React.useState<string | null>(() => getDomainCluster(workDomain)?.id || null);
+  const [isSectorPickerOpen, setIsSectorPickerOpen] = React.useState(false);
+  const [sectorSearchQuery, setSectorSearchQuery] = React.useState('');
 
   React.useEffect(() => {
     if (isOpen) {
       setCognitiveProfile(loadUserCognitiveProfile());
+      const cluster = getDomainCluster(workDomain);
+      if (cluster) {
+        setExpandedClusterId(cluster.id);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, workDomain]);
+
+  const localizedDomainOptions = getLocalizedWorkDomainOptions(language);
+  const localizedClusters = getLocalizedWorkDomainClusters(language);
+  const activeCluster = getDomainCluster(workDomain);
+  const selectedOption = localizedDomainOptions.find((opt) => opt.id === workDomain) || localizedDomainOptions[0];
+
+  const filteredClusters = React.useMemo(() => {
+    if (!sectorSearchQuery.trim()) return localizedClusters;
+    const q = sectorSearchQuery.toLowerCase().trim();
+    return localizedClusters.filter(
+      (c) =>
+        c.label.toLowerCase().includes(q) ||
+        c.sublabel.toLowerCase().includes(q) ||
+        c.keywords.some((k) => k.toLowerCase().includes(q))
+    );
+  }, [localizedClusters, sectorSearchQuery]);
 
   if (!isOpen) return null;
 
   const t = translations[language];
   const isDark = theme === 'dark';
 
-  const localizedDomainOptions = getLocalizedWorkDomainOptions(language);
-  const selectedOption = localizedDomainOptions.find((opt) => opt.id === workDomain) || localizedDomainOptions[0];
 
-  const quickPillOptions: { id: ProfessionDomain; label: string; icon: string }[] = language === 'tr' ? [
-    { id: 'OTOMATIK_JARGON', label: 'Otomatik Jargon', icon: '🎯' },
-    { id: 'SADE', label: 'Çalışmıyorum', icon: '📝' },
-    { id: 'GENEL', label: 'Genel Yaşam', icon: '🏠' },
-  ] : [
-    { id: 'OTOMATIK_JARGON', label: 'Auto Jargon', icon: '🎯' },
-    { id: 'SADE', label: 'Not Working', icon: '📝' },
-    { id: 'GENEL', label: 'General Life', icon: '🏠' },
-  ];
 
   return (
     <div
@@ -370,199 +391,208 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* 2. ÇALIŞTIĞIN SEKTÖR & BİLİŞSEL ODAK */}
           <div className="space-y-1.5">
-            <span className="text-[11px] font-bold tracking-wider uppercase px-1 text-stone-400 dark:text-stone-500">
-              {language === 'tr' ? 'Bilişsel Motor & Sektör' : 'Cognitive Engine & Sector'}
-            </span>
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[11px] font-bold tracking-wider uppercase text-stone-400 dark:text-stone-500">
+                {language === 'tr' ? 'Bilişsel Motor Odağı' : 'Cognitive Engine Focus'}
+              </span>
+              <span className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-full border border-indigo-200/80 dark:border-indigo-800/50">
+                {language === 'tr' ? '10 Odak Grubu' : '10 Focus Groups'}
+              </span>
+            </div>
 
             <div
               id="work-domain-selector-card"
-              className={`p-3.5 sm:p-4 rounded-2xl border transition-colors space-y-3 ${
+              className={`p-3 rounded-2xl border transition-all space-y-2.5 ${
                 isDark ? 'bg-stone-850/90 border-stone-800' : 'bg-white border-stone-200/90 shadow-2xs'
               }`}
             >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-lg shrink-0">
-                    {selectedOption.icon}
+              {/* Aktif Bilişsel Motor Özet Kartı & Inline Açılır Menü Butonu */}
+              <button
+                type="button"
+                onClick={() => setIsSectorPickerOpen((prev) => !prev)}
+                className="w-full p-3 rounded-xl bg-stone-100/80 dark:bg-stone-800/70 hover:bg-stone-100 dark:hover:bg-stone-800 border border-stone-200/80 dark:border-stone-750 flex items-center justify-between gap-3 text-left transition-all cursor-pointer select-none group"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0 shadow-2xs transition-transform group-hover:scale-105"
+                    style={{ backgroundColor: `${activeCluster.color}35` }}
+                  >
+                    {activeCluster.icon}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-xs sm:text-sm leading-tight truncate">
-                      {language === 'tr' ? 'Çalıştığın sektör' : 'Industry / Sector'}
-                    </h3>
-                    <p className="text-[11px] text-stone-500 dark:text-stone-400 truncate">
-                      {selectedOption.label}
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="font-bold text-xs sm:text-sm leading-tight truncate text-stone-900 dark:text-stone-100">
+                        {activeCluster.label}
+                      </h3>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" title="Aktif Motor" />
+                    </div>
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400 truncate mt-0.5">
+                      {workDomain === activeCluster.id
+                        ? (language === 'tr' ? 'Tam Çatı Küme Motoru' : 'Full Focus Cluster')
+                        : (selectedOption.label || activeCluster.sublabel)}
                     </p>
                   </div>
                 </div>
-              </div>
 
-              {/* Hızlı Seçim Hapları (Quick-Pill Selector) */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 pt-0.5 scrollbar-none">
-                {quickPillOptions.map((pill) => {
-                  const isActive = workDomain === pill.id;
-                  return (
-                    <button
-                      key={pill.id}
-                      type="button"
-                      onClick={() => onSelectWorkDomain?.(pill.id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0 ${
-                        isActive
-                          ? 'bg-indigo-600 text-white shadow-2xs'
-                          : isDark
-                          ? 'bg-stone-800 text-stone-300 hover:bg-stone-750'
-                          : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
-                      }`}
-                    >
-                      <span>{pill.icon}</span>
-                      <span>{pill.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* 27 Sektör & Özel Durumlar Dropdown Seçici */}
-              <div className="relative">
-                <select
-                  id="work-domain-select"
-                  aria-label={language === 'tr' ? 'Çalıştığın Alan Seçimi' : 'Select Career Domain'}
-                  value={workDomain}
-                  disabled={language === 'en'}
-                  onChange={(e) => {
-                    if (onSelectWorkDomain) {
-                      onSelectWorkDomain(e.target.value as ProfessionDomain);
-                    }
-                  }}
-                  className={`w-full text-xs sm:text-sm font-medium py-2.5 sm:py-2 pl-3 pr-10 rounded-xl border transition-all cursor-pointer outline-none appearance-none focus:ring-2 focus:ring-indigo-500/30 min-h-[44px] sm:min-h-0 ${
-                    language === 'en' ? 'opacity-90 cursor-default' : ''
-                  } ${
-                    isDark
-                      ? 'bg-stone-900 border-stone-750 text-stone-100 hover:border-stone-650'
-                      : 'bg-stone-50 border-stone-300 text-stone-800 hover:border-stone-400 shadow-2xs'
-                  }`}
-                >
-                  {language === 'en' ? (
-                    localizedDomainOptions.map((opt) => (
-                      <option key={opt.id} value={opt.id}>
-                        {opt.icon} {opt.label}
-                      </option>
-                    ))
-                  ) : (
-                    <>
-                      <optgroup label="Özel Durumlar">
-                        {localizedDomainOptions.filter((o) => o.category === 'ozel').map((opt) => (
-                          <option key={opt.id} value={opt.id}>
-                            {opt.icon} {opt.label}
-                          </option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="MYK 27 Sektör & Uzmanlık Grupları">
-                        {localizedDomainOptions
-                          .filter((o) => o.category === 'meslek')
-                          .sort((a, b) => a.label.localeCompare(b.label, language === 'tr' ? 'tr-TR' : 'en'))
-                          .map((opt) => (
-                            <option key={opt.id} value={opt.id}>
-                              {opt.icon} {opt.label}
-                            </option>
-                          ))}
-                      </optgroup>
-                    </>
-                  )}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-stone-400">
-                  <ChevronRight className="w-4 h-4 rotate-90" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* 3. KİŞİYE ÖZEL BİLİŞSEL PROFİL & YAŞAM RİTMİ (CİHAZ İÇİ ÖĞRENME) */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between px-1">
-              <span className="text-[11px] font-bold tracking-wider uppercase text-stone-400 dark:text-stone-500 flex items-center gap-1.5">
-                <Brain className="w-3.5 h-3.5 text-indigo-500" />
-                <span>{language === 'tr' ? 'Kişisel Asistan Öğrenme Profili' : 'Personal Cognitive Profile'}</span>
-              </span>
-              <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200 dark:border-emerald-800/50">
-                <Shield className="w-3 h-3" />
-                <span>{language === 'tr' ? 'Cihaz İçi Gizlilik ✓' : 'On-Device Privacy ✓'}</span>
-              </span>
-            </div>
-
-            <div className={`p-3.5 sm:p-4 rounded-2xl border transition-colors space-y-3.5 ${
-              isDark ? 'bg-stone-850/90 border-stone-800' : 'bg-white border-stone-200/90 shadow-2xs'
-            }`}>
-              {/* Açıklama & Mahremiyet Güvencesi */}
-              <div className="flex items-start gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 text-base">
-                  ✨
-                </div>
-                <div className="text-[11px] leading-relaxed text-stone-600 dark:text-stone-300">
-                  <p className="font-semibold text-stone-800 dark:text-stone-100">
-                    {language === 'tr' ? 'Size Özgü Yaşam Ritmi Öğrenildi' : 'Your Custom Life Rhythm Learned'}
-                  </p>
-                  <p className="text-stone-500 dark:text-stone-400 mt-0.5">
-                    {language === 'tr'
-                      ? 'Notivia, girdiğiniz eylemler ve günlük temponuzdan alışkanlıklarınızı çıkarır. Banka veya şifre gibi hassas veriler asla işlenmez ve tüm profil yalnızca telefonunuzda saklanır.'
-                      : 'Notivia extracts your habits from notes and daily flow. Bank or OTP data is never touched and remains purely on-device.'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Öğrenilen Yaşam Çapaları (Ritim Izgarası) */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                <div className={`p-2.5 rounded-xl border text-center ${
-                  isDark ? 'bg-stone-800/60 border-stone-750' : 'bg-stone-50 border-stone-200'
-                }`}>
-                  <span className="text-[10px] font-medium text-stone-400 block">{language === 'tr' ? 'Mesai / Başlangıç' : 'Work Start'}</span>
-                  <span className="text-xs sm:text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-0.5 block flex items-center justify-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    <span>{cognitiveProfile?.rhythm?.workStart || '08:30'}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-indigo-600 text-white flex items-center gap-1 shadow-2xs">
+                    <span>{isSectorPickerOpen ? (language === 'tr' ? 'Kapat' : 'Close') : (language === 'tr' ? 'Değiştir' : 'Change')}</span>
+                    {isSectorPickerOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                   </span>
                 </div>
-                <div className={`p-2.5 rounded-xl border text-center ${
-                  isDark ? 'bg-stone-800/60 border-stone-750' : 'bg-stone-50 border-stone-200'
-                }`}>
-                  <span className="text-[10px] font-medium text-stone-400 block">{language === 'tr' ? 'Mesai Bitişi' : 'Work End'}</span>
-                  <span className="text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400 mt-0.5 block flex items-center justify-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    <span>{cognitiveProfile?.rhythm?.workEnd || '17:30'}</span>
-                  </span>
-                </div>
-                <div className={`p-2.5 rounded-xl border text-center ${
-                  isDark ? 'bg-stone-800/60 border-stone-750' : 'bg-stone-50 border-stone-200'
-                }`}>
-                  <span className="text-[10px] font-medium text-stone-400 block">{language === 'tr' ? 'Eve Varış & Akşam' : 'Evening'}</span>
-                  <span className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 block flex items-center justify-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    <span>{cognitiveProfile?.rhythm?.eveningHome || '19:00'}</span>
-                  </span>
-                </div>
-                <div className={`p-2.5 rounded-xl border text-center ${
-                  isDark ? 'bg-stone-800/60 border-stone-750' : 'bg-stone-50 border-stone-200'
-                }`}>
-                  <span className="text-[10px] font-medium text-stone-400 block">{language === 'tr' ? 'Gece Dinlenme' : 'Night Rest'}</span>
-                  <span className="text-xs sm:text-sm font-bold text-purple-600 dark:text-purple-400 mt-0.5 block flex items-center justify-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    <span>{cognitiveProfile?.rhythm?.nightRest || '23:30'}</span>
-                  </span>
-                </div>
-              </div>
+              </button>
 
-              {/* Bilişsel İpuçları & Sık Odaklanılan Konular */}
-              {cognitiveProfile?.personalTips && cognitiveProfile.personalTips.length > 0 && (
-                <div className={`p-2.5 rounded-xl space-y-1.5 text-[11px] ${
-                  isDark ? 'bg-indigo-950/20 border border-indigo-900/40 text-indigo-200' : 'bg-indigo-50/70 border border-indigo-100 text-indigo-900'
-                }`}>
-                  {cognitiveProfile.personalTips.map((tip, idx) => (
-                    <div key={idx} className="flex items-start gap-1.5">
-                      <span className="text-indigo-500 font-bold shrink-0">•</span>
-                      <span className="leading-snug">{tip}</span>
-                    </div>
-                  ))}
+              {/* AYNI PENCERE İÇİNDE AÇILAN BASİT DÜŞEY LİSTE (ALT ALTA SEÇENEKLER) */}
+              {isSectorPickerOpen && (
+                <div className="space-y-2 pt-1.5 border-t border-stone-200/80 dark:border-stone-800 animate-in fade-in slide-in-from-top-1 duration-150">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[11px] font-semibold text-stone-600 dark:text-stone-300">
+                      {language === 'tr' ? 'Bir Sektör / Odak Grubu Seçin:' : 'Select an Industry / Focus Group:'}
+                    </span>
+                    <span className="text-[10px] text-stone-400">
+                      {language === 'tr' ? 'Alt alta tıklayarak seçin' : 'Click to select below'}
+                    </span>
+                  </div>
+
+                  {/* Basit Arama İptali/Araması */}
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                    <input
+                      type="text"
+                      value={sectorSearchQuery}
+                      onChange={(e) => setSectorSearchQuery(e.target.value)}
+                      placeholder={language === 'tr' ? 'Sektör ara (Örn: Sağlık, Sanayi)...' : 'Search sector...'}
+                      className="w-full pl-8 pr-2.5 py-1.5 text-xs rounded-xl border border-stone-200 dark:border-stone-750 bg-stone-50 dark:bg-stone-800 text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  {/* Alt Alta Düşey Liste */}
+                  <div className="space-y-1.5 max-h-[320px] overflow-y-auto pr-0.5 scrollbar-thin">
+                    {filteredClusters.map((cluster) => {
+                      const isClusterSelected =
+                        workDomain === cluster.id ||
+                        activeCluster.id === cluster.id ||
+                        cluster.subDomains.includes(workDomain as any);
+
+                      const isExpanded = expandedClusterId === cluster.id;
+
+                      return (
+                        <div
+                          key={cluster.id}
+                          className={`rounded-xl border transition-all overflow-hidden ${
+                            isClusterSelected
+                              ? isDark
+                                ? 'bg-indigo-950/40 border-indigo-500/80 ring-1 ring-indigo-500/40'
+                                : 'bg-indigo-50 border-indigo-300 ring-1 ring-indigo-500/30'
+                              : isDark
+                              ? 'bg-stone-800/50 border-stone-750 hover:bg-stone-800'
+                              : 'bg-stone-50/80 border-stone-200/90 hover:bg-stone-100/80'
+                          }`}
+                        >
+                          {/* Satır Seçeneği */}
+                          <div
+                            onClick={() => {
+                              onSelectWorkDomain?.(cluster.id as ProfessionDomain);
+                              setExpandedClusterId(cluster.id);
+                              setIsSectorPickerOpen(false);
+                            }}
+                            className="p-2.5 flex items-center justify-between gap-2.5 cursor-pointer select-none"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div
+                                className="w-8 h-8 rounded-lg flex items-center justify-center text-base shrink-0"
+                                style={{ backgroundColor: `${cluster.color}35` }}
+                              >
+                                {cluster.icon}
+                              </div>
+
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <h4 className="font-semibold text-xs text-stone-900 dark:text-stone-100 truncate">
+                                    {cluster.label}
+                                  </h4>
+                                  {isClusterSelected && (
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                                  )}
+                                </div>
+                                <p className="text-[10px] text-stone-500 dark:text-stone-400 truncate">
+                                  {cluster.sublabel}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                              <button
+                                type="button"
+                                onClick={() => setExpandedClusterId(isExpanded ? null : cluster.id)}
+                                className="px-2 py-0.5 rounded-md text-[10px] font-medium text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 bg-stone-200/60 dark:bg-stone-750 transition-colors cursor-pointer flex items-center gap-0.5"
+                              >
+                                <span>{cluster.subDomains.length} {language === 'tr' ? 'Alt Branş' : 'Fields'}</span>
+                                {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Alt Branş İnce Ayarı */}
+                          {isExpanded && (
+                            <div className="px-2.5 pb-2 pt-1 border-t border-stone-200/60 dark:border-stone-750 bg-white/50 dark:bg-stone-900/50 space-y-1">
+                              <p className="text-[9px] font-bold uppercase tracking-wider text-stone-400">
+                                {language === 'tr' ? 'Özel Alt Branş Seçin:' : 'Sub-discipline:'}
+                              </p>
+                              <div className="flex flex-wrap gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    onSelectWorkDomain?.(cluster.id as ProfessionDomain);
+                                    setIsSectorPickerOpen(false);
+                                  }}
+                                  className={`px-2 py-0.5 rounded-md text-[10px] font-medium transition-all cursor-pointer ${
+                                    workDomain === cluster.id
+                                      ? 'bg-indigo-600 text-white shadow-2xs'
+                                      : isDark
+                                      ? 'bg-stone-800 text-stone-300 hover:bg-stone-750'
+                                      : 'bg-stone-200 text-stone-700 hover:bg-stone-300'
+                                  }`}
+                                >
+                                  ✓ {language === 'tr' ? 'Tüm Çatı Motoru' : 'Full Cluster'}
+                                </button>
+
+                                {cluster.subDomains.map((subId) => {
+                                  const opt = localizedDomainOptions.find((o) => o.id === subId);
+                                  const isSubActive = workDomain === subId;
+                                  return (
+                                    <button
+                                      key={subId}
+                                      type="button"
+                                      onClick={() => {
+                                        onSelectWorkDomain?.(subId);
+                                        setIsSectorPickerOpen(false);
+                                      }}
+                                      className={`px-2 py-0.5 rounded-md text-[10px] font-medium transition-all cursor-pointer ${
+                                        isSubActive
+                                          ? 'bg-indigo-600 text-white shadow-2xs'
+                                          : isDark
+                                          ? 'bg-stone-800 text-stone-300 hover:bg-stone-750'
+                                          : 'bg-stone-200 text-stone-700 hover:bg-stone-300'
+                                      }`}
+                                    >
+                                      {opt?.icon || '•'} {opt?.label ? opt.label.split('(')[0].trim() : subId}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
           </div>
+
+
 
           {/* 4. UYGULAMA TERCİHLERİ (Görünüm, Düzen, Bildirimler, Dil) */}
           <div className="space-y-1.5">

@@ -30,6 +30,7 @@ export function getDomainConsolidatedScenarios(domain?: string): ShortScenarioMa
     case 'FINANS':
     case 'MALIYE':
     case 'NOTER':
+    case 'HUKUK_FINANS_CLUSTER':
       return LEGAL_FINANCE_SCENARIOS;
     case 'SAGLIK':
     case 'HEKIM':
@@ -37,18 +38,24 @@ export function getDomainConsolidatedScenarios(domain?: string): ShortScenarioMa
     case 'ECZACILIK':
     case 'DIS_HEKIMI':
     case 'VETERINER':
+    case 'SAGLIK_CLUSTER':
       return HEALTH_LIFE_SCENARIOS;
     case 'TEKNIK':
     case 'INSAAT':
     case 'ELEKTRIK':
     case 'MAKINE':
     case 'YAZILIM':
+    case 'BILISIM':
+    case 'BILISIM_CLUSTER':
+    case 'SANAYI_CLUSTER':
+    case 'YAPI_CLUSTER':
       return ENGINEERING_TECH_SCENARIOS;
     case 'EGITIM':
     case 'OGRETMEN':
     case 'AKADEMI':
     case 'OKUL_YONETIMI':
     case 'KAMU':
+    case 'EGITIM_CLUSTER':
       return EDUCATION_PUBLIC_SCENARIOS;
     case 'SAVUNMA':
     case 'POLIS':
@@ -56,6 +63,7 @@ export function getDomainConsolidatedScenarios(domain?: string): ShortScenarioMa
     case 'ITFAIYE':
     case 'ASKERI':
     case 'GUVENLIK':
+    case 'GUVENLIK_CLUSTER':
       return DEFENSE_SAFETY_SCENARIOS;
     case 'TICARET':
     case 'LOJISTIK':
@@ -63,13 +71,15 @@ export function getDomainConsolidatedScenarios(domain?: string): ShortScenarioMa
     case 'SOFOR':
     case 'KASIYER':
     case 'SATIS':
+    case 'ULASIM_CLUSTER':
       return TRADE_TRANSPORT_SCENARIOS;
     case 'ZIRAAT':
     case 'TARIM':
     case 'MUTFAK':
     case 'GASTRONOMI':
     case 'ASCI':
-      return AGRICULTURE_GASTRONOMY_SCENARIOS;
+    case 'HIZMET_CLUSTER':
+      return [...AGRICULTURE_GASTRONOMY_SCENARIOS, ...TRADE_TRANSPORT_SCENARIOS];
     default:
       return [];
   }

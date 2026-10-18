@@ -52,7 +52,18 @@ export type ProfessionDomain =
   | 'GUMRUK'
   | 'ECZACILIK'
   | 'ISG'
-  | 'SANAT_MEDYA';
+  | 'SANAT_MEDYA'
+  // 10 Odak Küme (Consolidated Clusters)
+  | 'GENEL_CLUSTER'
+  | 'BILISIM_CLUSTER'
+  | 'SANAYI_CLUSTER'
+  | 'YAPI_CLUSTER'
+  | 'SAGLIK_CLUSTER'
+  | 'HUKUK_FINANS_CLUSTER'
+  | 'EGITIM_CLUSTER'
+  | 'GUVENLIK_CLUSTER'
+  | 'ULASIM_CLUSTER'
+  | 'HIZMET_CLUSTER';
 
 export interface ActionButtonConfig {
   id: string;
@@ -921,6 +932,166 @@ export const DOMAIN_REGISTRY: Record<ProfessionDomain, DomainThemeConfig> = {
       { id: 'home_cycle', label: 'Periyodik Bakım', icon: '🔄', actionType: 'LOTO_CHECK' },
       { id: 'share', label: 'Paylaş', icon: '↗️', actionType: 'COPY_TEMPLATE' }
     ]
+  },
+
+  GENEL_CLUSTER: {
+    domain: 'GENEL_CLUSTER',
+    displayName: 'Genel Yaşam',
+    bgCard: 'bg-amber-50/70 border-amber-200',
+    borderAccent: 'border-l-amber-500',
+    badgeBg: 'bg-amber-100',
+    badgeText: 'text-amber-900',
+    btnPrimaryBg: 'bg-amber-700 hover:bg-amber-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'bill_track', label: 'Fatura & Kira', icon: '💳', actionType: 'COPY_TEMPLATE' },
+      { id: 'contract_end', label: 'Taahhüt Bitişi', icon: '📅', actionType: 'TIMER' },
+      { id: 'share', label: 'Paylaş', icon: '↗️', actionType: 'COPY_TEMPLATE' }
+    ]
+  },
+
+  BILISIM_CLUSTER: {
+    domain: 'BILISIM_CLUSTER',
+    displayName: 'Bilişim & Medya',
+    bgCard: 'bg-sky-50/70 border-sky-200',
+    borderAccent: 'border-l-sky-500',
+    badgeBg: 'bg-sky-100',
+    badgeText: 'text-sky-900',
+    btnPrimaryBg: 'bg-sky-700 hover:bg-sky-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'prod_deploy', label: 'Prod Deploy', icon: '🚀', actionType: 'CHECKLIST' },
+      { id: 'db_migration', label: 'DB Migration', icon: '🗄️', actionType: 'LOTO_CHECK' },
+      { id: 'api_monitor', label: 'API & SLA', icon: '⏱️', actionType: 'TIMER' }
+    ]
+  },
+
+  SANAYI_CLUSTER: {
+    domain: 'SANAYI_CLUSTER',
+    displayName: 'Sanayi & İmalat',
+    bgCard: 'bg-slate-50/80 border-slate-200',
+    borderAccent: 'border-l-slate-500',
+    badgeBg: 'bg-slate-200',
+    badgeText: 'text-slate-800',
+    btnPrimaryBg: 'bg-slate-800 hover:bg-slate-900',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'loto_lock', label: 'LOTO Kilitleme', icon: '🔒', actionType: 'LOTO_CHECK' },
+      { id: 'hydro_test', label: 'Basınç Testi', icon: '⚙️', actionType: 'CHECKLIST' },
+      { id: 'vibration_check', label: 'Vibrasyon & Yağ', icon: '🔄', actionType: 'TIMER' }
+    ]
+  },
+
+  YAPI_CLUSTER: {
+    domain: 'YAPI_CLUSTER',
+    displayName: 'Yapı & Mimarlık',
+    bgCard: 'bg-yellow-50/70 border-yellow-200',
+    borderAccent: 'border-l-yellow-500',
+    badgeBg: 'bg-yellow-100',
+    badgeText: 'text-yellow-900',
+    btnPrimaryBg: 'bg-yellow-700 hover:bg-yellow-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'beton_kirim', label: '7/28 Gün Kırım', icon: '🏗️', actionType: 'TIMER' },
+      { id: 'donati_kabul', label: 'Donatı Kabul', icon: '📐', actionType: 'CHECKLIST' },
+      { id: 'ruhsat_sayac', label: '30 Gün Ruhsat', icon: '📋', actionType: 'TIMER' }
+    ]
+  },
+
+  SAGLIK_CLUSTER: {
+    domain: 'SAGLIK_CLUSTER',
+    displayName: 'Sağlık & Medikal',
+    bgCard: 'bg-teal-50/70 border-teal-200',
+    borderAccent: 'border-l-teal-500',
+    badgeBg: 'bg-teal-100',
+    badgeText: 'text-teal-900',
+    btnPrimaryBg: 'bg-teal-700 hover:bg-teal-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'cold_chain', label: '2-8°C Soğuk Zincir', icon: '❄️', actionType: 'CHECKLIST' },
+      { id: 'sbar_devir', label: 'SBAR Devir', icon: '📋', actionType: 'COPY_TEMPLATE' },
+      { id: 'five_rights', label: '5 Doğru Kuralı', icon: '💉', actionType: 'CHECKLIST' }
+    ]
+  },
+
+  HUKUK_FINANS_CLUSTER: {
+    domain: 'HUKUK_FINANS_CLUSTER',
+    displayName: 'Hukuk & Finans',
+    bgCard: 'bg-indigo-50/70 border-indigo-200',
+    borderAccent: 'border-l-indigo-500',
+    badgeBg: 'bg-indigo-100',
+    badgeText: 'text-indigo-900',
+    btnPrimaryBg: 'bg-indigo-700 hover:bg-indigo-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'uyap_tebligat', label: 'UYAP 5 Gün Tebellüğ', icon: '⚖️', actionType: 'TIMER' },
+      { id: 'hmk_gerekceli', label: 'HMK 30 Gün Karar', icon: '🏛️', actionType: 'TIMER' },
+      { id: 'kdv_muhsgk', label: '26 Beyanname', icon: '📊', actionType: 'TIMER' }
+    ]
+  },
+
+  EGITIM_CLUSTER: {
+    domain: 'EGITIM_CLUSTER',
+    displayName: 'Eğitim & Akademi',
+    bgCard: 'bg-amber-50/70 border-amber-200',
+    borderAccent: 'border-l-amber-500',
+    badgeBg: 'bg-amber-100',
+    badgeText: 'text-amber-900',
+    btnPrimaryBg: 'bg-amber-700 hover:bg-amber-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'eokul_10gun', label: 'e-Okul 10 Gün Sayacı', icon: '📚', actionType: 'TIMER' },
+      { id: 'kbs_ekders', label: 'KBS Ek Ders Onayı', icon: '📋', actionType: 'CHECKLIST' },
+      { id: 'yemek_numune', label: '72s Numune (+4°C)', icon: '🍱', actionType: 'CHECKLIST' }
+    ]
+  },
+
+  GUVENLIK_CLUSTER: {
+    domain: 'GUVENLIK_CLUSTER',
+    displayName: 'Güvenlik & Operasyon',
+    bgCard: 'bg-blue-50/70 border-blue-200',
+    borderAccent: 'border-l-blue-500',
+    badgeBg: 'bg-blue-100',
+    badgeText: 'text-blue-900',
+    btnPrimaryBg: 'bg-blue-700 hover:bg-blue-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'gozalti_24s', label: '24s Gözaltı Sayacı', icon: '👮', actionType: 'TIMER' },
+      { id: 'scba_300bar', label: 'SCBA 300 Bar Kontrolü', icon: '🚒', actionType: 'LOTO_CHECK' },
+      { id: 'silahlik_sayim', label: 'Silahlık & Mühür', icon: '🪖', actionType: 'CHECKLIST' }
+    ]
+  },
+
+  ULASIM_CLUSTER: {
+    domain: 'ULASIM_CLUSTER',
+    displayName: 'Ulaşım & Lojistik',
+    bgCard: 'bg-orange-50/70 border-orange-200',
+    borderAccent: 'border-l-orange-500',
+    badgeBg: 'bg-orange-100',
+    badgeText: 'text-orange-900',
+    btnPrimaryBg: 'bg-orange-700 hover:bg-orange-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'aetr_takograf', label: '4.5s AETR Mola', icon: '⏱️', actionType: 'TIMER' },
+      { id: 'cmr_irsaliye', label: 'CMR & Rezerv Tutanağı', icon: '🚛', actionType: 'COPY_TEMPLATE' },
+      { id: 'pretrip_kontrol', label: 'Pre-Trip & King-Pin', icon: '🔍', actionType: 'LOTO_CHECK' }
+    ]
+  },
+
+  HIZMET_CLUSTER: {
+    domain: 'HIZMET_CLUSTER',
+    displayName: 'Ticaret & Gastronomi',
+    bgCard: 'bg-emerald-50/70 border-emerald-200',
+    borderAccent: 'border-l-emerald-500',
+    badgeBg: 'bg-emerald-100',
+    badgeText: 'text-emerald-900',
+    btnPrimaryBg: 'bg-emerald-700 hover:bg-emerald-800',
+    btnPrimaryText: 'text-white',
+    actions: [
+      { id: 'haccp_temp', label: 'HACCP Soğuk Oda (+4/-18)', icon: '❄️', actionType: 'CHECKLIST' },
+      { id: 'gun_sonu_z', label: 'Z Raporu & Kasa', icon: '🧾', actionType: 'CHECKLIST' },
+      { id: 'gunes_sulama', label: 'Güneş Kuralı (19:30)', icon: '🌿', actionType: 'TIMER' }
+    ]
   }
 };
 
@@ -1011,6 +1182,330 @@ export function getLocalizedWorkDomainOptions(language: string = 'tr'): WorkDoma
     return WORK_DOMAIN_OPTIONS_EN.filter((opt) => opt.id === 'SADE');
   }
   return WORK_DOMAIN_OPTIONS;
+}
+
+export type WorkDomainClusterId =
+  | 'GENEL_CLUSTER'
+  | 'BILISIM_CLUSTER'
+  | 'SANAYI_CLUSTER'
+  | 'YAPI_CLUSTER'
+  | 'SAGLIK_CLUSTER'
+  | 'HUKUK_FINANS_CLUSTER'
+  | 'EGITIM_CLUSTER'
+  | 'GUVENLIK_CLUSTER'
+  | 'ULASIM_CLUSTER'
+  | 'HIZMET_CLUSTER';
+
+export interface WorkDomainCluster {
+  id: WorkDomainClusterId;
+  label: string;
+  sublabel: string;
+  icon: string;
+  color: string;
+  badgeBg: string;
+  badgeText: string;
+  borderAccent: string;
+  subDomains: ProfessionDomain[];
+  keywords: string[];
+}
+
+export const WORK_DOMAIN_CLUSTERS: WorkDomainCluster[] = [
+  {
+    id: 'GENEL_CLUSTER',
+    label: 'Genel Yaşam & Rutinler',
+    sublabel: 'Kişisel ajanda, ev, fatura & kira, abonelikler ve günlük serbest görevler',
+    icon: '🏠',
+    color: '#FEF3C7',
+    badgeBg: 'bg-amber-100 dark:bg-amber-950/60',
+    badgeText: 'text-amber-900 dark:text-amber-300',
+    borderAccent: 'border-l-amber-500',
+    subDomains: ['GENEL', 'SADE', 'OTOMATIK_JARGON', 'OGRENCI'],
+    keywords: ['ev', 'kira', 'fatura', 'abonelik', 'alışveriş', 'çöp', 'ilaç', 'günlük', 'alarm', 'hatırlatıcı']
+  },
+  {
+    id: 'BILISIM_CLUSTER',
+    label: 'Bilişim, Yazılım & Medya',
+    sublabel: 'Yazılım geliştirme, DevOps, siber güvenlik, dijital medya, kurgu ve içerik üretimi',
+    icon: '💻',
+    color: '#E0F2FE',
+    badgeBg: 'bg-sky-100 dark:bg-sky-950/60',
+    badgeText: 'text-sky-900 dark:text-sky-300',
+    borderAccent: 'border-l-sky-500',
+    subDomains: ['BILISIM', 'MEDYA_ILETISIM_YAYIN', 'KULTUR_SANAT_TASARIM'],
+    keywords: ['prod deploy', 'pr', 'semver', 'db migration', 'api', 'call sheet', 'kurgu', 'reji', '-23 lufs']
+  },
+  {
+    id: 'SANAYI_CLUSTER',
+    label: 'Mühendislik, Sanayi & Üretim',
+    sublabel: 'Makine, elektrik-elektronik, enerji şebekesi, metal, maden, kimya, plastik ve tekstil sanayi',
+    icon: '⚙️',
+    color: '#E2E8F0',
+    badgeBg: 'bg-slate-200 dark:bg-slate-800',
+    badgeText: 'text-slate-900 dark:text-slate-200',
+    borderAccent: 'border-l-slate-500',
+    subDomains: [
+      'MAKINE',
+      'ELEKTRIK_ELEKTRONIK',
+      'ENERJI',
+      'METAL',
+      'MADEN',
+      'KIMYA_PETROL_PLASTIK',
+      'TEKSTIL_GIYIM_DERI',
+      'AGAC_KAGIT',
+      'CEVRE',
+      'CAM_CIMENTO_TOPRAK'
+    ],
+    keywords: ['loto', 'hidrostatik', 'vibrasyon', 'kaçak akım', 'kompanzasyon', 'plc', 'wps/pqr', 'msds', 'patlatma']
+  },
+  {
+    id: 'YAPI_CLUSTER',
+    label: 'İnşaat, Mimarlık & Şantiye',
+    sublabel: 'Şantiye yönetimi, beton dökümü, mimari ruhsat projeleri, yapı denetim ve emlak işlemleri',
+    icon: '🏗️',
+    color: '#FEF08A',
+    badgeBg: 'bg-yellow-100 dark:bg-yellow-950/60',
+    badgeText: 'text-yellow-900 dark:text-yellow-300',
+    borderAccent: 'border-l-yellow-500',
+    subDomains: ['INSAAT', 'KULTUR_SANAT_TASARIM', 'IS_YONETIM', 'EMLAK'],
+    keywords: ['beton döküm', '7/28 gün kırım', 'donatı', 'metraj', 'hakediş', 'ruhsat', 'belediye', 'tapu', 'clash']
+  },
+  {
+    id: 'SAGLIK_CLUSTER',
+    label: 'Sağlık & Medikal Bilimler',
+    sublabel: 'Doktor, cerrahi, hemşirelik, eczane, diş hekimliği, klinik bakım ve veterinerlik',
+    icon: '🩺',
+    color: '#CCFBF1',
+    badgeBg: 'bg-teal-100 dark:bg-teal-950/60',
+    badgeText: 'text-teal-900 dark:text-teal-300',
+    borderAccent: 'border-l-teal-500',
+    subDomains: ['SAGLIK_SOSYAL', 'SAGLIK', 'ECZACILIK', 'VETERINER'],
+    keywords: ['sbar', 'konsültasyon', 'epikriz', '5 doğru', 'dekübitus', '2-8°c soğuk zincir', 'medula', 'its', 'otoklav']
+  },
+  {
+    id: 'HUKUK_FINANS_CLUSTER',
+    label: 'Hukuk, Finans & Yönetim',
+    sublabel: 'Avukat, hakim, mali müşavir (SMMM), bankacı, İK yönetimi, kamu bürokrasisi ve EBYS/gümrük',
+    icon: '⚖️',
+    color: '#EDE9FE',
+    badgeBg: 'bg-indigo-100 dark:bg-indigo-950/60',
+    badgeText: 'text-indigo-900 dark:text-indigo-300',
+    borderAccent: 'border-l-indigo-500',
+    subDomains: ['ADALET_GUVENLIK', 'FINANS', 'IS_YONETIM', 'HUKUK', 'MALIYE', 'KAMU', 'GUMRUK'],
+    keywords: ['uyap tebligat', 'hmk gerekçeli karar', 'duruşma', 'kdv/muhsgk 26', 'sgk berat', 'ebys', 'cimer', 'antrepo']
+  },
+  {
+    id: 'EGITIM_CLUSTER',
+    label: 'Eğitim, Maarif & Akademi',
+    sublabel: 'Öğretmen (Maarif Modeli), okul idaresi/KBS, üniversite akademisyenliği, tez/jüri ve öğrenci',
+    icon: '📚',
+    color: '#FEF9C3',
+    badgeBg: 'bg-amber-100 dark:bg-amber-950/60',
+    badgeText: 'text-amber-900 dark:text-amber-300',
+    borderAccent: 'border-l-amber-500',
+    subDomains: ['EGITIM', 'OGRENCI'],
+    keywords: ['e-okul 10 gün', 'kbs ek ders', '72s numune', 'öğrenme çıktısı', 'rubrik', 'gözetmenlik', 'hakemlik', 'turnitin']
+  },
+  {
+    id: 'GUVENLIK_CLUSTER',
+    label: 'Operasyon, Güvenlik & Savunma',
+    sublabel: 'Polis, jandarma, askeri birlik komutanlığı, itfaiye/arama-kurtarma, özel güvenlik ve İSG',
+    icon: '🛡️',
+    color: '#BFDBFE',
+    badgeBg: 'bg-blue-100 dark:bg-blue-950/60',
+    badgeText: 'text-blue-900 dark:text-blue-300',
+    borderAccent: 'border-l-blue-500',
+    subDomains: ['ADALET_GUVENLIK', 'SAVUNMA', 'ISG'],
+    keywords: ['24s gözaltı', 'fezleke', 'scba 300 bar', 'yangın raporu', 'içtima', 'silahlık sayım', 'mühür', 'ibys', 'ramak kala']
+  },
+  {
+    id: 'ULASIM_CLUSTER',
+    label: 'Ulaşım, Lojistik & Saha',
+    sublabel: 'Ağır vasıta şoförlüğü (AETR), havacılık/pilotaj, denizcilik/liman, oto servis ve telekom',
+    icon: '🚛',
+    color: '#FED7AA',
+    badgeBg: 'bg-orange-100 dark:bg-orange-950/60',
+    badgeText: 'text-orange-900 dark:text-orange-300',
+    borderAccent: 'border-l-orange-500',
+    subDomains: ['ULASTIRMA_LOJISTIK', 'OTOMOTIV', 'HAVACILIK', 'DENIZCILIK', 'LOJISTIK'],
+    keywords: ['takograf 4.5s', 'aetr mola', 'cmr', 'pre-trip', 'obd arıza silme', 'ofp/metar', 'psc survey', 'balast']
+  },
+  {
+    id: 'HIZMET_CLUSTER',
+    label: 'Ticaret, Hizmet & Gastronomi',
+    sublabel: 'Mutfak şefliği (HACCP), mağaza/kasiyerlik, satış danışmanlığı, otelcilik, ziraat ve spor',
+    icon: '🏪',
+    color: '#DCFCE7',
+    badgeBg: 'bg-emerald-100 dark:bg-emerald-950/60',
+    badgeText: 'text-emerald-900 dark:text-emerald-300',
+    borderAccent: 'border-l-emerald-500',
+    subDomains: [
+      'TICARET',
+      'TURIZM_KONAKLAMA_YIYECEK',
+      'GIDA',
+      'TARIM_AV_BALIK',
+      'TOPLUMSAL_KISISEL',
+      'SPOR_REKREASYON',
+      'GASTRONOMI',
+      'KUAFOR',
+      'ZIRAAT'
+    ],
+    keywords: ['mise en place', 'haccp soğuk oda', 'z raporu', 'kasa mutabakatı', 'teklif', 'çks/tarsim', 'güneş kuralı 19:30']
+  }
+];
+
+export const WORK_DOMAIN_CLUSTERS_EN: WorkDomainCluster[] = [
+  {
+    id: 'GENEL_CLUSTER',
+    label: 'General Life & Routines',
+    sublabel: 'Personal agenda, home routines, bills & rent, subscriptions, errands',
+    icon: '🏠',
+    color: '#FEF3C7',
+    badgeBg: 'bg-amber-100 dark:bg-amber-950/60',
+    badgeText: 'text-amber-900 dark:text-amber-300',
+    borderAccent: 'border-l-amber-500',
+    subDomains: ['GENEL', 'SADE', 'OTOMATIK_JARGON', 'OGRENCI'],
+    keywords: ['home', 'rent', 'bill', 'shopping', 'medicine', 'daily', 'alarm']
+  },
+  {
+    id: 'BILISIM_CLUSTER',
+    label: 'IT, Software & Media',
+    sublabel: 'Software engineering, DevOps, cybersecurity, digital media, video editing',
+    icon: '💻',
+    color: '#E0F2FE',
+    badgeBg: 'bg-sky-100 dark:bg-sky-950/60',
+    badgeText: 'text-sky-900 dark:text-sky-300',
+    borderAccent: 'border-l-sky-500',
+    subDomains: ['BILISIM', 'MEDYA_ILETISIM_YAYIN', 'KULTUR_SANAT_TASARIM'],
+    keywords: ['prod deploy', 'pr', 'semver', 'db migration', 'api', 'call sheet']
+  },
+  {
+    id: 'SANAYI_CLUSTER',
+    label: 'Engineering & Manufacturing',
+    sublabel: 'Machinery, electrical/power systems, metallurgy, mining, chemical, textiles',
+    icon: '⚙️',
+    color: '#E2E8F0',
+    badgeBg: 'bg-slate-200 dark:bg-slate-800',
+    badgeText: 'text-slate-900 dark:text-slate-200',
+    borderAccent: 'border-l-slate-500',
+    subDomains: ['MAKINE', 'ELEKTRIK_ELEKTRONIK', 'ENERJI', 'METAL', 'MADEN', 'KIMYA_PETROL_PLASTIK', 'TEKSTIL_GIYIM_DERI', 'AGAC_KAGIT', 'CEVRE', 'CAM_CIMENTO_TOPRAK'],
+    keywords: ['loto', 'hydrostatic', 'vibration', 'residual current', 'plc']
+  },
+  {
+    id: 'YAPI_CLUSTER',
+    label: 'Construction & Architecture',
+    sublabel: 'Civil site management, concrete break tests, architectural permits, real estate',
+    icon: '🏗️',
+    color: '#FEF08A',
+    badgeBg: 'bg-yellow-100 dark:bg-yellow-950/60',
+    badgeText: 'text-yellow-900 dark:text-yellow-300',
+    borderAccent: 'border-l-yellow-500',
+    subDomains: ['INSAAT', 'KULTUR_SANAT_TASARIM', 'IS_YONETIM', 'EMLAK'],
+    keywords: ['concrete pour', '7/28 day break test', 'rebar', 'permit', 'deed']
+  },
+  {
+    id: 'SAGLIK_CLUSTER',
+    label: 'Healthcare & Medical Sciences',
+    sublabel: 'Physicians, nursing, pharmacy, dentistry, clinical care, veterinary',
+    icon: '🩺',
+    color: '#CCFBF1',
+    badgeBg: 'bg-teal-100 dark:bg-teal-950/60',
+    badgeText: 'text-teal-900 dark:text-teal-300',
+    borderAccent: 'border-l-teal-500',
+    subDomains: ['SAGLIK_SOSYAL', 'SAGLIK', 'ECZACILIK', 'VETERINER'],
+    keywords: ['sbar', 'handover', '5 rights', 'decubitus', '2-8°c cold chain', 'autoclave']
+  },
+  {
+    id: 'HUKUK_FINANS_CLUSTER',
+    label: 'Legal, Finance & Corporate',
+    sublabel: 'Lawyers, judges, CPAs, auditors, corporate HR, public administrative office',
+    icon: '⚖️',
+    color: '#EDE9FE',
+    badgeBg: 'bg-indigo-100 dark:bg-indigo-950/60',
+    badgeText: 'text-indigo-900 dark:text-indigo-300',
+    borderAccent: 'border-l-indigo-500',
+    subDomains: ['ADALET_GUVENLIK', 'FINANS', 'IS_YONETIM', 'HUKUK', 'MALIYE', 'KAMU', 'GUMRUK'],
+    keywords: ['notification', 'reasoned judgment', 'vat/tax', 'payroll', 'e-ledger']
+  },
+  {
+    id: 'EGITIM_CLUSTER',
+    label: 'Education & Academia',
+    sublabel: 'Teachers, school leadership/payroll, university faculty, exam juries, students',
+    icon: '📚',
+    color: '#FEF9C3',
+    badgeBg: 'bg-amber-100 dark:bg-amber-950/60',
+    badgeText: 'text-amber-900 dark:text-amber-300',
+    borderAccent: 'border-l-amber-500',
+    subDomains: ['EGITIM', 'OGRENCI'],
+    keywords: ['10-day grading', 'payroll approval', '72h sample', 'rubric', 'proctoring']
+  },
+  {
+    id: 'GUVENLIK_CLUSTER',
+    label: 'Security, Defense & Rescue',
+    sublabel: 'Police, military commanders, fire/rescue, private security, workplace safety (OHS)',
+    icon: '🛡️',
+    color: '#BFDBFE',
+    badgeBg: 'bg-blue-100 dark:bg-blue-950/60',
+    badgeText: 'text-blue-900 dark:text-blue-300',
+    borderAccent: 'border-l-blue-500',
+    subDomains: ['ADALET_GUVENLIK', 'SAVUNMA', 'ISG'],
+    keywords: ['24h detention', 'scba 300 bar', 'roll call', 'armory audit', 'near miss']
+  },
+  {
+    id: 'ULASIM_CLUSTER',
+    label: 'Transportation & Logistics',
+    sublabel: 'Heavy vehicle driving (AETR), aviation/flight, maritime, fleet & telecom',
+    icon: '🚛',
+    color: '#FED7AA',
+    badgeBg: 'bg-orange-100 dark:bg-orange-950/60',
+    badgeText: 'text-orange-900 dark:text-orange-300',
+    borderAccent: 'border-l-orange-500',
+    subDomains: ['ULASTIRMA_LOJISTIK', 'OTOMOTIV', 'HAVACILIK', 'DENIZCILIK', 'LOJISTIK'],
+    keywords: ['tachograph 4.5h', 'aetr break', 'cmr', 'pre-trip', 'obd clear', 'metar']
+  },
+  {
+    id: 'HIZMET_CLUSTER',
+    label: 'Commerce, Hospitality & Food',
+    sublabel: 'Culinary chef (HACCP), cashier, retail/sales, hospitality/hotel, agriculture',
+    icon: '🏪',
+    color: '#DCFCE7',
+    badgeBg: 'bg-emerald-100 dark:bg-emerald-950/60',
+    badgeText: 'text-emerald-900 dark:text-emerald-300',
+    borderAccent: 'border-l-emerald-500',
+    subDomains: ['TICARET', 'TURIZM_KONAKLAMA_YIYECEK', 'GIDA', 'TARIM_AV_BALIK', 'TOPLUMSAL_KISISEL', 'SPOR_REKREASYON', 'GASTRONOMI', 'KUAFOR', 'ZIRAAT'],
+    keywords: ['mise en place', 'haccp cold room', 'z report', 'cash count', 'drip irrigation']
+  }
+];
+
+export function getLocalizedWorkDomainClusters(language: string = 'tr'): WorkDomainCluster[] {
+  if (language === 'en') {
+    return WORK_DOMAIN_CLUSTERS_EN;
+  }
+  return WORK_DOMAIN_CLUSTERS;
+}
+
+export function getDomainCluster(domainId?: string): WorkDomainCluster {
+  if (!domainId) return WORK_DOMAIN_CLUSTERS[0];
+  const upper = domainId.toUpperCase();
+  const directMatch = WORK_DOMAIN_CLUSTERS.find((c) => c.id === upper);
+  if (directMatch) return directMatch;
+
+  for (const cluster of WORK_DOMAIN_CLUSTERS) {
+    if (cluster.subDomains.some((sub) => sub.toUpperCase() === upper)) {
+      return cluster;
+    }
+  }
+
+  return WORK_DOMAIN_CLUSTERS[0];
+}
+
+export function resolveActiveSubDomains(selectedDomain?: string): ProfessionDomain[] {
+  if (!selectedDomain) return ['GENEL'];
+  const upper = selectedDomain.toUpperCase();
+  const directCluster = WORK_DOMAIN_CLUSTERS.find((c) => c.id === upper);
+  if (directCluster) {
+    return directCluster.subDomains;
+  }
+  return [selectedDomain as ProfessionDomain];
 }
 
 export function detectDomainFromNote(note: { ikon?: string; baslik?: string; anomali_notu?: string | null; teshis_notu?: string | null; renk?: string }): ProfessionDomain {

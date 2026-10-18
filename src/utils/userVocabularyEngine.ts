@@ -4,7 +4,7 @@
  * tarayıcı yerel belleğinde saklar ve Jargon Radarına dinamik besler.
  */
 
-import { CustomVocabularyItem, ProfessionDomain } from '../types/notivia.ts';
+import type { CustomVocabularyItem, ProfessionDomain } from '../types/notivia.ts';
 
 const VOCAB_STORAGE_KEY = 'notivia_custom_vocabulary';
 
